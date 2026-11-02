@@ -18,7 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = "{{ site_config.title }}"
-copyright = "{{ site_config.copyright }}, {{ site_config.author }}"
+# With no author, the year alone: "2026, ." is what the footer showed
+copyright = "{{ site_config.copyright }}{% if site_config.author %}, {{ site_config.author }}{% endif %}"
 author = "{{ site_config.author }}"
 
 # The full version, including alpha/beta/rc tags

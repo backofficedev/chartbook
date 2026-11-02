@@ -64,6 +64,12 @@ A version's name is its commit and the time the snapshot was made, to the second
 - **No page links to a chart feed that is not written.** ablog writes `atom.xml` only when `blog_baseurl` is set, and none is, but the charts page, and its archive, category and tag pages, linked to one in their head. The link is gone, from a pipeline's site and from a version's: the `setup()` a build from the store adds to `conf.py` now calls the template's, which it replaced.
 - **`chartbook catalog build` no longer says "regenerated 0 of 0 pipeline(s)".** A catalog's pipelines are its stores' snapshots, which that count never saw; the line now says what changed and what Sphinx read. A pipeline's own build says it as before.
 
+### Fixed — found while writing the tutorial
+
+- **A command's output read through a pipe on Windows no longer stops it.** Windows writes a pipe or a file in its ANSI code page (cp1252), which has no `├──`, `→`, `·` or `…`, so `chartbook lineage | head`, and any command an agent ran, since an agent reads every command through a pipe, raised `UnicodeEncodeError` at the first such character. ChartBook writes a pipe or a file in UTF-8; a console is as it was (#164).
+- **A static chart's caption, note and source are below the x-axis title.** They were drawn at a fixed place under the axes, on top of `x_title` in the PNG and PDF; they now go below whatever is under the axes (#166).
+- **A site whose `[project]` has no `maintainer` says "© Copyright 2026." in its footer**, where it said "© Copyright 2026, .", and so does a catalog's (#166).
+
 ### Fixed — after a last review before the release
 
 - **`data.sql` of another pipeline's dataset spread over snapshots, with a `*` in a Hive key's value** (`tag=a*`), stopped with "is not in the subpath of": the check for such a key read each file's place in the store, which leads into another snapshot's folder. It reads each file's path inside the dataset, as the rest of the read does.

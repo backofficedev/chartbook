@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import codecs
 import contextlib
+import sys
 import warnings
 from pathlib import Path
 
@@ -107,6 +109,7 @@ class _Install(_Group):
 @click.pass_context
 def main(ctx):
     """chartbook CLI tool for generating documentation websites."""
+    _utf8_output()
     # A warning from the settings or a manifest is one line for a person,
     # not Python's file, line and source line
     warnings.showwarning = _show_warning
@@ -119,6 +122,26 @@ def main(ctx):
         _say_if_the_skill_is_stale()
     if not ctx.resilient_parsing:
         _remove_old_views()
+
+
+def _utf8_output(streams=None) -> None:
+    """Write a pipe or a file in UTF-8, whatever the system's code page.
+
+    On Windows, Python writes a console as UTF-16, but a pipe or a file in
+    the ANSI code page (cp1252), which has no ``├──``, ``→`` or ``…``: a
+    command that prints one, such as `chartbook lineage`, raised
+    UnicodeEncodeError the moment its output was piped, which is how an
+    agent always reads it. A console is left as it is.
+
+    :param streams: The streams to set, by default stdout and stderr.
+    """
+    for stream in (sys.stdout, sys.stderr) if streams is None else streams:
+        try:
+            if stream is None or stream.isatty() or codecs.lookup(stream.encoding or "ascii").name == "utf-8":
+                continue
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, LookupError, OSError, ValueError):
+            continue  # not a text stream that can be set (a test's runner, a closed stream): left as it is
 
 
 def _remove_old_views() -> None:
