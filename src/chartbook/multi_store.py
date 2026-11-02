@@ -270,9 +270,28 @@ class Stores:
         return self._collect("roots")
 
     def verify(self, content_hashes=None):
-        problems = []
+        if content_hashes is None:
+            problems = []
+            for entry in self._available():
+                problems.extend(entry.store.verify())
+            return problems
+        # Each store is asked of the objects it holds: one another store
+        # holds is not missing from it. One that no store holds is said
+        # missing once, as the first store says it
+        wanted = list(dict.fromkeys(content_hashes))
+        problems, unheld, first = [], set(wanted), None
         for entry in self._available():
-            problems.extend(entry.store.verify(content_hashes))
+            first = first or entry.store
+            try:
+                held = [content_hash for content_hash in wanted if entry.store.has(content_hash)]
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
+                continue
+            unheld.difference_update(held)
+            if held:
+                problems.extend(entry.store.verify(held))
+        if unheld and first is not None:
+            problems.extend(first.verify([content_hash for content_hash in wanted if content_hash in unheld]))
         return problems
 
     def begin(self, *args, **kwargs):

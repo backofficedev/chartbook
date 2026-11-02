@@ -424,7 +424,13 @@ def test_catalog_migration_explains_how_to_retire_old_store_settings(tmp_path, m
 
 def _consumer_of_upstream(tmp_path):
     """``acme/consumer``, built and committed, which depends by ID on ``acme/upstream``."""
+    import polars as pl
     folder = create_pipeline_project(tmp_path / "consumer", pipeline_id="acme/consumer")
+    # Bytes of its own, not the upstream's: the fixture makes the same files for both
+    for file in folder.rglob("*.parquet"):
+        pl.read_parquet(file).with_columns(pl.lit("consumer").alias("made_by")).write_parquet(file)
+    for file in folder.rglob("*.html"):
+        file.write_text(file.read_text(encoding="utf-8") + "<!-- consumer -->\n", encoding="utf-8")
     manifest = folder / "chartbook.toml"
     manifest.write_text(manifest.read_text() + '\n[scripts]\nbuild = "true"\n\n[dependencies]\n"acme/upstream" = {}\n')
     _git(folder, "init", "--quiet", "-b", "main")
@@ -514,3 +520,41 @@ def test_lineage_reads_a_snapshot_in_one_store_and_what_it_was_pinned_from_in_an
     assert (consumer_node["pipeline"], consumer_node["kind"], consumer_node["checked"]) == ("acme/consumer", "snapshot", "pins")
     (upstream_node,) = consumer_node["children"]
     assert (upstream_node["pipeline"], upstream_node["kind"]) == ("acme/upstream", "snapshot")
+
+
+def test_lineage_rehash_reads_each_object_in_the_store_that_holds_it(tmp_path, monkeypatch):
+    """`chartbook lineage --rehash` over two stores: an object in one is not a gap of the other; a changed one still is."""
+    import json
+    import os
+    import stat
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    snapshot.make(consumer)
+    monkeypatch.chdir(consumer)
+    result = CliRunner().invoke(main, ["lineage", "--rehash", "--json"])
+    assert result.exit_code == 0, result.output
+    walked = json.loads(result.output)
+    assert walked["gaps"] == 0 and walked["rehashed"] > 0, result.output
+    # A file changed in the read-only store is still found, once
+    (taken,) = snapshot.readable_snapshots(shared)[0]
+    changed = next(record["content_hash"] for record in taken.assets.values() if record.get("content_hash"))
+    for file in (f.location for f in shared.files(changed).files):
+        os.chmod(file, stat.S_IRUSR | stat.S_IWUSR)
+        file.write_bytes(b"changed")
+    result = CliRunner().invoke(main, ["lineage", "--rehash", "--json"])
+    walked = json.loads(result.output)
+    assert walked["gaps"] == 1, result.output
+    (upstream_node,) = walked["root"]["children"]
+    assert "is not what its name says" in upstream_node["gaps"][0]
+
+
+def test_verify_of_named_objects_asks_each_store_of_its_own(tmp_path):
+    from chartbook.multi_store import NamedStore
+    folder = pipeline(tmp_path)
+    one, two = FolderStore(tmp_path / "one"), FolderStore(tmp_path / "two")
+    (tmp_path / "two").mkdir()
+    taken = snapshot.make(folder, one).snapshot
+    stores = Stores([NamedStore("two", str(two), two), NamedStore("one", str(one), one)])
+    assert stores.verify(taken.hashes()) == []
+    nowhere = "sha256:" + "0" * 64
+    (problem,) = stores.verify([nowhere])
+    assert problem.content_hash == nowhere and problem.message == "not in the store"
