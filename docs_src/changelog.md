@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the catalog's charts, its page layout, and a long first build
+
+- **A catalog lists and shows its charts.** Every chart in a catalog comes from a stored pipeline, and the page of such a chart had no date, so ABlog left it off the Charts page and out of its categories, and the page showed no chart. The page now has the date, category and tags a pipeline's chart page has, and shows the chart from the newest version that has it, with a link to that version.
+- **The catalog's pages lay out as the theme does.** The catalog carried a copy of pydata-sphinx-theme 0.15's page layout. Under 0.16 and later, its search box and sidebar toggles showed bare above the header, and an empty sidebar took the left of the home page. The catalog now uses the theme's own layout, adding only the previous/next bar above each chart.
+- **`chartbook catalog build` says what it is building.** The first build after an upgrade builds the site of every version in the store again, one Sphinx build each, which can take minutes. It now says how many it will build and counts them off; each is kept, and later builds reuse it.
+
 ## [0.5.0] - 2026-11-02
 
 ### Read this first: upgrading from 0.4.0
