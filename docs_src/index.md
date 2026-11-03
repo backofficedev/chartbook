@@ -19,13 +19,6 @@ pip install chartbook
 <a class="sd-btn sd-btn-outline-primary cb-hero-button" href="tutorials/explore-a-catalog.html">Explore a catalog</a>
 </div>
 
-```{raw} html
-<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: the Quickstart's manifest, the script that writes the data and the chart, chartbook docs build asking whether the folder is yours, and the index's record of each asset with its hash and what it was made from">
-<source src="_static/tapes/quickstart.webm" type="video/webm">
-<source src="_static/tapes/quickstart.mp4" type="video/mp4">
-</video>
-```
-
 ```{image} _static/screenshots/quickstart-chart-light.png
 :alt: A chart's page in a ChartBook site: the chart, its write-up, and a Provenance table that names the dataframe it was made from and that dataframe's content hash
 :class: only-light cb-screenshot
@@ -79,6 +72,40 @@ Many pipelines become one catalog: a searchable website for your team, and an in
 
 ::::
 
+## Ask the catalog from the command line
+
+What a person browses on the site, a script or an agent can ask for at the terminal: which
+datasets there are, what each one holds, and the data itself.
+
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: chartbook ls dataframes lists the catalog's three datasets; chartbook get-docs prints one dataset's page, with its sources, license, rows, dates, write-up and a table of its columns; chartbook path prints where its parquet file is; and in Python, data.load reads it and shows its last five rows">
+<source src="_static/tapes/catalog.webm" type="video/webm">
+<source src="_static/tapes/catalog.mp4" type="video/mp4">
+</video>
+```
+
+<p class="cb-caption"><code>chartbook ls</code> lists what the catalog holds, <code>chartbook get-docs</code>
+prints a dataset's page with its columns, <code>chartbook path</code> hands its file to R, Stata or
+a shell, and <code>data.load</code> reads it in Python. This catalog is the
+<a href="tutorials/explore-a-catalog.html">tutorial's</a>.</p>
+
+## For your team and for your agents
+
+The catalog is one set of facts with two ways in. A person browses the site; an agent asks the
+command line the same questions and gets the same answers.
+
+| | Your team, in the browser | Your agents, from the command line |
+|---|---|---|
+| **What is there?** | The catalog's home page and search | `chartbook ls --json`, or the site's `llms.txt` |
+| **What is it?** | The dataset's or chart's page | `chartbook get-docs yield_curve:repo_public` |
+| **Use it** | Copy the snippet on the page | `data.load("yield_curve:repo_public")`, `chartbook path`, `chartbook add yield_curve` |
+| **Can I trust it?** | The Provenance table and the Versions page | `chartbook lineage --json`, and `chartbook.lock` in git |
+
+`chartbook install claude-skill` teaches Claude Code all of this, and every site ChartBook builds
+ships an [llms.txt](https://llmstxt.org/) at its root.
+
+## In any language
+
 ```{image} _static/diagrams/ecosystem-light.svg
 :alt: Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it
 :class: only-light
@@ -91,24 +118,9 @@ Many pipelines become one catalog: a searchable website for your team, and an in
 :align: center
 ```
 
-**In any language.** A pipeline's build is whatever command you name: a Python script, R, Stata,
+A pipeline's build is whatever command you name: a Python script, R, Stata,
 SQL, a Makefile. ChartBook runs it, records what it made, and lets the next pipeline read it,
 from Python with `data.load()` or from anything else with `chartbook path`.
-
-## For your team and for your agents
-
-The catalog is one set of facts with two ways in. A person browses the site; an agent asks the
-command line the same questions and gets the same answers.
-
-| | Your team, in the browser | Your agents, from the command line |
-|---|---|---|
-| **What is there?** | The catalog's home page and search | `chartbook ls --json`, or the site's `llms.txt` |
-| **What is it?** | The dataset's or chart's page | `chartbook get-docs yield_curve:chart/repo_rates` |
-| **Use it** | Copy the snippet on the page | `data.load("yield_curve:repo_public")`, `chartbook add yield_curve` |
-| **Can I trust it?** | The Provenance table and the Versions page | `chartbook lineage --json`, and `chartbook.lock` in git |
-
-`chartbook install claude-skill` teaches Claude Code all of this, and every site ChartBook builds
-ships an [llms.txt](https://llmstxt.org/) at its root.
 
 ## A pipeline, in three files
 
