@@ -2285,8 +2285,10 @@ def make(
         targets = stores.for_writing(pipeline, store_names)
         # Validate every target before writing the first one. A partial fan-out
         # remains recoverable: repeating the command skips existing snapshots.
-        require_lineage(directory, pipeline, stores)
-        report = make(directory, targets[0], made_at, built_by_run, ignoring, deep)
+        # The lineage is checked in every store, where the pins were read
+        # from: a snapshot pinned from a read-only store is written to another
+        _check_lineage(directory, pipeline, stores, deep)
+        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep)
         if len(targets) > 1:
             from chartbook.transfer import copy_snapshot
             for target in targets[1:]:
@@ -2298,6 +2300,15 @@ def make(
         return report
 
     store = store if store is not None else default_store()
+    _check_lineage(directory, pipeline, store, deep)
+    return _make_in(directory, pipeline, code, store, made_at, built_by_run, deep)
+
+
+def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> None:
+    """Refuse a snapshot whose lineage, read in ``store`` (one, or all of a catalog's), has a gap or a cycle.
+
+    :raises SnapshotError: Saying what is wrong and what to run.
+    """
     require_lineage(directory, pipeline, store)
     require_acyclic(directory, pipeline, store)
     if deep:
@@ -2311,6 +2322,11 @@ def make(
                 f"{pipeline} cannot have a snapshot with --deep: a snapshot upstream has a gap in its "
                 f"own lineage.\n{shown}{more}\n`chartbook lineage` shows the whole graph."
             )
+
+
+def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at: Optional[str],
+             built_by_run: bool, deep: bool) -> SnapshotReport:
+    """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`)."""
     raw = _read_manifest_file(directory)
     check_within(directory, pipeline)
     check_own_name(directory, pipeline, raw)
