@@ -1,8 +1,7 @@
-from settings import config
+from settings import END_DATE, START_DATE, config
 
 OUTPUT_DIR = config("OUTPUT_DIR")
 DATA_DIR = config("DATA_DIR")
-START_DATE = config("START_DATE")
 
 from datetime import datetime
 
@@ -236,7 +235,7 @@ fig.add_trace(
 # )
 
 start_date = "2015-01-01"
-end_date = datetime.today().strftime("%Y-%m-%d")
+end_date = pd.Timestamp(END_DATE).strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 fig.update_layout(title_text="Repo Rates and the Fed Funds Rate")
 fig.update_yaxes(title_text="Percent")
@@ -324,7 +323,7 @@ fig.add_trace(
 #     )
 # )
 start_date = "2015-01-01"
-end_date = datetime.today().strftime("%Y-%m-%d")
+end_date = pd.Timestamp(END_DATE).strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 fig.update_yaxes(range=[-0.2, 0.2])
 fig.update_layout(title_text="Rates Relative to Fed Funds Target Midpoint")
@@ -481,7 +480,7 @@ fig.add_trace(
 #     )
 # )
 start_date = "2016-01-01"
-end_date = datetime.today().strftime("%Y-%m-%d")
+end_date = pd.Timestamp(END_DATE).strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 # fig.update_yaxes(range=[0.2, 0.2])
 fig.update_layout(

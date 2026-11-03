@@ -37,8 +37,8 @@ from settings import config
 OUTPUT_DIR = Path(config("OUTPUT_DIR"))
 DATA_DIR = Path(config("DATA_DIR"))
 WRDS_USERNAME = config("WRDS_USERNAME")
-# START_DATE = config("START_DATE")
-# END_DATE = config("END_DATE")
+# The data window, if a pull needs it, is committed in settings.py:
+# from settings import END_DATE, START_DATE
 
 
 description_compustat = {

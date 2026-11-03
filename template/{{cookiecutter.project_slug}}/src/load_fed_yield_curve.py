@@ -11,11 +11,9 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from settings import config
+from settings import END_DATE, START_DATE, config
 
 DATA_DIR = config("DATA_DIR")
-START_DATE = config("START_DATE")
-END_DATE = config("END_DATE")
 
 
 def pull_fed_yield_curve():
@@ -40,6 +38,7 @@ def load_fed_yield_curve(data_dir=DATA_DIR):
 
 
 if __name__ == "__main__":
-    df = pull_fed_yield_curve()
+    # The Fed publishes the whole history in one file; keep the committed window.
+    df = pull_fed_yield_curve().sort_index().loc[START_DATE:END_DATE]
     path = Path(DATA_DIR) / "fed_yield_curve.parquet"
     df.to_parquet(path)

@@ -5,7 +5,7 @@
 
 **URL:** https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv
 
-**Date Range:** 1961-06-14 to present (updated daily)
+**Date Range:** 1961-06-14 to `END_DATE` (2025-12-31), the cutoff committed in `src/load_fed_yield_curve.py`
 
 **Columns:**
 

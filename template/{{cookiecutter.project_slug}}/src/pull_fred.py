@@ -4,11 +4,9 @@ import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
 
-from settings import config
+from settings import END_DATE, START_DATE, config
 
 DATA_DIR = Path(config("DATA_DIR"))
-START_DATE = config("START_DATE")
-END_DATE = config("END_DATE")
 
 
 series_to_pull = {
@@ -148,9 +146,9 @@ def demo():
 
 
 if __name__ == "__main__":
-    today = pd.Timestamp.today().strftime("%Y-%m-%d")
-    end_date = today
-    df = pull_fred(START_DATE, end_date)
+    # END_DATE is the pipeline's cutoff, committed in settings.py: the pull
+    # stops there rather than at today, so the same commit pulls the same window.
+    df = pull_fred(START_DATE, END_DATE)
     filedir = Path(DATA_DIR)
     filedir.mkdir(parents=True, exist_ok=True)
     df.to_parquet(filedir / "fred.parquet")

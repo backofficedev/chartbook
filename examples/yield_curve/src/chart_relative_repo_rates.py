@@ -1,9 +1,12 @@
-from chartbook.env import get, get_project_root
+from chartbook.env import get_project_root
 
 BASE_DIR = get_project_root()
 OUTPUT_DIR = BASE_DIR / "_output"
 DATA_DIR = BASE_DIR / "_data"
-START_DATE = get("START_DATE", default="2000-01-01")
+# The data window is committed here, not read from .env: two people with
+# different .env files who build the same commit must get the same bytes.
+START_DATE = "2000-01-01"
+END_DATE = "2025-12-31"
 
 from datetime import datetime
 
@@ -236,7 +239,7 @@ fig.add_trace(
 # )
 
 start_date = "2015-01-01"
-end_date = datetime.today().strftime("%Y-%m-%d")
+end_date = pd.Timestamp(END_DATE).strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 fig.update_layout(title_text="Repo Rates and the Fed Funds Rate")
 fig.update_yaxes(title_text="Percent")
@@ -324,7 +327,7 @@ fig.add_trace(
 #     )
 # )
 start_date = "2015-01-01"
-end_date = datetime.today().strftime("%Y-%m-%d")
+end_date = pd.Timestamp(END_DATE).strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 fig.update_yaxes(range=[-0.2, 0.2])
 fig.update_layout(title_text="Rates Relative to Fed Funds Target Midpoint")
@@ -481,7 +484,7 @@ fig.add_trace(
 #     )
 # )
 start_date = "2016-01-01"
-end_date = datetime.today().strftime("%Y-%m-%d")
+end_date = pd.Timestamp(END_DATE).strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 # fig.update_yaxes(range=[0.2, 0.2])
 fig.update_layout(

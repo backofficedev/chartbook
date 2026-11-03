@@ -420,3 +420,161 @@ def test_catalog_migration_explains_how_to_retire_old_store_settings(tmp_path, m
     assert str(settings) in result.output
     assert "fallback for other catalogs" in result.output
     assert settings.read_text() == original_settings
+
+
+def _consumer_of_upstream(tmp_path):
+    """``acme/consumer``, built and committed, which depends by ID on ``acme/upstream``."""
+    import polars as pl
+    folder = create_pipeline_project(tmp_path / "consumer", pipeline_id="acme/consumer")
+    # Bytes of its own, not the upstream's: the fixture makes the same files for both
+    for file in folder.rglob("*.parquet"):
+        pl.read_parquet(file).with_columns(pl.lit("consumer").alias("made_by")).write_parquet(file)
+    for file in folder.rglob("*.html"):
+        file.write_text(file.read_text(encoding="utf-8") + "<!-- consumer -->\n", encoding="utf-8")
+    manifest = folder / "chartbook.toml"
+    manifest.write_text(manifest.read_text() + '\n[scripts]\nbuild = "true"\n\n[dependencies]\n"acme/upstream" = {}\n')
+    _git(folder, "init", "--quiet", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "--quiet", "-m", "Initial")
+    return folder
+
+
+def _pinned_from_a_read_only_store(tmp_path, monkeypatch):
+    """``acme/upstream`` snapshotted into a read-only ``class`` store, and ``acme/consumer`` pinned from it, its lockfile committed; the first store, ``mine``, is where a snapshot goes."""
+    from chartbook import lock
+    upstream = pipeline(tmp_path)
+    shared = FolderStore(tmp_path / "class")
+    snapshot.make(upstream, shared)
+    consumer = _consumer_of_upstream(tmp_path)
+    configure(tmp_path, monkeypatch, {"mine": {"url": str(tmp_path / "mine")}, "class": {"url": str(shared), "read_only": True}})
+    assert not lock.pin(consumer, clone_missing=False).problems
+    _git(consumer, "add", "-A")
+    _git(consumer, "commit", "--quiet", "-m", "Pin")
+    return upstream, consumer, shared
+
+
+def test_snapshot_into_one_store_of_a_pipeline_pinned_from_another(tmp_path, monkeypatch):
+    """The pins are read in every store of the catalog; the snapshot is written to its own."""
+    from chartbook import lineage
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    before = _files_under(shared.root)
+    report = snapshot.make(consumer)
+    assert report.made and report.stores == ["mine"]
+    (taken,) = snapshot.readable_snapshots(FolderStore(tmp_path / "mine"))[0]
+    assert taken.pipeline == "acme/consumer"
+    assert [entry["id"] for entry in taken.inputs] == ["acme/upstream"]
+    assert _files_under(shared.root) == before
+    # Its lineage, read from the catalog's stores, reaches the snapshot it was pinned from
+    found = lineage.walk(consumer)
+    assert not found.gaps(), found.gaps()
+    assert [(child.pipeline, child.kind) for child in found.root.children] == [("acme/upstream", "snapshot")]
+
+
+def test_snapshot_deep_into_one_store_of_a_pipeline_pinned_from_another(tmp_path, monkeypatch):
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    assert snapshot.make(consumer, deep=True).stores == ["mine"]
+
+
+@pytest.mark.parametrize("command", [["snapshot"], ["run", "--snapshot"]])
+def test_the_commands_snapshot_into_one_store_a_pipeline_pinned_from_another(tmp_path, monkeypatch, command):
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    monkeypatch.chdir(consumer)
+    result = CliRunner().invoke(main, command)
+    assert result.exit_code == 0, result.output
+    assert "Stores: mine" in result.output
+    assert len(FolderStore(tmp_path / "mine").all_snapshot_files()) == 1
+
+
+def test_a_pin_no_store_of_the_catalog_has_still_stops_a_snapshot(tmp_path, monkeypatch):
+    from chartbook import lock
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    pinned = next(
+        record["content_hash"] for record in lock.read_lock(consumer / lock.LOCK_FILE).assets.values()
+        if record.get("content_hash")
+    )
+    assert shared.delete(pinned)
+    with pytest.raises(snapshot.SnapshotError, match="does not have it"):
+        snapshot.make(consumer)
+    assert not (tmp_path / "mine").exists() or not FolderStore(tmp_path / "mine").all_snapshot_files()
+
+
+def test_lineage_reads_a_snapshot_in_one_store_and_what_it_was_pinned_from_in_another(tmp_path, monkeypatch):
+    """A pipeline downstream of the consumer walks its snapshot, in ``mine``, up to the one in ``class``."""
+    import json
+    from chartbook import lock
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    snapshot.make(consumer)
+    report = create_pipeline_project(tmp_path / "report", pipeline_id="acme/report")
+    manifest = report / "chartbook.toml"
+    manifest.write_text(manifest.read_text() + '\n[dependencies]\n"acme/consumer" = {}\n')
+    _git(report, "init", "--quiet", "-b", "main")
+    _git(report, "add", "-A")
+    _git(report, "commit", "--quiet", "-m", "Initial")
+    assert not lock.pin(report, clone_missing=False).problems
+    monkeypatch.chdir(report)
+    result = CliRunner().invoke(main, ["lineage", "--check", "--json"])
+    assert result.exit_code == 0, result.output
+    walked = json.loads(result.output)
+    assert walked["gaps"] == 0
+    (consumer_node,) = walked["root"]["children"]
+    assert (consumer_node["pipeline"], consumer_node["kind"], consumer_node["checked"]) == ("acme/consumer", "snapshot", "pins")
+    (upstream_node,) = consumer_node["children"]
+    assert (upstream_node["pipeline"], upstream_node["kind"]) == ("acme/upstream", "snapshot")
+
+
+def test_lineage_rehash_reads_each_object_in_the_store_that_holds_it(tmp_path, monkeypatch):
+    """`chartbook lineage --rehash` over two stores: an object in one is not a gap of the other; a changed one still is."""
+    import json
+    import os
+    import stat
+    upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
+    snapshot.make(consumer)
+    monkeypatch.chdir(consumer)
+    result = CliRunner().invoke(main, ["lineage", "--rehash", "--json"])
+    assert result.exit_code == 0, result.output
+    walked = json.loads(result.output)
+    assert walked["gaps"] == 0 and walked["rehashed"] > 0, result.output
+    # A file changed in the read-only store is still found, once
+    (taken,) = snapshot.readable_snapshots(shared)[0]
+    changed = next(record["content_hash"] for record in taken.assets.values() if record.get("content_hash"))
+    for file in (f.location for f in shared.files(changed).files):
+        os.chmod(file, stat.S_IRUSR | stat.S_IWUSR)
+        file.write_bytes(b"changed")
+    result = CliRunner().invoke(main, ["lineage", "--rehash", "--json"])
+    walked = json.loads(result.output)
+    assert walked["gaps"] == 1, result.output
+    (upstream_node,) = walked["root"]["children"]
+    assert "is not what its name says" in upstream_node["gaps"][0]
+
+
+def test_verify_of_named_objects_asks_each_store_of_its_own(tmp_path):
+    from chartbook.multi_store import NamedStore
+    folder = pipeline(tmp_path)
+    one, two = FolderStore(tmp_path / "one"), FolderStore(tmp_path / "two")
+    (tmp_path / "two").mkdir()
+    taken = snapshot.make(folder, one).snapshot
+    stores = Stores([NamedStore("two", str(two), two), NamedStore("one", str(one), one)])
+    assert stores.verify(taken.hashes()) == []
+    nowhere = "sha256:" + "0" * 64
+    (problem,) = stores.verify([nowhere])
+    assert problem.content_hash == nowhere and problem.message == "not in the store"
+
+
+def test_verify_of_named_objects_says_what_no_store_holds_past_an_unreachable_first_store(tmp_path):
+    from chartbook.multi_store import NamedStore
+
+    class Disconnected(FolderStore):
+        def has(self, content_hash):
+            raise StoreUnreachableError("Disconnected")
+
+        def verify(self, content_hashes=None):
+            raise StoreUnreachableError("Disconnected")
+
+    folder = pipeline(tmp_path)
+    one = FolderStore(tmp_path / "one")
+    taken = snapshot.make(folder, one).snapshot
+    stores = Stores([NamedStore("away", str(tmp_path / "away"), Disconnected(tmp_path / "away")), NamedStore("one", str(one), one)])
+    nowhere = "sha256:" + "0" * 64
+    with pytest.warns(UserWarning, match="unreachable"):
+        (problem,) = stores.verify(list(taken.hashes()) + [nowhere])
+    assert problem.content_hash == nowhere and problem.message == "not in the store"

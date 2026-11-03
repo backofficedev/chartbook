@@ -6,8 +6,10 @@ from fredapi import Fred
 from chartbook.env import get, get_project_root
 
 DATA_DIR = get_project_root() / "_data"
-START_DATE = get("START_DATE", default="1913-01-01")
-END_DATE = get("END_DATE", default="2025-12-31")
+# The data window is committed here, not read from .env: two people with
+# different .env files who build the same commit must get the same bytes.
+START_DATE = "1913-01-01"
+END_DATE = "2025-12-31"
 
 
 series_to_pull = {
@@ -176,9 +178,8 @@ if __name__ == "__main__":
             df.to_csv(filedir / "fred.csv")
             print("Applied post-processing to cached data")
     else:
-        today = pd.Timestamp.today().strftime("%Y-%m-%d")
-        end_date = today
-        df = pull_fred(START_DATE, end_date)
+        # END_DATE is the pipeline's cutoff: the pull stops there, not at today.
+        df = pull_fred(START_DATE, END_DATE)
         filedir.mkdir(parents=True, exist_ok=True)
         df.to_parquet(target_file)
         df.to_csv(filedir / "fred.csv")

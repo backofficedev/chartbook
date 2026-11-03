@@ -101,7 +101,13 @@ ruff format . && ruff check --select I --fix . && ruff check --fix .
 
  - I'm using the `.env` file as a container for absolute paths that are private
    to each collaborator in the project. You can also use it for private
-   credentials, if needed. It should not be tracked in Git.
+   credentials, if needed. It should not be tracked in Git. That is all it
+   holds: secrets and machine facts (API keys, `WRDS_USERNAME`, `DATA_DIR`).
+   Anything that changes what is computed lives in a committed file, so that
+   two people with different `.env` files who build the same commit get the
+   same bytes. The data window, `START_DATE` and `END_DATE`, is committed at
+   the top of each script that uses it; `END_DATE` is the pipeline's cutoff,
+   and moving it is a commit.
 
 ### Data and Output Storage
 

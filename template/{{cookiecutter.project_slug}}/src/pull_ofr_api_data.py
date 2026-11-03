@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from settings import config
+from settings import END_DATE, START_DATE, config
 
 
 def pull_series_from_ofr_api(mnemonic=None):
@@ -50,7 +50,8 @@ def pull_series_list(series_list=list(series_descriptions.keys())):
         df = pull_series_from_ofr_api(mnemonic=s)
         df_list.append(df)
     df = pd.concat(df_list, axis=1)
-    return df
+    # The API returns each series to today; keep the committed window.
+    return df.sort_index().loc[START_DATE:END_DATE]
 
 
 if __name__ == "__main__":

@@ -642,6 +642,53 @@ class TestPinning:
         assert report.problems == [] and default_store().has(HELLO)
         assert (downstream / LOCK_FILE).read_bytes() == before
 
+    def test_a_fresh_store_is_given_back_what_the_lockfile_pins_and_reads_it(self, downstream, upstream, work, monkeypatch):
+        """A classmate's clone of the pipeline, or a CI runner: the lockfile came with it, the store and the clones did not."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        del manifest["dataframes"]["ignored"]  # all it declares is committed, so a frozen build can start from the lockfile
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        _commit(upstream, "Only what is committed")
+        _write_manifest(downstream, {"project": {"id": "downstream"}, "scripts": {"build": "true"}, "dependencies": {"acme/upstream": {"git": "../upstream"}}})
+        lock.pin(downstream, git_cache=GitCache(work / "cache"))
+        before = (downstream / LOCK_FILE).read_bytes()
+        monkeypatch.setenv("CHARTBOOK_STORE", str(work / "fresh_store"))
+        fresh = GitCache(work / "fresh_cache")
+
+        report = lock.pin(downstream, git_cache=fresh)
+        assert _statuses(report) == {"committed": "restored"}
+        assert report.problems == [] and (downstream / LOCK_FILE).read_bytes() == before
+        # The pin's snapshot holds the record of what it put back, so the asset reads by name
+        (record,) = json.loads(default_store().pinned_snapshot_files()[0].read_text(encoding="utf-8"))["records"]
+        assert record["id"] == "upstream:committed" and record["content_hash"] == HELLO
+        assert data.path("upstream:committed", project_dir=downstream).read_bytes() == b"hello"
+        assert not lock.verify(downstream).problems
+        monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(work / "fresh_cache"))
+        monkeypatch.chdir(downstream)
+        for command in (["pin", "--frozen"], ["run", "--frozen"]):
+            result = CliRunner().invoke(main, command)
+            assert result.exit_code == 0, result.output
+        assert (downstream / LOCK_FILE).read_bytes() == before
+
+    def test_a_fresh_store_files_two_assets_with_the_same_bytes_each_under_its_own_name(self, downstream, upstream, work, monkeypatch):
+        """Put back from the clone, each record of the pin's snapshot says where its own file is, not its twin's."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        del manifest["dataframes"]["ignored"]
+        manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (upstream / "data" / "twin.parquet").write_bytes(b"hello")  # the same bytes as committed.parquet
+        _commit(upstream, "A twin")
+        _write_manifest(downstream, {"project": {"id": "downstream"}, "scripts": {"build": "true"}, "dependencies": {"acme/upstream": {"git": "../upstream"}}})
+        lock.pin(downstream, git_cache=GitCache(work / "cache"))
+        monkeypatch.setenv("CHARTBOOK_STORE", str(work / "fresh_store"))
+
+        report = lock.pin(downstream, git_cache=GitCache(work / "fresh_cache"))
+        assert report.problems == []
+        records = json.loads(default_store().pinned_snapshot_files()[0].read_text(encoding="utf-8"))["records"]
+        assert {record["id"]: [f["path"] for f in record["stored"]["files"]] for record in records} == {
+            "upstream:committed": ["data/committed.parquet"],
+            "upstream:twin": ["data/twin.parquet"],
+        }
+
     def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
         """The store lost the one file two assets share: put back, each reads it under its own name."""
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
