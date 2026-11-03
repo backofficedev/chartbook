@@ -15,7 +15,7 @@ from chartbook.env import get_project_root
 DATA_DIR = get_project_root() / "_data"
 # The data window is committed here, not read from .env: two people with
 # different .env files who build the same commit must get the same bytes.
-START_DATE = "1990-01-01"
+START_DATE = "1961-01-01"
 END_DATE = "2025-12-31"
 
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         print(f"Data file {target_file} is up to date, skipping pull")
     else:
         # The Fed publishes the whole history in one file; keep the committed window.
-        df = pull_fed_yield_curve().loc[START_DATE:END_DATE]
+        df = pull_fed_yield_curve().sort_index().loc[START_DATE:END_DATE]
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         df.to_parquet(target_file)
         print(f"Saved Fed yield curve data to {target_file}")

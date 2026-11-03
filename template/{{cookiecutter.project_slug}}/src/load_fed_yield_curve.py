@@ -39,6 +39,6 @@ def load_fed_yield_curve(data_dir=DATA_DIR):
 
 if __name__ == "__main__":
     # The Fed publishes the whole history in one file; keep the committed window.
-    df = pull_fed_yield_curve().loc[START_DATE:END_DATE]
+    df = pull_fed_yield_curve().sort_index().loc[START_DATE:END_DATE]
     path = Path(DATA_DIR) / "fed_yield_curve.parquet"
     df.to_parquet(path)

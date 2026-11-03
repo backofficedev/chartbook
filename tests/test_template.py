@@ -558,9 +558,10 @@ def test_the_data_window_is_committed(template_dir, temp_dir):
         if script_path.name == "settings.py":
             continue
         text = script_path.read_text(encoding="utf-8")
-        assert 'config("START_DATE")' not in text and 'config("END_DATE")' not in text, script_path.name
-        if re.search(r"^(START|END)_DATE\b", text, re.MULTILINE):
-            assert re.search(r"^from settings import .*\b(START|END)_DATE\b", text, re.MULTILINE), script_path.name
+        assert not re.search(r"""config\(\s*["'](START|END)_DATE["']""", text), script_path.name
+        code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+        for name in re.findall(r"\b((?:START|END)_DATE)\b", code):
+            assert re.search(rf"^from settings import .*\b{name}\b", code, re.MULTILINE), (script_path.name, name)
     assert "START_DATE" not in (project_dir / ".env.example").read_text(encoding="utf-8").split("\n\n", 1)[1]
 
 

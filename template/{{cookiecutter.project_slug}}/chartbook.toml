@@ -86,7 +86,8 @@ path = "./_data/ofr_public_repo_data.parquet"
 date_col = "Date"
 docs = """
 Each series `src/pull_ofr_api_data.py` lists, by its OFR mnemonic, one column each: tri-party, DVP and
-GCF repo rates and volumes, and the New York Fed's reference rates.
+GCF repo rates and volumes, and the New York Fed's reference rates, to `END_DATE`, the cutoff committed in
+`src/settings.py`.
 """
 {% endif %}
 {% if cookiecutter.include_bloomberg %}
