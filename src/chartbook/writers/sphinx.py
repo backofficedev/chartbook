@@ -1672,6 +1672,8 @@ class SphinxWriter:
             fact = None
         if fact:
             lines[2:2] = [self._environment(Path(".")).get_template("freshness.md").render(freshness=[fact]), ""]
+        if record.get("kind") == "Chart":
+            lines = self._chart_hub_front_matter(record) + lines + self._chart_hub_embed(record, prefix)
         if record.get("kind") == "Model":
             lines += ["## Trained On", ""]
             for entry in self._trained_on(record, from_path):
@@ -1711,6 +1713,54 @@ class SphinxWriter:
             if entry.get("changes"):
                 lines += ["", _as_text(entry["changes"]), ""]
         return "\n".join(lines) + "\n"
+
+    def _chart_hub_front_matter(self, record: dict) -> list:
+        """A chart hub's front matter, as a chart page has it: ABlog lists only a page with a date.
+
+        The date is the chart file's ``modified_at``, else its newest
+        snapshot's time; the category is its tags and the tags its
+        dataframe's sources, as on a chart page.
+        """
+        moment = _as_utc((record.get("location") or {}).get("modified_at"))
+        snapshots = record.get("snapshots") or []
+        if moment is None and snapshots:
+            moment = _as_utc(snapshots[0]["made_at"][:19] + "Z")
+        moment = min(moment or datetime.now(timezone.utc), datetime.now(timezone.utc))
+        lines = ["---", f'date: "{moment.astimezone().strftime("%Y-%m-%d %H:%M:%S")}"']
+        dataframe = self._input_dataframe(record)
+        sources = (dataframe or {}).get("sources")
+        if isinstance(sources, list) and sources:
+            lines.append(f'tags: "{yaml_escape(", ".join(_as_text(s) for s in sources))}"')
+        tags = record.get("tags")
+        if isinstance(tags, list) and tags:
+            lines.append(f'category: "{yaml_escape(", ".join(_as_text(t) for t in tags))}"')
+        return lines + ["---", ""]
+
+    def _chart_hub_embed(self, record: dict, prefix: str) -> list:
+        """The chart itself on its hub: the file in the newest version's site that has it, named as that version."""
+        from chartbook.versions import site_path
+
+        for entry in record.get("snapshots") or []:
+            if not entry.get("present"):
+                continue
+            pipeline_entry = next(
+                (p for p in self.records[record["pipeline"]].get("snapshots", []) if p.get("name") == entry["name"]), {}
+            )
+            if pipeline_entry.get("rendered") is False:
+                continue
+            site = prefix + site_path(record["pipeline"], entry["name"])
+            chart = f"{site}/_static/{_slug(record['pipeline'])}/{_local_name(record)}.html"
+            label = f"{entry['commit'][:7]} · {entry['made_at']}"
+            return [
+                "## Chart",
+                "",
+                f'<iframe src="{chart}" height="500px" width="100%"></iframe>',
+                "",
+                f'As of the version <a href="{site}/{self.page_path(record).removesuffix(".md")}.html">{label}</a>. '
+                f'<a href="{chart}">Full screen chart</a>.',
+                "",
+            ]
+        return []
 
     def page(self, record: dict) -> str:
         """The page of any record that has one: dataframe, chart, model, files or pipeline."""

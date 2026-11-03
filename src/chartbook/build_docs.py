@@ -633,6 +633,7 @@ def _render_versions(manifest: dict, built: dict, into: tuple = ()) -> Optional[
         store=manifest.get("stores"),
         into=into,
         echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
+        progress=lambda line: click.echo(line, err=True),
     )
 
 
