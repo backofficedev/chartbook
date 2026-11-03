@@ -45,7 +45,11 @@ def add(folder, pipeline, target):
         raise ValueError(f"{target} declares {actual!r}, not {pipeline!r}")
     path = folder / NAME
     raw = tomli.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-    raw[pipeline] = os.path.relpath(target, folder)
+    try:
+        # With / on every system, which Windows reads as well: ../rates, not ..\rates in the TOML
+        raw[pipeline] = Path(os.path.relpath(target, folder)).as_posix()
+    except ValueError:  # on another drive (Windows), where no relative path reaches it
+        raw[pipeline] = target.as_posix()
     path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
     return path
 

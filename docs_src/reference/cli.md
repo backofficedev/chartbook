@@ -13,7 +13,8 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
 | `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
-| `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
+| `chartbook ls [pipelines\|dataframes\|charts] [--json]` | List cataloged objects |
+| `chartbook get-docs` | Print a dataframe's page, any other cataloged asset's write-up, or a pipeline's README |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
@@ -288,7 +289,7 @@ Pipelines (each covers the folders inside it):
 
 `chartbook docs build`, `chartbook run`, `chartbook create-data-glimpses` and `chartbook publish` use the pipeline trust gate; `chartbook check` reports the trust level without requiring trust. `chartbook catalog build` renders stored snapshots without member trust.
 
-No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {doc}`../design/trust`.
+No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {design}`trust`.
 
 ## chartbook path
 
@@ -353,10 +354,16 @@ $ chartbook path fed_yield_curve:chart/curve_today
 /Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-12T091500Z_4f2a91c0e1b2/_output/curve_today.html
 ```
 
-The path is into the store, where the snapshot that first had the file keeps it, under its own
-name. An asset whose files are kept in more than one snapshot's folder (a folder of files, some of
-them new in a later snapshot) is gathered into this machine's cache instead, as links where the
-disk allows, and the path is the cache's.
+The path is into the store, in the folder of the snapshot that keeps the file, under its own
+name. An asset of several files, a folder or a glob, has no one path: the store keeps each file
+once, so a snapshot's files may sit in other snapshots' folders. Asking exits `1` and says
+so, whatever the folders happen to hold today; `--files` prints the files, each where the store
+keeps it, and `data.load` reads them. Nothing is gathered into this machine's cache.
+
+```console
+$ chartbook path news_headlines:articles
+Error: 'news_headlines:articles' is a dataset of 14 files, kept in 3 places in the store, so there is no one folder. Read it with data.load('news_headlines:articles'), or hand data.files('news_headlines:articles') to your own reader. `chartbook path news_headlines:articles --files` prints them, one per line.
+```
 
 This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, not to that pipeline's working directory (before a pin, by the rules in {doc}`../guide/depending-on-pipelines`). So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
 
@@ -370,7 +377,7 @@ Three things have to be true, and each has its own message when it is not:
 
 The scope may be left off when only one dependency has that name. The path is for reading; never write to it.
 
-Two more parts of the {doc}`reference grammar <../design/references>` do not give a path. `dataframe#series` is the address of one column, for documentation: use the dataframe's path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
+Two more parts of the {design}`reference grammar <references>` do not give a path. `dataframe#series` is the address of one column, for documentation: use the dataframe's path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
 
 ## chartbook publish
 
@@ -386,6 +393,7 @@ It copies the files the manifest names, so in a folder you have not trusted it r
 `publish` copies files into a directory and does nothing else — no network, no registry. Sending a pipeline to a registry is a different act and will get a different verb, **`chartbook push`**. That name is reserved: the command exists only to say it is not yet supported, and `publish` will not grow a second meaning.
 ```
 
+(chartbook-catalog)=
 ## chartbook catalog
 
 Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` (`chartbook config` can point these commands at a different catalog). Concepts and the auto-discovery alternative: {doc}`../guide/catalogs-and-data`.
@@ -420,14 +428,25 @@ chartbook catalog enable ftsfr/sovereign_bonds [OPTIONS] [--catalog PATH]
 Render the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs build`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
-chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]]
+chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]] [--gc] [--no-gc-reminder]
 ```
 
 A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-docs).
 
 `--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 
-The catalog reads snapshots from its stores. It runs no member code and needs no member trust.
+The catalog reads snapshots from its stores. It runs no member code and needs no member trust. It lays out no data: a version's site is built from its snapshot's documents, charts, notebooks, notes and index, which recorded each dataframe's columns, rows, dates and first rows when the snapshot was made ({design}`plan-data-reads`).
+
+After the build, one line on stderr says what `chartbook store gc` would clear, if anything: snapshots older than seven days that are neither pinned nor the newest of their pipeline, and how much their removal would free. Nothing is removed unless you ask: `--gc` runs gc then, as `chartbook store gc --yes` would, and `--no-gc-reminder` silences the line. With `--gc`, something gc could not remove (another user's, in a store users share) exits `1` after the site was built, as `store gc` itself does.
+
+```console
+$ chartbook catalog build
+...
+Catalog site generated: /Users/x/.chartbook/docs/index.html
+`chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
+```
+
+`chartbook run --snapshot` says the same after its snapshot, and takes `--no-gc-reminder` too. With several stores in the catalog, each that gc could clear is named, with the `--store NAME` that gc takes there.
 
 ### catalog open
 
@@ -459,13 +478,24 @@ Catalog: /data/my-catalog/chartbook.toml
 
 Each asset is written as its reference, `pipeline:name`. A pipeline the catalog shows from the store alone is listed as store only, with the dataframes and charts its newest snapshot lists.
 
+`--json` prints the listing as JSON, for a script or an agent: a list with one record per pipeline and per asset, of every kind (models, files assets, notes and notebooks too, which the tree leaves out), none cut off. Each record has `kind` (`pipeline`, `dataframe`, `chart`, `model`, `file`, `note`, `notebook`), `id`, `name` and `description`, and an asset's has its `pipeline`. The `id` is what {ref}`chartbook get-docs <chartbook-get-docs>` and `data.load` take. Each listing takes `--json` as well, and `chartbook ls --json charts` is `chartbook ls charts --json`.
+
+```console
+$ chartbook ls --json
+[
+  {"kind": "pipeline", "id": "acme/yield_curve", "name": "Yield Curve Analysis", "description": "..."},
+  {"kind": "dataframe", "id": "acme/yield_curve:repo_public", "pipeline": "acme/yield_curve", "name": "Repo Public Data", "description": "..."},
+  ...
+]
+```
+
 ### ls stores
 
 ```console
 chartbook ls stores
 ```
 
-List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog.
+List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog. With `--json`, each is `name`, `url`, `read_only` and `reachable`.
 
 ### ls versions
 
@@ -473,7 +503,23 @@ List catalog stores in order, including read-only and unreachable stores. The gr
 chartbook ls versions
 ```
 
-List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once.
+List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once. With `--json`, each is `pipeline`, `commit`, `made_at` and `store`.
+
+(chartbook-get-docs)=
+## chartbook get-docs
+
+Print what a person reads on a cataloged asset's page, in Markdown, for a script or an agent. Name the asset by its ID, as `chartbook ls` prints it, or with keywords:
+
+```console
+chartbook get-docs yield_curve                                  # the pipeline's README
+chartbook get-docs yield_curve:repo_public                      # a dataframe's page
+chartbook get-docs yield_curve:chart/repo_rates                 # a chart's write-up
+chartbook get-docs --pipeline yield_curve --chart repo_rates    # the same, with keywords
+chartbook get-docs --pipeline rate_forecast --model forecaster  # a model's
+chartbook get-docs yield_curve:repo_public --path               # where the write-up's file is
+```
+
+The keywords are `--pipeline` and one of `--dataframe`, `--chart`, `--model`, `--file` (a files asset) or `--note`; with no asset, the pipeline's README. A bare name is a pipeline, since this reads the catalog. In an ID the last colon divides the pipeline from the asset, so a pipeline may be named by its scoped ID or its repository URL: `chartbook get-docs https://github.com/acme/yield_curve:chart/repo_rates`; a URL alone is the README. A dataframe's page is what its snapshot's index recorded of it: its name, description and ID; its sources, providers and license; how it is pulled; its rows and the span of its dates; the snapshot it is from; then its write-up and a table of its columns and their types. Pipe it through `head` for the top alone. For any other asset it is the write-up: the asset's `docs_path` or inline `docs`, and a note's own text; a notebook has no write-up apart from itself, and is refused, saying so. `--path` prints where the file is instead of its text: the `docs_path`, the `chartbook.toml` that holds inline `docs`, or the note. Each is read from the pipeline's newest snapshot in the catalog's stores. `--catalog PATH` overrides the configured catalog. In Python, `assets.get_docs_page(pipeline, "repo_public")` is the page, `assets.get_docs(pipeline, "chart/repo_rates")` the write-up alone, and `assets.get_docs_path(...)` where it is.
 
 ## chartbook data
 
@@ -481,11 +527,11 @@ Look up a cataloged dataframe from the shell. `--pipeline` accepts a bare name (
 
 ```console
 chartbook data get-path      --pipeline yield_curve --dataframe repo_public   # parquet path
-chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # write-up content
+chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # its page
 chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public   # write-up source file
 ```
 
-All three take `--catalog PATH` to override the configured catalog. The Python equivalents live in `chartbook.data` — see {doc}`../guide/catalogs-and-data`.
+All three take `--catalog PATH` to override the configured catalog. {ref}`chartbook get-docs <chartbook-get-docs>` reads any asset's write-up, and a pipeline's README. The Python equivalents live in `chartbook.data` — see {doc}`../guide/catalogs-and-data`.
 
 ## chartbook create-data-glimpses
 
@@ -505,7 +551,7 @@ The report reads the files the manifest names, so in a folder you have not trust
 ## chartbook snapshot
 
 ```console
-chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep]
+chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep] [--store NAME] [--no-gc-reminder]
 ```
 
 Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a **snapshot**.
@@ -529,6 +575,8 @@ Error: acme/forecast cannot have a snapshot: its pins do not account for every d
 ```
 
 Or both in one command, which is the better habit: `chartbook run --snapshot`. See {ref}`below <run-then-snapshot>`.
+
+After a snapshot, one line on stderr says what `chartbook store gc` would clear, if anything, as {ref}`catalog build <chartbook-catalog>` says it; `--no-gc-reminder` silences it. Nothing is removed unless you ask. The first snapshot of a pipeline leaves a `README.txt` in the pipeline's folder of the store, for whoever finds the folder: a later snapshot's folder holds only what changed, so folders are removed with `chartbook store gc` and never by hand ({ref}`store ls <chartbook-store>`).
 
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
 
@@ -642,6 +690,8 @@ chartbook add PIPELINE [--as NAME] [--commit COMMIT] [OPTIONS] [--project-dir PA
 
 Declare that this pipeline reads another, by the other's ID, and pin it. It writes the entry under `[dependencies]` in `chartbook.toml`, leaving the rest of the file as it is (its comments and order), then runs `chartbook pin`. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.
 
+A bare name is the one pipeline in the stores whose ID ends in it, as `chartbook get-docs` and `data.load(pipeline=...)` read one, and that full ID is written: with the store holding `tutorial/treasury_curve`, `chartbook add treasury_curve` writes `"tutorial/treasury_curve" = {}`. A bare ID the stores hold is written as it is. When several pipelines end in the name, the command lists them and writes nothing; when none does, it says which IDs the stores hold, or that they hold none, and writes nothing. Either way `chartbook.toml` and `chartbook.lock` are as they were.
+
 ```console
 $ chartbook add acme/rates --as rates
 Added to [dependencies] in /work/forecast/chartbook.toml: "rates" = { id = "acme/rates" }
@@ -655,7 +705,7 @@ Wrote chartbook.lock.
 | `--commit COMMIT` | Take the newest snapshot at this commit (its start, 7 or more hex digits) rather than the newest of all |
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 
-A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
+A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. An entry under a bare name that no store has a snapshot of, as `chartbook add` before 0.5.0 wrote and left when it could not pin it, can never be pinned, and code that names the bare name reads it rather than the full ID: `chartbook add` says so, of the name you give or of the full ID's last part, and that the way out is to delete its line in `chartbook.toml`. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
 
 ## chartbook pin
 
@@ -852,7 +902,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [OPTIONS] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [OPTIONS] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -943,7 +993,7 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 `run` stays at the commit in `chartbook.lock`. A `git` dependency that commits its data and has no `build` script is not built and not mentioned.
 
-**Build, and declare it ready.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command.
+**Build, and declare it ready.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command, and says what `chartbook store gc` would clear as `chartbook snapshot` does (`--no-gc-reminder` silences it).
 
 **Another script.** `chartbook run test` runs `test` in this pipeline, and that is all it does. Only `build` pins, and only `build` reaches what the pipeline depends on.
 
@@ -994,7 +1044,7 @@ Changed 3:
   Pipeline ftsfr/fed_yield_curve: assets changed
 ```
 
-A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files; a chart or a notebook says *rendered differently*, since each is a rendering of its dataframes), *pins moved* (a dependency's pinned hash, on a pipeline; or a model's pinned inputs), *dependencies changed* (a dependency added, removed or relocated without a pin moving), *N new version(s)* and *N version(s) gone*, *labels moved*, *out of date* or *up to date again*, *scores changed*, *trained on other data*, *assets changed*, *inputs changed*, *moved*, *write-up changed*, *data reaches further* or *less far* (a dated dataframe's last date), *source changed* (a pipeline's code, write-ups or manifest were committed), and *declared differently* with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different `root` or `schema` between the two files is said first: they may not be the same site, or not written the same way. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({doc}`../design/index-schema`, "What this unblocks").
+A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files; a chart or a notebook says *rendered differently*, since each is a rendering of its dataframes), *pins moved* (a dependency's pinned hash, on a pipeline; or a model's pinned inputs), *dependencies changed* (a dependency added, removed or relocated without a pin moving), *N new version(s)* and *N version(s) gone*, *labels moved*, *out of date* or *up to date again*, *scores changed*, *trained on other data*, *assets changed*, *inputs changed*, *moved*, *write-up changed*, *data reaches further* or *less far* (a dated dataframe's last date), *source changed* (a pipeline's code, write-ups or manifest were committed), and *declared differently* with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different `root` or `schema` between the two files is said first: they may not be the same site, or not written the same way. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({design}`index-schema`, "What this unblocks").
 
 **Across a commit, a pipeline always says *source changed*:** its `code_changed_at` moves with every commit that touches `src`, `docs_src` or the manifest, so `--exit-code` is `1` for any two builds on either side of one. That is a fact; read it as such.
 
@@ -1035,6 +1085,27 @@ Cache: /Users/x/.chartbook/cache
 What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming `pip install chartbook[s3]`, and exits `1`, rather than at the first pin or read; so is a scheme nothing installed provides.
 
 `--store NAME` shows just that catalog store. Without it, every store is shown, including read-only and unreachable stores.
+
+### store ls
+
+```console
+chartbook store ls [PIPELINE] [--store NAME]
+```
+
+List the snapshots in the store, one line each, newest last within its pipeline: the folder's name (when it was made and the commit), whether it is **standalone** or **shared**, and how much its own folder holds.
+
+```console
+$ chartbook store ls acme/news_headlines
+acme/news_headlines (3 snapshot(s))
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in other folders
+A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.
+```
+
+Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset and says which folder keeps each. The store keeps each file once, usually in the first snapshot that had it, so a snapshot's folder may hold only what is new or changed (shared) rather than every file of its version (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot's folder is not to be deleted by hand, since another snapshot may keep files in it: `chartbook store gc` removes snapshots and keeps every file a remaining one uses. A `README.txt` in each pipeline's folder of the store says the same, for whoever finds the folder. For one complete copy of a version, `chartbook store export PIPELINE --latest --to FOLDER`.
+
+`PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
 ### store verify
 
@@ -1152,7 +1223,7 @@ file it needs in its own folder and readable without ChartBook; with `--snapshot
 by its commit (or its start) and, where one commit has several, `@` and when it was made. Only what
 a snapshot's record names goes: its data, its documents and its index, never anything that runs.
 
-`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+With several stores in the catalog, the one that holds the pipeline is used, and `--store NAME` chooses when more than one does.
 
 ### store import
 
@@ -1175,7 +1246,7 @@ acme/rates at 9b1e22d, made 2026-10-02T10:00:00.000000Z
 Imported 2 snapshot(s), 2.1 GB copied.
 ```
 
-`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+`--store NAME` selects one catalog store; with several stores in the catalog it is required.
 
 ### store migrate
 
@@ -1185,7 +1256,7 @@ chartbook store migrate [--dry-run] [OPTIONS] [--yes]
 
 Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
 each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
-commit, and each file once, under its own name ({doc}`../design/plan-0.3.0`). A store of 0.2 is
+commit, and each file once, under its own name ({design}`plan-0.3.0`). A store of 0.2 is
 refused until it is moved, with a message that says to run this.
 
 - **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
@@ -1210,7 +1281,7 @@ Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s)
 Nothing was moved (--dry-run).
 ```
 
-`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+`--store NAME` selects one catalog store; with several stores in the catalog it is required.
 
 ### store add
 
@@ -1234,7 +1305,7 @@ Remove a store definition, leaving its files untouched. `--catalog PATH` selects
 chartbook store move PIPELINE --to NAME [OPTIONS]
 ```
 
-Copy every snapshot to `--to NAME`, checking hashes and copying retention and origin notes before removing source snapshots. `--dry-run` reports the count and bytes. `--keep` keeps the source copies; `--no-route` leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.
+Copy every snapshot to `--to NAME`, checking hashes and copying retention and origin notes before removing source snapshots. Once the copies are verified, the moved pipeline's files are removed from each source, as `store gc` would, and no other pipeline's folder is looked in; a source that refuses a removal is reported after routing, saying the snapshots moved and which files stayed. Two names for one store (a folder in another letter case, or reached through a link) are refused before anything is touched. `--dry-run` reports the count and bytes. `--keep` keeps the source copies; `--no-route` leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.
 
 ## chartbook config
 
@@ -1258,10 +1329,10 @@ chartbook install claude-skill -f           # overwrite files changed by hand wi
 
 ```yaml
 metadata:
-  chartbook-version: "0.4.0"
+  chartbook-version: "0.5.0"
 ```
 
-A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.3.0 to 0.4.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
+A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.4.0 to 0.5.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
 
 **Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
 

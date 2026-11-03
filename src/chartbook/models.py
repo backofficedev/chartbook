@@ -25,8 +25,9 @@ gives it a name people use::
     champion = "7f3a9c2e41b0"
 
     models.path("rate_forecaster")             # what is in the folder now
-    models.path("rate_forecaster@7f3a9c2e41b0")     # that version, in the store
+    models.path("rate_forecaster@7f3a9c2e41b0")     # that version, in the store (a model that is one file)
     models.path("rate_forecaster@champion")    # the version the label points at
+    assets.files("model/rate_forecaster@champion")  # a model that is a folder: its files, where the store keeps them
     models.versions("rate_forecaster")         # all of them, oldest first
 
 The design, including what is deliberately not done, is
@@ -66,7 +67,11 @@ def path(
     ``models.path("rate_forecaster@7f3a9c2e41b0")``, by the start of its content
     hash, or ``models.path("rate_forecaster@champion")``, by a label of
     ``[models.rate_forecaster.aliases]``. That path is in the store, is
-    read-only, and does not change.
+    read-only, and does not change. A model that is a folder has files
+    there and no one path, since the store keeps each file once:
+    :func:`chartbook.assets.files` lists them, and
+    :func:`chartbook.assets.gathered` lays them out in a temporary folder
+    for a loader that takes a directory.
 
     :param ref: The model's name: its key in ``[models]``.
     :type ref: str

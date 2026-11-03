@@ -664,6 +664,8 @@ class TestRunThenSnapshot:
             "Stores: default",
             "Ran build in 1 pipeline(s).",
         ]
+        result = CliRunner().invoke(main, ["run", "--snapshot", "--no-gc-reminder"])
+        assert result.exit_code == 0, result.output
 
     def test_the_command_refuses_before_building(self, reader, work, monkeypatch):
         (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")

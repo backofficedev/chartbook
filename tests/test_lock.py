@@ -318,9 +318,9 @@ class TestPin:
         assert locked.root == "downstream"
         assert locked.assets["acme/rates:treasury"]["content_hash"] == HELLO
         # ...and the bytes are in the store, under the file's own name
-        assert (store.get(HELLO) / "treasury.parquet").read_bytes() == b"hello"
+        assert store.files(HELLO).one.location.read_bytes() == b"hello"
         partitioned = locked.assets["acme/rates:by_year"]["content_hash"]
-        assert (store.get(partitioned) / "year=2024" / "part-0.parquet").is_file()
+        assert store.files(partitioned).by_relative()["year=2024/part-0.parquet"].is_file()
         # The store has what the snapshot holds: the assets the lockfile
         # names, and the version's index and documents
         (taken,) = snapshot.all_snapshots(store)
@@ -423,7 +423,7 @@ class TestPin:
         assert report.count("stale") == 1 and report.problems == []
         assert report.written is False
         assert (downstream / LOCK_FILE).read_bytes() == before
-        assert (store.get(HELLO) / "treasury.parquet").read_bytes() == b"hello"
+        assert store.files(HELLO).one.location.read_bytes() == b"hello"
 
     def test_what_was_not_built_is_pinned_by_update_once_a_snapshot_has_it(self, downstream, rates, store):
         """A dependency is pinned to one snapshot, whole: `pin` moves none of it."""
@@ -442,7 +442,7 @@ class TestPin:
         model = lock.read_lock(downstream).assets["acme/rates:model/ar1"]
         assert model["content_hash"] == hashing.hash_directory(rates / "_models" / "ar1").content_hash
         assert model["size_bytes"] == 102
-        assert (store.get(model["content_hash"]) / "weights" / "best.pt").is_file()
+        assert store.files(model["content_hash"]).by_relative()["weights/best.pt"].is_file()
 
     def test_an_asset_that_is_not_built_is_recorded_without_a_hash(
         self, downstream, rates, store
@@ -587,7 +587,7 @@ class TestPin:
         monkeypatch.setattr(store_module, "_reflink", refuse)  # a disk with no clones
         pin_from_snapshots(downstream, store)
         upstream = rates / "_data" / "treasury.parquet"
-        held = store.get(HELLO) / "treasury.parquet"
+        held = store.files(HELLO).one.location
         assert not held.is_symlink() and not held.samefile(upstream)
         assert os.stat(held).st_nlink == 1
 
@@ -604,10 +604,10 @@ class TestPin:
         """Something else may have stored the same bytes more cheaply."""
         upstream = rates / "_data" / "treasury.parquet"
         store.put(upstream, links=("hardlink",))
-        assert (store.get(HELLO) / "treasury.parquet").samefile(upstream)
+        assert store.files(HELLO).one.location.samefile(upstream)
 
         pin_from_snapshots(downstream, store)
-        held = store.get(HELLO) / "treasury.parquet"
+        held = store.files(HELLO).one.location
         assert not held.samefile(upstream)
         assert held.read_bytes() == b"hello" and store.verify() == []
 

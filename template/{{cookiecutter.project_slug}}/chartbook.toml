@@ -36,6 +36,112 @@ path = "_output/03_public_repo_summary_charts.ipynb"
 {% endif %}
 
 [dataframes]
+{% if cookiecutter.include_fred %}
+
+[dataframes.fred]
+name = "FRED Series"
+description = "Policy rates, the Fed's balance sheet and macro aggregates, daily, from FRED."
+sources = ["FRED"]
+providers = ["Federal Reserve Bank of St. Louis"]
+provider_links = ["https://fred.stlouisfed.org/"]
+tags = ["Macro", "Policy Rates"]
+pull_method = "Web API via Python (pandas-datareader)"
+path = "./_data/fred.parquet"
+date_col = "DATE"
+docs = """
+Every series `src/pull_fred.py` lists, by its FRED code, one column each, from `START_DATE` to the day it
+was pulled. Millions are converted to billions where the script says so, and a few slow series are
+forward-filled to daily.
+"""
+{% endif %}
+{% if cookiecutter.include_fed_yield_curve %}
+
+[dataframes.fed_yield_curve]
+name = "Fed Zero-Coupon Yield Curve"
+description = "Zero-coupon Treasury yields at maturities of 1 to 30 years, daily."
+sources = ["Federal Reserve Board"]
+providers = ["Federal Reserve Board"]
+provider_links = ["https://www.federalreserve.gov/data/nominal-yield-curve.htm"]
+tags = ["Treasuries", "Yield Curve"]
+pull_method = "Web download via Python"
+path = "./_data/fed_yield_curve.parquet"
+date_col = "Date"
+docs = """
+The Federal Reserve Board's fitted nominal yield curve (Gurkaynak, Sack and Wright, 2007). Column
+`SVENYnn` is the continuously compounded zero-coupon yield at `nn` years, in percent.
+"""
+{% endif %}
+{% if cookiecutter.include_ofr_api %}
+
+[dataframes.ofr_repo]
+name = "OFR Repo Rates and Volumes"
+description = "Repo rates and volumes from the OFR's Short-term Funding Monitor, daily."
+sources = ["Office of Financial Research"]
+providers = ["Office of Financial Research"]
+provider_links = ["https://www.financialresearch.gov/short-term-funding-monitor/api/"]
+tags = ["Short Term Funding", "Repo"]
+pull_method = "Web API via Python"
+path = "./_data/ofr_public_repo_data.parquet"
+date_col = "Date"
+docs = """
+Each series `src/pull_ofr_api_data.py` lists, by its OFR mnemonic, one column each: tri-party, DVP and
+GCF repo rates and volumes, and the New York Fed's reference rates.
+"""
+{% endif %}
+{% if cookiecutter.include_bloomberg %}
+
+[dataframes.bloomberg]
+name = "S&P 500 From Bloomberg"
+description = "The S&P 500's level, its 12-month dividend yield, and its front futures, daily."
+sources = ["Bloomberg"]
+providers = ["Bloomberg"]
+provider_links = ["https://www.bloomberg.com/professional/solution/bloomberg-terminal/"]
+tags = ["Equities"]
+access_types = ["Bloomberg Terminal"]
+pull_method = "Bloomberg API via Python (xbbg)"
+path = "./_data/bloomberg.parquet"
+date_col = "Date"
+docs = """
+Pulled by `src/pull_bloomberg.py` on a machine with a Bloomberg Terminal open. Bloomberg's terms
+apply to sharing it.
+"""
+{% endif %}
+{% if cookiecutter.include_crsp_stock %}
+
+[dataframes.crsp_index]
+name = "CRSP Monthly Index Returns"
+description = "Monthly returns of the CRSP indexes, value- and equal-weighted, with and without dividends."
+sources = ["CRSP"]
+providers = ["Wharton Research Data Services"]
+provider_links = ["https://wrds-www.wharton.upenn.edu/"]
+tags = ["Equities", "Returns"]
+access_types = ["WRDS subscription"]
+pull_method = "WRDS SQL via Python"
+path = "./_data/CRSP_MSIX.parquet"
+date_col = "caldt"
+docs = """
+`crsp_a_indexes.msix`, pulled by `src/pull_CRSP_stock.py` with the monthly stock file beside it.
+`vwretd` is the value-weighted return with dividends. WRDS's terms apply to sharing it.
+"""
+{% endif %}
+{% if cookiecutter.include_crsp_compustat %}
+
+[dataframes.fama_french_factors]
+name = "Fama-French Factors"
+description = "The monthly Fama-French factors: the market, size and value, and the risk-free rate."
+sources = ["Kenneth French's data library"]
+providers = ["Wharton Research Data Services"]
+provider_links = ["https://wrds-www.wharton.upenn.edu/"]
+tags = ["Equities", "Factors"]
+access_types = ["WRDS subscription"]
+pull_method = "WRDS via Python"
+path = "./_data/FF_FACTORS.parquet"
+date_col = "date"
+docs = """
+`ff.factors_monthly`, pulled by `src/pull_CRSP_Compustat.py` with Compustat, CRSP and the link table
+beside it. Returns are decimals: 0.01 is one percent. WRDS's terms apply to sharing it.
+"""
+{% endif %}
 {% if cookiecutter.include_fred and cookiecutter.include_ofr_api %}
 
 [dataframes.repo_public]
@@ -57,6 +163,96 @@ docs_path = "./docs_src/dataframes/repo_public.md"
 {% endif %}
 
 [charts]
+{% if cookiecutter.include_fred %}
+
+[charts.policy_rates]
+name = "The Fed's Policy Rates"
+description = "The fed funds target range, the effective fed funds rate and SOFR"
+dataframe = "fred"
+tags = ["Policy Rates"]
+frequency = "Daily"
+units = "Percent"
+observation_period = "Weekday"
+release_lag = "One business day"
+release_timing = "Weekday mornings"
+path = "./_output/policy_rates.html"
+docs = "Made by `src/chart_fred.py`. The effective rate trades inside the target range; SOFR starts in 2018."
+{% endif %}
+{% if cookiecutter.include_fed_yield_curve %}
+
+[charts.treasury_yields]
+name = "Zero-Coupon Treasury Yields"
+description = "2-, 10- and 30-year zero-coupon yields from the Fed's fitted curve"
+dataframe = "fed_yield_curve"
+tags = ["Treasuries", "Yield Curve"]
+frequency = "Daily"
+units = "Percent"
+observation_period = "Weekday"
+release_lag = "Days to weeks"
+release_timing = "When the Board updates the file"
+path = "./_output/treasury_yields.html"
+docs = "Made by `src/chart_fed_yield_curve.py`. When the 2-year is above the 10-year, the curve is inverted."
+{% endif %}
+{% if cookiecutter.include_ofr_api %}
+
+[charts.repo_reference_rates]
+name = "Repo Reference Rates"
+description = "The Broad and Tri-Party General Collateral Rates, and the tri-party overnight average"
+dataframe = "ofr_repo"
+tags = ["Short Term Funding", "Repo"]
+frequency = "Daily"
+units = "Percent"
+observation_period = "Weekday"
+release_lag = "One business day"
+release_timing = "Weekday"
+path = "./_output/repo_reference_rates.html"
+docs = "Made by `src/chart_ofr.py`."
+{% endif %}
+{% if cookiecutter.include_bloomberg %}
+
+[charts.sp500]
+name = "The S&P 500 Index"
+description = "The S&P 500's level"
+dataframe = "bloomberg"
+tags = ["Equities"]
+frequency = "Daily"
+units = "Index level"
+observation_period = "Weekday"
+release_lag = "None: pulled from the Terminal"
+release_timing = "On demand"
+path = "./_output/sp500.html"
+docs = "Made by `src/chart_bloomberg.py`."
+{% endif %}
+{% if cookiecutter.include_crsp_stock %}
+
+[charts.crsp_value_weighted]
+name = "Growth of $1 in the CRSP Value-Weighted Index"
+description = "A dollar invested in the CRSP value-weighted index, dividends reinvested"
+dataframe = "crsp_index"
+tags = ["Equities", "Returns"]
+frequency = "Monthly"
+units = "Dollars"
+observation_period = "Month"
+release_lag = "Months"
+release_timing = "On WRDS's update schedule"
+path = "./_output/crsp_value_weighted.html"
+docs = "Made by `src/chart_crsp_stock.py`, compounding `vwretd` from the first month pulled."
+{% endif %}
+{% if cookiecutter.include_crsp_compustat %}
+
+[charts.fama_french_factors]
+name = "Growth of $1 in the Fama-French Factors"
+description = "A dollar in each of the market, size and value factors, compounded monthly"
+dataframe = "fama_french_factors"
+tags = ["Equities", "Factors"]
+frequency = "Monthly"
+units = "Dollars"
+observation_period = "Month"
+release_lag = "Months"
+release_timing = "On WRDS's update schedule"
+path = "./_output/fama_french_factors.html"
+docs = "Made by `src/chart_crsp_compustat.py`. The factors are long-short returns, so a dollar in each is a dollar of exposure."
+{% endif %}
 {% if cookiecutter.include_fred and cookiecutter.include_ofr_api %}
 
 [charts.repo_rates]

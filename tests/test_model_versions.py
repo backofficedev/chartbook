@@ -303,8 +303,17 @@ class TestNamingAVersion:
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A model kept in git")
         ((_, name),) = snapshot.make(directory).new_versions
-        held = models.path(f"enc@{name}", project_dir=directory)
-        assert held.is_dir() and (held / "weights.bin").read_bytes() == b"w"
+        # A folder read from the store is its files, each where the store keeps it: no one path
+        from chartbook import assets
+        from chartbook.errors import NoSinglePathError
+
+        with pytest.raises(NoSinglePathError, match="is a model of 1 file, kept in one place in the store today"):
+            models.path(f"enc@{name}", project_dir=directory)
+        (held,) = assets.files(f"model/enc@{name}", project_dir=directory)
+        assert held.name == "weights.bin" and held.read_bytes() == b"w"
+        with assets.gathered(f"model/enc@{name}", project_dir=directory) as folder:
+            assert folder.is_dir() and (folder / "weights.bin").read_bytes() == b"w"
+        assert not folder.exists()
 
     def test_only_models_have_versions_so_far(self, forecast):
         from chartbook import data

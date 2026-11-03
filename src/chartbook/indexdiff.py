@@ -34,8 +34,11 @@ from typing import Union
 
 from chartbook.index import INDEX_FILE, published
 
-#: Fields whose change means the asset's data moved.
-DATA_FIELDS = ("content_hash", "definition_hash", "size_bytes", "row_count", "columns", "files", "file_count", "extensions")
+#: Fields whose change means the asset's data moved; the glimpse, dates and preview a page shows count for a record with no content hash (:func:`_timeless`).
+DATA_FIELDS = (
+    "content_hash", "definition_hash", "size_bytes", "row_count", "columns", "files", "file_count", "extensions",
+    "glimpse", "last_dates", "preview",
+)
 
 #: Kinds whose file is a rendering, which a renderer may write differently each time.
 RENDERED_KINDS = ("Chart", "Notebook")
@@ -234,11 +237,24 @@ def diff(before: dict, after: dict) -> IndexDiff:
     return result
 
 
+#: What a page shows of a file's data, worked out from its bytes: a file's content hash says whether they moved.
+SHOWN_FIELDS = ("glimpse", "last_dates", "preview")
+
+
 def _timeless(record: dict) -> dict:
-    """A record without when its file was written: the diff reads what a file holds, not when."""
+    """A record without when its file was written: the diff reads what a file holds, not when.
+
+    Nor, for a file, what its page shows of it (:data:`SHOWN_FIELDS`):
+    its content hash says whether its bytes moved, and a snapshot made
+    since 0.5 records a glimpse that one made before did not, of the same
+    bytes, as a newer polars may print the same rows otherwise. A table in
+    a source has no content hash, and keeps them.
+    """
     location = record.get("location")
     if isinstance(location, dict) and "modified_at" in location:
         record = {**record, "location": {k: v for k, v in location.items() if k != "modified_at"}}
+    if record.get("content_hash"):
+        record = {k: v for k, v in record.items() if k not in SHOWN_FIELDS}
     return record
 
 

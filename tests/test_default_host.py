@@ -200,7 +200,7 @@ class TestWhatTheReviewFound:
         store = default_store()
         import shutil
 
-        remove_tree(store.get(record["content_hash"]))
+        remove_tree(store.files(record["content_hash"]).home)
         assert not store.has(record["content_hash"])
         snapshot.make(repository)  # the store has a snapshot of it now; the pin stays from the repository
         lock.pin(forecast)

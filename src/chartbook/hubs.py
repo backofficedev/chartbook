@@ -42,8 +42,8 @@ def enrich(records, stores, notes=None):
                    "description": plain_line(latest.get("description"), 2000), "snapshots": []}
             for i, (taken, listed) in enumerate(indexes):
                 entry = {"commit": taken.commit, "made_at": taken.made_at, "present": False}
-                from chartbook.versions import version_name
-                entry["name"] = version_name(taken.commit, taken.made_at)
+                from chartbook.versions import name_of
+                entry["name"] = name_of(taken, found)
                 entry["store"] = stores.name_of(taken.path)
                 own = next((r for r in listed if isinstance(r, dict) and r.get("id") == asset_id), None)
                 entry["present"] = own is not None
@@ -63,8 +63,10 @@ def enrich(records, stores, notes=None):
                 if any(isinstance(r, dict) and r.get("kind") == "Chart" and isinstance(r.get("inputs"), list) and asset_id in r["inputs"] for r in current_records):
                     present.add("linked_charts")
                 hub["metadata_present"] = sorted(present)
-            modified = (latest.get("location") or {}).get("modified_at")
-            if isinstance(modified, str):
+            from chartbook.index import stored_modified_at
+
+            modified = stored_modified_at(latest)
+            if modified:
                 hub["location"]["modified_at"] = modified
             for key in ("license", "source", "tags", "columns", "row_count", "content_hash", "size_bytes",
                         "inputs", "pinned_inputs", "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "date_range",

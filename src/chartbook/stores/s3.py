@@ -16,11 +16,12 @@ cache folder for the bucket. The records are downloaded into it at their
 own names, each with the ETag the bucket gave it. Each file a reader asks
 for is downloaded once, into the cache's ``files/``, named by its hash and
 checked against it as it arrives: a file there is one whose bytes were
-checked, whichever record names it now. :meth:`S3Store.get` hands over a
-view in the cache that lays an asset's files out under their own names
-(:func:`chartbook.store.gather`). Offline, what was downloaded and checked
-before is served from the cache. Nothing else in ChartBook changes for a
-store that is remote; ``data.path()`` gives the path in the cache.
+checked, whichever record names it now. :meth:`S3Store.files` hands a
+reader those checked files, each by its path inside the asset
+(:class:`chartbook.store.KeptFiles`). Offline, what was downloaded and
+checked before is served from the cache. Nothing else in ChartBook changes
+for a store that is remote; ``data.path()`` of one file gives the checked
+file in the cache, named by its hash.
 
 A question of the store is one listing of ``pipelines/``, or of one
 pipeline's folder when the pipeline is known, and the records are read
@@ -83,6 +84,7 @@ from typing import Iterable, Iterator, Optional, Union
 from urllib.parse import parse_qsl, urlsplit
 
 from chartbook import hashing
+from chartbook.replacing import rename_when_let, replace_when_let
 from chartbook.store import (
     _of_shape,
     CLEARED_FILE,
@@ -104,9 +106,9 @@ from chartbook.store import (
     TMP_DIR,
     UNOWNED_DIR,
     V1_SCHEMA,
-    VIEWS_DIR,
     FolderStore,
     KeptAsset,
+    KeptFiles,
     KeptRecord,
     ObjectNotFoundError,
     PendingSnapshot,
@@ -130,7 +132,6 @@ from chartbook.store import (
     _split_hash,
     _unreadable_note_remedy,
     declared_name,
-    gather,
     is_snapshot_folder,
     kept_listing,
     pipeline_folder,
@@ -143,6 +144,7 @@ from chartbook.store import (
     this_machine,
     what_is_wrong,
     what_is_wrong_with,
+    unowned_files,
 )
 
 #: The query keys a store URL may carry. Never a credential.
@@ -155,6 +157,8 @@ CLAIMED_FILE = "CLAIMED.txt"
 #: Where the cache keeps each file of a snapshot it downloaded, named by its
 #: hash and checked against it: ``files/<2 hex>/<62 hex>``.
 CHECKED_DIR = "files"
+#: Where the cache names a checked file of an asset of one file by that file's name, a hard link to it (:meth:`S3Store._named`).
+NAMED_DIR = "named"
 
 #: How long, in seconds, one listing answers what is asked of the store
 #: outside a :meth:`S3Store.reading` block: the few questions of one read.
@@ -480,11 +484,6 @@ class S3Store(Store):
         """The folder on this machine that holds what was downloaded."""
         return self._root
 
-    @property
-    def views(self) -> Path:
-        """Where assets are laid out for readers, their files under their own names: ``views/`` in the cache."""
-        return self._root / VIEWS_DIR
-
     # -- talking to the bucket -------------------------------------------
 
     def _key(self, *parts: str) -> str:
@@ -754,7 +753,7 @@ class S3Store(Store):
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
             os.chmod(target, _WRITABLE)
-        os.replace(temporary, target)
+        replace_when_let(temporary, target)
 
     def _try_delete(self, keys: list[str]) -> dict[str, tuple[str, str]]:
         """Delete keys, a thousand to a request; each the service did not delete, with its code and what it said."""
@@ -846,6 +845,38 @@ class S3Store(Store):
             _remove_file(temporary)
         else:
             self._settle(temporary, checked)
+
+    def _named(self, file) -> Optional[Path]:
+        """A checked file of an asset of one file, by its name: ``data.path()`` hands it out, and readers go by its ending.
+
+        A hard link beside the checked copy, which takes no more room; None,
+        and the checked copy is read, where no link can be made.
+        """
+        _, digest = _split_hash(file.content_hash)
+        leaf = _plain_parts(file.relative)
+        if not leaf:
+            return None
+        named = self._root / NAMED_DIR / digest[:2] / digest[2:] / leaf[-1]
+        try:
+            if _is_there(named, file.size_bytes) and os.path.samefile(named, file.location):
+                return named
+            _remove_file(named)  # a link to an old copy, read-only as the cache's files are: Windows replaces none
+            named.parent.mkdir(parents=True, exist_ok=True)
+            temporary = named.with_name(f".{leaf[-1]}.{uuid.uuid4().hex[:12]}.part")
+            os.link(file.location, temporary)
+            replace_when_let(temporary, named)
+            return named
+        except OSError:
+            return None
+
+    def _forget_named(self, content_hash: str) -> None:
+        """Remove the names a checked file goes by (:meth:`_named`), as it goes."""
+        _, digest = _split_hash(content_hash)
+        folder = self._root / NAMED_DIR / digest[:2] / digest[2:]
+        for name in os.listdir(folder) if folder.is_dir() else ():
+            _remove_file(folder / name)
+        with contextlib.suppress(OSError):
+            folder.rmdir()
 
     def _as_checked(self, asset: KeptAsset) -> KeptAsset:
         """An asset with its files where the cache keeps them checked."""
@@ -1132,8 +1163,22 @@ class S3Store(Store):
         self._check_layout()
         if not dry_run:
             self._tidy_tmp()
+        return self._tidy(dry_run, keep)
+
+    def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
+        """Remove what no snapshot uses from one pipeline's folder, as :meth:`tidy` does from every one; what was removed, each with its size.
+
+        Nothing under ``tmp/`` and no note of origins is looked at: those are the store's, for ``store gc``.
+
+        :raises TidyError: As :meth:`tidy` does.
+        """
+        self._check_layout()
+        return self._tidy(dry_run, (), only=pipeline_folder(pipeline))
+
+    def _tidy(self, dry_run: bool, keep: Iterable[str], only: Optional[str] = None) -> list[tuple[str, int]]:
+        """:meth:`tidy`, after ``tmp/``: of every pipeline's folder, or of the *only* one named."""
         noted = self._notes()
-        seen = self._seen(fresh=True)
+        seen = self._seen(only, fresh=True)
         listing, records = dict(seen.listing), self._records_of(seen)
         keep = {_folded(name) for name in keep}
         now = time.time()
@@ -1169,7 +1214,8 @@ class S3Store(Store):
         ]
         if cleared:
             self._try_delete(cleared)
-        self._tidy_origins(records, now)
+        if only is None:
+            self._tidy_origins(records, now)
         for name, _ in removed:
             if _plain_parts(name) is not None:
                 _remove_file(self._root.joinpath(*name.split("/")))
@@ -1280,13 +1326,15 @@ class S3Store(Store):
             for asset in self._held(seen, content_hash, pipeline) for file in asset.files
         )
 
-    def get(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> Path:
-        """A folder on this machine with the asset's files under their own names, downloaded if they were not yet.
+    def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> KeptFiles:
+        """The asset's files, each where the cache keeps it checked, downloaded if they were not yet (:meth:`chartbook.store.Store.files`).
 
-        Each file is downloaded once into the cache, and its hash checked
-        against its record's as it arrives; a copy whose sizes in the
-        bucket are not its record's, or whose bytes are not, is passed over
-        for the next. Offline, what the cache has whole is served.
+        Each file is downloaded once into the cache, by its hash, and its
+        hash checked against its record's as it arrives; a copy whose sizes
+        in the bucket are not its record's, or whose bytes are not, is
+        passed over for the next. Offline, what the cache has whole is
+        served. A file is kept under its hash, not its name: a reader is
+        told its path inside the asset, and reads the bytes where they are.
 
         :param pipeline: The pipeline the asset is of, whose folder is
             looked in first.
@@ -1305,8 +1353,8 @@ class S3Store(Store):
                 return cached
             raise
 
-    def _fetch(self, content_hash: str, pipeline: Optional[str], name: Optional[str]) -> Path:
-        """The rest of :meth:`get`, online: its pipeline's folder first, then every one."""
+    def _fetch(self, content_hash: str, pipeline: Optional[str], name: Optional[str]) -> KeptFiles:
+        """The rest of :meth:`files`, online: its pipeline's folder first, then every one."""
         missing = wrong = None
         tried: set = set()
         own = self._pipeline_seen(pipeline)
@@ -1346,7 +1394,7 @@ class S3Store(Store):
             )
         if not remote:
             raise ObjectNotFoundError(f"The store {self} has no object {content_hash}.")
-        return self._fetch_unowned(content_hash, remote)
+        return unowned_files(content_hash, self._fetch_unowned(content_hash, remote), name)
 
     def _bring(self, asset: KeptAsset, seen: _Seen) -> KeptAsset:
         """An asset with each of its files in the cache's checked files, downloaded and checked where one is not.
@@ -1365,17 +1413,26 @@ class S3Store(Store):
                 )
         return self._as_checked(asset)
 
-    def _for_a_reader(self, asset: KeptAsset, name: Optional[str]) -> Path:
-        """The folder a reader opens an asset in, laid out from the cache's checked files (:func:`chartbook.store.gather`)."""
-        return gather(_read_as(asset, name), self.views)
+    def _for_a_reader(self, asset: KeptAsset, name: Optional[str]) -> KeptFiles:
+        """An asset as a reader is handed it: its files where the cache keeps them checked, by their paths inside it."""
+        from chartbook.store import plain_parts
+
+        asset = _read_as(asset, name)
+        if asset.single:
+            named = self._named(asset.files[0])
+            if named is not None:
+                asset = dataclasses.replace(asset, files=(dataclasses.replace(asset.files[0], location=named),))
+        at = plain_parts(asset.at) if asset.at else []
+        home = asset.record.folder.joinpath(*at) if at else asset.record.folder
+        return KeptFiles(asset.content_hash, asset.single, tuple(sorted(asset.files, key=lambda file: file.relative)), home)
 
     def _from_the_cache(
         self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None, lay_out: bool = True
-    ) -> Optional[Path]:
-        """Where the cache has an asset whole, as it was downloaded and checked; None if it has not.
+    ) -> Optional[Union[Path, KeptFiles]]:
+        """What the cache has of an asset whole, as it was downloaded and checked; None if it has not.
 
-        :param lay_out: Whether to lay it out for a reader. Without, nothing
-            is made, and the path returned only says that it is there.
+        :param lay_out: Whether to hand it to a reader, as its files.
+            Without, the path returned only says that it is there.
         """
         held = [
             asset for record in self._cached_records() if record.readable for asset in record.assets
@@ -1386,7 +1443,9 @@ class S3Store(Store):
             if all(_is_there(self._checked(file.content_hash), file.size_bytes) for file in asset.files):
                 return self._for_a_reader(self._as_checked(asset), name) if lay_out else asset.record.path
         local = self._unowned_cache(content_hash)
-        return local if local.is_dir() else None
+        if not local.is_dir():
+            return None
+        return unowned_files(content_hash, local, name) if lay_out else local
 
     def _fetch_unowned(self, content_hash: str, remote: dict[str, dict]) -> Path:
         """Bring an object no pipeline owns into the cache, whole and checked, and return its folder.
@@ -1422,13 +1481,13 @@ class S3Store(Store):
             local.parent.mkdir(parents=True, exist_ok=True)
             if local.exists():
                 aside = self._root / TMP_DIR / f"{uuid.uuid4().hex[:12]}.old"
-                os.rename(local, aside)
+                rename_when_let(local, aside)
                 try:
-                    os.rename(staging, local)
+                    rename_when_let(staging, local)
                 finally:
                     _remove_tree(aside, own=True)
             else:
-                os.rename(staging, local)
+                rename_when_let(staging, local)
         finally:
             if staging.exists():
                 _remove_tree(staging, own=True)
@@ -1516,6 +1575,7 @@ class S3Store(Store):
         for asset in held:
             for file in asset.files:
                 _remove_file(self._checked(file.content_hash))
+                self._forget_named(file.content_hash)
         self._forget_cached(content_hash)
         return bool(keys)
 
@@ -1531,10 +1591,10 @@ class S3Store(Store):
         return True
 
     def _forget_cached(self, content_hash: str) -> None:
-        """Remove the cache's object of this hash and its view, the bucket's being gone."""
-        for folder in (self._unowned_cache(content_hash), self.views / content_hash.split(":", 1)[1]):
-            if folder.exists() and not folder.is_symlink():
-                _remove_tree(folder, own=True)
+        """Remove the cache's object of this hash, the bucket's being gone."""
+        folder = self._unowned_cache(content_hash)
+        if folder.exists() and not folder.is_symlink():
+            _remove_tree(folder, own=True)
         _found_whole.difference_update({(self.url, content_hash, True), (self.url, content_hash, False)})
 
     def hashes(self) -> Iterator[str]:
@@ -2095,7 +2155,10 @@ class _S3Pending(PendingSnapshot):
             if self.base is None:
                 raise ValueError("Where it goes in the pipeline's folder is not known: give its place.")
             named = found.files[0] if found.single else found.root
-            place = os.path.relpath(os.path.abspath(named), self.base)
+            try:
+                place = os.path.relpath(os.path.abspath(named), self.base)
+            except ValueError:  # on another drive (Windows): not inside the pipeline's folder, and refused below
+                place = os.path.abspath(named)
         place = "" if place in (".", "") else str(place).replace("\\", "/") if os.name == "nt" else str(place)
         parts = _plain_parts(place) if place else []
         if parts is None or (derived and parts and parts[0] == OWN_DIR):

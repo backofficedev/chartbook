@@ -3,6 +3,7 @@
 
 import html
 import json
+import os
 import re
 from pathlib import Path
 
@@ -18,7 +19,7 @@ from chartbook.config import get_cache_path
 from chartbook.store import default_store
 from tests.fixtures import create_catalog_project
 from tests.test_model_versions import _git
-from tests.fixtures import remove_tree
+from tests.fixtures import needs_symlinks, remove_tree
 
 
 def _commit(repository: Path, message: str = "Work") -> None:
@@ -95,9 +96,9 @@ class TestTheSite:
     def test_a_version_is_built_once_on_this_machine(self, catalog, monkeypatch):
         root, first, second = catalog
         _build(root, monkeypatch)
-        kept = get_cache_path() / "versions" / "pipeline_a"
+        kept = get_cache_path() / "versions"
         stamps = {p: p.stat().st_mtime_ns for p in kept.rglob(".chartbook-version-site")}
-        assert len(stamps) == 2
+        assert {versions._kept(t) for t in (first, second)} <= {p.parent for p in stamps}
         calls = []
         real = versions.subprocess.run
 
@@ -122,14 +123,19 @@ class TestTheSite:
     def test_a_version_that_cannot_be_built_says_why(self, catalog, monkeypatch):
         root, first, second = catalog
         store = default_store()
-        data = next(r for r in first.assets.values() if r.get("content_hash") and r["kind"] == "Dataframe")
-        if data["content_hash"] not in second.hashes():
-            store.delete(data["content_hash"])
-        else:  # the same bytes in both: take the documents instead
-            store.delete(first.documents["content_hash"])
+        # A version is built from its documents, charts and index, not its data (which may be
+        # missing from the store): a third snapshot whose README is its own, not all synced yet
+        a = root / "pipelines" / "pipeline_a"
+        (a / "README.md").write_text("# A\n\nA README of the third version alone.\n", encoding="utf-8", newline="\n")
+        _commit(root.parent, "README")
+        third = snapshot.make(a).snapshot
+        readme = store.files(third.documents["content_hash"]).by_relative()["README.md"]
+        assert readme.is_relative_to(Path(third.path).parent.parent)  # new in this snapshot, kept here
+        os.chmod(readme, 0o600)
+        readme.write_bytes(readme.read_bytes()[:-1])
         result = _build(root, monkeypatch)
-        assert f"warning: pipeline_a at {first.commit[:7]}: it is not all in the store yet" in result.output
-        name = versions.version_name(first.commit, first.made_at)
+        assert f"warning: pipeline_a at {third.commit[:7]}: it is not all in the store yet" in result.output
+        name = versions.version_name(third.commit, third.made_at)
         placeholder = (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").read_text(encoding="utf-8")
         assert "not all in the store yet" in placeholder
         # The other version is unharmed
@@ -234,10 +240,61 @@ class TestWhatTheReviewFound:
 
     def test_a_change_to_chartbook_builds_a_version_again(self, catalog, monkeypatch):
         root, first, second = catalog
-        versions.fingerprint.cache_clear()
-        one = versions._kept("pipeline_a", "a" * 7 + "-20260101T000000Z")
+        assert versions.render(second).built
+        calls = []
+        real = versions.subprocess.run
+
+        def counted(command, *args, **kwargs):
+            if "chartbook.cli" in command:
+                calls.append(command)
+            return real(command, *args, **kwargs)
+
+        monkeypatch.setattr(versions.subprocess, "run", counted)
         monkeypatch.setattr(versions, "fingerprint", lambda: "0.0.0-changed")
-        assert versions._kept("pipeline_a", "a" * 7 + "-20260101T000000Z") != one
+        again = versions.render(second)
+        assert again.built and again.now and len(calls) == 1
+        assert (again.folder.parent / ".chartbook-version-site").read_text(encoding="utf-8").startswith("0.0.0-changed\n")
+        assert versions.render(second).now is False  # and kept, once built by this one
+
+    def test_a_kept_site_is_one_short_folder_in_the_cache(self, catalog):
+        root, first, second = catalog
+        rendered = versions.render(second)
+        assert rendered.folder.parent.parent == get_cache_path() / "versions"
+        assert len(rendered.folder.parent.name) == 12
+        assert versions.version_name(second.commit, second.made_at).endswith(second.made_at[17:19] + "Z")
+
+    def test_two_snapshots_of_a_commit_in_one_second_have_two_names(self):
+        from types import SimpleNamespace
+
+        commit = "b6ea3aa" + "0" * 33
+
+        def taken(made_at, folder, pipeline="acme/x"):
+            path = Path("store") / "pipelines" / "acme+x" / folder / "_chartbook" / "snapshot.json"
+            return SimpleNamespace(pipeline=pipeline, commit=commit, made_at=made_at, path=path)
+
+        first = taken("2026-10-31T14:54:10.168357Z", "2026-10-31T145410Z_b6ea3aa00000")
+        second = taken("2026-10-31T14:54:10.668357Z", "2026-10-31T145411Z_b6ea3aa00000")
+        both = [first, second]
+        assert [versions.name_of(t, both) for t in both] == ["b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145410.668357Z"]
+        assert versions.site_path("acme/x", versions.name_of(second, both))
+        assert versions._kept(first) != versions._kept(second)
+        # The second's copy in another store, where its folder is named by its own second: one name, one site
+        copy = taken(second.made_at, "2026-10-31T145410Z_b6ea3aa00000")
+        assert versions.name_of(copy, [first, second, copy]) == versions.name_of(second, both)
+        assert versions._kept(copy) == versions._kept(second)
+        # Another pipeline's snapshot of that second is not in the way
+        other = taken("2026-10-31T14:54:10.001Z", "x", pipeline="acme/y")
+        assert versions.name_of(first, [first, other]) == "b6ea3aa-20261031T145410Z"
+        # By time, not by text: a record with no fraction is the earlier ("…10Z" sorts after "…10.5Z")
+        whole, half = taken("2026-10-31T14:54:10Z", "a"), taken("2026-10-31T14:54:10.5Z", "b")
+        assert [versions.name_of(t, [whole, half]) for t in (whole, half)] == ["b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145410.5Z"]
+
+    def test_what_0_4_kept_of_a_version_goes_once_this_one_builds_it(self, catalog):
+        root, first, second = catalog
+        old = versions._kept_by_04(second)
+        (old / "0.4.0-c7a9789677a1" / "site").mkdir(parents=True)
+        assert versions.render(second).built
+        assert not old.exists() and not old.parent.exists()
 
 
 class TestWhoseFilesTheseAre:
@@ -293,11 +350,10 @@ def _forged_version(taken, store, manifest_text: str, tmp_path: Path):
     """A snapshot like *taken*, made at another moment, whose manifest says what someone wrote into the store."""
     import dataclasses
 
-    held = Path(store.get(taken.documents["content_hash"]))
     forged = tmp_path / "forged-documents"
-    for file in held.rglob("*"):
+    for relative, file in store.files(taken.documents["content_hash"]).by_relative().items():
         if file.is_file():
-            target = forged / file.relative_to(held)
+            target = forged / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(file.read_bytes())
     (forged / "chartbook.toml").write_text(manifest_text, encoding="utf-8", newline="\n")
@@ -384,7 +440,8 @@ class TestLinksFollowPins:
         assert page.count(link) == 2, page  # under Trained On, and in the provenance panel
         assert (site / pinned).is_file()  # the link leads somewhere
         newer = versions.version_name(second.commit, second.made_at)
-        assert newer not in page  # the version it was not trained on is not where it leads
+        # pipeline_a's: pipeline_b, of the same repository, may have a version of the same commit and second
+        assert versions.site_path("pipeline_a", newer) not in page
         assert "as pinned: the snapshot at " + first.commit[:7] in page
 
     def test_without_the_pinned_version_the_working_version_is_linked(self, trained, monkeypatch):
@@ -414,9 +471,9 @@ class TestGcClearsTheKeptSites:
     def test_a_removed_snapshot_takes_its_kept_site_with_it(self, catalog, monkeypatch):
         root, first, second = catalog
         _build(root, monkeypatch)
-        kept = get_cache_path() / "versions" / "pipeline_a"
+        kept = get_cache_path() / "versions"
         names = {p.name for p in kept.iterdir()}
-        assert versions.version_name(first.commit, first.made_at) in names
+        assert versions._kept(first).name in names
         store = default_store()
         # Nothing pins the first any more: pipeline_b's lockfile is forgotten
         store.remove_root(root / "pipelines" / "pipeline_b" / "chartbook.lock")
@@ -426,8 +483,8 @@ class TestGcClearsTheKeptSites:
         lock.run_gc(plan, store)
         left = {p.name for p in kept.iterdir()}
         for taken in doomed:
-            assert versions.version_name(taken.commit, taken.made_at) not in left
-        assert versions.version_name(second.commit, second.made_at) in left  # what gc kept, its site too
+            assert versions._kept(taken).name not in left
+        assert versions._kept(second).name in left  # what gc kept, its site too
 
 
 def _links(page: Path) -> list[str]:
@@ -449,15 +506,16 @@ class TestWhatTheLinksReviewFound:
         snapshot.remove(default_store(), first)
         _build(root, monkeypatch, "--incremental")
         assert all(_resolves(page, h) for h in _links(page)), _links(page)
-        assert versions.version_name(first.commit, first.made_at) not in page.read_text(encoding="utf-8")
+        assert versions.site_path("pipeline_a", versions.version_name(first.commit, first.made_at)) not in page.read_text(encoding="utf-8")
 
     def test_a_version_that_could_not_be_built_is_linked_to_the_page_that_says_why(self, trained, monkeypatch):
         root, first, second = trained
         from tests.fixtures import publish_catalog
         publish_catalog(root)
-        data = next(r for r in first.assets.values() if r.get("content_hash") and r["kind"] == "Dataframe")
-        assert data["content_hash"] not in second.hashes()
-        default_store().delete(data["content_hash"])
+        # A version is built without its data; its documents it cannot do without
+        readme = default_store().files(first.documents["content_hash"]).by_relative()["README.md"]
+        os.chmod(readme, 0o600)
+        readme.write_bytes(readme.read_bytes()[:-1])
         _build(root, monkeypatch)
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
         name = versions.version_name(first.commit, first.made_at)
@@ -730,6 +788,44 @@ class TestAPipelineFromTheStoreAlone:
         single = CliRunner().invoke(main, ["ls", "--catalog", str(root / "pipelines" / "pipeline_a")]).output
         assert "  [dataframe] pipeline_a:dataframe_0: Dataframe 0" in single
 
+    def test_ls_json_is_a_record_per_pipeline_and_asset(self, catalog, tmp_path, monkeypatch):
+        """`chartbook ls --json`, for a script or an agent: a pipeline known from the store alone is described by its snapshot's index."""
+        root, first, second = catalog
+        self._elsewhere(tmp_path)
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        listed = CliRunner().invoke(main, ["ls", "--catalog", str(root), "--json"])
+        assert listed.exit_code == 0, listed.output
+        records = json.loads(listed.output)
+        by_id = {record["id"]: record for record in records}
+        assert by_id["pipeline_c"]["kind"] == "pipeline"
+        assert by_id["pipeline_c:chart/chart_0_0"] == {
+            "kind": "chart", "id": "pipeline_c:chart/chart_0_0", "pipeline": "pipeline_c",
+            "name": "Chart 0-0", "description": "Description for chart 0-0",
+        }
+        assert by_id["pipeline_c:dataframe_0"]["kind"] == "dataframe"
+        # A listing takes the flag too, before or after its name
+        charts = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "charts", "--json"]).output)
+        assert charts and {record["kind"] for record in charts} == {"chart"}
+        assert "pipeline_c:chart/chart_0_0" in {record["id"] for record in charts}
+        pipelines = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "--json", "pipelines"]).output)
+        assert {record["kind"] for record in pipelines} == {"pipeline"}
+        versions = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "versions", "--json"]).output)
+        assert versions and set(versions[0]) == {"pipeline", "commit", "made_at", "store"}
+        stores = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "stores", "--json"]).output)
+        assert stores and set(stores[0]) == {"name", "url", "read_only", "reachable"}
+
+    def test_ls_json_of_a_folder_lists_every_kind(self, catalog):
+        """A pipeline's own folder: models, files and notes are listed too, which the text tree leaves out."""
+        root, first, second = catalog
+        folder = root / "pipelines" / "pipeline_a"
+        with open(folder / "chartbook.toml", "a", encoding="utf-8", newline="\n") as manifest:
+            manifest.write('\n[models.forecaster]\nname = "Forecaster"\npath = "_models/forecaster.bin"\ndocs = "A model."\n')
+        records = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(folder), "--json"]).output)
+        assert records[0] == {"kind": "pipeline", "id": "pipeline_a", "name": "Pipeline PIPELINE_A", "description": "Description for Pipeline PIPELINE_A"}
+        assert {"kind": "model", "id": "pipeline_a:model/forecaster", "pipeline": "pipeline_a", "name": "Forecaster", "description": ""} in records
+        assert "pipeline_a:dataframe_0" in {record["id"] for record in records}
+
 
 def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snapshot":
     """A pipeline `pipeline_c` snapshotted elsewhere with these `[project]` fields (and this name for
@@ -926,7 +1022,7 @@ class TestWhatTheStoreOnlyReviewFound:
 
         root, first, second = catalog
         taken = _elsewhere_with(tmp_path)
-        held = Path(default_store().get(taken.index["content_hash"]))
+        held = default_store().files(taken.index["content_hash"], name="index.json").one.location.parent
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
         (held / "index.json").write_text(content, encoding="utf-8", newline="\n")
@@ -939,7 +1035,7 @@ class TestWhatTheStoreOnlyReviewFound:
         import os
         import stat
 
-        held = Path(default_store().get(taken.index["content_hash"]))
+        held = default_store().files(taken.index["content_hash"], name="index.json").one.location.parent
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
         return held
@@ -949,6 +1045,7 @@ class TestWhatTheStoreOnlyReviewFound:
         _build(root, monkeypatch)
         return next(r for r in json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
 
+    @needs_symlinks
     def test_a_stored_index_is_not_read_through_a_link(self, catalog, tmp_path, monkeypatch):
         root, first, second = catalog
         taken = _elsewhere_with(tmp_path)

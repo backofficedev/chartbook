@@ -40,7 +40,7 @@ Where they are kept::
 A record is JSON in the index's format, like a lockfile: an envelope and
 one record for each asset, each with its content hash, and, for each of
 its files, where the store keeps it (``stored``): each file is kept once in
-the pipeline's folder, in the first snapshot that had it
+the pipeline's folder, usually in the first snapshot that had it
 (:class:`chartbook.store.PendingSnapshot`). A snapshot keeps what it names
 from being cleared (:func:`chartbook.lock.plan_gc`).
 
@@ -98,7 +98,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import KIND_TABLES, AssetRef
 from chartbook.resolve import MANIFEST_NAME, RESOLVABLE_KINDS, declared_files
-from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store
+from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store, plain_parts
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -789,15 +789,16 @@ def read(path: Union[str, Path]) -> Snapshot:
 
     :raises SnapshotError: If the file is not a record this version reads.
     """
+    from chartbook.store import _any_length, unreadable_detail
+
     path = Path(path)
     try:
-        with open(path, encoding="utf-8") as f:
+        # In the form Windows takes whatever its length: a record another machine wrote may be past this one's limit
+        with open(_any_length(path), encoding="utf-8") as f:
             document = json.load(f)
     except (OSError, ValueError) as error:
         # Not JSON, or not readable: in a store a sync service keeps, a file
         # there before its bytes, most likely
-        from chartbook.store import unreadable_detail
-
         raise SnapshotError(
             f"Cannot read the snapshot {path}: {unreadable_detail(path, error)}. A sync that has not finished is the "
             f"likeliest cause (a file there before its bytes): run this again once it has finished. If it stays "
@@ -1075,9 +1076,9 @@ def version_name(content_hash: str, among: Optional[list[str]] = None) -> str:
 
 
 #: A full commit hash, as a record must name one.
-_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+_COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
 #: When a snapshot was made, as :func:`_now` writes it (a test may leave out the fraction).
-_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$")
+_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z\Z")  # \Z, not $, which lets a last newline through
 
 
 def all_snapshots(store: Store) -> list[Snapshot]:
@@ -2784,15 +2785,23 @@ class Materialized:
         documents: The documents written, by path in the folder.
         assets: The assets written, by reference.
         left_out: The assets and documents not written, each with why.
+        from_index: The data assets not laid out on purpose (``data=False``),
+            by reference: the site built there shows them from the
+            snapshot's index.
     """
 
     folder: Path
     documents: list[str] = field(default_factory=list)
     assets: list[str] = field(default_factory=list)
     left_out: list[tuple[str, str]] = field(default_factory=list)
+    from_index: list[str] = field(default_factory=list)
 
 
-def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] = None) -> Materialized:
+#: The kinds of asset whose files are data, which a version rendered for a catalog does without.
+DATA_KINDS = frozenset({"Dataframe", "File", "Model"})
+
+
+def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] = None, data: bool = True) -> Materialized:
     """Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.
 
     The folder is then the pipeline at that version, as far as a site is
@@ -2816,6 +2825,14 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     its record has it (:func:`not_whole`).
 
     :param into: A folder that does not exist yet or is empty.
+    :param data: Whether to lay out the data too: dataframes, files assets
+        and models (:data:`DATA_KINDS`), and tables written out as parquet.
+        A version rendered for a catalog is laid out without (``False``):
+        its site shows each from the snapshot's own index, which recorded
+        their columns, rows, dates and glimpse when it had the files
+        (``chartbook.index``), so no data is copied or read, and the data
+        need not be in the store for the pages to be built. They are listed
+        in :attr:`Materialized.from_index`.
     :raises StoreNotReadyError: If an object it names is not in the store,
         or not whole: a sync that has not finished, perhaps.
     :raises SnapshotError: If the snapshot carries no documents (it was made
@@ -2837,7 +2854,15 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     if folder.exists() and any(folder.iterdir()):
         raise SnapshotError(f"{folder} has something in it; a snapshot is laid out in an empty folder.")
     named = [taken.documents.get("content_hash")]
-    named += [r["content_hash"] for r in taken.assets.values() if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file"]
+    named += [
+        r["content_hash"] for r in taken.assets.values()
+        if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file" and (data or r.get("kind") not in DATA_KINDS)
+    ]
+    # The snapshot's own index: without its data laid out, a version's pages are built from it
+    index_record = None
+    if isinstance(taken.index, dict) and isinstance(taken.index.get("content_hash"), str):
+        index_record = {**taken.index, "location": {"kind": "file", "path": INDEX_FILE}}
+        named.append(taken.index["content_hash"])
     try:
         missing = [h for h in named if not isinstance(h, str) or not store.has(h)]
     except ValueError as error:  # a hash that is not one: a record written to mislead
@@ -2850,9 +2875,9 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         )
     # Each object whole as its record has it: a site built from a file a
     # sync has half delivered would be wrong, and kept
-    for record in [taken.documents, *taken.assets.values()]:
+    for record in [taken.documents, *taken.assets.values(), *([index_record] if index_record else [])]:
         declared = (record.get("location") or {}).get("path")
-        if record is not taken.documents and safe_relative(declared) is None:
+        if record is not taken.documents and record is not index_record and safe_relative(declared) is None:
             continue  # not laid out at all, and said so below
         if record.get("content_hash") in named:
             unsynced = not_whole(store, record)
@@ -2873,22 +2898,25 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         marker["code_changed_at"] = code_changed_at
     (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    held = Path(store.get(taken.documents["content_hash"]))
+    # Each document where the store keeps it; a file that is a link, or under one, the store never hands out
+    kept = store.files(taken.documents["content_hash"]).by_relative()
     for relative in taken.documents.get("files", []):
         plain = plain_name(relative) if isinstance(relative, str) else None
         if plain is None or plain.split("/")[0] == VERSION_FILE:
             report.left_out.append((str(relative), NOT_A_PLAIN_PATH))
             continue
-        if _through_a_link(held, plain):
-            report.left_out.append((plain, A_LINK))
-            continue
-        if os.path.lexists(folder / plain) or not _copy_regular_file(held / plain, folder / plain):
+        source = kept.get(plain)
+        if source is None or os.path.lexists(folder / plain) or not _copy_regular_file(source, folder / plain):
             report.left_out.append((plain, NOT_A_FILE))
             continue
         report.documents.append(plain)
 
     for name in sorted(taken.assets):
         record = taken.assets[name]
+        if not data and record.get("kind") in DATA_KINDS:
+            if (record.get("location") or {}).get("kind") == "file":
+                report.from_index.append(record["id"])
+            continue  # shown from the index; a table or query is dealt with below
         why = _place_asset(record, store, folder)
         if why is not None:
             report.left_out.append((record["id"], why))
@@ -2907,23 +2935,40 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         if not isinstance(name, str) or plain_name(materialized_name(record)) is None:
             continue
         relative = f"_chartbook/tables/{materialized_name(record)}"
-        held = Path(store.get(record["content_hash"], taken.pipeline, name=materialized_name(record)))
-        if _copy_regular_file(held / materialized_name(record), folder / relative):
-            entry = raw.get("dataframes", {}).get(name)
-            if isinstance(entry, dict):
-                for key in ("source", "table", "query", "format", "read_options"):
-                    entry.pop(key, None)
-                entry["path"] = relative
-                entry["format"] = "parquet"
-                changed = True
+        if data:
+            written = store.files(record["content_hash"], taken.pipeline, name=materialized_name(record)).one.location
+            if not _copy_regular_file(written, folder / relative):
+                continue
+        # The manifest names the database; here the table is a parquet file (laid out, or shown from the index)
+        entry = raw.get("dataframes", {}).get(name)
+        if isinstance(entry, dict):
+            for key in ("source", "table", "query", "format", "read_options"):
+                entry.pop(key, None)
+            entry["path"] = relative
+            entry["format"] = "parquet"
+            changed = True
+            if data:
                 report.assets.append(record["id"])
                 report.left_out = [(key, why) for key, why in report.left_out if key != record["id"]]
+            else:
+                report.from_index.append(record["id"])
     if changed:
         import tomli_w
         manifest_path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
-    if taken.index and taken.index.get("content_hash"):
-        held = Path(store.get(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE))
-        _copy_regular_file(held / INDEX_FILE, folder / "_chartbook" / INDEX_FILE)
+    if index_record is not None:
+        try:
+            held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
+            copied = _copy_regular_file(held, folder / "_chartbook" / INDEX_FILE)
+        except StoreError as error:
+            copied, error_said = False, str(error)
+        else:
+            error_said = "it is not a regular file, or could not be read"
+        if not copied:
+            # Tried again next time (a sync not finished): a version with no index would show no data at all
+            raise StoreNotReadyError(
+                f"The snapshot of {taken.pipeline} at {taken.commit[:7]} names its index {taken.index['content_hash']}, "
+                f"and the store {store} does not give it: {error_said.rstrip('.')}."
+            )
     _write_back(taken, folder, report)
     # Whatever the filesystem made of the names written, there is no repository here
     if os.path.lexists(folder / ".git"):
@@ -2969,24 +3014,20 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
         )
     single = not is_glob_pattern(plain) and not record.get("files")
     try:
-        held = Path(store.get(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None))
+        kept = store.files(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None)
     except StoreError as error:
         # A file of it is a link, or not synced yet: the rest of the version is laid out
         return f"the store does not give it: {str(error).rstrip('.')}"
     if is_glob_pattern(plain):
-        _copy_tree(held, folder / glob_root(plain))
-    elif record.get("files"):
-        _copy_tree(held, folder / plain)
+        _copy_kept(kept, folder / glob_root(plain))
+    elif record.get("files") or not kept.single:
+        _copy_kept(kept, folder / plain)
     else:
-        # The same bytes may be held under several names: the declared one, else the first
-        files = sorted(p for p in held.iterdir() if p.is_file() and not p.is_symlink())
-        source = held / Path(plain).name
-        if source.is_symlink() or not source.is_file():
-            source = files[0] if files else None
-        if source is None:
+        if not kept.files:
             return "its object holds no file"
+        # The same bytes may be held under several names: the one asked for by its name, else the first
         target = folder / plain
-        if os.path.lexists(target) or not _copy_regular_file(source, target):
+        if os.path.lexists(target) or not _copy_regular_file(kept.files[0].location, target):
             return "its file could not be written where its path says"
     return None
 
@@ -3156,7 +3197,7 @@ def _stored_records(taken: Snapshot, store: Store) -> list:
     if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
         return []
     try:
-        held = Path(store.get(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE)) / INDEX_FILE
+        held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
         recorded = json.loads(_read_regular_file(held, STORED_INDEX_LIMIT).decode("utf-8"))
     except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
         return []
@@ -3186,13 +3227,14 @@ _ASSET_KINDS = {
 
 
 def stored_assets(taken: Snapshot, store: Store) -> list[dict]:
-    """The assets the index a snapshot holds lists, each as ``{"kind", "id", "name"}``, by ID; empty when it has none.
+    """The assets the index a snapshot holds lists, each as ``{"kind", "id", "name", "description"}``, by ID; empty when it has none.
 
     For a pipeline known from the store alone, whose folder is not here to
     say what it declares. Only a record whose ID reads as a reference to
     an asset of the snapshot's own pipeline, of the kind the record says,
     is listed; its name is one line of plain text
-    (:func:`chartbook.identity.plain_line`), empty when it has none.
+    (:func:`chartbook.identity.plain_line`), empty when it has none, and
+    so is its description.
     Anyone who can write to the store wrote these.
     """
     from chartbook.identity import plain_line
@@ -3211,7 +3253,10 @@ def stored_assets(taken: Snapshot, store: Store) -> list[dict]:
             continue
         if ref.pipeline_id != taken.pipeline or ref.registry or ref.kind != _ASSET_KINDS[record["kind"]] or ref.part or ref.rev:
             continue
-        listed.setdefault(str(ref), {"kind": record["kind"], "id": str(ref), "name": plain_line(record.get("name"), 200)})
+        listed.setdefault(str(ref), {
+            "kind": record["kind"], "id": str(ref), "name": plain_line(record.get("name"), 200),
+            "description": plain_line(record.get("description"), 2000),
+        })
     return [listed[asset_id] for asset_id in sorted(listed)]
 
 
@@ -3221,12 +3266,12 @@ def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
     return changed if isinstance(changed, str) else None
 
 
-def _copy_tree(source: Path, target: Path) -> None:
-    """Copy an object's files to a folder, writable, under the same relative paths; never through a link."""
-    for file in hashing.directory_files(source):
-        relative = file.relative_to(source).as_posix()
-        if plain_name(relative) is None or _through_a_link(source, relative):
+def _copy_kept(kept, target: Path) -> None:
+    """Copy an asset's files from where the store keeps them to a folder, under their paths inside the asset, writable; nothing on disk is written over."""
+    for file in kept.files:
+        parts = plain_parts(file.relative)
+        if parts is None:
             continue
-        destination = target / relative
+        destination = target.joinpath(*parts)
         if not os.path.lexists(destination):
-            _copy_regular_file(file, destination)
+            _copy_regular_file(file.location, destination)

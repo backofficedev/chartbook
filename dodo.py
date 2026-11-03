@@ -118,18 +118,18 @@ init(autoreset=True)
 # fmt: off
 ## Helper functions for automatic execution of Jupyter notebooks
 def jupyter_execute_notebook(notebook_path):
-    return f"jupyter nbconvert --execute --to notebook --ClearMetadataPreprocessor.enabled=True --inplace {notebook_path}"
+    return f'jupyter nbconvert --execute --to notebook --ClearMetadataPreprocessor.enabled=True --inplace "{notebook_path}"'
 
 def jupyter_to_html(notebook_path, output_dir=OUTPUT_DIR):
-    return f"jupyter nbconvert --to html --output-dir={output_dir} {notebook_path}"
+    return f'jupyter nbconvert --to html --output-dir="{output_dir}" "{notebook_path}"'
 
 def jupyter_to_md(notebook_path, output_dir=OUTPUT_DIR):
     """Requires jupytext"""
-    return f"jupytext --to markdown --output-dir={output_dir} {notebook_path}"
+    return f'jupytext --to markdown --output-dir="{output_dir}" "{notebook_path}"'
 
 def jupyter_clear_output(notebook_path):
     """Clear the output of a notebook"""
-    return f"jupyter nbconvert --ClearOutputPreprocessor.enabled=True --ClearMetadataPreprocessor.enabled=True --inplace {notebook_path}"
+    return f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --ClearMetadataPreprocessor.enabled=True --inplace "{notebook_path}"'
 # fmt: on
 
 
@@ -166,12 +166,53 @@ def copy_llms_file(origin_path, destination_path):
     return _copy
 
 
+#: What under docs_src/ is not a page: the design notes, and what the pages include or build from
+NOT_PAGES = {"design", "apidocs", "_examples", "_tapes", "_screenshots", "_diagrams", "_static", "_build"}
+
+
+def copy_page_sources(source_dir, site_dir):
+    """Create a Python action that puts each page's Markdown beside its HTML in the site.
+
+    `guide/agents.html` is also `guide/agents.md`, as llms.txt says: an agent
+    reads a page as the text it was written in, without its HTML.
+    """
+
+    def _copy():
+        for page in Path(source_dir).rglob("*.md"):
+            relative = page.relative_to(source_dir)
+            if relative.parts[0] in NOT_PAGES:
+                continue
+            dest = Path(site_dir) / relative
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            text = page.read_text(encoding="utf-8")
+            dest.write_text(_included(text, page.parent), encoding="utf-8", newline="\n")
+
+    return _copy
+
+
+def _included(text, folder):
+    """A page's Markdown with each file it includes written into it, since the site does not serve what it includes.
+
+    A ``{literalinclude}`` block becomes a code block of the file's text, under
+    its caption, as the HTML page shows it.
+    """
+    import re
+
+    def written(match):
+        options = dict(re.findall(r"^:(\w[\w-]*):[ \t]*(.*)$", match.group(2), re.M))
+        included = (folder / match.group(1).strip()).read_text(encoding="utf-8")
+        caption = f"`{options['caption']}`:\n\n" if options.get("caption") else ""
+        return f"{caption}```{options.get('language', '')}\n{included.rstrip()}\n```"
+
+    return re.sub(r"^```\{literalinclude\}[ \t]+(\S+)[ \t]*\n((?::[^\n]*\n)*)```", written, text, flags=re.M)
+
+
 def mv(from_path, to_path):
     """Move a file to a folder"""
     from_path = Path(from_path)
     to_path = Path(to_path)
     to_path.mkdir(parents=True, exist_ok=True)
-    return f"mv {from_path} {to_path}"
+    return f'mv "{from_path}" "{to_path}"'
 
 
 # Notebook tasks configuration
@@ -200,7 +241,7 @@ def task_run_notebooks():
         yield {
             "name": notebook_name,
             "actions": [
-                f"jupytext --to notebook --output {notebook_path} {pyfile_path}",
+                f'jupytext --to notebook --output "{notebook_path}" "{pyfile_path}"',
                 jupyter_execute_notebook(notebook_path),
                 copy_file(notebook_path, docs_notebook_path),
                 mv(notebook_path, OUTPUT_DIR / "_notebook_build"),
@@ -234,6 +275,7 @@ def task_sphinx():
             f"sphinx-build -b html {DOCS_SRC} {DOCS_OUTPUT}",
             copy_llms_file(llms_files[0], DOCS_OUTPUT / "llms.txt"),
             copy_llms_file(llms_files[1], DOCS_OUTPUT / "llms-full.txt"),
+            copy_page_sources(DOCS_SRC, DOCS_OUTPUT),
         ],
         # Not everything under docs_src/: the build writes apidocs/ there,
         # and Python its __pycache__/, which git ignores
@@ -384,7 +426,7 @@ def task_test_all():
     test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
     junit_path = TEST_RESULTS_DIR / "junit-all.xml"
     return {
-        "actions": [_run_tests(f"{sys.executable} -m hatch test --all -v", junit_path)],
+        "actions": [_run_tests(f"{sys.executable} -m hatch test --all --parallel -v", junit_path)],
         "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,

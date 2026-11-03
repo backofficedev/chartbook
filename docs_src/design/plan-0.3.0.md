@@ -271,6 +271,11 @@ it is. `data.path()` then answers with a path into the store that ends in `.parq
 when an asset's files are exactly what one snapshot's folder holds for it: a single file, or every
 file of a folder in the snapshot that first had them.
 
+*Superseded 2026-10-31 ({doc}`plan-data-reads`): nothing is gathered. `Store.files` hands a reader
+the asset's files, each by its path inside the asset and where the store keeps it, and polars and
+DuckDB read the list, Hive keys included. The `views/` folder grew without bound and pulled every
+byte local, and no reader needed it. What follows is kept as design history.*
+
 An asset whose files are kept in more than one snapshot's folder is **gathered**. Its files are laid
 out together in the machine's cache, `~/.chartbook/cache/views/<hash>/`, by reflink, then hard
 link, then symlink, then copy. That is what `data.load` needs to read a partitioned dataset through

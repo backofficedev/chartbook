@@ -43,6 +43,8 @@ from typing import Optional
 import tomli
 import tomli_w
 
+from chartbook.replacing import replace_when_let
+
 #: The environment variable that says where the store is, when it is set.
 STORE_ENV_VAR = "CHARTBOOK_STORE"
 #: Names the organization's settings file, read where the user's is silent.
@@ -286,7 +288,10 @@ def _folder_text(url: str) -> str:
     text = url.strip()
     if not text.lower().startswith("file://"):
         return text
-    text = text[len("file://"):]
+    from urllib.parse import unquote
+
+    # A URL's path is percent-encoded: file:///C:/My%20Drive/store, as a browser or Path.as_uri() writes it
+    text = unquote(text[len("file://"):])
     if os.name == "nt" and re.match(r"^/[A-Za-z]:", text):
         text = text[1:]  # file:///C:/x names the drive, not a root folder
     # On Windows a drive may follow at once (file://C:/x). Anything else is
@@ -621,7 +626,7 @@ def _keep_machine(path: Path, identity: str, name: str) -> None:
     temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
     try:
         temporary.write_text(json.dumps({"machines": {**_kept_machines(path), identity: name}}, indent=1) + "\n", encoding="utf-8", newline="\n")
-        os.replace(temporary, path)
+        replace_when_let(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()
@@ -1048,7 +1053,7 @@ def _write_trust(raw: dict) -> Path:
         with open(temporary, "wb") as f:
             f.write(_TRUST_HEADER.encode("utf-8"))
             tomli_w.dump({key: value for key, value in raw.items() if value not in ([], None)}, f)
-        os.replace(temporary, path)
+        replace_when_let(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()

@@ -33,17 +33,18 @@ OS_TYPE = config("OS_TYPE")
 environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
 
 # fmt: off
-## Helper functions for automatic execution of Jupyter notebooks
+## Helper functions for automatic execution of Jupyter notebooks. Each path is quoted, for a
+## project in a folder whose name has a space ("C:\Users\Jane Doe\...", "My Drive").
 def jupyter_execute_notebook(notebook_path):
-    return f"jupyter nbconvert --execute --to notebook --ClearMetadataPreprocessor.enabled=True --inplace {notebook_path}"
+    return f'jupyter nbconvert --execute --to notebook --ClearMetadataPreprocessor.enabled=True --inplace "{notebook_path}"'
 def jupyter_to_html(notebook_path, output_dir=OUTPUT_DIR):
-    return f"jupyter nbconvert --to html --output-dir={output_dir} {notebook_path}"
+    return f'jupyter nbconvert --to html --output-dir="{output_dir}" "{notebook_path}"'
 def jupyter_to_md(notebook_path, output_dir=OUTPUT_DIR):
     """Requires jupytext"""
-    return f"jupytext --to markdown --output-dir={output_dir} {notebook_path}"
+    return f'jupytext --to markdown --output-dir="{output_dir}" "{notebook_path}"'
 def jupyter_clear_output(notebook_path):
     """Clear the output of a notebook"""
-    return f"jupyter nbconvert --ClearOutputPreprocessor.enabled=True --ClearMetadataPreprocessor.enabled=True --inplace {notebook_path}"
+    return f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --ClearMetadataPreprocessor.enabled=True --inplace "{notebook_path}"'
 # fmt: on
 
 
@@ -53,9 +54,9 @@ def mv(from_path, to_path):
     to_path = Path(to_path)
     to_path.mkdir(parents=True, exist_ok=True)
     if OS_TYPE == "nix":
-        command = f"mv {from_path} {to_path}"
+        command = f'mv "{from_path}" "{to_path}"'
     else:
-        command = f"move {from_path} {to_path}"
+        command = f'move "{from_path}" "{to_path}"'
     return command
 {%- endif %}
 
@@ -87,7 +88,7 @@ def task_config():
         "clean": [],
     }
 
-{%- if cookiecutter.include_fred or cookiecutter.include_ofr_api or cookiecutter.include_bloomberg or cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
+{%- if cookiecutter.include_fred or cookiecutter.include_fed_yield_curve or cookiecutter.include_ofr_api or cookiecutter.include_bloomberg or cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
 
 
 def task_pull():
@@ -102,6 +103,19 @@ def task_pull():
         ],
         "targets": [DATA_DIR / "fred.parquet"],
         "file_dep": ["./src/settings.py", "./src/pull_fred.py"],
+        "clean": [],
+    }
+{%- endif %}
+{%- if cookiecutter.include_fed_yield_curve %}
+    yield {
+        "name": "fed_yield_curve",
+        "doc": "Pull the Fed's zero-coupon yield curve",
+        "actions": [
+            "python ./src/settings.py",
+            "python ./src/load_fed_yield_curve.py",
+        ],
+        "targets": [DATA_DIR / "fed_yield_curve.parquet"],
+        "file_dep": ["./src/settings.py", "./src/load_fed_yield_curve.py"],
         "clean": [],
     }
 {%- endif %}
@@ -139,7 +153,7 @@ def task_pull():
             "python ./src/settings.py",
             "python ./src/pull_CRSP_stock.py",
         ],
-        "targets": [DATA_DIR / "CRSP_monthly_stock.parquet"],
+        "targets": [DATA_DIR / "CRSP_monthly_stock.parquet", DATA_DIR / "CRSP_MSIX.parquet"],
         "file_dep": ["./src/settings.py", "./src/pull_CRSP_stock.py"],
         "clean": [],
     }
@@ -152,9 +166,74 @@ def task_pull():
             "python ./src/settings.py",
             "python ./src/pull_CRSP_Compustat.py",
         ],
-        "targets": [DATA_DIR / "CRSP_Compustat.parquet"],
+        "targets": [
+            DATA_DIR / "Compustat.parquet",
+            DATA_DIR / "CRSP_stock_ciz.parquet",
+            DATA_DIR / "CRSP_Comp_Link_Table.parquet",
+            DATA_DIR / "FF_FACTORS.parquet",
+        ],
         "file_dep": ["./src/settings.py", "./src/pull_CRSP_Compustat.py"],
         "clean": [],
+    }
+{%- endif %}
+{%- endif %}
+{%- if cookiecutter.include_chartbook and (cookiecutter.include_fred or cookiecutter.include_fed_yield_curve or cookiecutter.include_ofr_api or cookiecutter.include_bloomberg or cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat) %}
+
+
+def task_charts():
+    """The charts chartbook.toml declares, one script each, from the data its pull made"""
+{%- if cookiecutter.include_fred %}
+    yield {
+        "name": "policy_rates",
+        "actions": ["python ./src/chart_fred.py"],
+        "file_dep": ["./src/chart_fred.py", DATA_DIR / "fred.parquet"],
+        "targets": [OUTPUT_DIR / "policy_rates.html", OUTPUT_DIR / "policy_rates.png"],
+        "clean": True,
+    }
+{%- endif %}
+{%- if cookiecutter.include_fed_yield_curve %}
+    yield {
+        "name": "treasury_yields",
+        "actions": ["python ./src/chart_fed_yield_curve.py"],
+        "file_dep": ["./src/chart_fed_yield_curve.py", DATA_DIR / "fed_yield_curve.parquet"],
+        "targets": [OUTPUT_DIR / "treasury_yields.html", OUTPUT_DIR / "treasury_yields.png"],
+        "clean": True,
+    }
+{%- endif %}
+{%- if cookiecutter.include_ofr_api %}
+    yield {
+        "name": "repo_reference_rates",
+        "actions": ["python ./src/chart_ofr.py"],
+        "file_dep": ["./src/chart_ofr.py", DATA_DIR / "ofr_public_repo_data.parquet"],
+        "targets": [OUTPUT_DIR / "repo_reference_rates.html", OUTPUT_DIR / "repo_reference_rates.png"],
+        "clean": True,
+    }
+{%- endif %}
+{%- if cookiecutter.include_bloomberg %}
+    yield {
+        "name": "sp500",
+        "actions": ["python ./src/chart_bloomberg.py"],
+        "file_dep": ["./src/chart_bloomberg.py", DATA_DIR / "bloomberg.parquet"],
+        "targets": [OUTPUT_DIR / "sp500.html", OUTPUT_DIR / "sp500.png"],
+        "clean": True,
+    }
+{%- endif %}
+{%- if cookiecutter.include_crsp_stock %}
+    yield {
+        "name": "crsp_value_weighted",
+        "actions": ["python ./src/chart_crsp_stock.py"],
+        "file_dep": ["./src/chart_crsp_stock.py", DATA_DIR / "CRSP_MSIX.parquet"],
+        "targets": [OUTPUT_DIR / "crsp_value_weighted.html", OUTPUT_DIR / "crsp_value_weighted.png"],
+        "clean": True,
+    }
+{%- endif %}
+{%- if cookiecutter.include_crsp_compustat %}
+    yield {
+        "name": "fama_french_factors",
+        "actions": ["python ./src/chart_crsp_compustat.py"],
+        "file_dep": ["./src/chart_crsp_compustat.py", DATA_DIR / "FF_FACTORS.parquet"],
+        "targets": [OUTPUT_DIR / "fama_french_factors.html", OUTPUT_DIR / "fama_french_factors.png"],
+        "clean": True,
     }
 {%- endif %}
 {%- endif %}
@@ -276,7 +355,7 @@ def task_run_notebooks():
             "name": notebook,
             "actions": [
                 """python -c "import sys; from datetime import datetime; print(f'Start """ + notebook + """: {datetime.now()}', file=sys.stderr)" """,
-                f"jupytext --to notebook --output {notebook_path} {pyfile_path}",
+                f'jupytext --to notebook --output "{notebook_path}" "{pyfile_path}"',
                 jupyter_execute_notebook(notebook_path),
                 jupyter_to_html(notebook_path),
                 mv(notebook_path, OUTPUT_DIR),
@@ -458,9 +537,9 @@ def task_knit_RMarkdown_files():
 ###############################################################
 
 if OS_TYPE == "windows":
-    STATA_COMMAND = f"{config('STATA_EXE')} /e"
+    STATA_COMMAND = f'"{config("STATA_EXE")}" /e'
 elif OS_TYPE == "nix":
-    STATA_COMMAND = f"{config('STATA_EXE')} -b"
+    STATA_COMMAND = f'"{config("STATA_EXE")}" -b'
 else:
     raise ValueError(f"OS_TYPE {OS_TYPE} is unknown")
 

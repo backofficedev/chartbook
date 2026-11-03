@@ -357,6 +357,14 @@ the Polars type in lower case with its parameters in square brackets: `float64`,
 2026-10-12 with the implementation; this document had only shown `date` and `float64`.)* `inputs` carries the asset-level edges;
 `built_by` points at the `Build` record whose `output_hash` matches.
 
+*(Added 2026-10-31, {doc}`plan-data-reads`.)* `glimpse` is the first rows as text, as the
+dataframe's page shows them, and `last_dates` the least and greatest of each column's last
+non-null date (`{"min": "2024-01-01 00:00:00", "max": "2024-06-30 00:00:00"}`; `N/A` without a
+date column, `N/A (large file)` over the size threshold). Both are read when the index describes
+the file, so that a version rendered from the store shows them from its snapshot's index with no
+data laid out. They are anyone's text, as everything a store holds is: a writer shows them as text
+and never reads them as markup.
+
 ### Series
 
 A series needs no storage — the dataframe holds the data. It needs an *address*, so documentation
@@ -513,7 +521,11 @@ its entry declares (`sources`, `license`, `restrictions`...), plus what is said 
 and `files`, the first 1000 by path, each with `path`, `size_bytes`, `content_hash` and, in
 `key=value` folders, `partitions`. A path that names one file lists that file. Its ID is
 `ftsfr/fed_yield_curve:file/releases`. A `Dataframe` of many parts (a folder or a glob) has
-`file_count` and `files` too, each part with its `row_count` from its parquet footer.
+`file_count` and `files` too, each part with its `row_count` from its parquet footer. *(Added
+2026-10-31.)* `preview` is what its page previews: the first file listed that a preview can show,
+by its `path` inside the asset and its `kind` (`text` or `image`), with the first lines as `text`
+for a text file, recorded when the index had the files so that a version rendered from the store
+shows it.
 
 ### Build
 

@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 project = "chartbook"
 copyright = "2026, Jeremiah Bejarano"
 author = "Jeremiah Bejarano"
-release = "0.4.0"
+from chartbook import __version__ as release  # noqa: E402
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -29,7 +29,14 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "sphinx.ext.extlinks",
 ]
+
+# The design notes live in the repository, not on the site: {design}`trust` links
+# docs_src/design/trust.md on GitHub
+extlinks = {
+    "design": ("https://github.com/backofficedev/chartbook/blob/main/docs_src/design/%s.md", "%s"),
+}
 
 # autodoc2 configuration
 autodoc2_packages = [
@@ -83,6 +90,12 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
+    # In the repository, linked with {design}`name`
+    "design",
+    # Files the pages include and the scripts build, not pages
+    "_examples",
+    "_screenshots",
+    "_diagrams",
     "apidocs/index.rst",
     "apidocs/chartbook/chartbook.md",
     "apidocs/chartbook/chartbook.__about__.md",
@@ -107,7 +120,7 @@ html_static_path = ["_static"]
 html_theme_options = {
     "home_page_in_toc": True,
     "navigation_with_keys": True,
-    "show_navbar_depth": 2,
+    "show_navbar_depth": 1,
     "show_toc_level": 3,
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "icon_links": [
@@ -117,10 +130,24 @@ html_theme_options = {
             "icon": "fa-solid fa-code-branch",
         },
     ],
+    # The logo cut to its edges, one for each theme (docs_src/_diagrams/make_brand.py)
+    "logo": {
+        "image_light": "_static/logo-light.png",
+        "image_dark": "_static/logo-dark.png",
+    },
+}
+
+# What a link to these pages shows on Slack, X or LinkedIn (_templates/layout.html)
+html_context = {
+    "social_card": "https://backofficedev.github.io/chartbook/_static/social-card.png",
+    "social_description": (
+        "Data pipelines with provenance: each builds on another's exact, versioned output, traced to "
+        "its sources and verified by hash, in one catalog for people and agents."
+    ),
 }
 
 html_title = "ChartBook Documentation"
-html_logo = "_static/logo.png"
+html_logo = "_static/logo-light.png"
 html_favicon = "_static/logo.png"
 
 # Custom CSS/JS

@@ -223,11 +223,11 @@ class Stores:
             except (StoreUnreachableError, OSError) as error:
                 self._unreachable(entry, error)
 
-    def get(self, content_hash, pipeline=None, name=None):
+    def files(self, content_hash, pipeline=None, name=None):
         failures = []
         for store in self._holding(content_hash, pipeline):
             try:
-                return store.get(content_hash, pipeline, name)
+                return store.files(content_hash, pipeline, name)
             except (StoreError, OSError) as error:
                 failures.append(error)
         if failures:

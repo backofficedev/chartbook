@@ -128,16 +128,16 @@ These helpers generate shell commands for the notebook pipeline:
 
 ```python
 def jupyter_execute_notebook(notebook_path):
-    return f"jupyter nbconvert --execute --to notebook --ClearMetadataPreprocessor.enabled=True --inplace {notebook_path}"
+    return f'jupyter nbconvert --execute --to notebook --ClearMetadataPreprocessor.enabled=True --inplace "{notebook_path}"'
 
 def jupyter_to_html(notebook_path, output_dir=OUTPUT_DIR):
-    return f"jupyter nbconvert --to html --output-dir={output_dir} {notebook_path}"
+    return f'jupyter nbconvert --to html --output-dir="{output_dir}" "{notebook_path}"'
 
 def mv(from_path, to_path):
     from_path = Path(from_path)
     to_path = Path(to_path)
     to_path.mkdir(parents=True, exist_ok=True)
-    return f"mv {from_path} {to_path}"
+    return f'mv "{from_path}" "{to_path}"'
 ```
 
 ### Registering Notebooks
@@ -188,7 +188,7 @@ def task_run_notebooks():
         yield {
             "name": notebook,
             "actions": [
-                f"jupytext --to notebook --output {notebook_path} {pyfile_path}",
+                f'jupytext --to notebook --output "{notebook_path}" "{pyfile_path}"',
                 jupyter_execute_notebook(notebook_path),
                 jupyter_to_html(notebook_path),
                 mv(notebook_path, OUTPUT_DIR),

@@ -448,6 +448,79 @@ def test_wrds_sources(template_dir, temp_dir):
     assert "wrds" in requirements
 
 
+#: Each data source: the dataframe and the chart its project declares, the script that makes the
+#: chart, the file the chart is made from, and the task that pulls it
+SOURCES = {
+    "include_fred": ("fred", "policy_rates", "chart_fred.py", "fred.parquet", "pull:fred"),
+    "include_fed_yield_curve": ("fed_yield_curve", "treasury_yields", "chart_fed_yield_curve.py", "fed_yield_curve.parquet", "pull:fed_yield_curve"),
+    "include_ofr_api": ("ofr_repo", "repo_reference_rates", "chart_ofr.py", "ofr_public_repo_data.parquet", "pull:ofr"),
+    "include_bloomberg": ("bloomberg", "sp500", "chart_bloomberg.py", "bloomberg.parquet", "pull:bloomberg"),
+    "include_crsp_stock": ("crsp_index", "crsp_value_weighted", "chart_crsp_stock.py", "CRSP_MSIX.parquet", "pull:crsp_stock"),
+    "include_crsp_compustat": ("fama_french_factors", "fama_french_factors", "chart_crsp_compustat.py", "FF_FACTORS.parquet", "pull:crsp_compustat"),
+}
+
+
+@pytest.mark.parametrize("source", sorted(SOURCES))
+def test_each_source_gives_a_dataframe_and_a_chart(template_dir, temp_dir, source):
+    """A project with one data source declares its data and a chart of it, which its build makes:
+    a first site has pages for both, and none for the sources not chosen."""
+    import tomli
+
+    dataframe, chart, script, data_file, pull = SOURCES[source]
+    context = {**MINIMAL_CONTEXT, "include_chartbook": True, source: True}
+    project_dir = Path(generate_project(template_dir, temp_dir, context))
+
+    manifest = tomli.loads((project_dir / "chartbook.toml").read_text(encoding="utf-8"))
+    assert list(manifest["dataframes"]) == [dataframe]
+    assert list(manifest["charts"]) == [chart]
+    assert manifest["dataframes"][dataframe]["path"] == f"./_data/{data_file}"
+    assert manifest["charts"][chart]["dataframe"] == dataframe
+    assert manifest["charts"][chart]["path"] == f"./_output/{chart}.html"
+
+    # The chart's script reads the dataframe by its name and saves the chart the manifest names
+    made = (project_dir / "src" / script).read_text(encoding="utf-8")
+    assert f'data.load("{dataframe}"' in made
+    assert f'chart_id="{chart}"' in made
+    assert sorted(p.name for p in (project_dir / "src").glob("chart_*.py")) == [script]
+
+    # The build pulls the file the chart is made from, then makes the chart
+    tasks = subprocess.run(
+        [sys.executable, "-m", "doit", "list", "--all", "--deps"],
+        cwd=project_dir, capture_output=True, text=True, check=True,
+    ).stdout
+    assert pull in tasks
+    assert f"charts:{chart}" in tasks
+    dodo = (project_dir / "dodo.py").read_text(encoding="utf-8")
+    assert f'DATA_DIR / "{data_file}"' in dodo.split("def task_charts")[0], "no pull lists the chart's file as its target"
+
+
+
+def test_a_source_without_a_chartbook_site_brings_no_chart(template_dir, temp_dir):
+    """A chart's script reads its data by name from chartbook.toml, which a project with no ChartBook site
+    has not, nor chartbook among its requirements: its build would stop at the chart."""
+    context = {**MINIMAL_CONTEXT, "include_chartbook": False, **{source: True for source in SOURCES}}
+    project_dir = Path(generate_project(template_dir, temp_dir, context))
+    assert not (project_dir / "chartbook.toml").exists()
+    assert [script for *_, script, _, _ in SOURCES.values() if (project_dir / "src" / script).exists()] == []
+    tasks = subprocess.run(
+        [sys.executable, "-m", "doit", "list", "--all"], cwd=project_dir, capture_output=True, text=True, check=True,
+    ).stdout
+    names = {line.split()[0].split(":")[0] for line in tasks.splitlines() if line.strip()}
+    assert "charts" not in names and "pull" in names
+
+
+def test_every_pull_lists_the_files_its_script_writes(template_dir, temp_dir):
+    """A pull whose targets name a file its script never writes runs again on every build: for
+    CRSP and Compustat, a pull from WRDS each time."""
+    project_dir = Path(generate_project(template_dir, temp_dir, {**FULL_CONTEXT, "include_r_scripts": False}))
+    pulls = (project_dir / "dodo.py").read_text(encoding="utf-8").split("def task_pull")[1].split("\ndef ")[0]
+    for script in ("pull_fred.py", "load_fed_yield_curve.py", "pull_ofr_api_data.py", "pull_bloomberg.py", "pull_CRSP_stock.py", "pull_CRSP_Compustat.py"):
+        written = re.findall(r'"(\w+\.parquet)"', (project_dir / "src" / script).read_text(encoding="utf-8").split("__main__")[-1])
+        assert written, script
+        for name in written:
+            assert f'DATA_DIR / "{name}"' in pulls, f"{script} writes {name}, which no pull lists"
+
+
 def test_dodo_py_syntax(template_dir, temp_dir):
     """Test that generated dodo.py has valid Python syntax."""
     project_path = generate_project(template_dir, temp_dir, FULL_CONTEXT)
@@ -463,6 +536,28 @@ def test_dodo_py_syntax(template_dir, temp_dir):
         py_compile.compile(str(dodo_path), doraise=True)
     except py_compile.PyCompileError as e:
         pytest.fail(f"dodo.py has invalid Python syntax: {e}")
+
+
+def test_dodo_quotes_every_path_it_hands_a_shell(template_dir, temp_dir):
+    """A project in a folder whose name has a space ("C:\\Users\\Jane Doe", "My Drive") builds.
+
+    Found on Windows: unquoted, nbconvert wrote the notebook's HTML into a
+    folder beside the project, named for the part before the space, and
+    `move` failed; and Stata is installed under "C:\\Program Files".
+    """
+    project_dir = Path(generate_project(template_dir, temp_dir, FULL_CONTEXT))
+    dodo = (project_dir / "dodo.py").read_text(encoding="utf-8")
+    for quoted in (
+        '--inplace "{notebook_path}"',
+        '--output-dir="{output_dir}" "{notebook_path}"',
+        'move "{from_path}" "{to_path}"',
+        'mv "{from_path}" "{to_path}"',
+        '--output "{notebook_path}" "{pyfile_path}"',
+    ):
+        assert quoted in dodo
+    if "STATA_COMMAND" in dodo:
+        assert '"{config("STATA_EXE")}" /e' in dodo
+    assert not re.search(r"[ =]\{(notebook_path|output_dir|from_path|to_path|pyfile_path)\}", dodo)
 
 
 def test_dodo_src_references_match_filenames(template_dir, temp_dir):

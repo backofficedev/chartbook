@@ -30,7 +30,7 @@ from chartbook.errors import AssetNotPinnedError
 from chartbook.store import FolderStore, ObjectNotFoundError, StoreError, default_store, is_record_name, unsynced_part
 from tests.test_dependencies_by_id import _commit, _forecast, _rates
 from tests.test_model_versions import _git
-from tests.fixtures import remove_tree
+from tests.fixtures import needs_symlinks, remove_tree
 
 LONG_AGO = "2020-01-01T00:00:00.000000Z"
 
@@ -76,7 +76,7 @@ def _snapshot_again(rates: Path, value: float, made_at=None) -> snapshot.Snapsho
 
 def _object_file(taken: snapshot.Snapshot) -> Path:
     """The treasury file of a snapshot's object, writable, as a sync service would write it."""
-    held = default_store().get(taken.assets["treasury"]["content_hash"]) / "treasury.parquet"
+    held = default_store().files(taken.assets["treasury"]["content_hash"], name="treasury.parquet").one.location
     os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
     return held
 
@@ -231,6 +231,7 @@ class TestTheSizesOfAnObject:
         assert what.startswith("holds part-0 (1).parquet, which its record does not list") and not waiting
         assert unsynced_part(tmp_path, 10, {"part-0.parquet": 10}) is None  # one file's other names are other pins'
 
+    @needs_symlinks
     def test_a_link_is_not_judged(self, tmp_path):
         (tmp_path / "elsewhere.txt").write_bytes(b"x" * 3)
         (tmp_path / "object").mkdir()
@@ -330,7 +331,7 @@ class TestASyncServicesCopies:
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         assert [root.note for root in plan.elsewhere] == [copy.name] and plan.forget == [project / lock.LOCK_FILE]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--forget-missing"])
-        assert f"(a sync service's copy of a note: what it recorded at its last pin is kept; note {store.root}/roots/{copy.name})" in result.output
+        assert f"(a sync service's copy of a note: what it recorded at its last pin is kept; note {store.root / 'roots' / copy.name})" in result.output
 
     def test_a_copy_that_cannot_be_read_stops_gc_and_names_itself(self, drive):
         """Half a copy may be the only record of the other side's pins: nothing is removed until it is read or gone."""
@@ -474,7 +475,7 @@ class TestOnePersonsTwoMachines:
         plan = lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0)
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
-        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root}/roots/{older.name})" in result.output
+        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root / 'roots' / older.name})" in result.output
 
     def test_gc_says_whose_it_is(self, drive, monkeypatch):
         import socket
@@ -490,7 +491,7 @@ class TestOnePersonsTwoMachines:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0
         assert f"{forecast / lock.LOCK_FILE}  (on another machine, machine-b.local: what it recorded at its last pin is kept;" in result.output
-        assert f"note {default_store().root}/roots/" in result.output
+        assert f"note {default_store().root / 'roots'}{os.sep}" in result.output
         monkeypatch.setattr(socket, "gethostname", lambda: "machine-b.local")  # a machine named as the other is
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert "(noted by machine-b.local under another machine name than this one's now: " in result.output
@@ -647,7 +648,7 @@ class TestAPathDependencyOnAnotherMachine:
         from chartbook.manifest import load_manifest
 
         (record,) = [r for r in lock.read_lock(cloned).assets.values() if r.get("content_hash")]
-        held = default_store().get(record["content_hash"]) / "treasury.parquet"
+        held = default_store().files(record["content_hash"]).one.location
         os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
         _cut(held, b"PAR1")  # not synced to this machine yet
         (problem,) = check_dependencies(load_manifest(cloned), cloned)
@@ -715,11 +716,14 @@ class TestAVersionsSite:
         work, machine, rates = drive
         taken = snapshot.make(rates).snapshot
         store = default_store()
-        ((place, _),) = store.files_of(taken.assets["treasury"]["content_hash"])
-        assert store.delete(taken.assets["treasury"]["content_hash"])  # not synced here yet
+        # A version is built without its data; its documents it needs, and they have not synced here yet
+        places = [place for place, _ in store.files_of(taken.documents["content_hash"])]
+        assert places and store.delete(taken.documents["content_hash"])
         first = versions.render(taken, store)
         assert not first.built
-        shutil.copy(rates / "_data" / "treasury.parquet", store.root / place)  # the sync finishes
+        for place in places:  # the sync finishes
+            (store.root / place).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(rates.joinpath(*Path(place).parts[3:]), store.root / place)
         second = versions.render(taken, store)
         # Laid out from the store this time; whatever its build said is kept now
         assert second.now and "not all in the store yet" not in second.why
@@ -753,7 +757,7 @@ class TestAFileADirectorysRecordDoesNotList:
         machine("b")
         forecast = _forecast(work / "b" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
-        held = default_store().get(taken.assets["parts"]["content_hash"])
+        held = default_store().files(taken.assets["parts"]["content_hash"]).home
         os.chmod(held, stat.S_IRWXU)
         shutil.copy(held / "part-0.parquet", held / "part-0 (1).parquet")
         _forget_whole()
@@ -761,7 +765,7 @@ class TestAFileADirectorysRecordDoesNotList:
         assert lock.verify(forecast).problems == []
         monkeypatch.chdir(forecast)
         assert data.load("acme/rates:parts").collect()["a"].to_list() == [1, 2]
-        assert "part-0 (1).parquet" not in {p.name for p in Path(default_store().get(taken.assets["parts"]["content_hash"])).iterdir()}
+        assert "part-0 (1).parquet" not in {f.relative for f in default_store().files(taken.assets["parts"]["content_hash"]).files}
 
 
 class TestAFilesOwnNameNotThereYet:
@@ -773,7 +777,7 @@ class TestAFilesOwnNameNotThereYet:
         (tmp_path / "b.csv").write_text("x,y\n1,2\n", encoding="utf-8", newline="\n")
         stored = store.put(tmp_path / "a.csv", links=("copy",))
         assert store.put(tmp_path / "b.csv", links=("copy",)).content_hash == stored.content_hash
-        held = store.get(stored.content_hash)
+        held = store.object_path(stored.content_hash)
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "b.csv", stat.S_IRWXU)  # read-only, which Windows will not remove
         (held / "b.csv").unlink()  # this name not synced yet
@@ -979,7 +983,7 @@ class TestWhatADirectorysReaderReads:
         taken = snapshot.make(rates).snapshot
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
-        held = default_store().get(taken.assets["parts"]["content_hash"])
+        held = default_store().files(taken.assets["parts"]["content_hash"]).home
         os.chmod(held, stat.S_IRWXU)
         (held / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1" + b"\x00" * 600)
         (held / "Thumbs.db").write_bytes(b"x" * 10)
@@ -1141,7 +1145,7 @@ class TestADirectorysListedFiles:
             "files": [{"path": "../../a.parquet", "size_bytes": 3, "content_hash": "sha256:" + "0" * 64}],
         }
         record_ok = {**record, "files": [{"path": "a.parquet", "size_bytes": 3, "content_hash": "sha256:" + "0" * 64}]}
-        assert _held(store, record_ok).files == (store.get(stored.content_hash) / "a.parquet",)
+        assert _held(store, record_ok).files == (store.object_path(stored.content_hash) / "a.parquet",)
         with pytest.raises((StoreError, AssetNotPinnedError), match="not a plain path"):
             _held(store, record)
 
@@ -1556,7 +1560,7 @@ class TestAnOldNoteGivesWay:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0, result.output
         assert result.output.count(str(project / lock.LOCK_FILE)) == 1, result.output
-        assert f"roots/{root_name(project / lock.LOCK_FILE)}" in result.output
+        assert f"roots{os.sep}{root_name(project / lock.LOCK_FILE)}" in result.output
         lock.run_gc(lock.plan_gc(default_store()), default_store())
         assert not older.exists() and len(default_store().roots()) == 1
 

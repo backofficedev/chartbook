@@ -159,6 +159,7 @@ def _write_sphinx_project(
     hash_cache=None,
     built_index: dict | None = None,
     render_versions: bool = False,
+    versions_into: tuple = (),
 ):
     """Write the complete Sphinx project for a site into a directory.
 
@@ -193,7 +194,7 @@ def _write_sphinx_project(
     # policy.mode = "strict" fails the build on any missing required
     # field. The policy is the catalog's, or a lone pipeline's own.
     _check_policy(manifest, diagnostic_rows)
-    rendered = _render_versions(manifest, built_index) if render_versions and built_index is not None else None
+    rendered = _render_versions(manifest, built_index, versions_into) if render_versions and built_index is not None else None
 
     # Run pipeline publish
     run_build_markdown(
@@ -269,9 +270,40 @@ def _chartbook_keep_inside(app, doctree):
                 break
 
 
+# The template's own setup, which this one would otherwise replace
+_chartbook_template_setup = globals().get("setup")
+
+
 def setup(app):
+    if _chartbook_template_setup is not None:
+        _chartbook_template_setup(app)
     app.connect("doctree-read", _chartbook_keep_inside, priority=100)
 """
+
+
+def _not_shown_from_the_index(missing_files: list, project_dir) -> list:
+    """The missing files of a version laid out from the store, less the data its snapshot's index describes.
+
+    A version is laid out without its dataframes, files assets and models
+    (``chartbook.snapshot.materialize``, ``data=False``): the site shows each
+    from the snapshot's own index, which recorded them when it had the files
+    (``chartbook.index.stored_index_records``), so they are not missing.
+    """
+    from chartbook import index
+
+    stored = index.stored_index_records(Path(project_dir))
+    if not stored:
+        return missing_files
+    prefixes = {"dataframe": "", "file": "file/", "model": "model/"}
+    kept = []
+    for missing in missing_files:
+        prefix = prefixes.get(missing.file_type)
+        record = stored.get(f"{missing.pipeline_id}:{prefix}{missing.item_id}") if prefix is not None else None
+        # Built (a hash of its bytes), or a table or query in a source (a hash of its definition)
+        if isinstance(record, dict) and (isinstance(record.get("content_hash"), str) or isinstance(record.get("definition_hash"), str)):
+            continue
+        kept.append(missing)
+    return kept
 
 
 def _missing_files_hint(manifest: dict, missing_files: list, after_build: bool) -> list[str] | None:
@@ -366,6 +398,7 @@ def _refuse_unreadable(built: dict) -> None:
         and (record.get("location") or {}).get("kind") == "file"
         and (record.get("location") or {}).get("resolved_path")
         and "content_hash" not in record
+        and "definition_hash" not in record  # a table or query a version shows from its index: no file, and none expected
         and not not_built(record)
     ]
     if not unreadable:
@@ -448,6 +481,8 @@ def generate_docs(
     from chartbook.config import untrusted_source
 
     missing_files = validate_source_files(manifest, project_dir)
+    if untrusted_source():
+        missing_files = _not_shown_from_the_index(missing_files, project_dir)
     skip_pipelines: set[str] = set()
     if (
         missing_files
@@ -543,7 +578,7 @@ def generate_docs(
         code_times = apply_code_change_times(manifest)
         _docs_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
-        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines, size_threshold=size_threshold)
         _refuse_unreadable(built)
         rendered = _write_sphinx_project(
             manifest=manifest,
@@ -559,6 +594,7 @@ def generate_docs(
             hash_cache=cache,
             built_index=built,
             render_versions=True,
+            versions_into=(_docs_dir / "_build" / "html", output_dir),
         )
 
         # Run sphinx build
@@ -579,8 +615,13 @@ def generate_docs(
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
 
 
-def _render_versions(manifest: dict, built: dict) -> Optional[dict]:
-    """In a catalog, build each listed snapshot's site before the pages, so that they know which were built."""
+def _render_versions(manifest: dict, built: dict, into: tuple = ()) -> Optional[dict]:
+    """In a catalog, build each listed snapshot's site before the pages, so that they know which were built.
+
+    *into* are the folders the catalog's site is laid out in, where each
+    version's site is copied: one too deep for Windows in any of them is
+    not linked as built.
+    """
     if manifest["project"]["type"] != "catalog":
         return None
     import click
@@ -590,6 +631,7 @@ def _render_versions(manifest: dict, built: dict) -> Optional[dict]:
     return versions.render_listed(
         built,
         store=manifest.get("stores"),
+        into=into,
         echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
     )
 
@@ -676,11 +718,11 @@ def _generate_docs_mkdocs(
         pages_dir = _docs_dir / mkdocs_writer.PAGES_DIR
         pages_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
-        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines, size_threshold=size_threshold)
         _refuse_unreadable(built)
         _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
         _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))
-        rendered = _render_versions(manifest, built)
+        rendered = _render_versions(manifest, built, (_docs_dir / "_build" / "html", output_dir))
         run_build_markdown(
             project_dir=project_dir,
             pipeline_theme=pipeline_theme,
@@ -891,8 +933,11 @@ class IncrementalBuildSummary:
             sphinx = "Sphinx ran"
         else:
             sphinx = f"Sphinx re-read {self.pages_read} page(s)"
+        # A catalog's pipelines are its stores' snapshots, whose pages are written again on every
+        # build and kept only where they differ: there is no working pipeline to count
+        pipelines = f"regenerated {len(self.regenerated)} of {total} pipeline(s); " if total else ""
         return (
-            f"{lead}: regenerated {len(self.regenerated)} of {total} pipeline(s); "
+            f"{lead}: {pipelines}"
             f"{self.sources_written} source file(s) changed, "
             f"{self.sources_deleted} removed; {sphinx}."
         )
@@ -946,7 +991,7 @@ def _generate_docs_incremental(
     cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
     built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
     _refuse_unreadable(built)
-    rendered = _render_versions(manifest, built)
+    rendered = _render_versions(manifest, built, (_docs_dir / incremental.SPHINX_BUILD_DIR / "html", output_dir))
     records = {record["id"]: record for record in built["records"]}
     salts = {
         pipeline_id: provenance.digest(pipeline_id, records)

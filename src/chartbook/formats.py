@@ -369,7 +369,7 @@ def _chosen(read: Reading, names: list[str]) -> list[str]:
     return [name for name, ending in zip(candidates, endings) if endings.count(ending) == most]
 
 
-def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
+def _sources(path: Path, read: Reading, files=(), listed=(), inside=None) -> tuple:
     """What the reader opens, and the folder it is in when it is a folder's.
 
     A file or a glob is opened as it is. A folder pinned from another
@@ -381,6 +381,10 @@ def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
     file whose name a glob would read otherwise is a list of one, which no
     reader takes for a pattern; only a path that is not there is a glob.
 
+    :param inside: For an asset read from the store, where each of its
+        files is, by its path inside the asset
+        (:class:`chartbook.resolve.FileLocation`): the files may sit in
+        several snapshots' folders, and none need be under *path*.
     :returns: The path, or the files, as text; and the folder, or None.
     :raises UnreadableTableError: For a folder with no file of its format.
     """
@@ -410,6 +414,8 @@ def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
         chosen = _chosen(read, sorted(relative for relative, parts in plain.items() if parts))
         if not chosen:
             raise UnreadableTableError(path, read.format, _nothing(path, listed, read, pinned=True))
+        if inside:
+            return [str(inside[relative]) for relative in chosen], path
         return [str(on_disk(path, plain[relative])) for relative in chosen], path
     if is_folder:
         names = _names(path)
@@ -485,14 +491,14 @@ def _escaped(file: str) -> str:
     return glob.escape(file) if is_glob_pattern(file) else file
 
 
-def files_of(path: Union[str, Path], read: Reading, files=(), listed=()) -> list[Path]:
+def files_of(path: Union[str, Path], read: Reading, files=(), listed=(), inside=None) -> list[Path]:
     """The files a read of a path opens: the file, the glob's matches, or a folder's files of its format.
 
     Empty when there are none yet: nothing built, or a folder with no file
     of its format.
     """
     try:
-        sources, folder = _sources(Path(path), read, files, listed)
+        sources, folder = _sources(Path(path), read, files, listed, inside)
     except UnreadableTableError:
         return []
     if isinstance(sources, str) and folder is not None:
@@ -529,6 +535,109 @@ def _above(folder: Path) -> bool:
     return any("=" in part and not part.startswith("=") for part in Path(folder).parts)
 
 
+def _by_location(inside) -> dict:
+    """Each file's path inside its asset, by the file, from where the store says each is (:func:`_sources`); empty when the files are read under a folder."""
+    return {str(location): relative for relative, location in (inside or {}).items()}
+
+
+def _kept_apart(sources, inside) -> list:
+    """The store's files as ``(where it is, its path inside the asset)``, when where they are does not say their keys; else empty.
+
+    The store keeps each file once, by its bytes: a partition's file can sit
+    at another partition's path, of the same bytes (polars drops the key's
+    column when it writes, so two partitions can be one file), and an S3
+    store's copy here is named by its hash. A reader that takes a Hive key
+    from where a file is would then take the wrong one, or none, and would
+    read a file two partitions share once. Each pair is one file a read
+    opens (*sources*), once for every path inside the asset it is.
+    """
+    if not inside or not isinstance(sources, list):
+        return []
+    opened = set(sources)
+    pairs = [(str(location), relative) for relative, location in sorted(inside.items()) if str(location) in opened]
+    whole = len({location for location, _ in pairs}) == len(pairs) and all(
+        Path(location).parts[-len(Path(relative).parts):] == Path(relative).parts for location, relative in pairs
+    )
+    return [] if whole else pairs
+
+
+def _keys_of_pairs(pairs: list, own: Optional[Mapping] = None) -> dict:
+    """The Hive keys of files kept apart (:func:`_kept_apart`), each pair's from its path inside the asset: ``{key: (type, [value of each pair])}``.
+
+    A key that is a column of the files too (*own*, the first file's
+    schema) is of the column's type, as in polars' Hive read: its value as
+    written, cast to it.
+    """
+    from urllib.parse import unquote
+
+    relatives = [relative for _, relative in pairs]
+    keys = _partitions(relatives, Path("."), {relative: relative for relative in relatives})
+    found = {}
+    for key, (kind, values) in keys.items():
+        if own is not None and key in own:
+            written = [dict(_keys_of(Path(relative).parent))[key] for relative in relatives]
+            text = [None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in written]
+            found[key] = (own[key], pl.Series(text, dtype=pl.String).cast(own[key], strict=False).to_list())
+        else:
+            found[key] = (kind, [values[relative] for relative in relatives])
+    return found
+
+
+def _joined_to_keys(scan, pairs: list):
+    """Files kept apart (:func:`_kept_apart`) read each once with no keys, and joined to each pair's keys.
+
+    A file two partitions share gives its rows to each, with each one's
+    keys; a key's value is in place of a file's own column of its name, and
+    after the file's columns otherwise, as in polars' Hive read.
+    """
+    import inspect
+
+    files = list(dict.fromkeys(location for location, _ in pairs))
+    first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema()
+    keys = _keys_of_pairs(pairs, first)
+    given = {}
+    takes = inspect.signature(scan).parameters
+    if keys and "schema" in takes:
+        given["schema"] = {**first, **{key: kind for key, (kind, _) in keys.items() if key not in first}}
+        if "missing_columns" in takes:
+            given["missing_columns"] = "insert"
+    frame = _scan_files(scan, files, hive_partitioning=False, include_file_paths=_FILE, **given)
+    # Each pair by its file as polars names it: as given, or as escaped where it could not be told not to glob it
+    rows = [(compared, i) for i, (location, _) in enumerate(pairs) for compared in {_as_compared(location), _as_compared(_escaped(location))}]
+    held = {f"__chartbook_key_{n}": (key, kind, values) for n, (key, (kind, values)) in enumerate(keys.items())}
+    table = pl.LazyFrame(
+        {_FILE: [compared for compared, _ in rows], **{name: [values[i] for _, i in rows] for name, (_, _, values) in held.items()}},
+        schema={_FILE: pl.String, **{name: kind for name, (_, kind, _) in held.items()}},
+    )
+    joined = frame.with_columns(_file_compared().alias(_FILE)).join(table, on=_FILE, how="inner", maintain_order="left")
+    return joined.with_columns(pl.col(name).alias(key) for name, (key, _, _) in held.items()).drop([_FILE, *held])
+
+
+def _below(file, folder: Path, by_file: Optional[dict] = None) -> Path:
+    """The folders a file is under inside what is read: ``year=2024`` of ``year=2024/a.parquet``.
+
+    By the file's path inside its asset when the store says it (*by_file*),
+    since its files may sit in several folders; else under *folder*.
+    """
+    relative = by_file.get(str(file)) if by_file else None
+    if relative is not None:
+        return Path(relative).parent
+    return Path(file).relative_to(folder).parent
+
+
+def _keys_above(files, folder: Path, by_file: Optional[dict] = None) -> bool:
+    """Whether a ``key=value`` part is in the path above what is read: the folder's own, or, for files the store keeps, above each file's path inside the asset."""
+    if not by_file:
+        return _above(folder)
+    bases = set()
+    for file in files:
+        relative = by_file.get(str(file))
+        if relative is None:
+            return True  # not where the store said: read with no keys, which is safe
+        bases.add(Path(file).parents[len(Path(relative).parts) - 1])
+    return any(_above(base) for base in bases)
+
+
 def _keys_of(parent: Path) -> list:
     """The Hive keys a path below a folder names, each with its value as written: ``[("year", "2024")]``.
 
@@ -539,15 +648,15 @@ def _keys_of(parent: Path) -> list:
     return [tuple(part.split("=")) for part in Path(parent).parts if part.count("=") == 1 and not part.startswith("=")]
 
 
-def _valued_with(files, folder: Path, characters: str) -> bool:
+def _valued_with(files, folder: Path, characters: str, by_file: Optional[dict] = None) -> bool:
     """Whether a key below a folder has one of *characters* in a value: ``tag=a*``, ``tag=q?``."""
     # Of the files with one in their path at all, which most folders have none of
     odd = [file for file in files if any(character in str(file) for character in characters)]
-    parents = {Path(file).relative_to(folder).parent for file in odd}
+    parents = {_below(file, folder, by_file) for file in odd}
     return any(character in value for parent in parents for _, value in _keys_of(parent) for character in characters)
 
 
-def _partitions(files: list[str], folder: Path) -> dict:
+def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None) -> dict:
     """The Hive keys of a folder's files, from the folders below it and none above: ``year`` of ``year=2024/a.parquet``.
 
     The keys are those every folder below names, once each, in the order
@@ -563,10 +672,12 @@ def _partitions(files: list[str], folder: Path) -> dict:
     A key polars cannot read, a time of day, or takes for no key, a value
     with a ``*``, is text, and its column is kept.
 
+    :param by_file: Each file's path inside its asset, for files the store
+        keeps in several folders (:func:`_by_location`).
     :returns: ``{key: (polars type, {file: value})}``; empty when there is no key.
     :raises RuntimeError: If no scratch file can be written (:func:`_scratch`).
     """
-    relative = {file: Path(file).relative_to(folder).parent for file in files}
+    relative = {file: _below(file, folder, by_file) for file in files}
     named = {parent: _keys_of(parent) for parent in set(relative.values())}
     keys = [key for key, _ in named[relative[files[0]]]] if files else []
     if not keys or len(set(keys)) < len(keys) or any(sorted(key for key, _ in each) != sorted(keys) for each in named.values()):
@@ -648,7 +759,7 @@ def _not_written(error: BaseException) -> RuntimeError:
     )
 
 
-def _hive(scan, files: list[str], folder: Path):
+def _hive(scan, files: list[str], folder: Path, by_file: Optional[dict] = None):
     """A scan of a folder's files with its Hive keys as columns: those below the folder, and none above it.
 
     With no ``key=value`` in the folder's own path, which is every folder of
@@ -664,17 +775,17 @@ def _hive(scan, files: list[str], folder: Path):
     polars' own Hive read fails on, or passes a key of over (``tag=a*``)
     (:func:`_by_file`).
     """
-    if not _above(folder) and not _valued_with(files, folder, "*"):
+    if not _keys_above(files, folder, by_file) and not _valued_with(files, folder, "*", by_file):
         frame = _scan_files(scan, files, hive_partitioning=True)
         try:
             frame.collect_schema()
             return frame
         except READ_ERRORS:
             pass
-    return _by_file(scan, files, folder)
+    return _by_file(scan, files, folder, by_file)
 
 
-def _by_file(scan, files: list[str], folder: Path):
+def _by_file(scan, files: list[str], folder: Path, by_file: Optional[dict] = None):
     """A folder's files read with no keys, and the keys below it put on by each row's file (:func:`_hive`).
 
     Also for a folder polars' Hive read fails on, as it does when a key is
@@ -684,7 +795,7 @@ def _by_file(scan, files: list[str], folder: Path):
     """
     import inspect
 
-    keys = _partitions(files, folder)
+    keys = _partitions(files, folder, by_file)
     if not keys:
         return _scan_files(scan, files, hive_partitioning=False)
     given = {}
@@ -728,19 +839,28 @@ def _overrides(read: Reading) -> dict:
     return {column: getattr(pl, _type(name)) for column, name in (read.options.get("schema_overrides") or {}).items()}
 
 
+def _named(sources, by_file: Optional[dict]):
+    """The names the files are read by, for what a name tells (a TSV's tab): each file's path inside its asset when the store keeps it under another name (a bucket's cache keeps a file under its hash), else the files themselves."""
+    if not by_file:
+        return sources
+    if isinstance(sources, list):
+        return [by_file.get(str(source), source) for source in sources]
+    return by_file.get(str(sources), sources)
+
+
 def _tab_separated(sources) -> bool:
     """Whether every file a CSV read opens is named as a TSV is."""
     names = [sources] if isinstance(sources, str) else list(sources)
     return bool(names) and all(str(name).lower().endswith(_TAB_ENDINGS) for name in names)
 
 
-def _scan(read: Reading, sources, folder: Optional[Path]):
+def _scan(read: Reading, sources, folder: Optional[Path], by_file: Optional[dict] = None):
     """The polars scan of a format's files, unchecked; a JSON lines file's columns not given their types yet."""
     # A list is files, each itself, which polars is told not to take for a
     # glob (_scan_files): `tag=[draft]/` and `a[1].parquet` are no patterns
     if read.format == "parquet":
         if isinstance(sources, list) and folder is not None:
-            return _hive(pl.scan_parquet, sources, folder)
+            return _hive(pl.scan_parquet, sources, folder, by_file)
         if isinstance(sources, list):
             return _scan_files(pl.scan_parquet, sources, hive_partitioning=True)
         # A file, a glob, or a folder handed whole: as parquet always was
@@ -761,12 +881,12 @@ def _scan(read: Reading, sources, folder: Optional[Path]):
 
             return _hive(pl.scan_ipc, _files(sources), hashing.split_glob(sources)[0])
         if isinstance(sources, list) and folder is not None:
-            return _hive(pl.scan_ipc, sources, folder)
+            return _hive(pl.scan_ipc, sources, folder, by_file)
         if isinstance(sources, list):
             return _scan_files(pl.scan_ipc, sources, hive_partitioning=False)
         return pl.scan_ipc(sources, hive_partitioning=False)
     if read.format == "csv":
-        frame, (polars_names, names) = _csv(read, sources)
+        frame, (polars_names, names) = _csv(read, sources, _named(sources, by_file))
         return frame.rename(dict(zip(polars_names, names))) if polars_names != names else frame
     # Each file's types inferred from its own lines, and the files read as
     # one under all of their columns, as DuckDB's union_by_name reads them:
@@ -782,15 +902,18 @@ def _scan(read: Reading, sources, folder: Optional[Path]):
     return pl.scan_ndjson(files, schema=merged)
 
 
-def _csv(read: Reading, sources) -> tuple:
+def _csv(read: Reading, sources, named=None) -> tuple:
     """A CSV file's scan, and its columns' names: as polars gives them, and as both engines are to give them.
 
     A file with no header has its columns named ``column_1``, ``column_2``
     and so on, which polars names otherwise by version and DuckDB names
     otherwise again; an empty name in a header is named so too, which
     DuckDB will not take. ``schema_overrides`` name the columns so.
+
+    :param named: The names the files are read by (:func:`_named`), when
+        they are not the files' own; a TSV is told by its name.
     """
-    options = _csv_options(read, sources)
+    options = _csv_options(read, sources if named is None else named)
     overrides = options.pop("schema_overrides", None) or {}
     if isinstance(sources, str) and is_glob_pattern(sources) and not os.path.exists(sources):
         sources = _pattern(sources)
@@ -827,6 +950,7 @@ def scan(
     *,
     files=(),
     listed=(),
+    inside=None,
     where: Optional[str] = None,
     public: bool = False,
 ):
@@ -857,6 +981,8 @@ def scan(
     :param files: For a folder pinned from another pipeline, the parquet
         files its record lists (:class:`chartbook.resolve.FileLocation`).
     :param listed: And every file it lists, by its path in the folder.
+    :param inside: And where each is, by that path, when the store keeps
+        them in several folders (:func:`_sources`).
     :param where: What a message names first: ``"Dataframe 'rates'"``.
     :param public: Whether a message is for a page, which names the file by
         its name alone: a machine's paths belong on no page.
@@ -869,13 +995,17 @@ def scan(
         temporary folder can be written to (:func:`_partitions`).
     """
     read = reading(path, format, read_options, where)
-    sources, folder = _sources(Path(path), read, files, listed)
+    sources, folder = _sources(Path(path), read, files, listed, inside)
     shown = Path(str(path)).name if public else str(path)
     shown = f"{where}: {shown}" if where else shown
     if isinstance(sources, str) and is_glob_pattern(sources) and not _matches_any(sources):
         raise FileNotFoundError(f"{shown} matches no file yet.")
     try:
-        frame = _scan(read, sources, folder)
+        kept_apart = _kept_apart(sources, inside) if read.format in ("parquet", "ipc") else []
+        if kept_apart:
+            frame = _joined_to_keys(pl.scan_parquet if read.format == "parquet" else pl.scan_ipc, kept_apart)
+        else:
+            frame = _scan(read, sources, folder, _by_location(inside))
         schema = frame.collect_schema()
     except FileNotFoundError:
         raise
@@ -951,6 +1081,7 @@ def scan_location(location, where: Optional[str] = None):
         getattr(location, "read_options", None),
         files=location.files,
         listed=location.listed,
+        inside=getattr(location, "inside", None),
         where=where,
     )
 
@@ -967,8 +1098,12 @@ def to_pandas(location, where: Optional[str] = None):
     read = reading_of(location, where)
     if read.format != "parquet":
         return frame.collect().to_pandas()
-    sources, folder = _sources(Path(location.path), read, location.files, location.listed)
+    inside = getattr(location, "inside", None)
+    sources, folder = _sources(Path(location.path), read, location.files, location.listed, inside)
     if isinstance(sources, str) and is_glob_pattern(sources):
+        return frame.collect().to_pandas()
+    if isinstance(sources, list) and inside:
+        # Files the store keeps in several folders have no one base for pyarrow to read keys below
         return frame.collect().to_pandas()
     if isinstance(sources, list) and folder is not None:
         import pyarrow.dataset as ds
@@ -1063,7 +1198,7 @@ def _listed(tables: list[str]) -> str:
     return "[" + ", ".join(quote_literal(_escaped(Path(file).as_posix())) for file in tables) + "]"
 
 
-def _folder_sql(tables: list[str], folder: Path) -> str:
+def _folder_sql(tables: list[str], folder: Path, by_file: Optional[dict] = None) -> str:
     """A folder's files in SQL, with the Hive keys below it as polars reads them (:func:`_hive`).
 
     With no ``key=value`` in the folder's own path, DuckDB reads its keys
@@ -1077,13 +1212,13 @@ def _folder_sql(tables: list[str], folder: Path) -> str:
     """
     from chartbook.backends import quote_literal
 
-    if not _above(folder) and not _valued_with(tables, folder, "?\\"):
+    if not _keys_above(tables, folder, by_file) and not _valued_with(tables, folder, "?\\", by_file):
         # The keys every file's path has below the folder, of polars' types
-        named = [{key for key, _ in _keys_of(Path(file).relative_to(folder).parent)} for file in tables]
+        named = [{key for key, _ in _keys_of(_below(file, folder, by_file))} for file in tables]
         hive = {}
         if named and set.intersection(*named):
             # Polars takes `tag=a*` for no key, and has no column of it
-            if not _valued_with(tables, folder, "*"):
+            if not _valued_with(tables, folder, "*", by_file):
                 try:
                     hive = pl.scan_parquet(tables, hive_partitioning=True, glob=False).collect_schema()
                 except READ_ERRORS:
@@ -1092,13 +1227,13 @@ def _folder_sql(tables: list[str], folder: Path) -> str:
                 # Polars cannot read these files with their keys (a key that
                 # is a file's column too, say, or a time of day): its types
                 # of the keys alone, text where it has none
-                hive = {key: kind for key, (kind, _) in _partitions(tables, folder).items()}
+                hive = {key: kind for key, (kind, _) in _partitions(tables, folder, by_file).items()}
         keys = {key: kind for key, kind in hive.items() if all(key in each for each in named)}
         if not keys:
             return f"read_parquet({_listed(tables)}, hive_partitioning = false)"
         types = ", ".join(f"{quote_literal(key)}: {quote_literal(_duckdb_type(kind))}" for key, kind in keys.items())
         return f"read_parquet({_listed(tables)}, hive_partitioning = true, hive_types = {{{types}}})"
-    keys = _partitions(tables, folder)
+    keys = _partitions(tables, folder, by_file)
     read_parquet = f"read_parquet({_listed(tables)}, hive_partitioning = false"
     if not keys:
         return read_parquet + ")"
@@ -1117,6 +1252,31 @@ def _folder_sql(tables: list[str], folder: Path) -> str:
     selected = ", ".join([selected] + [f"chartbook_keys.{_identifier(key)}" for key in keys if key not in own])
     return (
         f"(select {selected} from {read_parquet}, filename = '{_FILE}') as chartbook_files "
+        f"join (values {rows}) as chartbook_keys({columns}) using ({_FILE}))"
+    )
+
+
+def _joined_sql(pairs: list) -> str:
+    """Files kept apart (:func:`_kept_apart`) in SQL: each read once with no keys, joined to each pair's keys (:func:`_joined_to_keys`)."""
+    from chartbook.backends import quote_literal
+
+    files = list(dict.fromkeys(location for location, _ in pairs))
+    schema = pl.scan_parquet(files[0], hive_partitioning=False, glob=False).collect_schema()
+    keys = _keys_of_pairs(pairs, schema)
+    read_parquet = f"read_parquet({_listed(files)}, hive_partitioning = false, filename = '{_FILE}')"
+    own = set(schema.names())
+    rows = ", ".join(
+        "(" + ", ".join([quote_literal(Path(location).as_posix())] + [_literal(values[i], kind) for kind, values in keys.values()]) + ")"
+        for i, (location, _) in enumerate(pairs)
+    )
+    columns = ", ".join([_FILE] + [_identifier(key) for key in keys])
+    selected = f"chartbook_files.* exclude ({_FILE})"
+    replaced = [_identifier(key) for key in keys if key in own]
+    if replaced:
+        selected += " replace (" + ", ".join(f"chartbook_keys.{key} as {key}" for key in replaced) + ")"
+    selected = ", ".join([selected] + [f"chartbook_keys.{_identifier(key)}" for key in keys if key not in own])
+    return (
+        f"(select {selected} from {read_parquet} as chartbook_files "
         f"join (values {rows}) as chartbook_keys({columns}) using ({_FILE}))"
     )
 
@@ -1154,7 +1314,8 @@ def sql(location) -> str:
             f"{path.name} is {what}, so there is no text to stand for it in SQL. data.sql() hands "
             f"DuckDB what data.load() reads."
         )
-    sources, folder = _sources(path, read, location.files, location.listed)
+    inside = getattr(location, "inside", None)
+    sources, folder = _sources(path, read, location.files, location.listed, inside)
     # With / on every system: DuckDB reads it so on Windows too, and SQL
     # with a path in it reads the same wherever it is pasted
     if read.format == "parquet":
@@ -1164,7 +1325,10 @@ def sql(location) -> str:
             from chartbook.utils import directory_tables
 
             tables = sources if isinstance(sources, list) else [str(file) for file in directory_tables(folder)]
-            return _folder_sql(tables, folder)
+            kept_apart = _kept_apart(tables, inside)
+            if kept_apart:
+                return _joined_sql(kept_apart)
+            return _folder_sql(tables, folder, _by_location(inside))
         if isinstance(sources, list):
             return f"read_parquet({quote_literal(_escaped(path.as_posix()))})"  # a file named as a glob would be
         if is_glob_pattern(sources):
@@ -1181,13 +1345,14 @@ def sql(location) -> str:
         return f"read_json({text}, {', '.join(given)})"
     # As polars reads it, which says now what it cannot read: a glob whose
     # files have other columns, say, which DuckDB would read as the first's
-    scan(path, read.format, read.options, files=location.files, listed=location.listed)
-    _, (polars_names, names) = _csv(read, sources)
+    scan(path, read.format, read.options, files=location.files, listed=location.listed, inside=inside)
+    named = _named(sources, _by_location(inside))
+    _, (polars_names, names) = _csv(read, sources, named)
     quote = options.get("quote_char", '"')
     nulls = options.get("null_values", [])
     nulls = [""] + [n for n in ([nulls] if isinstance(nulls, str) else nulls) if n != ""]
     given = [
-        f"delim = {quote_literal(options.get('separator', chr(9) if _tab_separated(sources) else ','))}",
+        f"delim = {quote_literal(options.get('separator', chr(9) if _tab_separated(named) else ','))}",
         f"header = {'true' if options.get('has_header', True) else 'false'}",
         f"quote = {quote_literal(quote)}",
         f"escape = {quote_literal(quote)}",
@@ -1237,7 +1402,7 @@ def handed_name(location) -> str:
     import json
 
     read = reading_of(location)
-    files = [str(file) for file in files_of(location.path, read, location.files, location.listed)]
+    files = [str(file) for file in files_of(location.path, read, location.files, location.listed, getattr(location, "inside", None))]
     said = json.dumps([read.format, read.options, sorted(files)], sort_keys=True, default=str)
     return f"chartbook_{read.format}_" + hashlib.sha256(said.encode("utf-8")).hexdigest()[:16]
 
@@ -1263,12 +1428,17 @@ def arrow_dataset(location):
     from chartbook import hashing
 
     read = reading_of(location)
-    found = [str(file) for file in files_of(location.path, read, location.files, location.listed)]
+    inside = getattr(location, "inside", None)
+    by_file = _by_location(inside)
+    found = [str(file) for file in files_of(location.path, read, location.files, location.listed, inside)]
     if not found:
         raise FileNotFoundError(f"{location.path}: no Arrow IPC file is there yet.")
+    kept_apart = _kept_apart(found, inside)
+    if kept_apart:
+        return _arrow_kept_apart(location, kept_apart)
     path = Path(location.path)
-    root = hashing.split_glob(path)[0] if is_glob_pattern(str(path)) and not path.exists() else path if path.is_dir() else None
-    keys = list(_partitions(found, Path(root))) if root is not None else []
+    root = hashing.split_glob(path)[0] if is_glob_pattern(str(path)) and not path.exists() else path if path.is_dir() or by_file else None
+    keys = list(_partitions(found, Path(root), by_file)) if root is not None else []
     if not keys:
         schema = ds.dataset(found, format="ipc").schema
         plain = pa.schema([column.with_type(_plain(column.type)) for column in schema], metadata=schema.metadata)
@@ -1279,12 +1449,43 @@ def arrow_dataset(location):
     arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
     # Each path with `/`, as pyarrow writes a file's and not the folder it is told keys start below
     found = [Path(file).as_posix() for file in found]
-    given = {"partitioning": ds.partitioning(pa.schema(list(arrow.items())), flavor="hive"), "partition_base_dir": Path(root).as_posix()}
+    given = {"partitioning": ds.partitioning(pa.schema(list(arrow.items())), flavor="hive")}
+    if not by_file:
+        # Files the store keeps in several folders have no one base; pyarrow then reads the keys from each path
+        given["partition_base_dir"] = Path(root).as_posix()
     first = ds.dataset(found[:1], format="ipc").schema
     fields = {column.name: column.with_type(_plain(column.type)) for column in first}
     fields.update((key, pa.field(key, kind)) for key, kind in arrow.items())
     plain = pa.schema([fields[name] for name in loaded.names()], metadata=first.metadata)
     return ds.dataset(found, format="ipc", schema=plain, **given)
+
+
+def _arrow_kept_apart(location, pairs: list):
+    """Arrow IPC files kept apart (:func:`_kept_apart`) as a dataset, each pair's keys given as its partition, not read from where it is."""
+    import pyarrow as pa
+    import pyarrow.dataset as ds
+    import pyarrow.fs as fs
+
+    keys = _keys_of_pairs(pairs, _scan_files(pl.scan_ipc, [pairs[0][0]], hive_partitioning=False).collect_schema())
+    loaded = scan_location(location).collect_schema()
+    arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
+    first = ds.dataset([Path(pairs[0][0]).as_posix()], format="ipc").schema
+    fields = {column.name: column.with_type(_plain(column.type)) for column in first}
+    fields.update((key, pa.field(key, kind)) for key, kind in arrow.items())
+    plain = pa.schema([fields[name] for name in loaded.names()], metadata=first.metadata)
+    partitions = []
+    for i in range(len(pairs)):
+        said = ds.scalar(True)
+        for key, (_, values) in keys.items():
+            value = values[i]
+            field = ds.field(key)
+            said = said & (field.is_null() if value is None else field == pa.scalar(value, type=arrow[key]))
+        partitions.append(said)
+    return ds.FileSystemDataset.from_paths(
+        # Each path with `/`, as pyarrow writes a file's (arrow_dataset)
+        [Path(location).as_posix() for location, _ in pairs], schema=plain, format=ds.IpcFileFormat(),
+        filesystem=fs.LocalFileSystem(), partitions=partitions,
+    )
 
 
 def _plain(kind):

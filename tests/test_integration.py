@@ -327,6 +327,9 @@ class TestExampleProjects:
         assert (example_path / "_data" / "fred.parquet").exists()
         assert (example_path / "_output" / "01_gdp_chart.html").exists()
         assert (example_path / "docs" / "index.html").exists()
+        # ablog writes no feed without a blog_baseurl, so the chart listing links to none
+        charts_page = example_path / "docs" / "cb" / "charts" / "index.html"
+        assert charts_page.is_file() and "atom.xml" not in charts_page.read_text(encoding="utf-8")
 
     def test_yield_curve_example(self):
         """Test that yield_curve example runs successfully with doit -a."""
@@ -616,6 +619,8 @@ class TestExampleProjects:
 
             # Verify outputs exist
             assert (catalog_path / "docs" / "index.html").exists()
+            charts_page = catalog_path / "docs" / "cb" / "charts" / "index.html"
+            assert charts_page.is_file() and "atom.xml" not in charts_page.read_text(encoding="utf-8")
 
             # In the catalog's index, the model's input is the ID of the
             # dataframe's own record, with the bytes it is pinned at

@@ -5,11 +5,30 @@ This module provides utilities to create complete pipeline and catalog
 projects for integration testing.
 """
 
+import functools
+import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 import polars as pl
+import pytest
 import tomli_w
+
+
+@functools.lru_cache(maxsize=None)
+def symlinks_work() -> bool:
+    """Whether this user may make a symlink: on Windows only with Developer Mode on, or as an administrator."""
+    with tempfile.TemporaryDirectory() as folder:
+        try:
+            os.symlink(os.path.join(folder, "target"), os.path.join(folder, "link"))
+        except (OSError, NotImplementedError):
+            return False
+    return True
+
+
+#: For a test that makes a symlink: skipped where this user may not make one, as on Windows by default
+needs_symlinks = pytest.mark.skipif(not symlinks_work(), reason="this user may not make a symlink here (Windows without Developer Mode)")
 
 
 def remove_tree(path) -> None:
@@ -579,6 +598,8 @@ def clear_keeping_its_bytes(store, taken) -> None:
     clears a snapshot whose bytes a lockfile pins.
     """
     import os
+    import shutil
+    import tempfile
 
     from chartbook.snapshot import materialized_name
     from chartbook.store import declared_name
@@ -595,8 +616,15 @@ def clear_keeping_its_bytes(store, taken) -> None:
             name = None
         else:
             name = declared_name(location.get("path", ""))
-        held = Path(store.get(content_hash, taken.pipeline, name=name))
-        store.put(held / name if name else held, links=("copy",))
+        kept = store.files(content_hash, taken.pipeline, name=name)
+        # Laid out whole in a scratch folder, as a 0.2 object was, and put from there
+        with tempfile.TemporaryDirectory() as scratch:
+            whole = Path(scratch) / "asset"
+            for file in kept.files:
+                target = whole.joinpath(*file.relative.split("/"))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(file.location, target)
+            store.put(whole / name if name else whole, links=("copy",))
     os.chmod(taken.path, 0o600)
     taken.path.unlink()
 

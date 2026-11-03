@@ -40,6 +40,7 @@ chartbook
 ../apidocs/chartbook/chartbook.lock
 ../apidocs/chartbook/chartbook.lineage
 ../apidocs/chartbook/chartbook.gitcache
+../apidocs/chartbook/chartbook.replacing
 ../apidocs/chartbook/chartbook.run
 ../apidocs/chartbook/chartbook.build_docs
 ../apidocs/chartbook/chartbook.check

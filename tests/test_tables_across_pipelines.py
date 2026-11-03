@@ -75,7 +75,7 @@ class TestTheSnapshotWritesTablesOut:
             assert "path" not in assets[name]["location"]
         assert report.not_built == []
         # The parquet is in the store under the table's name, and holds the table
-        held = Path(snapshot.default_store().get(assets["curve"]["content_hash"], name="curve.parquet")) / "curve.parquet"
+        held = snapshot.default_store().files(assets["curve"]["content_hash"], name="curve.parquet").one.location
         assert pl.read_parquet(held).shape == (2, 3)
         # Nothing changed: the next snapshot is the same one
         assert snapshot.make(rates).made is False
@@ -195,7 +195,7 @@ class TestWhatTheReviewFound:
             again = snapshot.make(rates)
             assert again.made is False
             assert again.snapshot.assets["agg"]["content_hash"] == first.snapshot.assets["agg"]["content_hash"]
-        held = Path(snapshot.default_store().get(first.snapshot.assets["agg"]["content_hash"], name="agg.parquet")) / "agg.parquet"
+        held = snapshot.default_store().files(first.snapshot.assets["agg"]["content_hash"], name="agg.parquet").one.location
         assert pl.read_parquet(held)["k"].to_list() == list(range(7))  # sorted on every column
 
     def test_a_column_polars_cannot_import_does_not_stop_the_snapshot(self, work):

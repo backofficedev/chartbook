@@ -55,11 +55,9 @@ from chartbook.resolve import (
     FileLocation,
     caller_start_dirs,
     find_manifest_dir,
-    locate_in_catalog,
-    require_file,
+    require_single_path,
     resolve,
 )
-from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 
 
 def path(
@@ -95,6 +93,11 @@ def path(
     declared in ``[dependencies]``, and the path is the copy that
     ``chartbook.lock`` pins, in the store, not the other pipeline's working
     directory; see :func:`chartbook.assets.path`. Read it; never write to it.
+    Another pipeline's dataframe of several files, a Hive folder or a glob,
+    has no one path: the store keeps each file once, so its files may sit
+    in several snapshot folders. Asking raises
+    :class:`~chartbook.errors.NoSinglePathError`; :func:`load` and
+    :func:`sql` read it where it is, and :func:`files` lists the files.
 
     The rest of the reference grammar, ``asset#part`` and ``@rev``, is
     reserved and raises "not yet supported".
@@ -132,8 +135,91 @@ def path(
         ) from None
 
 
-#: Where :func:`scratch` puts throwaway files, relative to the pipeline root.
+def files(
+    ref: Union[str, AssetRef],
+    project_dir: Optional[Union[str, Path]] = None,
+) -> list[Path]:
+    """Get the files of a dataframe, sorted: the file, a folder's files, or a glob's matches, wherever each is kept.
+
+    >>> from chartbook import data
+    >>> file_dep = data.files("news_headlines:articles")  # doctest: +SKIP
+
+    This is :func:`chartbook.assets.files` with ``kind="dataframe"``. Of
+    your own pipeline's dataframe, the files at its declared path. Of
+    another pipeline's, the files of the pinned copy in the store, each
+    where the store keeps it: the store keeps each file once, so a dataset
+    that grew over several snapshots has files in several snapshot folders,
+    and no one folder (:func:`path` says so). Where a file is kept need
+    not say its Hive keys: the store keeps each file once, so a partition's
+    file may sit at another partition's path, and an S3 store names its
+    copies by their hashes. Read the dataset with :func:`load` or
+    :func:`sql`, which take each file's keys from its path inside the
+    dataset. A ``dodo.py`` names the files as ``file_dep``.
+
+    :param ref: The dataframe's name, or ``"pipeline:name"`` for another
+        pipeline's, as for :func:`path`.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :returns: The absolute path of each file.
+    :raises FileNotFoundError: If nothing is there: the dataframe is not built.
+    :raises TypeError: If the dataframe is a table or a query in a source.
+    :raises AssetNotDeclaredError: As for :func:`path`, and the rest of its errors.
+    """
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    try:
+        asset, location = _assets._located(ref, "dataframe", start_dirs)
+    except KindMismatchError as e:
+        raise KindMismatchError(
+            str(ref), e.found, e.expected, hint=(
+                f"data.files() answers for dataframes only; use "
+                f"chartbook.assets.files({str(ref)!r}) for a {e.found}."
+            )
+        ) from None
+    return [file for _, file in _assets._found(asset, location)]
+
+
+#: Where :func:`scratch` puts throwaway files, relative to the pipeline root, unless ``[project] scratch`` says otherwise.
 SCRATCH_DIR = Path("_data") / "_scratch"
+
+
+def _scratch_declared(root: Path) -> Path:
+    """Where ``[project] scratch`` puts the scratch folder, relative to the pipeline's root; :data:`SCRATCH_DIR` by default.
+
+    Read from the manifest's text alone, so that a call at the top of a
+    ``dodo.py`` costs one small file. A value that is not a plain relative
+    path inside the pipeline (``../tmp``, an absolute path, the root itself)
+    is refused by name.
+    """
+    import tomli
+
+    from chartbook.snapshot import safe_relative
+
+    try:
+        raw = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return SCRATCH_DIR
+    declared = (raw.get("project") or {}).get("scratch") if isinstance(raw.get("project"), dict) else None
+    if declared in (None, ""):
+        return SCRATCH_DIR
+    plain = safe_relative(declared) if isinstance(declared, str) else None
+    if not plain:
+        raise ValueError(
+            f"{root / 'chartbook.toml'}: [project] scratch = {declared!r} is not a plain path inside the pipeline. "
+            f'Write one relative to the pipeline\'s folder, e.g. scratch = "./_data/_scratch".'
+        )
+    return Path(*plain.split("/"))
+
+
+def _scratch_in_no_asset(root: Path, relative: Path) -> None:
+    """Refuse the scratch folder, the default too, where it would join a declared asset (:func:`chartbook.manifest._refuse_scratch_in_an_asset`)."""
+    import tomli
+
+    from chartbook.manifest import _refuse_scratch_in_an_asset
+
+    try:
+        raw = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    _refuse_scratch_in_an_asset(raw, root, relative.as_posix())
 
 
 def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
@@ -145,7 +231,8 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     >>> from chartbook import data
     >>> tmp = data.scratch() / "raw_download.csv"  # doctest: +SKIP
 
-    The directory is ``_data/_scratch/`` inside the pipeline, created on
+    The directory is ``_data/_scratch/`` inside the pipeline, or what
+    ``[project] scratch`` names (a path inside the pipeline), created on
     first use. What goes in it is not an asset: it is not declared in the
     manifest, not documented, not published, and it ignores itself in git.
     It is safe to delete at any time. Because it lives inside the project,
@@ -160,80 +247,19 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     :rtype: Path
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
+    :raises ValueError: If ``[project] scratch`` is not a plain path inside
+        the pipeline, or is inside a declared dataset, files asset or model.
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
-    directory = find_manifest_dir(*start_dirs) / SCRATCH_DIR
+    root = find_manifest_dir(*start_dirs)
+    relative = _scratch_declared(root)
+    _scratch_in_no_asset(root, relative)
+    directory = root / relative
     directory.mkdir(parents=True, exist_ok=True)
     gitignore = directory / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("*\n", encoding="utf-8", newline="\n")
     return directory
-
-
-def _get_dataframe_docs_info_from_catalog(
-    catalog_path: Path,
-    pipeline: str,
-    dataframe: str,
-) -> tuple:
-    """Look up docs info for a dataframe inside a catalog manifest.
-
-    :param catalog_path: Path to the catalog's ``chartbook.toml``.
-    :type catalog_path: Path
-    :param pipeline: The pipeline reference — a bare name
-        (``"crsp_treasury"``, if unambiguous), a scoped ID
-        (``"ftsfr/crsp_treasury"``), or a repository URL.
-    :type pipeline: str
-    :param dataframe: The dataframe identifier within the pipeline.
-    :type dataframe: str
-    :returns: Tuple of (doc_mode, doc_value, pipeline_base_dir) where doc_mode
-        is ``"path"`` or ``"str"``, doc_value is the path string or inline
-        content, and pipeline_base_dir is the base directory of the pipeline.
-    :rtype: tuple[str, str, Path]
-    :raises KeyError: If the pipeline or dataframe is not found.
-    """
-    from chartbook.manifest import load_manifest
-
-    manifest = load_manifest(base_dir=catalog_path.parent)
-
-    pipeline_key = locate_in_catalog(manifest, pipeline)
-    if manifest.get("stores") is not None:
-        from chartbook import snapshot
-        from chartbook.hubs import selected_snapshots
-        import tomli
-        stores = manifest["stores"]
-        found, _ = snapshot.readable_snapshots(stores)
-        chosen = selected_snapshots(found, pipeline_key, manifest.get("pipeline_notes", {}).get(pipeline_key, {}).get("repository"))
-        if not chosen:
-            raise KeyError(f"{pipeline_key} has no snapshot. Run `chartbook snapshot` in its pipeline.")
-        taken = max(chosen, key=lambda t: t.made_at)
-        if not taken.documents:
-            raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
-        held = Path(stores.get(taken.documents["content_hash"], pipeline_key))
-        raw = tomli.loads((held / "chartbook.toml").read_text(encoding="utf-8"))
-        entry = raw.get("dataframes", {}).get(dataframe)
-        if not isinstance(entry, dict):
-            raise KeyError(f"{pipeline_key} declares no dataframe {dataframe!r} in its newest snapshot")
-        if entry.get("docs_path"):
-            plain = snapshot.safe_relative(entry["docs_path"])
-            if plain is None or snapshot._through_a_link(held, plain):
-                raise ValueError("The documentation path is not inside the snapshot's documents")
-            return "path", plain, held
-        return "str", entry.get("docs", ""), held
-
-    pipeline_manifest = manifest["pipelines"][pipeline_key]
-    available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
-    if dataframe not in pipeline_manifest.get("dataframes", {}):
-        raise KeyError(
-            f"Dataframe {dataframe!r} not found in pipeline {pipeline_key!r}. "
-            f"Available dataframes: {available_dataframes}"
-        )
-
-    df_manifest = pipeline_manifest["dataframes"][dataframe]
-    doc_mode = df_manifest["_doc_mode"]
-    doc_value = df_manifest["_doc_value"]
-    pipeline_base_dir = Path(pipeline_manifest["base_dir"])
-
-    return doc_mode, doc_value, pipeline_base_dir
 
 
 def get_data_path(
@@ -254,9 +280,8 @@ def get_data_path(
     dataframe through a catalog, from a notebook that belongs to no
     pipeline, say. It gives the file by the rules of :func:`load`: in a
     pipeline that declares the other one, its pin; otherwise the file in
-    the pipeline's newest snapshot in the store; with no snapshot, the file
-    in the folder the catalog lists, with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`. Which pipeline the
+    the pipeline's newest snapshot in the store; with no snapshot, an
+    error, since a catalog reads no working folder. Which pipeline the
     call is in is found as for :func:`path`: from the calling file first,
     then the working directory, so a script in a pipeline's folder gets
     that pipeline's pin wherever it is run from.
@@ -276,6 +301,9 @@ def get_data_path(
     :type project_dir: Optional[Union[str, Path]]
     :returns: The resolved path to the file (may contain glob characters).
     :rtype: Path
+    :raises NoSinglePathError: If the dataframe is several files read from
+        the store, a Hive folder or a glob, which have no one path: read it
+        with :func:`load`, or list the files with :func:`files`.
     :raises CatalogNotConfiguredError: If no catalog is configured, and the
         store has no snapshot of the pipeline.
     :raises AssetNotPinnedError: If the dataframe has no copy to read: no
@@ -286,7 +314,8 @@ def get_data_path(
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path, start_dirs=start_dirs)
-    return require_file(location, f"Dataframe {dataframe!r}")
+    # A dataset of several files read from the store has no one path (as data.path says)
+    return require_single_path(location, f"Dataframe {dataframe!r}", f"{pipeline}:{dataframe}", "dataframe")
 
 
 def get_docs_path(
@@ -315,14 +344,7 @@ def get_docs_path(
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
-    resolved_catalog = _resolve_catalog_path(catalog_path)
-    doc_mode, doc_value, pipeline_base_dir = _get_dataframe_docs_info_from_catalog(
-        resolved_catalog, pipeline, dataframe
-    )
-    if doc_mode == "path":
-        return (pipeline_base_dir / doc_value).resolve()
-    else:  # doc_mode == "str"
-        return (pipeline_base_dir / "chartbook.toml").resolve()
+    return _assets.get_docs_path(pipeline, _assets.parse(dataframe, kind="dataframe"), catalog_path)
 
 
 def get_docs(
@@ -353,15 +375,7 @@ def get_docs(
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
-    resolved_catalog = _resolve_catalog_path(catalog_path)
-    doc_mode, doc_value, pipeline_base_dir = _get_dataframe_docs_info_from_catalog(
-        resolved_catalog, pipeline, dataframe
-    )
-    if doc_mode == "path":
-        doc_path = (pipeline_base_dir / doc_value).resolve()
-        return doc_path.read_text(encoding="utf-8")
-    else:  # doc_mode == "str"
-        return doc_value
+    return _assets.get_docs(pipeline, _assets.parse(dataframe, kind="dataframe"), catalog_path)
 
 
 def load(
@@ -392,17 +406,15 @@ def load(
     is pinned then, to its newest snapshot, and stderr says so. One not
     declared is read from its newest snapshot with an
     :class:`~chartbook.resolve.UnrecordedReadWarning`, and one with no
-    snapshot from its folder with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`. Under
-    ``chartbook run``'s ``build`` (``CHARTBOOK_BATCH=1``) only a pin is
-    read. Outside any pipeline, the newest snapshot is read and nothing is
+    snapshot is an error that names ``chartbook snapshot`` in its folder,
+    or ``chartbook link``. Under ``chartbook run``'s ``build``
+    (``CHARTBOOK_BATCH=1``) only a pin is read. Outside any pipeline, the newest snapshot is read and nothing is
     said; in a batch run there, nothing is read, since nothing records it.
 
     **Through a catalog**, with a pipeline and a dataframe. This reads by
     the same rules: its pin, in a pipeline that declares it; otherwise its
-    newest snapshot in the store; with no snapshot, the file in the folder
-    the catalog lists, as it is now, with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`:
+    newest snapshot in the store; with no snapshot, an error, since a
+    catalog reads no working folder:
 
     >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP

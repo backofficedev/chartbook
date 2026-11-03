@@ -115,7 +115,7 @@ Use consistent verb prefixes to indicate function behavior:
 
 ```bash
 uv run doit test          # the suite on the default Python (hatch test -v; JUnit report in _build/test-results/junit.xml)
-uv run doit test_all      # the matrix: Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13
+uv run doit test_all      # the matrix: Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13, each in parallel (hatch test --all --parallel)
 uv run pytest -q          # the suite in the uv environment itself, as CI runs it
 uv run hatch test --cover # with coverage
 ```

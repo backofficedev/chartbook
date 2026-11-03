@@ -13,6 +13,8 @@ supported; loading one raises an error pointing at the migration script.
 """
 
 import difflib
+import fnmatch
+import itertools
 import json
 import importlib.resources
 import os
@@ -21,7 +23,7 @@ import subprocess
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import tomli
 
@@ -68,6 +70,8 @@ PROJECT_DEFAULTS = {
     "os_compatibility": [],
     "build": "",
     "site_dir": "",
+    # Where data.scratch() puts throwaway files: _data/_scratch by default
+    "scratch": "",
     "enable_data_download": False,
     "writer": "sphinx",
     # Which ChartBook the project needs, as a requirement: ">=0.2.0"
@@ -1276,6 +1280,14 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
     project = dict(PROJECT_DEFAULTS)
     project.update({k: v for k, v in project_raw.items() if k in PROJECT_DEFAULTS})
     project["type"] = project_type
+    if project["scratch"]:
+        from chartbook.snapshot import safe_relative
+
+        if not safe_relative(project["scratch"]):
+            raise ValueError(
+                f"{source}: [project] scratch = {project['scratch']!r} is not a plain path inside the pipeline. "
+                f'Write one relative to the pipeline\'s folder, e.g. scratch = "./_data/_scratch".'
+            )
     if project["writer"] not in WRITERS:
         raise ValueError(
             f"{source}: [project] writer = {project['writer']!r} names a site tool ChartBook does not write "
@@ -1297,9 +1309,13 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
         from chartbook.identity import read_version_file
         project["repo_url"] = remote_to_web_url(read_version_file(base_dir).get("repository") or get_git_remote_url(base_dir))
 
-    if not project["site_url"]:
-        webpage_path = Path(base_dir) / "docs" / "index.html"
-        project["site_url"] = f"file://{webpage_path.as_posix()}"
+    from chartbook.config import untrusted_source
+
+    if not project["site_url"] and not untrusted_source():
+        # Not for a version built from the store: its folder is a temporary one, which its pages would link
+        webpage_path = Path(os.path.abspath(Path(base_dir) / "docs" / "index.html"))
+        # file:///C:/x on Windows, where file://C:/x would name a host "C:"; a space is %20
+        project["site_url"] = webpage_path.as_uri()
 
     return project
 
@@ -1318,9 +1334,10 @@ _PROJECT_EXAMPLES = {
     "copyright": "2026",
     "logo": "./docs_src/logo.png",
     "favicon": "./docs_src/favicon.ico",
+    "scratch": "./_data/_scratch",
     "os_compatibility": '["Linux", "macOS", "Windows"]',
     "build": "doit",
-    "requires_chartbook": ">=0.4.0",
+    "requires_chartbook": ">=0.5.0",
     "site_dir": "./docs_src/site/",
     "writer": "sphinx",
 }
@@ -1396,6 +1413,77 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
                 f"trusted) reads nothing outside the folder. `chartbook trust` in a folder trusts the "
                 f"pipeline there."
             )
+
+
+def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path, scratch: Optional[str] = None) -> None:
+    """Refuse a scratch folder that shares files with a declared dataset, files asset or model.
+
+    Inside an asset, or where a glob's folders reach (``./_data/**/*.parquet``
+    reaches ``_data/_scratch``), its throwaway files would join the asset:
+    hashed with it and copied to the store with every snapshot. Holding an
+    asset, it would be deleted with the scratch folder, which is
+    throwaway too.
+
+    :param scratch: The folder ``data.scratch()`` is about to use, the
+        default included; else the one ``[project] scratch`` declares, and
+        nothing is checked when it declares none (a pipeline that never
+        calls ``data.scratch()`` loads as it did).
+    :raises ValueError: Naming the asset.
+    """
+    from chartbook.snapshot import safe_relative
+
+    project = manifest.get("project") if isinstance(manifest.get("project"), dict) else {}
+    declared = project.get("scratch")
+    used = scratch if scratch is not None else declared
+    plain = safe_relative(used) if isinstance(used, str) and used else None
+    if not plain:
+        return
+    folder = plain.lower().split("/")  # a disk that tells no letter case apart, as most do
+    said = (
+        f"[project] scratch = {declared!r}" if isinstance(declared, str) and declared
+        else f"data.scratch()'s folder, {plain} by default,"
+    )
+    for table in ("dataframes", "files", "models"):
+        entries = manifest.get(table)
+        for name, entry in (entries.items() if isinstance(entries, dict) else ()):
+            path = entry.get("path") if isinstance(entry, dict) else None
+            asset = safe_relative(path) if isinstance(path, str) and path else None
+            if not asset:
+                continue
+            parts = asset.lower().split("/")
+            glob = is_glob_pattern(path)
+            if glob:
+                # The folders before the first wildcard hold every match
+                fixed = list(itertools.takewhile(lambda part: not is_glob_pattern(part), parts[:-1]))
+            else:
+                fixed = parts
+            folders = parts if parts[-1] == "**" else parts[:-1]  # `./_data/**` is every file below `_data`
+            if _reaches(folders, folder) if glob else folder[: len(fixed)] == fixed:
+                where = f"where [{table}.{name}] path = {path!r} reaches" if glob else (
+                    f"inside [{table}.{name}] path = {path!r}"
+                )
+                raise ValueError(
+                    f"{base_dir / 'chartbook.toml'}: {said} is {where}, so its throwaway files would be part of "
+                    f"{name} and go to the store with it. Name a folder outside every asset in [project], "
+                    f'e.g. scratch = "./_scratch".'
+                )
+            if fixed[: len(folder)] == folder:
+                raise ValueError(
+                    f"{base_dir / 'chartbook.toml'}: {said} holds [{table}.{name}] path = {path!r}, and the "
+                    f"scratch folder is throwaway: deleting it would delete {name}. Name a folder that holds "
+                    f'no asset in [project], e.g. scratch = "./_scratch".'
+                )
+
+
+def _reaches(folders: list, scratch: list) -> bool:
+    """Whether a glob's folder parts match the scratch folder or a folder inside it, ``**`` any number of them."""
+    if not scratch:
+        return True  # the parts left can match folders inside it
+    if not folders:
+        return False  # the glob's files are in a folder above it
+    if folders[0] == "**":
+        return _reaches(folders[1:], scratch) or _reaches(folders, scratch[1:])
+    return fnmatch.fnmatchcase(scratch[0], folders[0]) and _reaches(folders[1:], scratch[1:])
 
 
 #: Each entity table and what one of its entries is.
@@ -1536,6 +1624,7 @@ def _load_pipeline_manifest(raw_manifest):
 
     # Every field as its type, before anything below reads one
     _check_entity_fields(manifest, str(Path(base_dir) / "chartbook.toml"))
+    _refuse_scratch_in_an_asset(manifest, Path(base_dir))
 
     # A key becomes part of an address, so the index can name the asset.
     # Models are checked in validate_models; the other kinds here, so that

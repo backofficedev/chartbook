@@ -56,10 +56,11 @@ All keys are optional:
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.4.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.5.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
+| `scratch` | string (path inside the pipeline): where `data.scratch()` puts throwaway files; refused inside, holding, or where a glob reaches, a declared asset | `"./_data/_scratch"` |
 
 ### Scripts
 
@@ -239,7 +240,11 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
 - Code then reads the pinned copy by reference: `data.load("fed_yield_curve:treasury_rates")`,
   `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never
-  resolves to the other pipeline's working directory, and is read-only.
+  resolves to the other pipeline's working directory, and is read-only. An asset of
+  several files (a Hive folder, a glob, a model that is a folder) has no one path there,
+  since the store keeps each file once: `data.files(...)`, `assets.files(...)` and
+  `chartbook path REF --files` list the files where they are kept, `data.load`/`data.sql`
+  read them, and `assets.gathered(...)` lays them out in a temporary folder for a loader.
 - A `git` dependency (`{ git = "https://…", rev = "v1.2" }`; `rev` optional) is
   cloned by `chartbook pin` into `~/.chartbook/git/` and pinned like a directory.
   It has ONLY what its repository commits: git-ignored, built data is "not built".

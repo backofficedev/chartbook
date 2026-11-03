@@ -504,18 +504,22 @@ class TestPages:
 
 
 class TestCatalog:
-    def test_a_catalog_lists_files_only_when_some_pipeline_has_them(self, catalog_project, monkeypatch):
+    def test_a_catalog_lists_files_only_when_some_pipeline_has_them(self, catalog_project, monkeypatch, tmp_path):
+        # A developer's Git identity must not hide a missing test author in CI.
+        git_config = tmp_path / "gitconfig"
+        git_config.write_text("[user]\n    useConfigOnly = true\n", encoding="utf-8")
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(git_config))
+        monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+        for name in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL"):
+            monkeypatch.delenv(name, raising=False)
         catalog = catalog_project.resolve()
         monkeypatch.chdir(catalog)
         result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert not (catalog / "docs" / "cb" / "files.html").exists()
         add_files(catalog / "pipelines" / "pipeline_a")
-        from chartbook import snapshot
-        from tests.fixtures import publish_catalog
-        import subprocess
-        subprocess.run(["git", "add", "-A"], cwd=catalog / "pipelines" / "pipeline_a", check=True)
-        subprocess.run(["git", "commit", "-qm", "Publish files"], cwd=catalog / "pipelines" / "pipeline_a", check=True)
+        _git(catalog / "pipelines" / "pipeline_a", "add", "-A")
+        _git(catalog / "pipelines" / "pipeline_a", "commit", "-qm", "Publish files")
         snapshot.make(catalog / "pipelines" / "pipeline_a")
         result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
@@ -827,8 +831,8 @@ class TestWhatTheSecondReviewFound:
             store._forget()
         assert store.incomplete(glob.content_hash, glob.size_bytes, None, False) is not None
         with pytest.raises(StoreError):
-            store.get(glob.content_hash)  # never the SHA256SUMS in its place
-        assert (Path(store.get(one.content_hash, name="SHA256SUMS")) / "SHA256SUMS").read_text(encoding="utf-8") == sums
+            store.files(glob.content_hash)  # never the SHA256SUMS in its place
+        assert store.files(one.content_hash, name="SHA256SUMS").one.location.read_text(encoding="utf-8") == sums
         if kind == "s3":
             context.__exit__(None, None, None)
 
@@ -850,7 +854,8 @@ class TestWhatTheSecondReviewFound:
             "made_at": pending.made_at,
             "records": [{"id": "acme/rates:parts", "content_hash": put.content_hash, "size_bytes": put.size_bytes, "stored": put.stored}],
         })
-        kept = Path(store.get(put.content_hash))
-        kept.chmod(0o755)
-        os.mkfifo(kept / "x.parquet")
-        assert not (Path(store.get(put.content_hash)) / "x.parquet").exists()  # gathered from what its record lists
+        kept = store.files(put.content_hash)
+        assert kept.in_place()
+        kept.home.chmod(0o755)
+        os.mkfifo(kept.home / "x.parquet")
+        assert [f.relative for f in store.files(put.content_hash).files] == ["a.parquet"]  # what its record lists, and nothing else

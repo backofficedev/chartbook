@@ -23,7 +23,7 @@ The work now is to make this smooth from end to end, for one person on one machi
 
 ## 0.3.0
 
-0.3.0 carries out {doc}`design/plan-0.3.0`. At its centre is a store a person can find their way
+0.3.0 carries out {design}`plan-0.3.0`. At its centre is a store a person can find their way
 around: one folder for each pipeline, which can be sent to someone else and added to their store,
 by hand or with `chartbook store export` and `store import`. Inside it, each snapshot has a folder
 holding the pipeline's files under their own names, and each file is kept once, however many
@@ -34,7 +34,7 @@ moved to it once with `chartbook store migrate` (the {doc}`changelog`, "Read thi
 
 ## 0.4.0
 
-0.4.0 carries out {doc}`design/plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
+0.4.0 carries out {design}`plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
 every pipeline with a snapshot in any of them, every version of each rendered from the store alone,
 with the data dictionary as it was then and what changed between versions, and a page for the
 stores themselves. A machine may have several stores, one Drive folder per collaborator, say, with
@@ -43,6 +43,17 @@ public store by URL so that a stranger who clones a downstream repository can fe
 lockfile pins. Working folders leave the catalog; a `chartbook.links.toml` beside a pipeline's
 manifest is how two pipelines are worked on at once. `chartbook build` goes: `chartbook run` runs
 the build script, `chartbook docs build` renders the site.
+
+## 0.5.0: data reads
+
+0.5.0 carries out {design}`plan-data-reads` (proposed 2026-10-31, released 2026-11-02). A version of a dataset whose files are kept
+in several snapshot folders is read from where they sit: no gathered copy on each machine, so
+nothing under `~/.chartbook` grows with every catalog build. The catalog renders a version from
+its snapshot's index and documents alone, reading no data. `data.path` writes your own outputs
+and gives one path, `data.load` and `data.sql` read anyone's data in any shape, and `data.files`
+lists the files for a build tool. The store says in plain words which snapshot folders stand
+alone and which share files, and `store gc` is the one way to remove them. The guide is
+rewritten around what a person is trying to do.
 
 ## Experimental: Databricks
 
@@ -76,6 +87,6 @@ travel too, a day by default, so the same question about pins arises there.
 settled.
 
 **A database as the store,** for an organization that keeps everything in one warehouse
-({doc}`design/stores-and-backends` leaves its layout open).
+({design}`stores-and-backends` leaves its layout open).
 
 **An MCP server,** so that an assistant can browse a catalog and read what it describes.
