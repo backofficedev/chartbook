@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `chartbook get-docs` prints a dataframe's whole page
+
+`chartbook get-docs pipeline:dataframe` printed the dataframe's write-up and nothing else, though its snapshot's index records much more, so an agent working from the command line could not see what columns a dataset has without loading it. It now prints the page in Markdown: the dataframe's name, description and ID; its sources, providers and license; how it is pulled; its rows and the span of its dates; the snapshot it is from; then its write-up, and a table of its columns and their types. `chartbook data get-docs` prints the same. Pipe it through `head` for the top alone. Any other asset's output is its write-up, as before, and so is the Python `assets.get_docs()`; `assets.get_docs_page()` is the page.
+
 ### Changed — `chartbook init` makes a dataframe and a chart for each data source chosen
 
 A project scaffolded with a data source declared no dataframe and no chart unless it had both FRED and the OFR API, so its first site showed a notebook and nothing that the catalog, provenance or a dependency could use. Each source now brings a dataframe of what it pulls and a chart of it, declared in `chartbook.toml` and made by a short script in `src/` that reads the dataframe by name (`data.load("fred")`) and saves the chart with `chartbook.plotting`: FRED's policy rates, the Fed's zero-coupon Treasury yields, the OFR's repo reference rates, Bloomberg's S&P 500, CRSP's value-weighted index and the Fama-French factors. One source or several, the first `chartbook run` builds a page for each. A project made without a ChartBook site (`include_chartbook` no) gets the pulls alone, as before: a chart's script reads its data by name from `chartbook.toml`, which such a project has not.

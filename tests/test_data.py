@@ -365,6 +365,65 @@ def test_cli_get_docs_takes_an_id_or_keywords(catalog_with_write_ups):
     assert notebook.exit_code == 1 and "no write-up of its own" in notebook.output
 
 
+def test_cli_get_docs_prints_a_dataframes_whole_page(catalog_with_write_ups):
+    """A dataframe's facts, its write-up and its columns, from its snapshot's index; the write-up's own title is not said twice."""
+    from click.testing import CliRunner
+
+    from chartbook import assets
+    from chartbook.cli import main
+
+    catalog = ["--catalog", str(catalog_with_write_ups)]
+    page = CliRunner().invoke(main, ["get-docs", "pipeline_w:dataframe_0", *catalog])
+    assert page.exit_code == 0, page.output
+    lines = page.output.splitlines()
+    assert lines[:3] == ["# Dataframe 0", "", "Description for dataframe 0"]
+    for fact in ("- ID: pipeline_w:dataframe_0", "- Sources: Test Source", "- Rows: 10", "- Dates: 2020-01-01 to 2020-01-01, in column date"):
+        assert fact in lines, page.output
+    assert lines.count("# Dataframe 0") == 1
+    assert page.output.index("Documentation for dataframe 0.") < page.output.index("## Columns")
+    assert "| value | int64 |" in lines and "| category | string |" in lines
+    assert not page.output.endswith("\n\n")
+    missing = CliRunner().invoke(main, ["get-docs", "pipeline_w:dataframe_9", *catalog])
+    assert missing.exit_code == 1 and "dataframe 'dataframe_9'" in missing.output, missing.output
+    same = CliRunner().invoke(main, ["data", "get-docs", "--pipeline", "pipeline_w", "--dataframe", "dataframe_0", *catalog])
+    assert same.exit_code == 0 and same.output == page.output, same.output
+    # The write-up alone is still the Python call's, and a chart's page is its write-up
+    assert "## Columns" not in assets.get_docs("pipeline_w", "dataframe_0", catalog_path=catalog_with_write_ups)
+    assert assets.get_docs_page("pipeline_w", "chart/chart_0_0", catalog_path=catalog_with_write_ups) == assets.get_docs(
+        "pipeline_w", "chart/chart_0_0", catalog_path=catalog_with_write_ups
+    )
+
+
+def test_dataframe_page_reads_a_stored_record_as_someone_elses_text():
+    """Anyone who can write to a shared store wrote the record: what does not print is a space, bars are escaped, wrong shapes are left out."""
+    from types import SimpleNamespace
+
+    from chartbook.assets import _dataframe_page
+
+    taken = SimpleNamespace(commit="0123456789abcdef", made_at="2026-11-02T22:14:54.791033Z")
+    record = {
+        "id": "acme/rates:yields",
+        "name": "Yields\x1b[2J",
+        "description": ["not", "text"],
+        "sources": ["Board", 7, "\x07"],
+        "row_count": True,
+        "date_range": {"first": "2020-01-01T00:00:00", "last": None},
+        "columns": [{"name": "a|b\nc", "dtype": "f64"}, "not a column", {"dtype": "no name"}],
+    }
+    page = _dataframe_page(record, taken, "# Yields\n\nThe write-up.\n")
+    lines = page.splitlines()
+    assert lines[0] == "# Yields [2J"
+    assert "- Sources: Board" in lines and "- Snapshot: 0123456, made 2026-11-02T22:14:54Z" in lines
+    assert not any(line.startswith(("- Rows", "- Dates")) for line in lines)
+    assert "not" not in lines and "The write-up." in lines
+    assert lines[-1] == "| a\\|b c | f64 |" and lines.count("|---|---|") == 1
+    assert _dataframe_page({"id": "acme/rates:yields", "columns": "no"}, taken, None).splitlines()[0] == "# acme/rates:yields"
+    # A snapshot whose commit or time ends in a newline is not read at all
+    from chartbook.snapshot import _COMMIT, _MADE_AT
+
+    assert not _MADE_AT.match("2026-11-02T22:14:54Z\n") and not _COMMIT.match("0" * 40 + "\n")
+
+
 
 def test_cli_get_docs_takes_a_scoped_id_and_a_repository_url(tmp_path):
     """The last colon divides pipeline and asset, as in any reference, so a repository URL's own colon is not taken for it."""

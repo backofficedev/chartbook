@@ -78,6 +78,7 @@ __all__ = [
     "files",
     "gathered",
     "get_docs",
+    "get_docs_page",
     "get_docs_path",
     "index",
     "parse",
@@ -478,8 +479,30 @@ WRITE_UP_KINDS = ("dataframe", "chart", "model", "file")
 WRITE_UP_LIMIT = 8 * 1024 * 1024
 
 
-def _docs_info(catalog_path: Path, pipeline: str, asset: Optional[Union[str, AssetRef]]) -> tuple[str, str, Path]:
+def _newest_snapshot(manifest: dict, pipeline_key: str):
+    """A cataloged pipeline's newest snapshot in the catalog's stores, with the stores.
+
+    :raises KeyError: If the stores hold no snapshot of it.
+    """
+    from chartbook import snapshot
+    from chartbook.hubs import selected_snapshots
+
+    stores = manifest["stores"]
+    found, _ = snapshot.readable_snapshots(stores)
+    chosen = selected_snapshots(found, pipeline_key, manifest.get("pipeline_notes", {}).get(pipeline_key, {}).get("repository"))
+    if not chosen:
+        raise KeyError(f"{pipeline_key} has no snapshot. Run `chartbook snapshot` in its pipeline.")
+    return stores, max(chosen, key=lambda t: t.made_at)
+
+
+def _docs_info(
+    catalog_path: Path, pipeline: str, asset: Optional[Union[str, AssetRef]], manifest: Optional[dict] = None, newest=None
+) -> tuple[str, str, Path]:
     """Where a cataloged pipeline's write-up of an asset is, or its README with no asset.
+
+    *manifest* is the catalog's, loaded, and *newest* the stores and the
+    pipeline's newest snapshot (:func:`_newest_snapshot`), when the caller
+    has them already; each is read here if None.
 
     :returns: ``("path", declared, file)`` for a write-up in a file, the
         file where it is: in the pipeline's folder, or where the store keeps
@@ -506,21 +529,15 @@ def _docs_info(catalog_path: Path, pipeline: str, asset: Optional[Union[str, Ass
         )
     shown = f"{ref.kind} {ref.name!r}" if ref is not None else "README"
 
-    manifest = load_manifest(base_dir=catalog_path.parent)
+    manifest = manifest if manifest is not None else load_manifest(base_dir=catalog_path.parent)
     pipeline_key = locate_in_catalog(manifest, pipeline)
 
     if manifest.get("stores") is not None:
         import tomli
 
         from chartbook import snapshot
-        from chartbook.hubs import selected_snapshots
 
-        stores = manifest["stores"]
-        found, _ = snapshot.readable_snapshots(stores)
-        chosen = selected_snapshots(found, pipeline_key, manifest.get("pipeline_notes", {}).get(pipeline_key, {}).get("repository"))
-        if not chosen:
-            raise KeyError(f"{pipeline_key} has no snapshot. Run `chartbook snapshot` in its pipeline.")
-        taken = max(chosen, key=lambda t: t.made_at)
+        stores, taken = newest if newest is not None else _newest_snapshot(manifest, pipeline_key)
         if not taken.documents:
             raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
         kept = stores.files(taken.documents["content_hash"], pipeline_key).by_relative()
@@ -650,9 +667,14 @@ def get_docs(
     :raises ValueError: If the asset is a notebook, which has no write-up.
     """
     from chartbook.resolve import resolve_catalog_path
+
+    return _read_docs(*_docs_info(resolve_catalog_path(catalog_path), pipeline, asset))
+
+
+def _read_docs(mode: str, value: str, docs_file: Path) -> str:
+    """The text of a write-up, from where :func:`_docs_info` says it is."""
     from chartbook.snapshot import _read_regular_file
 
-    mode, value, docs_file = _docs_info(resolve_catalog_path(catalog_path), pipeline, asset)
     if mode == "path":
         # Not a link, a device or a pipe, which a shared store's writer could leave there
         try:
@@ -662,3 +684,123 @@ def get_docs(
         except (OSError, UnicodeDecodeError) as error:
             raise ValueError(f"The write-up {docs_file} cannot be read as text: {error}") from None
     return value
+
+
+def get_docs_page(
+    pipeline: str,
+    asset: Optional[Union[str, AssetRef]] = None,
+    catalog_path: Optional[Union[str, Path]] = None,
+) -> str:
+    """What ``chartbook get-docs`` prints: a dataframe's whole page, or another asset's write-up.
+
+    A dataframe's page is in Markdown, from what its newest snapshot's index
+    recorded of it: its name, ID and description; its sources, providers
+    and license; how it is pulled; its rows and the span of its dates; the
+    snapshot it is from; then its write-up, and a table of its columns and
+    their types::
+
+        print(assets.get_docs_page("yield_curve", "repo_public"))
+
+    Any other asset, and the README with no asset, is its write-up, as
+    :func:`get_docs` gives it. So is a dataframe whose snapshot's index
+    has no record of it.
+
+    :param pipeline: The pipeline reference, as for :func:`get_docs_path`.
+    :param asset: The asset, as for :func:`get_docs_path`.
+    :param catalog_path: The catalog to look in; the default one if None.
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline or the asset is not there, or an
+        asset other than a dataframe has no write-up.
+    :raises ValueError: If the asset is a notebook, which has no write-up.
+    """
+    from chartbook.manifest import load_manifest
+    from chartbook.resolve import locate_in_catalog, resolve_catalog_path
+    from chartbook.snapshot import _stored_records
+
+    ref = parse(asset) if asset is not None else None
+    if ref is None or ref.kind != "dataframe" or ref.pipeline is not None or ref.part or ref.rev:
+        return get_docs(pipeline, asset, catalog_path)
+    resolved = resolve_catalog_path(catalog_path)
+    manifest = load_manifest(base_dir=resolved.parent)
+    if manifest.get("stores") is None:
+        return _read_docs(*_docs_info(resolved, pipeline, ref, manifest))
+    newest = _newest_snapshot(manifest, locate_in_catalog(manifest, pipeline))
+    stores, taken = newest
+    asset_id = f"{taken.pipeline}:{ref.name}"
+    record = next(
+        (r for r in _stored_records(taken, stores) if isinstance(r, dict) and r.get("kind") == "Dataframe" and r.get("id") == asset_id),
+        None,
+    )
+    try:
+        write_up = _read_docs(*_docs_info(resolved, pipeline, ref, manifest, newest))
+    except KeyError:
+        if record is None:
+            raise
+        write_up = None  # the page is still its facts and columns
+    return write_up if record is None else _dataframe_page(record, taken, write_up)
+
+
+def _dataframe_page(record: dict, taken, write_up: Optional[str]) -> str:
+    """A dataframe's page in Markdown, from its record in a stored index; see :func:`get_docs_page`.
+
+    The record is whatever its owner put in the store, so each field is
+    read as one line of what can be seen, and anything not of its shape is
+    left out.
+    """
+    from chartbook.identity import plain_line
+
+    def line(value) -> str:
+        return plain_line(value, 2000)
+
+    def listed(value) -> str:
+        return ", ".join(text for text in (line(v) for v in value) if text) if isinstance(value, list) else line(value)
+
+    lines = [f"# {line(record.get('name')) or line(record.get('id'))}", ""]
+    if line(record.get("description")):
+        lines += [line(record["description"]), ""]
+    facts = [
+        ("ID", line(record.get("id"))),
+        ("Sources", listed(record.get("sources"))),
+        ("Providers", listed(record.get("providers"))),
+        ("Provider links", listed(record.get("provider_links"))),
+        ("License", line(record.get("license"))),
+        ("Pulled", line(record.get("pull_method"))),
+        ("Tags", listed(record.get("tags"))),
+    ]
+    rows = record.get("row_count")
+    if isinstance(rows, int) and not isinstance(rows, bool):
+        facts.append(("Rows", f"{rows:,}"))
+    span = record.get("date_range")
+    if isinstance(span, dict) and line(span.get("first")) and line(span.get("last")):
+        dates = f"{_day(line(span['first']))} to {_day(line(span['last']))}"
+        if line(record.get("date_col")):
+            dates += f", in column {line(record['date_col'])}"
+        facts.append(("Dates", dates))
+    made = taken.made_at.split(".")[0].removesuffix("Z") + "Z"  # to the second
+    facts.append(("Snapshot", f"{taken.commit[:7]}, made {made}"))
+    lines += [f"- {label}: {value}" for label, value in facts if value] + [""]
+    if write_up and write_up.strip():
+        # A write-up often starts with the dataframe's name, which the page has
+        first, _, rest = write_up.strip().partition("\n")
+        if first.lstrip("#").strip().casefold() == line(record.get("name")).casefold() and first.startswith("# "):
+            write_up = rest
+        if write_up.strip():
+            lines += [write_up.strip(), ""]
+    columns = record.get("columns") if isinstance(record.get("columns"), list) else []
+    columns = [c for c in columns if isinstance(c, dict) and line(c.get("name"))]
+    if columns:
+        lines += ["## Columns", "", "| Column | Type |", "|---|---|"]
+        lines += [f"| {_cell(c.get('name'))} | {_cell(c.get('dtype'))} |" for c in columns]
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def _day(text: str) -> str:
+    """An ISO 8601 date or time as written, but a midnight as its day alone."""
+    return text.removesuffix("T00:00:00")
+
+
+def _cell(value) -> str:
+    """Text as one cell of a Markdown table: one line, its bars escaped."""
+    from chartbook.identity import plain_line
+
+    return plain_line(value, 200).replace("|", "\\|")
