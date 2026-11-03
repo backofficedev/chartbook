@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - unreleased
+
+### Fixed — a pipeline pinned from one store, on a machine that writes to another
+
+- **`chartbook snapshot` and `chartbook run --snapshot` of a pipeline pinned from a read-only store write the snapshot to the writable one.** With a catalog of two stores, a class's read-only store holding the upstream snapshots and the student's own first, a consumer pinned from the class store was refused with "the store at mine does not have it": the pins were checked in every store, and then checked again in the store the snapshot goes to alone. The lineage, its cycles and `--deep`'s walk are now checked once, in every store of the catalog, and the snapshot is written to its own store; a pin that no store holds is refused as before. `chartbook lineage` of a pipeline downstream walks from the snapshot in one store to the one it was pinned from in the other. The workaround, `chartbook store import` of the class store into your own, is no longer needed. The upstream snapshots stay in the store they were pinned from: a catalog without it shows the lineage as a gap.
+- **A `git` dependency's pins, put back in a store that lacks them, can be read.** On a machine whose store did not have what a committed lockfile pins from a `git` dependency (a classmate's clone of the pipeline, a CI runner), `chartbook pin` said "1 put back in the store" and wrote the pin's snapshot with no records, so every read of the dependency failed with `AssetNotPinnedError` and `chartbook run`, `pin --frozen` and `run --frozen` refused. What was put back was looked up by the stand-in it was put under, while a pin that does not move holds its own hash; it is now found by that hash too, for that dependency only. The lockfile is not changed.
+- **`chartbook lineage --rehash` with several stores reads each object in the store that holds it.** With two stores in the catalog, the pins in the second, it said every object of every snapshot "is not what its name says: not in the store", since each store was asked to hash again every object, and the first holds none of them; with one store it was right. Each store is now asked only of what it holds, a changed object in any store is still found, and one that no store holds is still a gap.
+
 ## [0.5.0] - 2026-11-02
 
 ### Read this first: upgrading from 0.4.0
