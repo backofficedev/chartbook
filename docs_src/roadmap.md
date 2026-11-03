@@ -46,7 +46,7 @@ the build script, `chartbook docs build` renders the site.
 
 ## 0.5.0: data reads
 
-0.5.0 carries out {design}`plan-data-reads` (proposed 2026-10-31, released 2026-11-01). A version of a dataset whose files are kept
+0.5.0 carries out {design}`plan-data-reads` (proposed 2026-10-31, released 2026-11-02). A version of a dataset whose files are kept
 in several snapshot folders is read from where they sit: no gathered copy on each machine, so
 nothing under `~/.chartbook` grows with every catalog build. The catalog renders a version from
 its snapshot's index and documents alone, reading no data. `data.path` writes your own outputs
