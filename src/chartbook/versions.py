@@ -364,7 +364,7 @@ def _placeholder(folder: Path, taken, why: str) -> None:
     )
 
 
-def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
+def render_listed(index: dict, store=None, echo=print, into=(), progress=None) -> dict:
     """Build (or find kept) the site of every snapshot a catalog's index lists, and say on each entry whether it was built.
 
     Called before the catalog's pages are written, so that a page links to
@@ -379,6 +379,10 @@ def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
     paths off) is not linked as built: its page says why, and the catalog
     is built all the same.
 
+    *progress*, if given, is told of each version as it is built: a
+    version not built on this machine yet takes a Sphinx build, so the
+    first catalog build after an upgrade builds every one.
+
     :returns: Each version built or found, by ``(pipeline, commit,
         made_at)``: the snapshot and its :class:`Rendered`, for
         :func:`add_to_site` to copy.
@@ -390,6 +394,23 @@ def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
     found, _ = snapshots.readable_snapshots(store)
     by_moment = {(t.pipeline, t.commit, t.made_at): t for t in found}
     done: dict = {}
+    to_build: dict = {}  # each version to be built now, by its moment, numbered from 1
+    if progress is not None:
+        for record in index.get("records", []):
+            if record.get("kind") != "Pipeline":
+                continue
+            for entry in record.get("snapshots") or []:
+                moment = (record["id"], entry.get("commit"), entry.get("made_at"))
+                try:
+                    if moment in by_moment and _why_done(_kept(by_moment[moment])) is None:
+                        to_build.setdefault(moment, len(to_build) + 1)
+                except ValueError:
+                    continue
+        if to_build:
+            progress(
+                f"Building the site of {len(to_build)} version(s) not built on this machine yet; "
+                f"each is kept, so later builds reuse it."
+            )
     for record in index.get("records", []):
         if record.get("kind") != "Pipeline" or not record.get("snapshots"):
             continue
@@ -399,6 +420,8 @@ def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
             taken = by_moment.get(moment)
             if taken is None:
                 continue  # gone from the store: nothing will link to it
+            if moment in to_build:
+                progress(f"  {to_build[moment]}/{len(to_build)} {record['id']} at {taken.commit[:7]}")
             try:
                 rendered = render(taken, store)
             except ValueError:
