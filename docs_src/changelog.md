@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.1] - unreleased
+## [0.5.1] - 2026-11-03
 
 ### Changed — the template's data window is committed, not read from `.env`
 
-`START_DATE` and `END_DATE` were defaults in `src/settings.py` that `.env` could override, so two people building the same commit could pull different windows while ChartBook named both snapshots by that commit. They are now constants of `settings.py`, imported by every pull (`from settings import START_DATE, END_DATE`); `config("END_DATE")` raises and says where the date lives, so an old `.env` cannot move it. `END_DATE` is the pipeline's cutoff: the FRED pull stops there instead of at today, the Fed yield curve and the OFR repo series are kept to the window, and moving it is a commit. The rule, in the template's `README`, `.env.example` and the skill: `.env` holds secrets and machine facts (API keys, `WRDS_USERNAME`, `DATA_DIR`); anything that changes what is computed lives in a committed file. The `examples/` pipelines follow it.
+`START_DATE` and `END_DATE` were defaults in `src/settings.py` that `.env` could override, so two people building the same commit could pull different windows while ChartBook named both snapshots by that commit. They are now constants of `settings.py`, imported by every pull (`from settings import START_DATE, END_DATE`); `config("END_DATE")` raises and says where the date lives, so an old `.env` cannot move it. `END_DATE` is the pipeline's cutoff: the FRED pull stops there instead of at today, the Fed yield curve and the OFR repo series are kept to the window, the repo-rate charts end there, and moving it is a commit. The rule, in the template's `README`, `.env.example` and the skill: `.env` holds secrets and machine facts (API keys, `WRDS_USERNAME`, `DATA_DIR`); anything that changes what is computed lives in a committed file. The `examples/` pipelines follow it.
 
 ### Fixed — a pipeline pinned from one store, on a machine that writes to another
 
