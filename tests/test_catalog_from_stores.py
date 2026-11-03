@@ -217,3 +217,32 @@ def test_dataframe_hub_keeps_versions_and_changes_out_of_the_dictionary(tmp_path
             assert entry["changes"] in versions
     assert versions.count('<a href="') == 2
     assert "## Snapshot history" not in page
+
+
+def test_chart_hub_front_matter_and_embed(tmp_path, monkeypatch):
+    import yaml
+    from chartbook.writers.sphinx import SphinxWriter
+    folder = pipeline(tmp_path)
+    store = FolderStore(tmp_path / "store")
+    snapshot.make(folder, store)
+    path = configure(tmp_path, monkeypatch, {"mine": {"url": str(store)}})
+    built = index.build_index(load_manifest(path.parent))
+    chart = next(r for r in built["records"] if r["kind"] == "Chart")
+    own = next(r for r in built["records"] if r["id"] == chart["pipeline"])
+    chart["tags"] = ["Fed: policy", "<b>bold</b>"]
+
+    def front(page):
+        return yaml.safe_load(page.split("---", 2)[1]) if page.startswith("---") else None
+
+    # Not built (or gone from the store): listed, but nothing embedded
+    page = SphinxWriter(built, theme="catalog").page(chart)
+    said = front(page)
+    assert said["category"] == "Fed: policy, ‹b›bold‹/b›"
+    assert said["tags"] == "Test Source"
+    assert "<b>" not in page and "<iframe" not in page
+    own["snapshots"][0]["rendered"] = True
+    page = SphinxWriter(built, theme="catalog").page(chart)
+    assert 'sandbox="allow-scripts"' in page and "/_static/acme--upstream/" in page
+    # A chart gone from the newest version is shown but not listed
+    chart["current"] = False
+    assert front(SphinxWriter(built, theme="catalog").page(chart)) is None

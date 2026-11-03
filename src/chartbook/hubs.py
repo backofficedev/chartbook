@@ -68,7 +68,7 @@ def enrich(records, stores, notes=None):
             modified = stored_modified_at(latest)
             if modified:
                 hub["location"]["modified_at"] = modified
-            for key in ("license", "source", "tags", "columns", "row_count", "content_hash", "size_bytes",
+            for key in ("license", "source", "sources", "tags", "columns", "row_count", "content_hash", "size_bytes",
                         "inputs", "pinned_inputs", "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "date_range",
                         "frequency", "units", "category", "provider", "license_expiration", "maintainer"):
                 if key in latest:
