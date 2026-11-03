@@ -10,11 +10,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from settings import config
+from settings import END_DATE, START_DATE, config
 
 DATA_DIR = config("DATA_DIR")
-START_DATE = config("START_DATE")
-END_DATE = config("END_DATE")
 
 
 def pull_bbg_data(end_date=END_DATE):

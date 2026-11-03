@@ -1,8 +1,7 @@
-from settings import config
+from settings import START_DATE, config
 
 OUTPUT_DIR = config("OUTPUT_DIR")
 DATA_DIR = config("DATA_DIR")
-START_DATE = config("START_DATE")
 
 from datetime import datetime
 

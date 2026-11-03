@@ -225,7 +225,10 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
   `chartbook run --snapshot` (build, then snapshot; or `chartbook snapshot`
   alone after a build): everything in that folder must be committed, and its
   built assets are copied to the store, labelled with the commit. It is made on
-  purpose, not by every build. A snapshot never contains anything from `.env`.
+  purpose, not by every build. A snapshot never contains anything from `.env`,
+  so a setting that changes results (a data window, a cutoff date) lives in a
+  committed file, never in `.env`: two people with different `.env` files who
+  build the same commit must get the same bytes.
 - `chartbook pin` pins each dependency's newest snapshot (the newest at the
   commit its folder is on, else at the nearest earlier commit that has one) and
   writes the content hashes and the commit to `chartbook.lock`, which is

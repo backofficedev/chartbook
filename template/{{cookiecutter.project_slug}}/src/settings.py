@@ -17,6 +17,11 @@ such as `.env.development` or `.env.production`. You would only
 need to copy over the settings from one into `.env` to switch
 over to the other configuration, for example.
 
+One kind of setting does not belong in `.env`: anything that changes what
+the pipeline computes. The data window (`START_DATE`, `END_DATE`) is a
+committed constant of this module, not a `config()` variable; see the
+comment where it is defined.
+
 
 Example
 -------
@@ -147,9 +152,25 @@ if "STATA_EXE" in cli_vars:
 else:
     defaults["STATA_EXE"] = get_stata_exe()
 
-## Dates
-defaults["START_DATE"] = datetime.strptime("1913-01-01", "%Y-%m-%d")
-defaults["END_DATE"] = datetime.strptime("2024-12-31", "%Y-%m-%d")
+########################################################
+## The data window: committed here, never read from .env
+########################################################
+# Two people with different `.env` files who build the same commit must get
+# the same bytes. `.env` holds secrets and machine facts (API keys,
+# WRDS_USERNAME, DATA_DIR); anything that changes what is computed lives in
+# a committed file. ChartBook names each snapshot by the commit that made
+# it, so a window read from `.env` would leave the record saying "commit X"
+# for bytes commit X does not determine.
+#
+# END_DATE is the pipeline's cutoff: no pull keeps data past it, and moving
+# it is a commit. Scripts import these constants directly
+# (`from settings import START_DATE, END_DATE`); `config("END_DATE")`
+# raises, so an old `.env` cannot override them.
+START_DATE = datetime.strptime("1913-01-01", "%Y-%m-%d")
+END_DATE = datetime.strptime("2026-10-31", "%Y-%m-%d")
+
+# Names config() refuses: they are the constants above, not variables.
+COMMITTED = ("START_DATE", "END_DATE")
 
 
 ## File paths
@@ -198,7 +219,18 @@ def config(
     3. Settings.py file
     4. Defaults defined in-line in the local file
     5. Error
+
+    The data window is not a config variable: `config("START_DATE")` and
+    `config("END_DATE")` raise. Import the constants instead.
     """
+
+    if var_name in COMMITTED:
+        raise ValueError(
+            f"{var_name} is committed in settings.py, not read from .env or the "
+            f"command line: `from settings import {var_name}`. Two people with "
+            f"different .env files who build the same commit must get the same "
+            f"bytes; to move the window, edit settings.py and commit."
+        )
 
     # 1. Command line arguments (highest priority)
     if var_name in cli_vars and cli_vars[var_name] is not None:

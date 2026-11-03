@@ -521,6 +521,49 @@ def test_every_pull_lists_the_files_its_script_writes(template_dir, temp_dir):
             assert f'DATA_DIR / "{name}"' in pulls, f"{script} writes {name}, which no pull lists"
 
 
+def test_the_data_window_is_committed(template_dir, temp_dir):
+    """START_DATE and END_DATE are constants of settings.py, and `.env` cannot move them.
+
+    Two people with different `.env` files who build the same commit must get
+    the same bytes: `.env` holds secrets and machine facts, and the window,
+    which changes what is computed, is committed. A snapshot is named by its
+    commit, so a window read from `.env` would be a record of bytes the
+    commit does not determine. An old `.env` that still sets END_DATE is
+    ignored by the constants and refused by `config()`.
+    """
+    project_dir = Path(generate_project(template_dir, temp_dir, FULL_CONTEXT))
+    (project_dir / ".env").write_text("START_DATE=1999-01-01\nEND_DATE=1999-12-31\n", encoding="utf-8")
+    script = (
+        "import settings\n"
+        "print('window', settings.START_DATE.date(), settings.END_DATE.date())\n"
+        "try:\n"
+        "    settings.config('END_DATE')\n"
+        "except ValueError as e:\n"
+        "    print('refused', e)\n"
+        "else:\n"
+        "    print('accepted')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=project_dir / "src",
+        capture_output=True,
+        text=True, encoding="utf-8", errors="replace",
+    )
+    assert result.returncode == 0, result.stderr
+    assert "window 1913-01-01 2026-10-31" in result.stdout, "the committed window, not .env's"
+    assert "refused END_DATE is committed in settings.py" in result.stdout, result.stdout
+
+    # No script reads the window through config(); each imports the constants.
+    for script_path in (project_dir / "src").glob("*.py"):
+        if script_path.name == "settings.py":
+            continue
+        text = script_path.read_text(encoding="utf-8")
+        assert 'config("START_DATE")' not in text and 'config("END_DATE")' not in text, script_path.name
+        if re.search(r"^(START|END)_DATE\b", text, re.MULTILINE):
+            assert re.search(r"^from settings import .*\b(START|END)_DATE\b", text, re.MULTILINE), script_path.name
+    assert "START_DATE" not in (project_dir / ".env.example").read_text(encoding="utf-8").split("\n\n", 1)[1]
+
+
 def test_dodo_py_syntax(template_dir, temp_dir):
     """Test that generated dodo.py has valid Python syntax."""
     project_path = generate_project(template_dir, temp_dir, FULL_CONTEXT)

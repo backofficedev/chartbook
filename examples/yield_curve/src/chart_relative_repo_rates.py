@@ -1,9 +1,11 @@
-from chartbook.env import get, get_project_root
+from chartbook.env import get_project_root
 
 BASE_DIR = get_project_root()
 OUTPUT_DIR = BASE_DIR / "_output"
 DATA_DIR = BASE_DIR / "_data"
-START_DATE = get("START_DATE", default="2000-01-01")
+# The data window is committed here, not read from .env: two people with
+# different .env files who build the same commit must get the same bytes.
+START_DATE = "2000-01-01"
 
 from datetime import datetime
 

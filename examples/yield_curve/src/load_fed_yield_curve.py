@@ -10,11 +10,13 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from chartbook.env import get, get_project_root
+from chartbook.env import get_project_root
 
 DATA_DIR = get_project_root() / "_data"
-START_DATE = get("START_DATE", default="1990-01-01")
-END_DATE = get("END_DATE", default="2025-12-31")
+# The data window is committed here, not read from .env: two people with
+# different .env files who build the same commit must get the same bytes.
+START_DATE = "1990-01-01"
+END_DATE = "2025-12-31"
 
 
 def pull_fed_yield_curve():
@@ -46,7 +48,8 @@ if __name__ == "__main__":
     if target_file.exists() and target_file.stat().st_mtime > source_file.stat().st_mtime:
         print(f"Data file {target_file} is up to date, skipping pull")
     else:
-        df = pull_fed_yield_curve()
+        # The Fed publishes the whole history in one file; keep the committed window.
+        df = pull_fed_yield_curve().loc[START_DATE:END_DATE]
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         df.to_parquet(target_file)
         print(f"Saved Fed yield curve data to {target_file}")
