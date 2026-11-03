@@ -14,7 +14,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
 | `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
 | `chartbook ls [pipelines\|dataframes\|charts] [--json]` | List cataloged objects |
-| `chartbook get-docs` | Print any cataloged asset's write-up, or a pipeline's README |
+| `chartbook get-docs` | Print a dataframe's page, any other cataloged asset's write-up, or a pipeline's README |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
@@ -508,17 +508,18 @@ List every snapshot across the catalog's stores, newest first, showing the store
 (chartbook-get-docs)=
 ## chartbook get-docs
 
-Print the write-up of a cataloged pipeline's asset: what a person reads on its page in the catalog, for a script or an agent. Name the asset by its ID, as `chartbook ls` prints it, or with keywords:
+Print what a person reads on a cataloged asset's page, in Markdown, for a script or an agent. Name the asset by its ID, as `chartbook ls` prints it, or with keywords:
 
 ```console
 chartbook get-docs yield_curve                                  # the pipeline's README
+chartbook get-docs yield_curve:repo_public                      # a dataframe's page
 chartbook get-docs yield_curve:chart/repo_rates                 # a chart's write-up
 chartbook get-docs --pipeline yield_curve --chart repo_rates    # the same, with keywords
 chartbook get-docs --pipeline rate_forecast --model forecaster  # a model's
 chartbook get-docs yield_curve:repo_public --path               # where the write-up's file is
 ```
 
-The keywords are `--pipeline` and one of `--dataframe`, `--chart`, `--model`, `--file` (a files asset) or `--note`; with no asset, the pipeline's README. A bare name is a pipeline, since this reads the catalog. In an ID the last colon divides the pipeline from the asset, so a pipeline may be named by its scoped ID or its repository URL: `chartbook get-docs https://github.com/acme/yield_curve:chart/repo_rates`; a URL alone is the README. A write-up is the asset's `docs_path` or inline `docs`, and a note is its own text; a notebook has no write-up apart from itself, and is refused, saying so. `--path` prints where the file is instead of its text: the `docs_path`, the `chartbook.toml` that holds inline `docs`, or the note. Each is read from the pipeline's newest snapshot in the catalog's stores. `--catalog PATH` overrides the configured catalog. In Python, `assets.get_docs(pipeline, "chart/repo_rates")` and `assets.get_docs_path(...)`.
+The keywords are `--pipeline` and one of `--dataframe`, `--chart`, `--model`, `--file` (a files asset) or `--note`; with no asset, the pipeline's README. A bare name is a pipeline, since this reads the catalog. In an ID the last colon divides the pipeline from the asset, so a pipeline may be named by its scoped ID or its repository URL: `chartbook get-docs https://github.com/acme/yield_curve:chart/repo_rates`; a URL alone is the README. A dataframe's page is what its snapshot's index recorded of it: its name, description and ID; its sources, providers and license; how it is pulled; its rows and the span of its dates; the snapshot it is from; then its write-up and a table of its columns and their types. Pipe it through `head` for the top alone. For any other asset it is the write-up: the asset's `docs_path` or inline `docs`, and a note's own text; a notebook has no write-up apart from itself, and is refused, saying so. `--path` prints where the file is instead of its text: the `docs_path`, the `chartbook.toml` that holds inline `docs`, or the note. Each is read from the pipeline's newest snapshot in the catalog's stores. `--catalog PATH` overrides the configured catalog. In Python, `assets.get_docs_page(pipeline, "repo_public")` is the page, `assets.get_docs(pipeline, "chart/repo_rates")` the write-up alone, and `assets.get_docs_path(...)` where it is.
 
 ## chartbook data
 
@@ -526,7 +527,7 @@ Look up a cataloged dataframe from the shell. `--pipeline` accepts a bare name (
 
 ```console
 chartbook data get-path      --pipeline yield_curve --dataframe repo_public   # parquet path
-chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # write-up content
+chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # its page
 chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public   # write-up source file
 ```
 

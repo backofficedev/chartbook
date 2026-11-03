@@ -2267,7 +2267,7 @@ def data_get_path(pipeline, dataframe, catalog):
 @click.option("--dataframe", required=True, help="Dataframe ID")
 @click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 def data_get_docs(pipeline, dataframe, catalog):
-    """Print documentation content for a dataframe.
+    """Print a dataframe's page: its facts, its write-up and its columns.
 
     `chartbook get-docs` does this for any asset, and a pipeline's README.
 
@@ -2275,13 +2275,14 @@ def data_get_docs(pipeline, dataframe, catalog):
     Examples:
         chartbook data get-docs --pipeline yield_curve --dataframe repo_public
     """
-    from chartbook.data import get_docs
+    from chartbook.assets import get_docs_page
     from chartbook.errors import CatalogNotConfiguredError
+    from chartbook.refs import parse_asset_ref
     from chartbook.store import StoreError
 
     try:
-        docs = get_docs(pipeline, dataframe, catalog_path=catalog)
-        click.echo(docs)
+        docs = get_docs_page(pipeline, parse_asset_ref(dataframe, kind="dataframe"), catalog_path=catalog)
+        click.echo(docs.rstrip("\n"))
     except CatalogNotConfiguredError as e:
         click.echo(f"Error: {e}", err=True)
         click.echo("", err=True)
@@ -2390,15 +2391,17 @@ def _split_docs_id(text):
 @click.option("--path", "as_path", is_flag=True, help="Print where the write-up's file is, not its text")
 @click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as_path, catalog):
-    """Print the write-up of a cataloged pipeline's asset, or with no asset its README.
+    """Print the documentation of a cataloged pipeline's asset, or with no asset its README.
 
     What a person reads on the asset's page in the catalog, for a script or
-    an agent: a dataframe's, chart's, model's or files asset's write-up (its
-    docs or docs_path), or a note's text. Name the asset by its ID, as
-    `chartbook ls` prints it, or with keywords. A bare name is a pipeline, so
-    `chartbook get-docs yield_curve` is its README. A notebook has no
-    write-up apart from itself. Read from the pipeline's newest snapshot in
-    the catalog's stores.
+    an agent, in Markdown. A dataframe's is its whole page: its name,
+    description, sources and license, its rows and dates, its write-up, and
+    a table of its columns and their types. A chart's, model's or files
+    asset's is its write-up (its docs or docs_path), and a note's its text.
+    Name the asset by its ID, as `chartbook ls` prints it, or with keywords.
+    A bare name is a pipeline, so `chartbook get-docs yield_curve` is its
+    README. A notebook has no write-up apart from itself. Read from the
+    pipeline's newest snapshot in the catalog's stores.
 
     \b
     Examples:
@@ -2408,7 +2411,7 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
         chartbook get-docs --pipeline rate_forecast --model forecaster
         chartbook get-docs yield_curve:repo_public --path
     """
-    from chartbook.assets import get_docs, get_docs_path
+    from chartbook.assets import get_docs_page, get_docs_path
     from chartbook.errors import CatalogNotConfiguredError
     from chartbook.store import StoreError
 
@@ -2428,7 +2431,7 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
         if as_path:
             click.echo(str(get_docs_path(pipeline, asset, catalog_path=catalog)))
         else:
-            click.echo(get_docs(pipeline, asset, catalog_path=catalog))
+            click.echo(get_docs_page(pipeline, asset, catalog_path=catalog).rstrip("\n"))
     except StoreError as e:
         # The store's own words, as a synced folder still downloading the snapshot
         click.echo(f"Error: {e}", err=True)

@@ -8,7 +8,7 @@ one matters, the data last.
 | Step | The agent runs | It gets |
 |---|---|---|
 | **What is there?** | `chartbook ls --json` | One record per pipeline and asset: its ID, kind, name and description |
-| **What is it?** | `chartbook get-docs ID` | The write-up a person reads on the asset's page; a pipeline's README |
+| **What is it?** | `chartbook get-docs ID` | What a person reads on the asset's page: a dataframe's facts, write-up and columns; a pipeline's README |
 | **Use it** | `data.load("pipeline:name")`, `chartbook add` | The data, pinned to the exact snapshot it read |
 | **Can it be trusted?** | `chartbook lineage --json` | Every snapshot upstream, by commit and hash, checked |
 
@@ -63,8 +63,9 @@ $ chartbook get-docs rate_outlook:model/spread_ar1
 scored on the rest. ...
 ```
 
-A pipeline's name alone gives its README; `pipeline:kind/name` gives that asset's write-up, and a
-dataframe needs no kind (`treasury_curve:zero_coupon_yields`). The same works with keywords,
+A pipeline's name alone gives its README; `pipeline:kind/name` gives that asset's write-up. A
+dataframe needs no kind, and gets its whole page: its sources and license, rows and dates, its
+write-up, and a table of its columns and their types (`treasury_curve:zero_coupon_yields`). The same works with keywords,
 `chartbook get-docs --pipeline treasury_curve --chart yields`. `--path` prints where the
 write-up's file is instead of its text.
 

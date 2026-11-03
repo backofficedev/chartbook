@@ -1076,9 +1076,9 @@ def version_name(content_hash: str, among: Optional[list[str]] = None) -> str:
 
 
 #: A full commit hash, as a record must name one.
-_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+_COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
 #: When a snapshot was made, as :func:`_now` writes it (a test may leave out the fraction).
-_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$")
+_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z\Z")  # \Z, not $, which lets a last newline through
 
 
 def all_snapshots(store: Store) -> list[Snapshot]:
