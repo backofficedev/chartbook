@@ -13,7 +13,8 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
 | `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
-| `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
+| `chartbook ls [pipelines\|dataframes\|charts] [--json]` | List cataloged objects |
+| `chartbook get-docs` | Print a dataframe's page, any other cataloged asset's write-up, or a pipeline's README |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
@@ -288,7 +289,7 @@ Pipelines (each covers the folders inside it):
 
 `chartbook docs build`, `chartbook run`, `chartbook create-data-glimpses` and `chartbook publish` use the pipeline trust gate; `chartbook check` reports the trust level without requiring trust. `chartbook catalog build` renders stored snapshots without member trust.
 
-No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {doc}`../design/trust`.
+No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {design}`trust`.
 
 ## chartbook path
 
@@ -376,7 +377,7 @@ Three things have to be true, and each has its own message when it is not:
 
 The scope may be left off when only one dependency has that name. The path is for reading; never write to it.
 
-Two more parts of the {doc}`reference grammar <../design/references>` do not give a path. `dataframe#series` is the address of one column, for documentation: use the dataframe's path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
+Two more parts of the {design}`reference grammar <references>` do not give a path. `dataframe#series` is the address of one column, for documentation: use the dataframe's path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
 
 ## chartbook publish
 
@@ -434,7 +435,7 @@ A catalog build is **incremental by default**. Its working files are kept beside
 
 `--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 
-The catalog reads snapshots from its stores. It runs no member code and needs no member trust. It lays out no data: a version's site is built from its snapshot's documents, charts, notebooks, notes and index, which recorded each dataframe's columns, rows, dates and first rows when the snapshot was made ({doc}`../design/plan-data-reads`).
+The catalog reads snapshots from its stores. It runs no member code and needs no member trust. It lays out no data: a version's site is built from its snapshot's documents, charts, notebooks, notes and index, which recorded each dataframe's columns, rows, dates and first rows when the snapshot was made ({design}`plan-data-reads`).
 
 After the build, one line on stderr says what `chartbook store gc` would clear, if anything: snapshots older than seven days that are neither pinned nor the newest of their pipeline, and how much their removal would free. Nothing is removed unless you ask: `--gc` runs gc then, as `chartbook store gc --yes` would, and `--no-gc-reminder` silences the line. With `--gc`, something gc could not remove (another user's, in a store users share) exits `1` after the site was built, as `store gc` itself does.
 
@@ -477,13 +478,24 @@ Catalog: /data/my-catalog/chartbook.toml
 
 Each asset is written as its reference, `pipeline:name`. A pipeline the catalog shows from the store alone is listed as store only, with the dataframes and charts its newest snapshot lists.
 
+`--json` prints the listing as JSON, for a script or an agent: a list with one record per pipeline and per asset, of every kind (models, files assets, notes and notebooks too, which the tree leaves out), none cut off. Each record has `kind` (`pipeline`, `dataframe`, `chart`, `model`, `file`, `note`, `notebook`), `id`, `name` and `description`, and an asset's has its `pipeline`. The `id` is what {ref}`chartbook get-docs <chartbook-get-docs>` and `data.load` take. Each listing takes `--json` as well, and `chartbook ls --json charts` is `chartbook ls charts --json`.
+
+```console
+$ chartbook ls --json
+[
+  {"kind": "pipeline", "id": "acme/yield_curve", "name": "Yield Curve Analysis", "description": "..."},
+  {"kind": "dataframe", "id": "acme/yield_curve:repo_public", "pipeline": "acme/yield_curve", "name": "Repo Public Data", "description": "..."},
+  ...
+]
+```
+
 ### ls stores
 
 ```console
 chartbook ls stores
 ```
 
-List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog.
+List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog. With `--json`, each is `name`, `url`, `read_only` and `reachable`.
 
 ### ls versions
 
@@ -491,7 +503,23 @@ List catalog stores in order, including read-only and unreachable stores. The gr
 chartbook ls versions
 ```
 
-List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once.
+List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once. With `--json`, each is `pipeline`, `commit`, `made_at` and `store`.
+
+(chartbook-get-docs)=
+## chartbook get-docs
+
+Print what a person reads on a cataloged asset's page, in Markdown, for a script or an agent. Name the asset by its ID, as `chartbook ls` prints it, or with keywords:
+
+```console
+chartbook get-docs yield_curve                                  # the pipeline's README
+chartbook get-docs yield_curve:repo_public                      # a dataframe's page
+chartbook get-docs yield_curve:chart/repo_rates                 # a chart's write-up
+chartbook get-docs --pipeline yield_curve --chart repo_rates    # the same, with keywords
+chartbook get-docs --pipeline rate_forecast --model forecaster  # a model's
+chartbook get-docs yield_curve:repo_public --path               # where the write-up's file is
+```
+
+The keywords are `--pipeline` and one of `--dataframe`, `--chart`, `--model`, `--file` (a files asset) or `--note`; with no asset, the pipeline's README. A bare name is a pipeline, since this reads the catalog. In an ID the last colon divides the pipeline from the asset, so a pipeline may be named by its scoped ID or its repository URL: `chartbook get-docs https://github.com/acme/yield_curve:chart/repo_rates`; a URL alone is the README. A dataframe's page is what its snapshot's index recorded of it: its name, description and ID; its sources, providers and license; how it is pulled; its rows and the span of its dates; the snapshot it is from; then its write-up and a table of its columns and their types. Pipe it through `head` for the top alone. For any other asset it is the write-up: the asset's `docs_path` or inline `docs`, and a note's own text; a notebook has no write-up apart from itself, and is refused, saying so. `--path` prints where the file is instead of its text: the `docs_path`, the `chartbook.toml` that holds inline `docs`, or the note. Each is read from the pipeline's newest snapshot in the catalog's stores. `--catalog PATH` overrides the configured catalog. In Python, `assets.get_docs_page(pipeline, "repo_public")` is the page, `assets.get_docs(pipeline, "chart/repo_rates")` the write-up alone, and `assets.get_docs_path(...)` where it is.
 
 ## chartbook data
 
@@ -499,11 +527,11 @@ Look up a cataloged dataframe from the shell. `--pipeline` accepts a bare name (
 
 ```console
 chartbook data get-path      --pipeline yield_curve --dataframe repo_public   # parquet path
-chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # write-up content
+chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # its page
 chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public   # write-up source file
 ```
 
-All three take `--catalog PATH` to override the configured catalog. The Python equivalents live in `chartbook.data` — see {doc}`../guide/catalogs-and-data`.
+All three take `--catalog PATH` to override the configured catalog. {ref}`chartbook get-docs <chartbook-get-docs>` reads any asset's write-up, and a pipeline's README. The Python equivalents live in `chartbook.data` — see {doc}`../guide/catalogs-and-data`.
 
 ## chartbook create-data-glimpses
 
@@ -662,6 +690,8 @@ chartbook add PIPELINE [--as NAME] [--commit COMMIT] [OPTIONS] [--project-dir PA
 
 Declare that this pipeline reads another, by the other's ID, and pin it. It writes the entry under `[dependencies]` in `chartbook.toml`, leaving the rest of the file as it is (its comments and order), then runs `chartbook pin`. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.
 
+A bare name is the one pipeline in the stores whose ID ends in it, as `chartbook get-docs` and `data.load(pipeline=...)` read one, and that full ID is written: with the store holding `tutorial/treasury_curve`, `chartbook add treasury_curve` writes `"tutorial/treasury_curve" = {}`. A bare ID the stores hold is written as it is. When several pipelines end in the name, the command lists them and writes nothing; when none does, it says which IDs the stores hold, or that they hold none, and writes nothing. Either way `chartbook.toml` and `chartbook.lock` are as they were.
+
 ```console
 $ chartbook add acme/rates --as rates
 Added to [dependencies] in /work/forecast/chartbook.toml: "rates" = { id = "acme/rates" }
@@ -675,7 +705,7 @@ Wrote chartbook.lock.
 | `--commit COMMIT` | Take the newest snapshot at this commit (its start, 7 or more hex digits) rather than the newest of all |
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 
-A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
+A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. An entry under a bare name that no store has a snapshot of, as `chartbook add` before 0.5.0 wrote and left when it could not pin it, can never be pinned, and code that names the bare name reads it rather than the full ID: `chartbook add` says so, of the name you give or of the full ID's last part, and that the way out is to delete its line in `chartbook.toml`. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
 
 ## chartbook pin
 
@@ -1014,7 +1044,7 @@ Changed 3:
   Pipeline ftsfr/fed_yield_curve: assets changed
 ```
 
-A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files; a chart or a notebook says *rendered differently*, since each is a rendering of its dataframes), *pins moved* (a dependency's pinned hash, on a pipeline; or a model's pinned inputs), *dependencies changed* (a dependency added, removed or relocated without a pin moving), *N new version(s)* and *N version(s) gone*, *labels moved*, *out of date* or *up to date again*, *scores changed*, *trained on other data*, *assets changed*, *inputs changed*, *moved*, *write-up changed*, *data reaches further* or *less far* (a dated dataframe's last date), *source changed* (a pipeline's code, write-ups or manifest were committed), and *declared differently* with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different `root` or `schema` between the two files is said first: they may not be the same site, or not written the same way. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({doc}`../design/index-schema`, "What this unblocks").
+A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files; a chart or a notebook says *rendered differently*, since each is a rendering of its dataframes), *pins moved* (a dependency's pinned hash, on a pipeline; or a model's pinned inputs), *dependencies changed* (a dependency added, removed or relocated without a pin moving), *N new version(s)* and *N version(s) gone*, *labels moved*, *out of date* or *up to date again*, *scores changed*, *trained on other data*, *assets changed*, *inputs changed*, *moved*, *write-up changed*, *data reaches further* or *less far* (a dated dataframe's last date), *source changed* (a pipeline's code, write-ups or manifest were committed), and *declared differently* with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different `root` or `schema` between the two files is said first: they may not be the same site, or not written the same way. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({design}`index-schema`, "What this unblocks").
 
 **Across a commit, a pipeline always says *source changed*:** its `code_changed_at` moves with every commit that touches `src`, `docs_src` or the manifest, so `--exit-code` is `1` for any two builds on either side of one. That is a fact; read it as such.
 
@@ -1226,7 +1256,7 @@ chartbook store migrate [--dry-run] [OPTIONS] [--yes]
 
 Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
 each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
-commit, and each file once, under its own name ({doc}`../design/plan-0.3.0`). A store of 0.2 is
+commit, and each file once, under its own name ({design}`plan-0.3.0`). A store of 0.2 is
 refused until it is moved, with a message that says to run this.
 
 - **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it

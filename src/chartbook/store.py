@@ -100,6 +100,7 @@ from pathlib import Path, PurePosixPath
 from typing import Iterable, Iterator, Optional, Union
 
 from chartbook import hashing
+from chartbook.replacing import rename_when_let, replace_when_let
 
 #: The ways the store can hold a file, cheapest first. The order is the
 #: design's ("Links, not copies").
@@ -2158,7 +2159,7 @@ class FolderStore(Store):
                 json.dump({"schema": SCHEMA}, f)
                 f.write("\n")
             try:
-                os.replace(temporary, marker)
+                replace_when_let(temporary, marker)
             except PermissionError:
                 # Windows does not replace a file that another thread or
                 # process has open: another made it first, and is reading it
@@ -2212,18 +2213,18 @@ class FolderStore(Store):
                         shutil.copyfile(frozen_file, staging / other.name)
                         os.chmod(staging / other.name, _READ_ONLY)
             aside = staging.with_name(staging.name + ".linked")
-            os.rename(final, aside)
+            rename_when_let(final, aside)
             try:
-                os.rename(staging, final)
+                rename_when_let(staging, final)
             except OSError:
                 if not final.is_dir():
-                    os.rename(aside, final)
+                    rename_when_let(aside, final)
                     raise
             _remove_tree(aside)
             return True
         if not final.is_dir():
             try:
-                os.rename(staging, final)
+                rename_when_let(staging, final)
                 return True
             except OSError:
                 if not final.is_dir():
@@ -2232,7 +2233,7 @@ class FolderStore(Store):
             # The same bytes under a name the object does not have yet
             for file in staging.iterdir():
                 if not os.path.lexists(final / file.name):
-                    os.rename(file, final / file.name)
+                    rename_when_let(file, final / file.name)
         try:
             # Stored again just now: an object someone is in the middle of
             # pinning must not look old enough to be cleared away
@@ -2286,7 +2287,7 @@ class FolderStore(Store):
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(root_document(lockfile, hashes, snapshots, machine, labelled), f, indent=1)
                 f.write("\n")
-            os.replace(temporary, note)
+            replace_when_let(temporary, note)
         except BaseException:
             # Whole or not at all: a half-written note is not left behind
             try:
@@ -3055,7 +3056,7 @@ class _FolderPending(PendingSnapshot):
                         return content_hash, kind  # put back by another snapshot at the same time
                     raise StoreError(f"{target} is in the store already, with other bytes than {source}.")
                 try:
-                    os.rename(temporary, target)
+                    rename_when_let(temporary, target)
                     break
                 except FileNotFoundError:
                     if attempt == 2 or not os.path.exists(temporary):
@@ -3230,7 +3231,7 @@ class _FolderPending(PendingSnapshot):
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(document, f, indent=2, ensure_ascii=False)
                 f.write("\n")
-            os.replace(temporary, record)
+            replace_when_let(temporary, record)
         finally:
             if temporary.exists():
                 temporary.unlink()

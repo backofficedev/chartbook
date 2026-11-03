@@ -54,7 +54,7 @@ chartbook run --snapshot    # In a pipeline OTHERS depend on: build, then declar
 chartbook snapshot          # The second half alone: copies its built assets to the store, labelled with the commit. Takes your word that they were built by that commit. Refuses unless its pins account for every dependency (run `chartbook pin` first)
 chartbook restore           # The mirror of snapshot: puts this pipeline's assets back on disk from its snapshots. With no names, every asset marked `keep = true` that is missing; `chartbook restore embeddings model/forecaster` puts those back, kept or not. Never writes over a file. Exits 0 on a first build with nothing to restore
 chartbook lineage           # Every snapshot upstream of this pipeline, walked through the pins and checked by hash; --check for CI, --rehash to re-hash the bytes. `chartbook snapshot --deep` refuses on an upstream gap
-chartbook add acme/rates    # Declare a dependency by its ID ("acme/rates" = {} under [dependencies]) and pin its newest snapshot from the store: no folder of it, no clone; --as NAME, --commit C
+chartbook add acme/rates    # Declare a dependency by its ID ("acme/rates" = {} under [dependencies]) and pin its newest snapshot from the store: no folder of it, no clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
 chartbook pin --frozen      # Writes nothing but, where it can, the store's note that this machine reads these pins (so gc elsewhere keeps them). Exit 1 unless chartbook.lock is complete and every pin is in the store. For CI and a read-only shared store
 chartbook index diff BEFORE AFTER  # What changed between two builds from their index.json (or site folders): data, pins, versions, labels, staleness. --json, --exit-code
@@ -90,8 +90,13 @@ chartbook ls                # List all pipelines, dataframes, charts
 chartbook ls pipelines      # List pipelines only
 chartbook ls dataframes     # List dataframes only
 chartbook ls charts         # List charts only
+chartbook ls --json         # Every pipeline and asset of every kind, as JSON: kind, id, name, description, pipeline
+chartbook get-docs <pipeline>                # A pipeline's README
+chartbook get-docs <pipeline>:<dataframe>    # A dataframe's page: sources, license, rows, dates, write-up, columns and types
+chartbook get-docs <pipeline>:chart/<name>   # Any other asset's write-up, by the id `chartbook ls` prints
+chartbook get-docs --pipeline <id> --model <name>  # ...or with keywords (--dataframe, --chart, --model, --file, --note)
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
-chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
+chartbook data get-docs --pipeline <id> --dataframe <id>   # Print the dataframe's page
 chartbook data get-docs-path --pipeline <id> --dataframe <id>  # Get docs path
 ```
 
@@ -272,6 +277,12 @@ docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
 
 # Get path to documentation source file
 docs_path = data.get_docs_path(pipeline="crsp_treasury", dataframe="my_data")
+
+# Any asset's write-up, by kind/name, or the pipeline's README with none
+from chartbook import assets
+chart_docs = assets.get_docs("crsp_treasury", "chart/my_chart")
+readme = assets.get_docs("crsp_treasury")
+page = assets.get_docs_page("crsp_treasury", "my_data")  # what `chartbook get-docs` prints
 ```
 
 The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix and a registry prefix (`registry.example/scope/name`) are reserved but not yet supported.

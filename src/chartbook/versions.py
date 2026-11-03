@@ -280,9 +280,9 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             shutil.rmtree(kept, ignore_errors=True)
         try:
             # A virus scanner reading the files just built may hold one for a moment, and Windows refuses the rename
-            from chartbook.gitcache import _rename_when_let
+            from chartbook.replacing import rename_when_let
 
-            _rename_when_let(staging, kept)
+            rename_when_let(staging, kept)
         except OSError as error:
             done = _why_done(kept)
             if done is None:

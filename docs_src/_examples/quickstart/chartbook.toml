@@ -1,0 +1,18 @@
+[project]
+name = "My Pipeline"
+description = "A demo pipeline: two random walks and a chart of them"
+
+[dataframes.walks]
+name = "Random Walks"
+description = "Two simulated random walk series"
+sources = ["Simulated"]
+path = "./_data/walks.parquet"
+date_col = "date"
+docs = "365 daily observations of two cumulative-sum series."
+
+[charts.random_walks]
+name = "Two Random Walks"
+description = "Cumulative sums of daily standard-normal draws"
+dataframe = "walks"
+path = "./_output/random_walks.html"
+docs = "Both series are pure noise. Any pattern you see is your brain's doing."

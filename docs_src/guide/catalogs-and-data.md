@@ -10,6 +10,22 @@ $ chartbook catalog build
 $ chartbook catalog open
 ```
 
+The catalog lists every snapshot of every pipeline in its stores, each its own site as its owner
+declared it ready, and which pipeline pins it. {doc}`../tutorials/explore-a-catalog` builds this one
+from a store you download:
+
+```{image} ../_static/screenshots/tutorial-versions-light.png
+:alt: The catalog's Versions page: each pipeline's snapshots by commit and time, and which pipeline pins each
+:class: only-light cb-screenshot
+:align: center
+```
+
+```{image} ../_static/screenshots/tutorial-versions-dark.png
+:alt: The catalog's Versions page: each pipeline's snapshots by commit and time, and which pipeline pins each
+:class: only-dark cb-screenshot
+:align: center
+```
+
 ## A store is a folder
 
 Your own store is a folder on this machine. A store a team shares is a folder a sync service keeps

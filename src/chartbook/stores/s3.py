@@ -84,6 +84,7 @@ from typing import Iterable, Iterator, Optional, Union
 from urllib.parse import parse_qsl, urlsplit
 
 from chartbook import hashing
+from chartbook.replacing import rename_when_let, replace_when_let
 from chartbook.store import (
     _of_shape,
     CLEARED_FILE,
@@ -752,7 +753,7 @@ class S3Store(Store):
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
             os.chmod(target, _WRITABLE)
-        os.replace(temporary, target)
+        replace_when_let(temporary, target)
 
     def _try_delete(self, keys: list[str]) -> dict[str, tuple[str, str]]:
         """Delete keys, a thousand to a request; each the service did not delete, with its code and what it said."""
@@ -863,7 +864,7 @@ class S3Store(Store):
             named.parent.mkdir(parents=True, exist_ok=True)
             temporary = named.with_name(f".{leaf[-1]}.{uuid.uuid4().hex[:12]}.part")
             os.link(file.location, temporary)
-            os.replace(temporary, named)
+            replace_when_let(temporary, named)
             return named
         except OSError:
             return None
@@ -1480,13 +1481,13 @@ class S3Store(Store):
             local.parent.mkdir(parents=True, exist_ok=True)
             if local.exists():
                 aside = self._root / TMP_DIR / f"{uuid.uuid4().hex[:12]}.old"
-                os.rename(local, aside)
+                rename_when_let(local, aside)
                 try:
-                    os.rename(staging, local)
+                    rename_when_let(staging, local)
                 finally:
                     _remove_tree(aside, own=True)
             else:
-                os.rename(staging, local)
+                rename_when_let(staging, local)
         finally:
             if staging.exists():
                 _remove_tree(staging, own=True)

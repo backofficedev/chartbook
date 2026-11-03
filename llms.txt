@@ -1,14 +1,17 @@
 # ChartBook
 
-> A developer platform for data science teams to discover, document, and share analytics work. Provides a centralized catalog for pipelines, charts, and dataframes with automatic documentation website generation.
+> Data pipelines with provenance. ChartBook connects a team's data pipelines, in any language, so each one builds on another's exact, versioned output: every chart traces back to its sources, every input is verified by hash, and everything lands in one catalog that people browse and agents build on.
 
-ChartBook organizes analytics work into **pipelines** (self-contained projects) or **catalogs** (multi-pipeline collections). All configuration uses TOML format (`chartbook.toml`).
+A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declares what it makes (dataframes, charts, models, files, notebooks, notes). A **snapshot** is everything one pipeline built at one commit, by hash, kept in a **store**; another pipeline **pins** it in `chartbook.lock` and reads it by name. A **catalog** is one site over every snapshot in its stores. Every page is also published as Markdown: `guide/agents.html` is `guide/agents.md`.
 
-## Quick Start
+## Get started
 
-- [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
+- [Quickstart](docs_src/getting-started.md): `pip install chartbook`; a pipeline from three files (manifest, script, README); `chartbook docs build`; what `index.json` records
+- [Explore a Catalog](docs_src/tutorials/explore-a-catalog.md): download the tutorial store from the latest release, `chartbook store import`, `chartbook catalog init` / `build` / `open`, follow a model to its source through a pin, ask an agent, `chartbook add tutorial/treasury_curve`
+- [Let Your Agent Use the Catalog](docs_src/guide/agents.md): what is there (`chartbook ls --json`), what it is (`chartbook get-docs ID`), use it (`chartbook add`, `data.load`, `chartbook path`), can it be trusted (`chartbook lineage`)
+- [Start a Project From the Template](docs_src/guide/starting-a-project.md): `chartbook init`; each data source chosen brings a dataframe and a chart
 - [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
-- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs build`, `chartbook run`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs build`, `chartbook docs open`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook get-docs`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
 
 ## Guides
 
@@ -34,11 +37,11 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ```bash
 chartbook init            # Scaffold a new pipeline project
 chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
-chartbook docs build      # Render the HTML documentation website (was `chartbook docs`)
+chartbook docs build      # Render the HTML documentation website
 chartbook run           # Make everything current: run [scripts] build, then render the site
 chartbook docs build -f   # Force overwrite existing docs
 chartbook docs build -f --watch  # Rebuild incrementally on every file change
-chartbook docs open          # Open the generated site (was `chartbook browse`)
+chartbook docs open          # Open the generated site
 chartbook check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 # every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,
 # notebook, note, model and files asset, each with an ID (scope/pipeline:kind/name) and a content hash,
@@ -60,7 +63,7 @@ chartbook run --snapshot     # Build, then declare the build ready for others (a
 chartbook snapshot           # The second half alone: this pipeline's built assets into the store, labelled with the commit; refuses unless its pins account for every dependency
 chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets back on disk from its snapshots; with no names, every `keep = true` asset that is missing; never over a file
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
-chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C
+chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
 chartbook pin --frozen       # Write nothing but the store's note for gc; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
@@ -80,12 +83,14 @@ chartbook install claude-skill  # The Claude Code skill, user-level (--project: 
 chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml
 chartbook store add NAME URL  # Add a store; a pipeline enters by snapshot
 chartbook catalog disable <id>  # Leave a pipeline out of the catalog's builds; `chartbook catalog enable <id>` brings it back
-chartbook catalog build   # Render the catalog site (was `catalog build`)
+chartbook catalog build   # Render the catalog site
 chartbook catalog open       # Open the catalog site in the browser
 chartbook ls                 # List all pipelines, dataframes, charts
 chartbook ls dataframes      # List dataframes only
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
+chartbook ls --json                       # Every pipeline and asset of every kind, as JSON
+chartbook get-docs <pipeline>:chart/<name>  # Any asset's write-up, by its id; a bare <pipeline> is its README
 ```
 
 ## Python API
@@ -102,6 +107,7 @@ from chartbook import assets
 paths = assets.files("file/filings")             # a [files] asset's files, sorted (works for a dataframe of many parts too)
 table = assets.index("dep:file/filings")         # LazyFrame: path, size_bytes, sha256, a column per key=value folder; a dependency's from the store's record
 docs = data.get_docs(pipeline="markets", dataframe="market_data")       # the write-up, as text
+docs = assets.get_docs("markets", "chart/volume")                       # any asset's write-up; assets.get_docs("markets") is the README
 ```
 
 ## Minimal Configuration Example

@@ -1,6 +1,6 @@
 # Configuration Guide
 
-chartbook uses a TOML configuration file (`chartbook.toml`) to define your project metadata, charts, dataframes, and pipelines. This page is the reference for **format v2**; the reasoning behind the design lives in {doc}`../design/toml-format-v2`.
+chartbook uses a TOML configuration file (`chartbook.toml`) to define your project metadata, charts, dataframes, and pipelines. This page is the reference for **format v2**; the reasoning behind the design lives in {design}`toml-format-v2`.
 
 ## Configuration File Structure
 
@@ -135,7 +135,7 @@ data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical
 data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # URL, normalized
 ```
 
-If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. See {doc}`../design/toml-format-v2` for why identity works this way.
+If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. See {design}`toml-format-v2` for why identity works this way.
 
 Two extensions of the ID grammar are **reserved**: the parser recognizes them and refuses them with a "not yet supported" error, so they can be given meaning later without changing what any existing ID means.
 
@@ -144,7 +144,7 @@ Two extensions of the ID grammar are **reserved**: the parser recognizes them an
 | `scope/name@rev` | `ftsfr/crsp_treasury@a1b2c3d` | Pinning a revision |
 | `registry/scope/name` | `charthub.example/ftsfr/crsp_treasury` | Naming the registry that resolves an ID |
 
-A registry prefix is the first of exactly three components, and looks like a host — it contains `.` or `:`, or is `localhost` (the rule Docker uses). `acme/rates` therefore means the same thing whether or not a registry ever exists, and a two-component ID is always `scope/name`, even if the scope contains a dot. See {doc}`../design/asset-graph`.
+A registry prefix is the first of exactly three components, and looks like a host — it contains `.` or `:`, or is `localhost` (the rule Docker uses). `acme/rates` therefore means the same thing whether or not a registry ever exists, and a two-component ID is always `scope/name`, even if the scope contains a dot. See {design}`asset-graph`.
 
 ## `catalog.toml` and several stores
 
@@ -312,7 +312,7 @@ docs = "One nested record per event, a file per quarter."
 | `schema_overrides` | CSV, JSON lines | A table of columns and their types: `String`, `Boolean`, `Int8` to `Int64`, `UInt8` to `UInt64`, `Float32`, `Float64`, `Date`, `Datetime`, `Time`. A CSV file's columns are read as these types by both engines, `true` or `false` from the same words (`yes`, `t`, `1`, …). A JSON lines file's are cast to them by polars after the read (text trimmed, a date as `YYYY-MM-DD`, a time with an offset made UTC; a struct or a list is refused), and `data.sql()` hands DuckDB that frame, so that they mean the same there; such a file has no text for `data.ref()`, and DuckDB reads it whole, into memory, for each query, however little the query asks for. A column the file does not have is refused |
 | `infer_schema_length` | CSV, JSON lines | How many rows the types are inferred from, in both engines; 20480 by default, DuckDB's own |
 
-A parquet or Arrow IPC file keeps its own schema and takes none. Polars' `comment_prefix` and `skip_rows` are not taken: DuckDB reads a comment, and skips rows, otherwise than polars does. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each JSON lines file of a glob or a folder has its types inferred from its own lines, and the files are joined by their columns' names, so a field the later ones bring is kept. What is left to inference is each engine's own: DuckDB finds dates and times in text, keeps the zeros of `00123` as text, and reads a JSON field of numbers and text as JSON, where polars leaves text, reads a number and reads text; give a column its type with `schema_overrides` where the two must agree. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({doc}`../design/plan-0.3.0`), is for it.
+A parquet or Arrow IPC file keeps its own schema and takes none. Polars' `comment_prefix` and `skip_rows` are not taken: DuckDB reads a comment, and skips rows, otherwise than polars does. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each JSON lines file of a glob or a folder has its types inferred from its own lines, and the files are joined by their columns' names, so a field the later ones bring is kept. What is left to inference is each engine's own: DuckDB finds dates and times in text, keeps the zeros of `00123` as text, and reads a JSON field of numbers and text as JSON, where polars leaves text, reads a number and reads text; give a column its type with `schema_overrides` where the two must agree. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({design}`plan-0.3.0`), is for it.
 
 `keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.
 
@@ -680,7 +680,7 @@ An entry has `path` or `git`, not both, or neither. Named by its ID alone, "newe
 
 - `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder, and never reads one: that folder is its owner's to build and to declare ready; with `--upstream`, one with no snapshot to pin is built and snapshotted first. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.
 
-A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
+A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {design}`asset-graph`.
 
 (scripts)=
 ## `[scripts]` — Named Commands
@@ -735,7 +735,7 @@ The old `[config]`/`[site]`/`[pipeline]` format is not supported; loading a v1 f
 python scripts/migrate_toml_v2.py /path/to/project
 ```
 
-The full v1 → v2 field mapping is in the {doc}`design doc <../design/toml-format-v2>`.
+The full v1 → v2 field mapping is in the {design}`design doc <toml-format-v2>`.
 
 ## Global Configuration
 
@@ -811,7 +811,7 @@ level = "run"
 since = "2026-10-18T22:14:05Z"
 ```
 
-A folder's level is the highest of every entry that covers it: a `[[pipeline]]` entry whose path is the folder or a parent of it, and a `[[repository]]` entry whose url is the repository the folder's `origin` remote names (in any spelling: `git@github.com:Acme/Rates.git` is `https://github.com/acme/rates`). Trust a repository only for clones you made yourself: a folder that arrived with a `.git/` inside (an unpacked archive) may name any repository in its `.git/config`, and is trusted by its path. `render` lets queries run and the files the manifest names be read wherever they are; `run` lets the build script run too. The file is read as the settings are: one that cannot be read stops the command, naming the file; an entry of another shape (a relative `path` is one) is passed over with a warning that names it, and kept as it was; a `pipeline` or `repository` key that is a table rather than an array stops a write, which would otherwise drop it. It is written by `chartbook trust`, by `chartbook init` for the project it makes (at `run`), by `chartbook catalog init` for the catalog's folder (at `run`), whole or not at all; a hand edit is read, and the next write rewrites the file without its comments. Two environment variables sit above it. Under `CI` (set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code, and is the one value the variable takes. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. The reasoning is {doc}`../design/trust`.
+A folder's level is the highest of every entry that covers it: a `[[pipeline]]` entry whose path is the folder or a parent of it, and a `[[repository]]` entry whose url is the repository the folder's `origin` remote names (in any spelling: `git@github.com:Acme/Rates.git` is `https://github.com/acme/rates`). Trust a repository only for clones you made yourself: a folder that arrived with a `.git/` inside (an unpacked archive) may name any repository in its `.git/config`, and is trusted by its path. `render` lets queries run and the files the manifest names be read wherever they are; `run` lets the build script run too. The file is read as the settings are: one that cannot be read stops the command, naming the file; an entry of another shape (a relative `path` is one) is passed over with a warning that names it, and kept as it was; a `pipeline` or `repository` key that is a table rather than an array stops a write, which would otherwise drop it. It is written by `chartbook trust`, by `chartbook init` for the project it makes (at `run`), by `chartbook catalog init` for the catalog's folder (at `run`), whole or not at all; a hand edit is read, and the next write rewrites the file without its comments. Two environment variables sit above it. Under `CI` (set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code, and is the one value the variable takes. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. The reasoning is {design}`trust`.
 
 **Set by ChartBook for its own child processes.** Five more variables are not settings: ChartBook sets them for a process it starts, and a build script may read them. `CHARTBOOK_RUN_DIR` and `CHARTBOOK_RUN_SCRIPT` are set for a script that {ref}`chartbook run <chartbook-run>` or `chartbook run` runs: the pipeline's directory, and the script's name (`build`, or the one named). They are how `chartbook run`, called from inside the build script, tells that it was, and renders the site without running the script again; `CHARTBOOK_RUN_STACK` is the whole chain of scripts being run, outermost first, as a JSON list of `[directory, script]` pairs. For `build`, `CHARTBOOK_BATCH=1` is set with them, and CI may set that one itself. `CHARTBOOK_UNTRUSTED_SOURCE=1` is set by a catalog's build for its build of a version laid out from the store, whose files anyone who can write to the store may have written: that build takes no template from the project's folder, copies only pages and pictures of its site folder, runs no table or query, and lets no page take in a file from outside the site (the whole list is under Versions in {doc}`../guide/catalogs-and-data`). `chartbook docs build` sets it for itself, too, in a pipeline folder you have not trusted (above).
 

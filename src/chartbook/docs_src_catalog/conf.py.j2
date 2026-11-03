@@ -18,7 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = "{{ site_config.title }}"
-copyright = "{{ site_config.copyright }}, {{ site_config.author }}"
+# With no author, the year alone: "2026, ." is what the footer showed
+copyright = "{{ site_config.copyright }}{% if site_config.author.strip() %}, {{ site_config.author }}{% endif %}"
 author = "{{ site_config.author }}"
 
 # The full version, including alpha/beta/rc tags
@@ -236,6 +237,18 @@ blog_post_pattern = [
     # "_notebook_build/*.ipynb",
     "cb/charts/*.md",
 ]
+
+
+def _no_feed_link(app, pagename, templatename, context, doctree):
+    # ablog writes atom.xml only with a blog_baseurl, but links its chart
+    # listings to one whether or not it does: without one, the link leads nowhere
+    if not app.config.blog_baseurl:
+        context.pop("feed_path", None)
+
+
+def setup(app):
+    app.connect("html-page-context", _no_feed_link)
+
 
 # html_sidebars = {
 #     "**": [
