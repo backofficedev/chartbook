@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] - unreleased
 
+### Changed — the template's data window is committed, not read from `.env`
+
+`START_DATE` and `END_DATE` were defaults in `src/settings.py` that `.env` could override, so two people building the same commit could pull different windows while ChartBook named both snapshots by that commit. They are now constants of `settings.py`, imported by every pull (`from settings import START_DATE, END_DATE`); `config("END_DATE")` raises and says where the date lives, so an old `.env` cannot move it. `END_DATE` is the pipeline's cutoff: the FRED pull stops there instead of at today, the Fed yield curve and the OFR repo series are kept to the window, and moving it is a commit. The rule, in the template's `README`, `.env.example` and the skill: `.env` holds secrets and machine facts (API keys, `WRDS_USERNAME`, `DATA_DIR`); anything that changes what is computed lives in a committed file. The `examples/` pipelines follow it.
+
 ### Fixed — a pipeline pinned from one store, on a machine that writes to another
 
 - **`chartbook snapshot` and `chartbook run --snapshot` of a pipeline pinned from a read-only store write the snapshot to the writable one.** With a catalog of two stores, a class's read-only store holding the upstream snapshots and the student's own first, a consumer pinned from the class store was refused with "the store at mine does not have it": the pins were checked in every store, and then checked again in the store the snapshot goes to alone. The lineage, its cycles and `--deep`'s walk are now checked once, in every store of the catalog, and the snapshot is written to its own store; a pin that no store holds is refused as before. `chartbook lineage` of a pipeline downstream walks from the snapshot in one store to the one it was pinned from in the other. The workaround, `chartbook store import` of the class store into your own, is no longer needed. The upstream snapshots stay in the store they were pinned from: a catalog without it shows the lineage as a gap.

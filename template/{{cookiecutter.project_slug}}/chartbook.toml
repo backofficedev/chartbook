@@ -49,9 +49,9 @@ pull_method = "Web API via Python (pandas-datareader)"
 path = "./_data/fred.parquet"
 date_col = "DATE"
 docs = """
-Every series `src/pull_fred.py` lists, by its FRED code, one column each, from `START_DATE` to the day it
-was pulled. Millions are converted to billions where the script says so, and a few slow series are
-forward-filled to daily.
+Every series `src/pull_fred.py` lists, by its FRED code, one column each, from `START_DATE` to `END_DATE`,
+the window committed in `src/settings.py`. Millions are converted to billions where the script says so,
+and a few slow series are forward-filled to daily.
 """
 {% endif %}
 {% if cookiecutter.include_fed_yield_curve %}
@@ -68,7 +68,8 @@ path = "./_data/fed_yield_curve.parquet"
 date_col = "Date"
 docs = """
 The Federal Reserve Board's fitted nominal yield curve (Gurkaynak, Sack and Wright, 2007). Column
-`SVENYnn` is the continuously compounded zero-coupon yield at `nn` years, in percent.
+`SVENYnn` is the continuously compounded zero-coupon yield at `nn` years, in percent, from `START_DATE`
+to `END_DATE`, the window committed in `src/settings.py`.
 """
 {% endif %}
 {% if cookiecutter.include_ofr_api %}
@@ -85,7 +86,8 @@ path = "./_data/ofr_public_repo_data.parquet"
 date_col = "Date"
 docs = """
 Each series `src/pull_ofr_api_data.py` lists, by its OFR mnemonic, one column each: tri-party, DVP and
-GCF repo rates and volumes, and the New York Fed's reference rates.
+GCF repo rates and volumes, and the New York Fed's reference rates, to `END_DATE`, the cutoff committed in
+`src/settings.py`.
 """
 {% endif %}
 {% if cookiecutter.include_bloomberg %}

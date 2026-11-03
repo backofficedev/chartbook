@@ -287,6 +287,7 @@ def task_example_plot():
 def task_chart_repo_rates():
     """Example charts for Chartbook"""
     file_dep = [
+        "./src/settings.py",
         "./src/pull_fred.py",
         "./src/chart_relative_repo_rates.py",
     ]
