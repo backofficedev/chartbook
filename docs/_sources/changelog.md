@@ -22,7 +22,9 @@ A project scaffolded with a data source declared no dataframe and no chart unles
 - **The Fed's yield curve is pulled.** Choosing it brought `load_fed_yield_curve.py` and no task that ran it.
 - **CRSP-Compustat is pulled once, not on every build.** Its task's target was `CRSP_Compustat.parquet`, a file the script does not write, so doit took the task as never done and pulled from WRDS again each time. Its targets are the four files it writes; CRSP's stock pull lists the index file it writes too.
 
-### Changed — the guide is rewritten around what you are trying to do
+### Changed — a Quickstart, a tutorial, and a guide rewritten around what you are trying to do
+
+New: {doc}`getting-started`, five minutes from an empty folder to a pipeline that makes a dataset and a chart and a site that shows both, with what each was made from; {doc}`tutorials/explore-a-catalog`, fifteen minutes with a catalog of three pipelines built on public data, downloaded with the release (`chartbook-tutorial-store.zip`), browsed, traced back to its sources, asked about by an agent and built on; and {doc}`guide/agents`, how an agent finds what exists, reads what it is, uses it and checks it, with `chartbook ls --json` and `chartbook get-docs`. The home page opens with a chart and a replay of browsing a catalog.
 
 Each guide page opens with a complete example to run in a template project, then the next most common scenarios, and stops. New: {doc}`guide/reading-and-writing-data`, how you write your own outputs by name, read any pipeline's data in any shape, and what to do when a dataset has files and no one path. The dependencies, catalogs (now "Catalogs and Stores"), documenting and build pages are cut to the common path, with the reference carrying the rest.
 
