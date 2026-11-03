@@ -796,7 +796,9 @@ class TestASnapshotBeingMade:
         monkeypatch.setattr(pending, "_note_line", lambda *lines: (notes.append(lines), original(*lines))[1])
         pending.put(folder / "_data" / "b.txt")
         assert notes == []  # written a moment ago
-        monkeypatch.setattr(s3, "ALIVE_SECONDS", 0)
+        # Below zero, not zero: Windows ticks time.monotonic() every ~15 ms, so two
+        # reads a moment apart can be equal, and 0 > 0 would leave the note as it was
+        monkeypatch.setattr(s3, "ALIVE_SECONDS", -1)
         pending.put(folder / "_data" / "a.txt")
         assert notes  # written again, so that gc sees it is still going
 
