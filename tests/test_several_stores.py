@@ -558,3 +558,23 @@ def test_verify_of_named_objects_asks_each_store_of_its_own(tmp_path):
     nowhere = "sha256:" + "0" * 64
     (problem,) = stores.verify([nowhere])
     assert problem.content_hash == nowhere and problem.message == "not in the store"
+
+
+def test_verify_of_named_objects_says_what_no_store_holds_past_an_unreachable_first_store(tmp_path):
+    from chartbook.multi_store import NamedStore
+
+    class Disconnected(FolderStore):
+        def has(self, content_hash):
+            raise StoreUnreachableError("Disconnected")
+
+        def verify(self, content_hashes=None):
+            raise StoreUnreachableError("Disconnected")
+
+    folder = pipeline(tmp_path)
+    one = FolderStore(tmp_path / "one")
+    taken = snapshot.make(folder, one).snapshot
+    stores = Stores([NamedStore("away", str(tmp_path / "away"), Disconnected(tmp_path / "away")), NamedStore("one", str(one), one)])
+    nowhere = "sha256:" + "0" * 64
+    with pytest.warns(UserWarning, match="unreachable"):
+        (problem,) = stores.verify(list(taken.hashes()) + [nowhere])
+    assert problem.content_hash == nowhere and problem.message == "not in the store"

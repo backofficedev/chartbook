@@ -2862,11 +2862,25 @@ class _PutLater:
             records = []
             # A pin kept as it was, whose bytes were put back from the clone,
             # holds its own hash in the lockfile, not the stand-in it was put by
-            by_hash = {put.content_hash: put for put in stored.values() if put.stored}
+            by_hash = {}
+            for put in stored.values():
+                if put.stored:
+                    by_hash.setdefault(put.content_hash, []).append(put)
+
+            def put_of(record: dict):
+                """Of the puts of the record's bytes, the one put from its own path: two assets may share bytes, not a name."""
+                puts = by_hash.get(record.get("content_hash"), [])
+                own = str((record.get("location") or {}).get("path") or "").removeprefix("./").rstrip("/")
+                for put in puts:
+                    paths = [file["path"] for file in put.stored.get("files", ())]
+                    if own and any(path == own or path.startswith(own + "/") for path in paths):
+                        return put
+                return puts[0] if puts else None
+
             for record in after.assets.values():
                 put = stored.get(record.get("content_hash"))
                 if put is None and record.get("pipeline") == key:
-                    put = by_hash.get(record.get("content_hash"))
+                    put = put_of(record)
                 if put is None or not put.stored:
                     continue
                 kept = snapshot.renamed(record, pipeline)

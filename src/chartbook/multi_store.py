@@ -277,16 +277,16 @@ class Stores:
             return problems
         # Each store is asked of the objects it holds: one another store
         # holds is not missing from it. One that no store holds is said
-        # missing once, as the first store says it
+        # missing once, as the first reachable store says it
         wanted = list(dict.fromkeys(content_hashes))
         problems, unheld, first = [], set(wanted), None
         for entry in self._available():
-            first = first or entry.store
             try:
                 held = [content_hash for content_hash in wanted if entry.store.has(content_hash)]
             except (StoreUnreachableError, OSError) as error:
                 self._unreachable(entry, error)
                 continue
+            first = first or entry.store
             unheld.difference_update(held)
             if held:
                 problems.extend(entry.store.verify(held))
