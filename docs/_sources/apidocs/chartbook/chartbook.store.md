@@ -27,6 +27,10 @@
   - ```{autodoc2-docstring} chartbook.store.KeptFile
     :summary:
     ```
+* - {py:obj}`KeptFiles <chartbook.store.KeptFiles>`
+  - ```{autodoc2-docstring} chartbook.store.KeptFiles
+    :summary:
+    ```
 * - {py:obj}`KeptRecord <chartbook.store.KeptRecord>`
   - ```{autodoc2-docstring} chartbook.store.KeptRecord
     :summary:
@@ -67,16 +71,12 @@
   - ```{autodoc2-docstring} chartbook.store.default_store
     :summary:
     ```
-* - {py:obj}`gather <chartbook.store.gather>`
-  - ```{autodoc2-docstring} chartbook.store.gather
+* - {py:obj}`handed <chartbook.store.handed>`
+  - ```{autodoc2-docstring} chartbook.store.handed
     :summary:
     ```
 * - {py:obj}`holds_v1 <chartbook.store.holds_v1>`
   - ```{autodoc2-docstring} chartbook.store.holds_v1
-    :summary:
-    ```
-* - {py:obj}`in_place <chartbook.store.in_place>`
-  - ```{autodoc2-docstring} chartbook.store.in_place
     :summary:
     ```
 * - {py:obj}`is_record_name <chartbook.store.is_record_name>`
@@ -155,6 +155,10 @@
   - ```{autodoc2-docstring} chartbook.store.too_long
     :summary:
     ```
+* - {py:obj}`unowned_files <chartbook.store.unowned_files>`
+  - ```{autodoc2-docstring} chartbook.store.unowned_files
+    :summary:
+    ```
 * - {py:obj}`unreadable_detail <chartbook.store.unreadable_detail>`
   - ```{autodoc2-docstring} chartbook.store.unreadable_detail
     :summary:
@@ -169,6 +173,10 @@
     ```
 * - {py:obj}`what_is_wrong_with <chartbook.store.what_is_wrong_with>`
   - ```{autodoc2-docstring} chartbook.store.what_is_wrong_with
+    :summary:
+    ```
+* - {py:obj}`write_readme <chartbook.store.write_readme>`
+  - ```{autodoc2-docstring} chartbook.store.write_readme
     :summary:
     ```
 ````
@@ -211,6 +219,14 @@
   - ```{autodoc2-docstring} chartbook.store.OBJECTS_DIR
     :summary:
     ```
+* - {py:obj}`OLD_VIEWS_DIR <chartbook.store.OLD_VIEWS_DIR>`
+  - ```{autodoc2-docstring} chartbook.store.OLD_VIEWS_DIR
+    :summary:
+    ```
+* - {py:obj}`OLD_VIEWS_REMOVED <chartbook.store.OLD_VIEWS_REMOVED>`
+  - ```{autodoc2-docstring} chartbook.store.OLD_VIEWS_REMOVED
+    :summary:
+    ```
 * - {py:obj}`ORIGINS_DIR <chartbook.store.ORIGINS_DIR>`
   - ```{autodoc2-docstring} chartbook.store.ORIGINS_DIR
     :summary:
@@ -237,6 +253,14 @@
     ```
 * - {py:obj}`PIPELINES_DIR <chartbook.store.PIPELINES_DIR>`
   - ```{autodoc2-docstring} chartbook.store.PIPELINES_DIR
+    :summary:
+    ```
+* - {py:obj}`README_FILE <chartbook.store.README_FILE>`
+  - ```{autodoc2-docstring} chartbook.store.README_FILE
+    :summary:
+    ```
+* - {py:obj}`README_TEXT <chartbook.store.README_TEXT>`
+  - ```{autodoc2-docstring} chartbook.store.README_TEXT
     :summary:
     ```
 * - {py:obj}`RECORD_FILE <chartbook.store.RECORD_FILE>`
@@ -273,14 +297,6 @@
     ```
 * - {py:obj}`V1_SCHEMA <chartbook.store.V1_SCHEMA>`
   - ```{autodoc2-docstring} chartbook.store.V1_SCHEMA
-    :summary:
-    ```
-* - {py:obj}`VIEWS_DIR <chartbook.store.VIEWS_DIR>`
-  - ```{autodoc2-docstring} chartbook.store.VIEWS_DIR
-    :summary:
-    ```
-* - {py:obj}`VIEW_LINKS <chartbook.store.VIEW_LINKS>`
-  - ```{autodoc2-docstring} chartbook.store.VIEW_LINKS
     :summary:
     ```
 * - {py:obj}`WINDOWS_FOLDER_LIMIT <chartbook.store.WINDOWS_FOLDER_LIMIT>`
@@ -381,16 +397,16 @@ Bases: {py:obj}`chartbook.store.Store`
 
 ````
 
-````{py:method} files_of(content_hash: str) -> list[tuple[str, int]]
-:canonical: chartbook.store.FolderStore.files_of
+````{py:method} files(content_hash: str, pipeline: typing.Optional[str] = None, name: typing.Optional[str] = None) -> chartbook.store.KeptFiles
+:canonical: chartbook.store.FolderStore.files
+
+```{autodoc2-docstring} chartbook.store.FolderStore.files
+```
 
 ````
 
-````{py:method} get(content_hash: str, pipeline: typing.Optional[str] = None, name: typing.Optional[str] = None) -> pathlib.Path
-:canonical: chartbook.store.FolderStore.get
-
-```{autodoc2-docstring} chartbook.store.FolderStore.get
-```
+````{py:method} files_of(content_hash: str) -> list[tuple[str, int]]
+:canonical: chartbook.store.FolderStore.files_of
 
 ````
 
@@ -602,6 +618,14 @@ Bases: {py:obj}`chartbook.store.Store`
 
 ````
 
+````{py:method} tidy_pipeline(pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]
+:canonical: chartbook.store.FolderStore.tidy_pipeline
+
+```{autodoc2-docstring} chartbook.store.FolderStore.tidy_pipeline
+```
+
+````
+
 ````{py:method} unowned_hashes() -> list[str]
 :canonical: chartbook.store.FolderStore.unowned_hashes
 
@@ -622,15 +646,6 @@ Bases: {py:obj}`chartbook.store.Store`
 :canonical: chartbook.store.FolderStore.verify
 
 ```{autodoc2-docstring} chartbook.store.FolderStore.verify
-```
-
-````
-
-````{py:property} views
-:canonical: chartbook.store.FolderStore.views
-:type: pathlib.Path
-
-```{autodoc2-docstring} chartbook.store.FolderStore.views
 ```
 
 ````
@@ -757,6 +772,83 @@ Bases: {py:obj}`chartbook.store.Store`
    None
 
 ```{autodoc2-docstring} chartbook.store.KeptFile.size_bytes
+```
+
+````
+
+`````
+
+`````{py:class} KeptFiles
+:canonical: chartbook.store.KeptFiles
+
+```{autodoc2-docstring} chartbook.store.KeptFiles
+```
+
+````{py:method} by_relative() -> dict[str, pathlib.Path]
+:canonical: chartbook.store.KeptFiles.by_relative
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.by_relative
+```
+
+````
+
+````{py:attribute} content_hash
+:canonical: chartbook.store.KeptFiles.content_hash
+:type: str
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.content_hash
+```
+
+````
+
+````{py:attribute} files
+:canonical: chartbook.store.KeptFiles.files
+:type: tuple[chartbook.store.KeptFile, ...]
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.files
+```
+
+````
+
+````{py:attribute} home
+:canonical: chartbook.store.KeptFiles.home
+:type: pathlib.Path
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.home
+```
+
+````
+
+````{py:method} in_place() -> bool
+:canonical: chartbook.store.KeptFiles.in_place
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.in_place
+```
+
+````
+
+````{py:property} one
+:canonical: chartbook.store.KeptFiles.one
+:type: chartbook.store.KeptFile
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.one
+```
+
+````
+
+````{py:attribute} single
+:canonical: chartbook.store.KeptFiles.single
+:type: bool
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.store.KeptFiles.single
 ```
 
 ````
@@ -958,6 +1050,26 @@ Bases: {py:obj}`chartbook.store.Store`
 
 ````
 
+````{py:data} OLD_VIEWS_DIR
+:canonical: chartbook.store.OLD_VIEWS_DIR
+:value: >
+   'views'
+
+```{autodoc2-docstring} chartbook.store.OLD_VIEWS_DIR
+```
+
+````
+
+````{py:data} OLD_VIEWS_REMOVED
+:canonical: chartbook.store.OLD_VIEWS_REMOVED
+:value: >
+   '.views-removed'
+
+```{autodoc2-docstring} chartbook.store.OLD_VIEWS_REMOVED
+```
+
+````
+
 ````{py:data} ORIGINS_DIR
 :canonical: chartbook.store.ORIGINS_DIR
 :value: >
@@ -1108,6 +1220,25 @@ Bases: {py:obj}`abc.ABC`
 
 `````
 
+````{py:data} README_FILE
+:canonical: chartbook.store.README_FILE
+:value: >
+   'README.txt'
+
+```{autodoc2-docstring} chartbook.store.README_FILE
+```
+
+````
+
+````{py:data} README_TEXT
+:canonical: chartbook.store.README_TEXT
+:value: <Multiline-String>
+
+```{autodoc2-docstring} chartbook.store.README_TEXT
+```
+
+````
+
 ````{py:data} RECORD_FILE
 :canonical: chartbook.store.RECORD_FILE
 :value: >
@@ -1247,6 +1378,17 @@ Bases: {py:obj}`chartbook.store.StoreError`
 
 ````
 
+````{py:attribute} written
+:canonical: chartbook.store.Root.written
+:type: str
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.store.Root.written
+```
+
+````
+
 `````
 
 ````{py:data} SCHEMA
@@ -1340,19 +1482,19 @@ Bases: {py:obj}`abc.ABC`
 
 ````
 
-````{py:method} files_of(content_hash: str) -> list[tuple[str, int]]
-:canonical: chartbook.store.Store.files_of
+````{py:method} files(content_hash: str, pipeline: typing.Optional[str] = None, name: typing.Optional[str] = None) -> chartbook.store.KeptFiles
+:canonical: chartbook.store.Store.files
+:abstractmethod:
 
-```{autodoc2-docstring} chartbook.store.Store.files_of
+```{autodoc2-docstring} chartbook.store.Store.files
 ```
 
 ````
 
-````{py:method} get(content_hash: str, pipeline: typing.Optional[str] = None, name: typing.Optional[str] = None) -> pathlib.Path
-:canonical: chartbook.store.Store.get
-:abstractmethod:
+````{py:method} files_of(content_hash: str) -> list[tuple[str, int]]
+:canonical: chartbook.store.Store.files_of
 
-```{autodoc2-docstring} chartbook.store.Store.get
+```{autodoc2-docstring} chartbook.store.Store.files_of
 ```
 
 ````
@@ -1524,6 +1666,14 @@ Bases: {py:obj}`abc.ABC`
 :canonical: chartbook.store.Store.tidy
 
 ```{autodoc2-docstring} chartbook.store.Store.tidy
+```
+
+````
+
+````{py:method} tidy_pipeline(pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]
+:canonical: chartbook.store.Store.tidy_pipeline
+
+```{autodoc2-docstring} chartbook.store.Store.tidy_pipeline
 ```
 
 ````
@@ -1789,26 +1939,6 @@ Bases: {py:obj}`chartbook.store.StoreError`
 
 ````
 
-````{py:data} VIEWS_DIR
-:canonical: chartbook.store.VIEWS_DIR
-:value: >
-   'views'
-
-```{autodoc2-docstring} chartbook.store.VIEWS_DIR
-```
-
-````
-
-````{py:data} VIEW_LINKS
-:canonical: chartbook.store.VIEW_LINKS
-:value: >
-   None
-
-```{autodoc2-docstring} chartbook.store.VIEW_LINKS
-```
-
-````
-
 ````{py:data} WINDOWS_FOLDER_LIMIT
 :canonical: chartbook.store.WINDOWS_FOLDER_LIMIT
 :value: >
@@ -1843,10 +1973,10 @@ Bases: {py:obj}`chartbook.store.StoreError`
 ```
 ````
 
-````{py:function} gather(asset: chartbook.store.KeptAsset, views: pathlib.Path) -> pathlib.Path
-:canonical: chartbook.store.gather
+````{py:function} handed(asset: chartbook.store.KeptAsset) -> chartbook.store.KeptFiles
+:canonical: chartbook.store.handed
 
-```{autodoc2-docstring} chartbook.store.gather
+```{autodoc2-docstring} chartbook.store.handed
 ```
 ````
 
@@ -1854,13 +1984,6 @@ Bases: {py:obj}`chartbook.store.StoreError`
 :canonical: chartbook.store.holds_v1
 
 ```{autodoc2-docstring} chartbook.store.holds_v1
-```
-````
-
-````{py:function} in_place(asset: chartbook.store.KeptAsset) -> typing.Optional[pathlib.Path]
-:canonical: chartbook.store.in_place
-
-```{autodoc2-docstring} chartbook.store.in_place
 ```
 ````
 
@@ -1997,6 +2120,13 @@ Bases: {py:obj}`chartbook.store.StoreError`
 ```
 ````
 
+````{py:function} unowned_files(content_hash: str, folder: pathlib.Path, name: typing.Optional[str] = None) -> chartbook.store.KeptFiles
+:canonical: chartbook.store.unowned_files
+
+```{autodoc2-docstring} chartbook.store.unowned_files
+```
+````
+
 ````{py:function} unreadable_detail(path: pathlib.Path, error: Exception) -> str
 :canonical: chartbook.store.unreadable_detail
 
@@ -2022,5 +2152,12 @@ Bases: {py:obj}`chartbook.store.StoreError`
 :canonical: chartbook.store.what_is_wrong_with
 
 ```{autodoc2-docstring} chartbook.store.what_is_wrong_with
+```
+````
+
+````{py:function} write_readme(pipeline_path: pathlib.Path) -> None
+:canonical: chartbook.store.write_readme
+
+```{autodoc2-docstring} chartbook.store.write_readme
 ```
 ````

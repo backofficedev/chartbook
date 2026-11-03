@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -15,71 +14,72 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
     <script src="../../_static/documentation_options.js?v=9453eeee"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/transfer';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,7 +87,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -95,17 +94,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -118,15 +117,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -139,8 +141,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -163,7 +164,8 @@ document.write(`
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -176,15 +178,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -197,8 +202,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -225,21 +229,17 @@ document.write(`
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -254,10 +254,11 @@ document.write(`
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-and-writing-data.html">Reading and Writing Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Stores</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
@@ -355,6 +356,7 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-data-reads.html">Design: the plan for data reads</a></li>
 </ul>
 
     </div>
@@ -363,9 +365,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -414,24 +421,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 
 </div></div>
       
@@ -458,53 +464,55 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.transfer</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Verified copying between Store implementations, without shared physical references.&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
-<span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">snapshot</span>
-<span class="kn">from</span> <span class="nn">chartbook.store</span> <span class="kn">import</span> <span class="n">StoreError</span>
+<span></span><span class="sd">"""Verified copying between Store implementations, without shared physical references."""</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">snapshot</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
 
 
 <div class="viewcode-block" id="copy_snapshot">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.transfer.html#chartbook.transfer.copy_snapshot">[docs]</a>
-<span class="k">def</span> <span class="nf">copy_snapshot</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">copy_snapshot</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
     <span class="n">existing</span> <span class="o">=</span> <span class="p">[</span><span class="n">snapshot</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">all_snapshot_files</span><span class="p">()</span> <span class="o">+</span> <span class="n">target</span><span class="o">.</span><span class="n">pinned_snapshot_files</span><span class="p">()]</span>
     <span class="k">for</span> <span class="n">held</span> <span class="ow">in</span> <span class="n">existing</span><span class="p">:</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">held</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">held</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">):</span>
-            <span class="k">def</span> <span class="nf">logical</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">logical</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
                 <span class="n">raw</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_document</span><span class="p">()</span>
-                <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">,</span> <span class="p">[]),</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">),</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;documents&quot;</span><span class="p">)]:</span>
+                <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"records"</span><span class="p">,</span> <span class="p">[]),</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"index"</span><span class="p">),</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"documents"</span><span class="p">)]:</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-                        <span class="n">part</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;stored&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                        <span class="n">part</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"stored"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">raw</span>
             <span class="k">if</span> <span class="n">logical</span><span class="p">(</span><span class="n">held</span><span class="p">)</span> <span class="o">!=</span> <span class="n">logical</span><span class="p">(</span><span class="n">taken</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Conflicting snapshot in target: </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Conflicting snapshot in target: </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="n">problems</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">hashes</span><span class="p">())</span>
             <span class="k">if</span> <span class="n">problems</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target snapshot failed verification: </span><span class="si">{</span><span class="n">problems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Target snapshot failed verification: </span><span class="si">{</span><span class="n">problems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">held</span><span class="o">.</span><span class="n">path</span>
-    <span class="n">document</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
-    <span class="n">pending</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span> <span class="n">made_by</span><span class="o">=</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;made_by&quot;</span><span class="p">,</span> <span class="s2">&quot;snapshot&quot;</span><span class="p">))</span>
+    <span class="n">document</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span>
+    <span class="n">pending</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span> <span class="n">made_by</span><span class="o">=</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"made_by"</span><span class="p">,</span> <span class="s2">"snapshot"</span><span class="p">))</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">,</span> <span class="p">[]))</span> <span class="o">+</span> <span class="p">[</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;documents&quot;</span><span class="p">),</span> <span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)]</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"records"</span><span class="p">,</span> <span class="p">[]))</span> <span class="o">+</span> <span class="p">[</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"documents"</span><span class="p">),</span> <span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)]</span>
         <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content_hash&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">):</span>
                 <span class="k">continue</span>
-            <span class="n">stored</span> <span class="o">=</span> <span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stored&quot;</span><span class="p">)</span>
+            <span class="n">stored</span> <span class="o">=</span> <span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"stored"</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="s2">&quot;Snapshot has no physical file listing; migrate its source store first&quot;</span><span class="p">)</span>
-            <span class="n">single</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;single&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="n">files</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;files&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="s2">"Snapshot has no physical file listing; migrate its source store first"</span><span class="p">)</span>
+            <span class="n">single</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"single"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">,</span> <span class="p">[])</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="s2">&quot;Snapshot has an empty file listing&quot;</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;path&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">single</span> <span class="k">else</span> <span class="kc">None</span>
-            <span class="n">held</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">part</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">],</span> <span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">))</span>
-            <span class="n">place</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;path&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">single</span> <span class="k">else</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;at&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">pending</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">held</span> <span class="o">/</span> <span class="n">name</span> <span class="k">if</span> <span class="n">single</span> <span class="k">else</span> <span class="n">held</span><span class="p">,</span> <span class="n">place</span><span class="o">=</span><span class="n">place</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">content_hash</span> <span class="o">!=</span> <span class="n">part</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">]:</span>
-                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Copy of </span><span class="si">{</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;documents&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> failed hash verification&quot;</span><span class="p">)</span>
-            <span class="n">part</span><span class="p">[</span><span class="s2">&quot;stored&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stored</span>
+                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="s2">"Snapshot has an empty file listing"</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"path"</span><span class="p">])</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">single</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">kept</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">part</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">],</span> <span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">place</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"path"</span><span class="p">]</span> <span class="k">if</span> <span class="n">single</span> <span class="k">else</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"at"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+            <span class="c1"># Each file from where the source keeps it, by its path inside the asset: no folder is gathered</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">pending</span><span class="o">.</span><span class="n">put_listed</span><span class="p">([(</span><span class="n">file</span><span class="o">.</span><span class="n">relative</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">location</span><span class="p">))</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">kept</span><span class="o">.</span><span class="n">files</span><span class="p">],</span> <span class="n">place</span><span class="p">,</span> <span class="n">single</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">content_hash</span> <span class="o">!=</span> <span class="n">part</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Copy of </span><span class="si">{</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'id'</span><span class="p">,</span><span class="w"> </span><span class="s1">'documents'</span><span class="p">)</span><span class="si">}</span><span class="s2"> failed hash verification"</span><span class="p">)</span>
+            <span class="n">part</span><span class="p">[</span><span class="s2">"stored"</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stored</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">pending</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">origin</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">origins</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">record_name</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">subdirectory</span><span class="p">)):</span>
             <span class="n">target</span><span class="o">.</span><span class="n">note_origin</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">record_name</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">subdirectory</span><span class="p">),</span> <span class="n">origin</span><span class="p">)</span>
@@ -515,10 +523,27 @@ document.write(`
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_same_place</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Whether two stores are one: two names for a folder (letter case, a link) or for a bucket."""</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s2">"bucket"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="s2">"bucket"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">place</span><span class="p">(</span><span class="n">store</span><span class="p">):</span>
+            <span class="n">options</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="s2">"options"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"endpoint"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>  <span class="c1"># none is AWS</span>
+            <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="s2">"prefix"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">),</span> <span class="n">endpoint</span>
+        <span class="k">return</span> <span class="n">place</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="n">place</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="n">first</span><span class="p">,</span> <span class="n">second</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s2">"root"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="s2">"root"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">Path</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">second</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">samefile</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="move">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.transfer.html#chartbook.transfer.move">[docs]</a>
-<span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">stores</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">route</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-    <span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">validate_pipeline_id</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">move</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">stores</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">route</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_pipeline_id</span>
     <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)</span>
     <span class="n">target_entry</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">named</span><span class="p">(</span><span class="n">to</span><span class="p">)</span>
     <span class="n">stores</span><span class="o">.</span><span class="n">for_writing</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="p">[</span><span class="n">to</span><span class="p">])</span>
@@ -530,15 +555,18 @@ document.write(`
             <span class="k">continue</span>
         <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="n">snapshot</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">entry</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">all_snapshot_files</span><span class="p">()</span> <span class="o">+</span> <span class="n">entry</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">pinned_snapshot_files</span><span class="p">()]</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">found</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">==</span> <span class="n">pipeline</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">chosen</span> <span class="ow">and</span> <span class="n">_same_place</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">store</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+            <span class="c1"># Its records would be taken for the copies, then removed with their files</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Stores </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">to</span><span class="si">!r}</span><span class="s2"> are one store under two names; nothing was moved"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">chosen</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">read_only</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">keep</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source store </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is read-only; use --keep&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source store </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is read-only; use --keep"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">chosen</span><span class="p">:</span>
             <span class="n">sources</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">entry</span><span class="p">,</span> <span class="n">chosen</span><span class="p">))</span>
             <span class="n">total</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">size_of</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">()</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">hashes</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">chosen</span><span class="p">)))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">sources</span><span class="p">:</span>
         <span class="n">held</span> <span class="o">=</span> <span class="p">[</span><span class="n">snapshot</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">all_snapshot_files</span><span class="p">()</span> <span class="o">+</span> <span class="n">target</span><span class="o">.</span><span class="n">pinned_snapshot_files</span><span class="p">()]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">==</span> <span class="n">pipeline</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">held</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No reachable store has a snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No reachable store has a snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">),</span> <span class="n">total</span>
     <span class="c1"># Copy and verify every snapshot and note before removing anything.</span>
@@ -557,16 +585,38 @@ document.write(`
                                 <span class="nb">set</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">labelled</span> <span class="ow">or</span> <span class="p">())</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">previous</span><span class="o">.</span><span class="n">labelled</span> <span class="ow">or</span> <span class="p">()</span> <span class="k">if</span> <span class="n">previous</span> <span class="k">else</span> <span class="p">()))</span>
         <span class="n">problems</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">hashes</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">problems</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target failed verification; source retained: </span><span class="si">{</span><span class="n">problems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Target failed verification; source retained: </span><span class="si">{</span><span class="n">problems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">keep</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">entry</span><span class="p">,</span> <span class="n">chosen</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
             <span class="c1"># Oldest first lets the store preserve files referenced by remaining snapshots.</span>
             <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">made_at</span><span class="p">):</span>
                 <span class="n">entry</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">remove_snapshot</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">route</span> <span class="ow">and</span> <span class="n">stores</span><span class="o">.</span><span class="n">catalog</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">chartbook.catalog_config</span> <span class="kn">import</span> <span class="n">route</span> <span class="k">as</span> <span class="n">set_route</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.catalog_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">route</span> <span class="k">as</span> <span class="n">set_route</span>
         <span class="n">set_route</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="p">[</span><span class="n">to</span><span class="p">],</span> <span class="n">stores</span><span class="o">.</span><span class="n">catalog</span><span class="p">)</span>
-    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">),</span> <span class="n">total</span></div>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">)</span>
+    <span class="n">stuck</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keep</span> <span class="ow">and</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="c1"># Clearing a record leaves its files for a tidy: this pipeline's go now, and no other's,</span>
+        <span class="c1"># once the target is seen to hold every record still</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">held</span> <span class="o">=</span> <span class="p">{(</span><span class="n">t</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">read</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">all_snapshot_files</span><span class="p">()</span> <span class="o">+</span> <span class="n">target</span><span class="o">.</span><span class="n">pinned_snapshot_files</span><span class="p">())</span>
+                    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">==</span> <span class="n">pipeline</span><span class="p">}</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Moved </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> snapshot(s) of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">, but </span><span class="si">{</span><span class="n">to</span><span class="si">!r}</span><span class="s2"> could not be read again (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">); "</span>
+                             <span class="sa">f</span><span class="s2">"the sources' files are left as they are"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">chosen</span> <span class="ow">in</span> <span class="n">sources</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">chosen</span> <span class="k">if</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">held</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Moved </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> snapshot(s) of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">, but </span><span class="si">{</span><span class="n">to</span><span class="si">!r}</span><span class="s2"> no longer lists one made </span><span class="si">{</span><span class="n">missing</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">made_at</span><span class="si">}</span><span class="s2">; "</span>
+                             <span class="sa">f</span><span class="s2">"the sources' files are left as they are"</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">entry</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">entry</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">tidy_pipeline</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">stuck</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stuck</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Moved </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> snapshot(s) of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">to</span><span class="si">}</span><span class="s2">, but some of their files are left behind. </span><span class="si">{</span><span class="s1">' '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stuck</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">count</span><span class="p">,</span> <span class="n">total</span></div>
 
 </pre></div>
 
@@ -630,8 +680,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

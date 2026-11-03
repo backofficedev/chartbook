@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -16,72 +15,82 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
     <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=83f9ed06" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=f4c13ce8" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=9453eeee"></script>
-    <script src="_static/doctools.js?v=9bcbadda"></script>
-    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/documentation_options.js?v=f7ee7eb5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=f281be69"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="_static/logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Getting Started" href="getting-started.html" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="en"/>
-  </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+    <link rel="next" title="Quickstart" href="getting-started.html" />
 
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+<meta property="og:type" content="website">
+<meta property="og:title" content="ChartBook · ChartBook">
+<meta property="og:description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+<meta property="og:image" content="https://backofficedev.github.io/chartbook/_static/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+  </head>
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="search.html"
       method="get">
@@ -89,7 +98,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +105,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,15 +128,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,8 +152,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -153,7 +163,7 @@ document.write(`
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,7 +179,8 @@ document.write(`
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -182,15 +193,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -203,8 +217,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -230,22 +243,18 @@ document.write(`
       
     
     
-    <img src="_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="_static/logo-light.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="_static/logo-dark.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -256,26 +265,35 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get started</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/explore-a-catalog.html">Explore a Catalog</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">How-to guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="guide/starting-a-project.html">Start a Project From the Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/reading-and-writing-data.html">Reading and Writing Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/catalogs-and-data.html">Catalogs and Stores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/agents.html">Let Your Agent Use the Catalog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/gallery.html">ChartBook Plotting Gallery</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="guide/how-the-build-works.html">How the Build Works</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="reference/configuration.html">Configuration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/cli.html">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="reference/api.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -320,6 +338,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.replacing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.replacing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
@@ -343,24 +362,10 @@ document.write(`
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/overview.html">Design: start here</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/references.html">Design: references</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/asset-graph.html">Design: the asset graph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/index-schema.html">Design: the index</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/writer.html">Design: the writer, and what every page shows</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/models.html">Design: models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/data-access.html">Design: data access</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/stores-and-backends.html">Design: stores and backends</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/versioned-catalog.html">Design: the versioned catalog</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/trust.html">Design: trust, for a build of files on this machine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/keep.html">Design: keeping costly outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -369,9 +374,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -468,24 +478,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -508,11 +517,13 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start">Start</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-four-documents">The four documents</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#from-zero-to-a-documented-pipeline">From zero to a documented pipeline</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-things-are">Where things are</a><ul class="visible nav section-nav flex-column">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-chartbook-does">What ChartBook does</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ask-the-catalog-from-the-command-line">Ask the catalog from the command line</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-your-team-and-for-your-agents">For your team and for your agents</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-any-language">In any language</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-pipeline-in-three-files">A pipeline, in three files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-next">Where next</a><ul class="pst-show_toc_level nav section-nav flex-column">
 </ul>
 </li>
 </ul>
@@ -528,118 +539,245 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="chartbook">
 <h1>ChartBook<a class="headerlink" href="#chartbook" title="Link to this heading">#</a></h1>
-<p><strong>Turn a data pipeline into a documented, searchable site, and let other pipelines build on
-what it made.</strong></p>
-<p>A pipeline is a folder of code in git: a manifest, scripts, write-ups, and the data, charts and
-models the scripts produce. ChartBook reads that folder, records what is in it, and writes a
-site. Many pipelines make a catalog: one site over all of them, where any dataset can be loaded
-by name, and where one pipeline can pin exactly what another one built.</p>
-<img alt="repository, resolved into an index, written into pages, built into a site" class="only-light align-center" src="_images/chain-light.svg" />
-<img alt="repository, resolved into an index, written into pages, built into a site" class="only-dark align-center" src="_images/chain-dark.svg" />
-<p>Three steps, each a transformation of the one before. The <strong>index</strong> in the middle is the point
-of the design: one JSON file that says what the site shows, with an ID and a content hash for
-everything, so that pages can be written for any site tool, two builds can be compared, and
-another program can read what you published without scraping it. <a class="reference internal" href="guide/vocabulary.html"><span class="doc">Vocabulary</span></a> defines
-these words, and every page here uses them in those senses.</p>
-<section id="start">
-<h2>Start<a class="headerlink" href="#start" title="Link to this heading">#</a></h2>
+<div class="cb-hero">
+<p class="cb-eyebrow">Data pipelines with provenance</p>
+<p class="cb-hero-title">Know exactly where every number came from.</p>
+<p class="cb-hero-sub">ChartBook connects your team's data pipelines, in any language, so each one builds on
+another's exact, versioned output. Every chart traces back to its sources, every input is
+verified by hash, and everything lands in one catalog your team browses and your agents build
+on.</p>
+</div>
+<div class="cb-hero-install highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install chartbook</span>
+</pre></div>
+</div>
+<div class="cb-hero-actions">
+<a class="sd-btn sd-btn-primary cb-hero-button" href="getting-started.html">Quickstart: five minutes</a>
+<a class="sd-btn sd-btn-outline-primary cb-hero-button" href="tutorials/explore-a-catalog.html">Explore a catalog</a>
+</div>
+<a class="only-light cb-screenshot reference internal image-reference" href="_images/quickstart-chart-light.png"><img alt="A chart's page in a ChartBook site: the chart, its write-up, and a Provenance table that names the dataframe it was made from and that dataframe's content hash" class="align-center only-light cb-screenshot" src="_images/quickstart-chart-light.png" style="width: 760px;" />
+</a>
+<a class="only-dark cb-screenshot reference internal image-reference" href="_images/quickstart-chart-dark.png"><img alt="A chart's page in a ChartBook site: the chart, its write-up, and a Provenance table that names the dataframe it was made from and that dataframe's content hash" class="align-center only-dark cb-screenshot" src="_images/quickstart-chart-dark.png" style="width: 760px;" />
+</a>
+<p class="cb-caption">Every chart gets a page: the chart, its write-up, and exactly what it was
+made from, with the hash of that data in this build. This one is the Quickstart's.</p>
+<section id="what-chartbook-does">
+<h2>What ChartBook does<a class="headerlink" href="#what-chartbook-does" title="Link to this heading">#</a></h2>
 <div class="sd-container-fluid sd-sphinx-override sd-mb-4 docutils">
-<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-1 sd-row-cols-md-3 sd-row-cols-lg-3 sd-g-3 sd-g-xs-3 sd-g-sm-3 sd-g-md-3 sd-g-lg-3 docutils">
+<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-2 sd-row-cols-md-2 sd-row-cols-lg-2 sd-g-3 sd-g-xs-3 sd-g-sm-3 sd-g-md-3 sd-g-lg-3 docutils">
 <div class="sd-col sd-d-flex-row docutils">
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
-Install and build</div>
-<p class="sd-card-text"><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code>, scaffold a project with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code>, and have a site in a minute.</p>
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-package-dependencies" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.126.64a1.748 1.748 0 0 1 1.75 0l8.25 4.762c.103.06.199.128.286.206a.75.75 0 0 1 .554.96c.023.113.035.23.035.35v3.332a.75.75 0 0 1-1.5 0V7.64l-7.75 4.474V22.36a.75.75 0 0 1-1.125.65l-8.75-5.052a1.75 1.75 0 0 1-.875-1.515V6.917c0-.119.012-.236.035-.35a.749.749 0 0 1 .554-.96c.088-.078.184-.146.286-.205L9.126.639Zm.875 10.173v.001l7.75-4.474-7.625-4.402a.248.248 0 0 0-.25 0L2.251 6.34Zm-8.5-3.175v8.803c0 .09.048.172.125.216l7.625 4.402v-8.947Z"></path><path d="m16.617 17.5 2.895-2.702a.75.75 0 0 0-1.024-1.096l-4.285 4a.75.75 0 0 0 0 1.096l4.285 4a.75.75 0 1 0 1.024-1.096L16.617 19h6.633a.75.75 0 0 0 0-1.5h-6.633Z"></path></svg> Depend</div>
+<p class="sd-card-text">Build on another pipeline’s exact output, the way you depend on a package.
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span> <span class="pre">acme/rates</span></code> pins its newest snapshot in <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>, and what you read
+changes only when you run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>.</p>
 </div>
-<a class="sd-stretched-link sd-hide-link-text reference internal" href="getting-started.html"><span class="doc">Getting Started</span></a></div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a></div>
 </div>
 <div class="sd-col sd-d-flex-row docutils">
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
-Document a pipeline</div>
-<p class="sd-card-text">Describe charts, dataframes, notebooks, notes and models in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>; each gets a page.</p>
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-git-commit" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.944 11h4.306a.75.75 0 0 1 0 1.5h-4.306a5.001 5.001 0 0 1-9.888 0H2.75a.75.75 0 0 1 0-1.5h4.306a5.001 5.001 0 0 1 9.888 0Zm-1.444.75a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0Z"></path></svg> Trace</div>
+<p class="sd-card-text">Every dataframe, chart and model records what it was made from, by content hash.
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">lineage</span></code> walks the chain back to the first source and checks every hash on the way.</p>
 </div>
-<a class="sd-stretched-link sd-hide-link-text reference internal" href="guide/documenting-a-pipeline.html"><span class="doc">Documenting a Pipeline</span></a></div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="reference/cli.html#chartbook-lineage"><span class="std std-ref">chartbook lineage</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-history" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.998 2.5A9.503 9.503 0 0 0 3.378 8H5.75a.75.75 0 0 1 0 1.5H2a1 1 0 0 1-1-1V4.75a.75.75 0 0 1 1.5 0v1.697A10.997 10.997 0 0 1 11.998 1C18.074 1 23 5.925 23 12s-4.926 11-11.002 11C6.014 23 1.146 18.223 1 12.275a.75.75 0 0 1 1.5-.037 9.5 9.5 0 0 0 9.498 9.262c5.248 0 9.502-4.253 9.502-9.5s-4.254-9.5-9.502-9.5Z"></path><path d="M12.5 7.25a.75.75 0 0 0-1.5 0v5.5c0 .27.144.518.378.651l3.5 2a.75.75 0 0 0 .744-1.302L12.5 12.315V7.25Z"></path></svg> Rebuild</div>
+<p class="sd-card-text">A snapshot keeps the exact bytes a pipeline made, labelled with its commit. Rebuild from the
+same inputs, and put back an output that took a day to compute with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code>.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="guide/keeping-costly-outputs.html"><span class="doc">Keeping Costly Outputs</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-search" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.25 2a8.25 8.25 0 0 1 6.34 13.53l5.69 5.69a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-5.69-5.69A8.25 8.25 0 1 1 10.25 2ZM3.5 10.25a6.75 6.75 0 1 0 13.5 0 6.75 6.75 0 0 0-13.5 0Z"></path></svg> Discover</div>
+<p class="sd-card-text">Many pipelines become one catalog: a searchable website for your team, and an index, an
+<code class="docutils literal notranslate"><span class="pre">llms.txt</span></code> and a command line your agents work from.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="guide/catalogs-and-data.html"><span class="doc">Catalogs and Stores</span></a></div>
+</div>
+</div>
+</div>
+</section>
+<section id="ask-the-catalog-from-the-command-line">
+<h2>Ask the catalog from the command line<a class="headerlink" href="#ask-the-catalog-from-the-command-line" title="Link to this heading">#</a></h2>
+<p>What a person browses on the site, a script or an agent can ask for at the terminal: which
+datasets there are, what each one holds, and the data itself.</p>
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: chartbook ls dataframes lists the catalog's three datasets; chartbook get-docs prints one dataset's page, with its sources, license, rows, dates, write-up and a table of its columns; chartbook path prints where its parquet file is; and in Python, data.load reads it and shows its last five rows">
+<source src="_static/tapes/catalog.webm" type="video/webm">
+<source src="_static/tapes/catalog.mp4" type="video/mp4">
+</video><p class="cb-caption"><code>chartbook ls</code> lists what the catalog holds, <code>chartbook get-docs</code>
+prints a dataset's page with its columns, <code>chartbook path</code> hands its file to R, Stata or
+a shell, and <code>data.load</code> reads it in Python. This catalog is the
+<a href="tutorials/explore-a-catalog.html">tutorial's</a>.</p>
+</section>
+<section id="for-your-team-and-for-your-agents">
+<h2>For your team and for your agents<a class="headerlink" href="#for-your-team-and-for-your-agents" title="Link to this heading">#</a></h2>
+<p>The catalog is one set of facts with two ways in. A person browses the site; an agent asks the
+command line the same questions and gets the same answers.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>Your team, in the browser</p></th>
+<th class="head"><p>Your agents, from the command line</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>What is there?</strong></p></td>
+<td><p>The catalog’s home page and search</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">--json</span></code>, or the site’s <code class="docutils literal notranslate"><span class="pre">llms.txt</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>What is it?</strong></p></td>
+<td><p>The dataset’s or chart’s page</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span> <span class="pre">yield_curve:repo_public</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Use it</strong></p></td>
+<td><p>Copy the snippet on the page</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">data.load(&quot;yield_curve:repo_public&quot;)</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span> <span class="pre">yield_curve</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Can I trust it?</strong></p></td>
+<td><p>The Provenance table and the Versions page</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">lineage</span> <span class="pre">--json</span></code>, and <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> in git</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">claude-skill</span></code> teaches Claude Code all of this, and every site ChartBook builds
+ships an <a class="reference external" href="https://llmstxt.org/">llms.txt</a> at its root.</p>
+</section>
+<section id="in-any-language">
+<h2>In any language<a class="headerlink" href="#in-any-language" title="Link to this heading">#</a></h2>
+<img alt="Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it" class="align-center only-light" src="_images/ecosystem-light.svg" />
+<img alt="Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it" class="align-center only-dark" src="_images/ecosystem-dark.svg" />
+<p>A pipeline’s build is whatever command you name: a Python script, R, Stata,
+SQL, a Makefile. ChartBook runs it, records what it made, and lets the next pipeline read it,
+from Python with <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> or from anything else with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code>.</p>
+</section>
+<section id="a-pipeline-in-three-files">
+<h2>A pipeline, in three files<a class="headerlink" href="#a-pipeline-in-three-files" title="Link to this heading">#</a></h2>
+<p>A pipeline is a folder: a manifest that says what it makes, the code that makes it, and a README.
+The <a class="reference internal" href="getting-started.html"><span class="doc">Quickstart</span></a> builds this one.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+chartbook.toml</label><div class="sd-tab-content docutils">
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"My Pipeline"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"A demo pipeline: two random walks and a chart of them"</span>
+
+<span class="k">[dataframes.walks]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Random Walks"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Two simulated random walk series"</span>
+<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Simulated"</span><span class="p">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/walks.parquet"</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"date"</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"365 daily observations of two cumulative-sum series."</span>
+
+<span class="k">[charts.random_walks]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Two Random Walks"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Cumulative sums of daily standard-normal draws"</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"walks"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/random_walks.html"</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Both series are pure noise. Any pattern you see is your brain's doing."</span>
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+src/build_chart.py</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">chartbook</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s2">"date"</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="s2">"2024-01-01"</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="mi">365</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"D"</span><span class="p">),</span>
+    <span class="s2">"walk_a"</span><span class="p">:</span> <span class="n">rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="mi">365</span><span class="p">)</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="s2">"walk_b"</span><span class="p">:</span> <span class="n">rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="mi">365</span><span class="p">)</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">100</span><span class="p">,</span>
+<span class="p">})</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"walks"</span><span class="p">))</span>  <span class="c1"># chartbook.toml says where "walks" goes</span>
+
+<span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="s2">"walk_a"</span><span class="p">,</span> <span class="s2">"walk_b"</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Two Random Walks"</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">"random_walks"</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s2">"_output"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-2" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-2">
+Terminal</label><div class="sd-tab-content docutils">
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>src/build_chart.py<span class="w">      </span><span class="c1"># writes _data/walks.parquet and the chart</span>
+<span class="gp">$ </span>chartbook<span class="w"> </span>docs<span class="w"> </span>build<span class="w">           </span><span class="c1"># writes the site, and index.json beside it</span>
+<span class="gp">$ </span>chartbook<span class="w"> </span>docs<span class="w"> </span>open
+</pre></div>
+</div>
+</div>
+</div>
+<p>Once it takes a snapshot (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>), any other pipeline can read that dataset by
+name, pinned to the exact bytes this one made:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
+
+<span class="n">walks</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"my_pipeline:walks"</span><span class="p">)</span>   <span class="c1"># the pinned copy, never the other folder</span>
+</pre></div>
+</div>
+</section>
+<section id="where-next">
+<h2>Where next<a class="headerlink" href="#where-next" title="Link to this heading">#</a></h2>
+<div class="sd-container-fluid sd-sphinx-override sd-mb-4 docutils">
+<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-2 sd-row-cols-md-2 sd-row-cols-lg-2 sd-g-3 sd-g-xs-3 sd-g-sm-3 sd-g-md-3 sd-g-lg-3 docutils">
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+Quickstart</div>
+<p class="sd-card-text">Build a pipeline and its site in five minutes, from three files.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="getting-started.html"><span class="doc">Quickstart</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+Explore a catalog</div>
+<p class="sd-card-text">Download a real catalog of public data, browse it, and point your agent at it.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="tutorials/explore-a-catalog.html"><span class="doc">Explore a Catalog</span></a></div>
 </div>
 <div class="sd-col sd-d-flex-row docutils">
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
 Depend on another pipeline</div>
-<p class="sd-card-text">Snapshots, pins and the lockfile: read exactly what another pipeline built, and nothing else.</p>
+<p class="sd-card-text">Pin exactly what another pipeline built, and read it by name.</p>
 </div>
 <a class="sd-stretched-link sd-hide-link-text reference internal" href="guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a></div>
 </div>
-</div>
-</div>
-</section>
-<section id="the-four-documents">
-<h2>The four documents<a class="headerlink" href="#the-four-documents" title="Link to this heading">#</a></h2>
-<p>Four files, one record format, and none is another in disguise. <strong>A manifest asks, a lockfile
-records what was got, a snapshot records what was made, and an index records what a site
-shows.</strong></p>
-<img alt="the manifest, the lockfile, the snapshot and the index: what each records, who writes it, where it lives" class="only-light align-center" src="_images/documents-light.svg" />
-<img alt="the manifest, the lockfile, the snapshot and the index: what each records, who writes it, where it lives" class="only-dark align-center" src="_images/documents-dark.svg" />
-</section>
-<section id="from-zero-to-a-documented-pipeline">
-<h2>From zero to a documented pipeline<a class="headerlink" href="#from-zero-to-a-documented-pipeline" title="Link to this heading">#</a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install chartbook</span>
-<span class="go">chartbook init            # scaffold a pipeline project</span>
-<span class="go">cd &lt;your-project&gt;</span>
-<span class="go">chartbook docs generate   # write the site, and index.json beside it</span>
-<span class="go">chartbook docs open       # open it</span>
-</pre></div>
-</div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">data</span>
-
-<span class="n">df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;fred_charts&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;fred&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;pandas&quot;</span><span class="p">)</span>   <span class="c1"># any cataloged dataset</span>
-<span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;fed_yield_curve:treasury_rates&quot;</span><span class="p">)</span>   <span class="c1"># a dependency&#39;s dataframe: the pinned copy, by name</span>
-</pre></div>
-</div>
-</section>
-<section id="where-things-are">
-<h2>Where things are<a class="headerlink" href="#where-things-are" title="Link to this heading">#</a></h2>
-<div class="sd-container-fluid sd-sphinx-override sd-mb-4 docutils">
-<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-1 sd-row-cols-md-2 sd-row-cols-lg-2 sd-g-3 sd-g-xs-3 sd-g-sm-3 sd-g-md-3 sd-g-lg-3 docutils">
 <div class="sd-col sd-d-flex-row docutils">
-<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
-User guide</div>
-<ul class="simple">
-<li><p class="sd-card-text"><a class="reference internal" href="getting-started.html"><span class="doc">Getting Started</span></a>: install, scaffold, first build</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/vocabulary.html"><span class="doc">Vocabulary</span></a>: the words, defined once</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/documenting-a-pipeline.html"><span class="doc">Documenting a Pipeline</span></a>: the manifest and the pages it makes</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a>: snapshots, pins, the lockfile</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/keeping-costly-outputs.html"><span class="doc">Keeping Costly Outputs</span></a>: <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code>, and the stop before a build remakes it</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>: one site over many pipelines; <code class="docutils literal notranslate"><span class="pre">data.load()</span></code></p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/plotting.html"><span class="doc">Plotting</span></a>: one call, five chart files</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="guide/how-the-build-works.html"><span class="doc">How the Build Works</span></a>: the index, the writer, Sphinx</p></li>
-</ul>
+Let your agent use the catalog</div>
+<p class="sd-card-text">How an agent finds, reads and builds on your team’s work.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="guide/agents.html"><span class="doc">Let Your Agent Use the Catalog</span></a></div>
 </div>
 </div>
 </div>
-<div class="sd-col sd-d-flex-row docutils">
-<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
-<div class="sd-card-body docutils">
-<div class="sd-card-title sd-font-weight-bold docutils">
-Reference</div>
-<ul class="simple">
-<li><p class="sd-card-text"><a class="reference internal" href="reference/configuration.html"><span class="doc">Configuration Guide</span></a>: every <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> field</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="reference/cli.html"><span class="doc">CLI Reference</span></a>: every command</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="reference/api.html"><span class="doc">API Reference</span></a>: the Python modules</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="reference/stability.html"><span class="doc">Stability</span></a>: what “experimental” means here</p></li>
-<li><p class="sd-card-text"><a class="reference internal" href="design/overview.html"><span class="doc">Design: start here</span></a>: the design, decision by decision</p></li>
-</ul>
+<div class="toctree-wrapper compound">
 </div>
+<div class="toctree-wrapper compound">
 </div>
-</div>
-</div>
-</div>
-<p>Working with an AI assistant? The built site ships <a class="reference external" href="https://llmstxt.org/">llms.txt</a> files at its
-root, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">claude-skill</span></code> installs a ChartBook skill for Claude Code, which says when it is for another ChartBook.</p>
 <div class="toctree-wrapper compound">
 </div>
 <div class="toctree-wrapper compound">
@@ -665,7 +803,7 @@ root, and <code class="docutils literal notranslate"><span class="pre">chartbook
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Getting Started</p>
+        <p class="prev-next-title">Quickstart</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -676,7 +814,8 @@ root, and <code class="docutils literal notranslate"><span class="pre">chartbook
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -684,11 +823,13 @@ root, and <code class="docutils literal notranslate"><span class="pre">chartbook
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start">Start</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-four-documents">The four documents</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#from-zero-to-a-documented-pipeline">From zero to a documented pipeline</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-things-are">Where things are</a><ul class="visible nav section-nav flex-column">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-chartbook-does">What ChartBook does</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ask-the-catalog-from-the-command-line">Ask the catalog from the command line</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-your-team-and-for-your-agents">For your team and for your agents</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-any-language">In any language</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-pipeline-in-three-files">A pipeline, in three files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-next">Where next</a><ul class="pst-show_toc_level nav section-nav flex-column">
 </ul>
 </li>
 </ul>
@@ -739,8 +880,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

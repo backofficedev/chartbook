@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -16,73 +15,83 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=f4c13ce8" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=9453eeee"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/documentation_options.js?v=f7ee7eb5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'reference/cli';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="API Reference" href="api.html" />
     <link rel="prev" title="Configuration Guide" href="configuration.html" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="en"/>
-  </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+<meta property="og:type" content="website">
+<meta property="og:title" content="CLI Reference · ChartBook">
+<meta property="og:description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+<meta property="og:image" content="https://backofficedev.github.io/chartbook/_static/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+  </head>
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -90,7 +99,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -98,17 +106,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -121,15 +129,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -142,8 +153,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -154,7 +164,7 @@ document.write(`
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -168,7 +178,8 @@ document.write(`
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -181,15 +192,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,8 +216,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,22 +242,18 @@ document.write(`
       
     
     
-    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../_static/logo-light.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo-dark.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -255,26 +264,35 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get started</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/explore-a-catalog.html">Explore a Catalog</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">How-to guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guide/starting-a-project.html">Start a Project From the Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-and-writing-data.html">Reading and Writing Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Stores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/agents.html">Let Your Agent Use the Catalog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -319,6 +337,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.replacing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.replacing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
@@ -342,24 +361,10 @@ document.write(`
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/overview.html">Design: start here</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/references.html">Design: references</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/asset-graph.html">Design: the asset graph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/index-schema.html">Design: the index</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/writer.html">Design: the writer, and what every page shows</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/models.html">Design: models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/data-access.html">Design: data access</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/stores-and-backends.html">Design: stores and backends</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/versioned-catalog.html">Design: the versioned catalog</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/trust.html">Design: trust, for a build of files on this machine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/keep.html">Design: keeping costly outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -368,9 +373,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -467,24 +477,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -507,9 +516,9 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-init">chartbook init</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-docs">chartbook docs</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-docs">chartbook docs</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#docs-build">docs build</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#docs-open">docs open</a></li>
 </ul>
@@ -518,7 +527,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-trust">chartbook trust</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-path">chartbook path</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-publish">chartbook publish</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog">chartbook catalog</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog">chartbook catalog</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-init">catalog init</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-migrate">catalog migrate</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-disable-enable">catalog disable / enable</a></li>
@@ -526,17 +535,18 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-open">catalog open</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls">chartbook ls</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls">chartbook ls</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ls-stores">ls stores</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ls-versions">ls versions</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-get-docs">chartbook get-docs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data">chartbook data</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-create-data-glimpses">chartbook create-data-glimpses</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-snapshot">chartbook snapshot</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">chartbook restore</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">chartbook restore</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-add">chartbook add</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">chartbook pin</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">chartbook pin</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#working-on-two-pipelines-at-once">Working on two pipelines at once</a></li>
 </ul>
 </li>
@@ -544,8 +554,9 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-lineage">chartbook lineage</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-run">chartbook run</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-index">chartbook index</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-store">chartbook store</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-store">chartbook store</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-info">store info</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-ls">store ls</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-verify">store verify</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-gc">store gc</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-export">store export</a></li>
@@ -572,7 +583,7 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="cli-reference">
 <h1>CLI Reference<a class="headerlink" href="#cli-reference" title="Link to this heading">#</a></h1>
-<p>Every command supports <code class="docutils literal notranslate"><span class="pre">--help</span></code>. Everything the CLI needs ships with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code>; see <a class="reference internal" href="../getting-started.html"><span class="doc">Getting Started</span></a>.</p>
+<p>Every command supports <code class="docutils literal notranslate"><span class="pre">--help</span></code>. Everything the CLI needs ships with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code>; see <a class="reference internal" href="../getting-started.html"><span class="doc">Quickstart</span></a>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
@@ -607,55 +618,58 @@ document.write(`
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init/add/disable/enable/generate/open</span></code></p></td>
 <td><p>Manage a catalog and its site</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">[pipelines|dataframes|charts]</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">[pipelines|dataframes|charts]</span> <span class="pre">[--json]</span></code></p></td>
 <td><p>List cataloged objects</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path/get-docs/get-docs-path</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span></code></p></td>
+<td><p>Print a dataframe’s page, any other cataloged asset’s write-up, or a pipeline’s README</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path/get-docs/get-docs-path</span></code></p></td>
 <td><p>Look up a dataframe’s file or write-up</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code></p></td>
 <td><p>Summarize every dataframe the manifest declares</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code></p></td>
 <td><p>Declare this pipeline’s build ready for the pipelines that depend on it</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code></p></td>
 <td><p>Put this pipeline’s own assets back on disk from its snapshots: a costly output, after a clean or a clone</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span> <span class="pre">PIPELINE</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span> <span class="pre">PIPELINE</span></code></p></td>
 <td><p>Declare a dependency by its ID, read from the store, and pin it</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code></p></td>
 <td><p>Freeze what this pipeline depends on, in <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code></p></td>
 <td><p>Move pins forward to each dependency’s newest snapshot</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">lineage</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">lineage</span></code></p></td>
 <td><p>Show and check every snapshot upstream of this pipeline</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">[SCRIPT]</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">[SCRIPT]</span></code></p></td>
 <td><p>Run a named script in this pipeline; <code class="docutils literal notranslate"><span class="pre">build</span></code> by default, after pinning what it depends on</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">verify</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">verify</span></code></p></td>
 <td><p>Check that nothing in the store has changed since it was stored</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code></p></td>
 <td><p>Remove old snapshots, and from the store what nothing names</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span></code></p></td>
 <td><p>Write one pipeline’s snapshots into a folder, to send to someone</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">import</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">import</span></code></p></td>
 <td><p>Copy the snapshots a folder holds into this machine’s store</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code></p></td>
 <td><p>Move a store made by ChartBook 0.2 to the layout of 0.3</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code></p></td>
 <td><p>Set the default catalog for data loading</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">claude-skill</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">claude-skill</span></code></p></td>
 <td><p>Install the bundled Claude Code skill (user-level by default)</p></td>
 </tr>
 </tbody>
@@ -664,7 +678,7 @@ document.write(`
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">--version</span></code> prints the installed version; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">&lt;command&gt;</span> <span class="pre">--help</span></code> prints a command’s options.</p>
 <section id="chartbook-init">
 <h2>chartbook init<a class="headerlink" href="#chartbook-init" title="Link to this heading">#</a></h2>
-<p>Scaffold a new pipeline from the <a class="reference external" href="https://github.com/backofficedev/chartbook/tree/main/template">cookiecutter template</a> that came with your ChartBook. It asks 19 questions, each with a default that Enter takes: the project’s name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. <a class="reference internal" href="../getting-started.html"><span class="doc">Getting Started</span></a> says which answers matter. A folder name that is not lowercase letters, digits and <code class="docutils literal notranslate"><span class="pre">_</span></code>, starting with a lowercase letter, stops it with nothing created, and its last line says what to do at the second question next time: press Enter, or type such a name (the name made from the project’s name may not be one, as for <code class="docutils literal notranslate"><span class="pre">2024</span> <span class="pre">Rates</span></code>).</p>
+<p>Scaffold a new pipeline from the <a class="reference external" href="https://github.com/backofficedev/chartbook/tree/main/template">cookiecutter template</a> that came with your ChartBook. It asks 19 questions, each with a default that Enter takes: the project’s name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. <a class="reference internal" href="../getting-started.html"><span class="doc">Quickstart</span></a> says which answers matter. A folder name that is not lowercase letters, digits and <code class="docutils literal notranslate"><span class="pre">_</span></code>, starting with a lowercase letter, stops it with nothing created, and its last line says what to do at the second question next time: press Enter, or type such a name (the name made from the project’s name may not be one, as for <code class="docutils literal notranslate"><span class="pre">2024</span> <span class="pre">Rates</span></code>).</p>
 <p><strong>The template comes with the package</strong>, as <code class="docutils literal notranslate"><span class="pre">chartbook/template</span></code> in the wheel (the files git tracks in the repository’s <code class="docutils literal notranslate"><span class="pre">template/</span></code>; in a source checkout, those same files of <code class="docutils literal notranslate"><span class="pre">template/</span></code> beside <code class="docutils literal notranslate"><span class="pre">src/</span></code>), so a project is always made with the template of the ChartBook that makes it, and making it needs no network. It is rendered with cookiecutter, and the project’s <code class="docutils literal notranslate"><span class="pre">.cruft.json</span></code> is written as <a class="reference external" href="https://cruft.github.io/cruft/">cruft</a> writes it: the template’s repository on GitHub, its <code class="docutils literal notranslate"><span class="pre">template</span></code> folder, and the commit the template is at (recorded in the package when it is built; asked of git in a source checkout). So <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">update</span></code> and <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">check</span></code> in the project follow the template on GitHub from there. The command says when that commit is in no tag and on no branch of a remote that is the template’s repository, in the checkout it runs from, so may not be on GitHub, where <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">update</span></code> looks for it. When the commit is not known (the package recorded none, or the checkout’s <code class="docutils literal notranslate"><span class="pre">template/</span></code> has changes git has not committed to tracked files), there is no <code class="docutils literal notranslate"><span class="pre">.cruft.json</span></code>, and the command says why and prints the command that makes one once the commit is known, with the answers you gave: <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">link</span> <span class="pre">https://github.com/backofficedev/chartbook</span> <span class="pre">--directory</span> <span class="pre">template</span> <span class="pre">--checkout</span> <span class="pre">&lt;commit&gt;</span> <span class="pre">--no-input</span> <span class="pre">--extra-context</span> <span class="pre">'{…}'</span></code>. A source checkout that git cannot read, or a copy of one with no <code class="docutils literal notranslate"><span class="pre">.git</span></code>, is not rendered from, since which files git tracks cannot be told; the command says what to do. Everything rendered can be written by its owner, even from a template installed read-only. A folder of the project’s name that is there already stops it, with nothing changed. The project’s environment files ask for <code class="docutils literal notranslate"><span class="pre">chartbook&gt;=</span></code> the template’s version, which is your ChartBook’s; <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">update</span></code> moves it to the template’s version then.</p>
 <p>The template is the <code class="docutils literal notranslate"><span class="pre">template/</span></code> folder of ChartBook’s own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">[scripts]</span> <span class="pre">build</span> <span class="pre">=</span> <span class="pre">&quot;doit&quot;</span></code>), so <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> builds it and renders its site, and before that <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> renders its site with the example notebook shown as not built. <code class="docutils literal notranslate"><span class="pre">doit</span></code> there runs every task in <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> but the tests, which are <code class="docutils literal notranslate"><span class="pre">doit</span> <span class="pre">run_pytest</span></code>. When the project is made, the command prints the next steps: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code>, the commands that install its dependencies, then <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">open</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (<code class="docutils literal notranslate"><span class="pre">Trusted:</span> <span class="pre">this</span> <span class="pre">folder</span></code>); a folder you cloned is not, until <a class="reference internal" href="#chartbook-trust"><span class="std std-ref">chartbook trust</span></a> says it is. When the record cannot be written (no home folder), the command says so and goes on.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook init [--git] [--github [OPTIONS] [--public | --private]]</span>
@@ -875,13 +889,13 @@ With --strict, this is an error.
 <p><strong>Dependencies.</strong> For each <code class="docutils literal notranslate"><span class="pre">path</span></code> in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, <code class="docutils literal notranslate"><span class="pre">check</span></code> looks for a pipeline there and reads its <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, nothing more. So a pipeline that depends on <code class="docutils literal notranslate"><span class="pre">../fed_yield_curve</span></code> needs that directory checked out wherever <code class="docutils literal notranslate"><span class="pre">check</span></code> runs. A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency is looked at where <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> has fetched it, at the commit <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> names. <code class="docutils literal notranslate"><span class="pre">check</span></code> never uses the network: if the dependency has not been fetched on this machine, it says so in a <code class="docutils literal notranslate"><span class="pre">warning:</span></code> line and does not fail. A dependency named by its ID, or a <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency that is there, with no pin in <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> yet draws a <code class="docutils literal notranslate"><span class="pre">warning:</span></code> line too: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> pins its newest snapshot, as the first read of it does, and so does <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> (the build). A fresh clone is in that state on purpose, and <a class="reference internal" href="#chartbook-pin"><span class="std std-ref">–frozen</span></a> is the gate that fails on it. A <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> that names a pipeline <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> does not declare stops the manifest loading, so <code class="docutils literal notranslate"><span class="pre">check</span></code> fails on it.</p>
 <p><strong>IDs that changed.</strong> A pipeline’s ID can change, when it gets a git remote or a <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code> (<a class="reference internal" href="configuration.html#pipeline-identity"><span class="std std-ref">Pipeline Identity</span></a>), and its snapshots are then made under the new one. <code class="docutils literal notranslate"><span class="pre">check</span></code> warns, naming what to write, when a catalog’s <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> key is not what the pipeline in that folder calls itself now (the catalog shows only the snapshots made under the key), and when a dependency named by its ID, with no <code class="docutils literal notranslate"><span class="pre">commit</span></code>, is a pipeline whose folders on this machine all call themselves something else now (the dependency stays at the last snapshot made under the old ID). Its folders are the catalog’s own under that ID and those a store on this disk notes its newest snapshots were made in, each only if it is a checkout of the repository those snapshots record; a store at a URL is not read, since <code class="docutils literal notranslate"><span class="pre">check</span></code> uses no network, and then nothing is said. It also warns when a pipeline’s <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">repo_url</span></code> and its git remote name two repositories, since its ID is then <code class="docutils literal notranslate"><span class="pre">repo_url</span></code>’s, and says what it would be without it.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>check
-<span class="go">chartbook.toml: [dependencies.&quot;ftsfr/fed_yield_curve&quot;] path: directory not found: /work/fed_yield_curve</span>
-<span class="go">chartbook.toml: [models.rate_forecaster] trained_on: &#39;crsp:ratingz&#39; names a dataframe that the pipeline &#39;ftsfr/crsp&#39; does not declare. Its dataframes are: ratings, returns</span>
+<span class="go">chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found: /work/fed_yield_curve</span>
+<span class="go">chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns</span>
 </pre></div>
 </div>
 <p><strong>One file of a set.</strong> A dataframe whose <code class="docutils literal notranslate"><span class="pre">path</span></code> names one file, beside files named the same but for a number or a date, draws a warning that gives the glob that names them all:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>check
-<span class="go">warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = &quot;_data/transcripts_*.parquet&quot;.</span>
+<span class="go">warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = "_data/transcripts_*.parquet".</span>
 <span class="go">chartbook.toml: OK (1 pipeline(s), 1 dataframes, 0 charts, 0 notebooks)</span>
 </pre></div>
 </div>
@@ -908,7 +922,7 @@ With --strict, this is an error.
   ~/GitRepositories/rates  (acme/rates, github.com/acme/rates)
 Its build command runs on this machine:
     doit
-  y  it&#39;s mine: trust this folder and the folders inside it, and don&#39;t ask again
+  y  it's mine: trust this folder and the folders inside it, and don't ask again
   r  render its site only, without running its code
   n  stop
 Trust this folder? [y/r/N]:
@@ -956,7 +970,7 @@ Trust this folder? [y/r/N]:
 <p><strong>Recorded for you.</strong> A project <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> makes is trusted to run. Catalogs and their stores need no working-folder trust: the catalog renders snapshots in the version renderer’s sandbox.</p>
 <p><strong>Without a record.</strong> Under <code class="docutils literal notranslate"><span class="pre">CI</span></code> (the environment variable, set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none; a runner builds its own checkout. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_TRUST=all</span></code> trusts every folder to run, for a container that is nothing but your own code (the test suite runs so); it is the one value the variable takes, and another is said once and ignored. A build of files from a store (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code>) is never trusted, whatever the record says. A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency is built in ChartBook’s own copy of its commit: naming it in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> is the trust for that, and the pipeline that names it must itself be trusted to run.</p>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code> use the pipeline trust gate; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reports the trust level without requiring trust. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">build</span></code> renders stored snapshots without member trust.</p>
-<p>No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is <a class="reference internal" href="../design/trust.html"><span class="doc">Design: trust, for a build of files on this machine</span></a>.</p>
+<p>No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is <a class="extlink-design reference external" href="https://github.com/backofficedev/chartbook/blob/main/docs_src/design/trust.md">trust</a>.</p>
 </section>
 <section id="chartbook-path">
 <h2>chartbook path<a class="headerlink" href="#chartbook-path" title="Link to this heading">#</a></h2>
@@ -1033,10 +1047,15 @@ Trust this folder? [y/r/N]:
 <span class="go">/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-12T091500Z_4f2a91c0e1b2/_output/curve_today.html</span>
 </pre></div>
 </div>
-<p>The path is into the store, where the snapshot that first had the file keeps it, under its own
-name. An asset whose files are kept in more than one snapshot’s folder (a folder of files, some of
-them new in a later snapshot) is gathered into this machine’s cache instead, as links where the
-disk allows, and the path is the cache’s.</p>
+<p>The path is into the store, in the folder of the snapshot that keeps the file, under its own
+name. An asset of several files, a folder or a glob, has no one path: the store keeps each file
+once, so a snapshot’s files may sit in other snapshots’ folders. Asking exits <code class="docutils literal notranslate"><span class="pre">1</span></code> and says
+so, whatever the folders happen to hold today; <code class="docutils literal notranslate"><span class="pre">--files</span></code> prints the files, each where the store
+keeps it, and <code class="docutils literal notranslate"><span class="pre">data.load</span></code> reads them. Nothing is gathered into this machine’s cache.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>path<span class="w"> </span>news_headlines:articles
+<span class="go">Error: 'news_headlines:articles' is a dataset of 14 files, kept in 3 places in the store, so there is no one folder. Read it with data.load('news_headlines:articles'), or hand data.files('news_headlines:articles') to your own reader. `chartbook path news_headlines:articles --files` prints them, one per line.</span>
+</pre></div>
+</div>
 <p>This resolves differently, on purpose. Your own assets resolve <em>live</em>, to the file you are working on. Another pipeline’s resolve <em>pinned</em>: to the copy that <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> names, in the store, not to that pipeline’s working directory (before a pin, by the rules in <a class="reference internal" href="../guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a>). So what you read from it stays the same while it is being worked on, and changes only when you run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>.</p>
 <p>Three things have to be true, and each has its own message when it is not:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -1059,7 +1078,7 @@ disk allows, and the path is the cache’s.</p>
 </table>
 </div>
 <p>The scope may be left off when only one dependency has that name. The path is for reading; never write to it.</p>
-<p>Two more parts of the <a class="reference internal" href="../design/references.html"><span class="doc">reference grammar</span></a> do not give a path. <code class="docutils literal notranslate"><span class="pre">dataframe#series</span></code> is the address of one column, for documentation: use the dataframe’s path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code>.</p>
+<p>Two more parts of the <a class="extlink-design reference external" href="https://github.com/backofficedev/chartbook/blob/main/docs_src/design/references.md">reference grammar</a> do not give a path. <code class="docutils literal notranslate"><span class="pre">dataframe#series</span></code> is the address of one column, for documentation: use the dataframe’s path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code>.</p>
 </section>
 <section id="chartbook-publish">
 <h2>chartbook publish<a class="headerlink" href="#chartbook-publish" title="Link to this heading">#</a></h2>
@@ -1074,8 +1093,8 @@ disk allows, and the path is the cache’s.</p>
 </div>
 </section>
 <section id="chartbook-catalog">
-<h2>chartbook catalog<a class="headerlink" href="#chartbook-catalog" title="Link to this heading">#</a></h2>
-<p>Manage a catalog — by default the global one at <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> can point these commands at a different catalog). Concepts and the auto-discovery alternative: <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>.</p>
+<span id="id4"></span><h2>chartbook catalog<a class="headerlink" href="#chartbook-catalog" title="Link to this heading">#</a></h2>
+<p>Manage a catalog — by default the global one at <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> can point these commands at a different catalog). Concepts and the auto-discovery alternative: <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Stores</span></a>.</p>
 <section id="catalog-init">
 <h3>catalog init<a class="headerlink" href="#catalog-init" title="Link to this heading">#</a></h3>
 <p>Create the global catalog with an empty <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> section. Its folder is recorded as trusted to run (<a class="reference internal" href="#chartbook-trust"><span class="std std-ref">chartbook trust</span></a>): you made it.</p>
@@ -1101,12 +1120,20 @@ disk allows, and the path is the cache’s.</p>
 <section id="catalog-build">
 <h3>catalog build<a class="headerlink" href="#catalog-build" title="Link to this heading">#</a></h3>
 <p>Render the catalog’s site into <code class="docutils literal notranslate"><span class="pre">~/.chartbook/docs/</span></code> (or the configured catalog’s location). Unlike <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code>, the default here is <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code>: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]]</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]] [--gc] [--no-gc-reminder]</span>
 </pre></div>
 </div>
 <p>A catalog build is <strong>incremental by default</strong>. Its working files are kept beside the catalog, in <code class="docutils literal notranslate"><span class="pre">_docs/</span></code>, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See <a class="reference internal" href="#chartbook-docs">Incremental builds</a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">--clean</span></code> throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. <code class="docutils literal notranslate"><span class="pre">--watch</span></code> rebuilds whenever a member pipeline’s files change, until Ctrl-C.</p>
-<p>The catalog reads snapshots from its stores. It runs no member code and needs no member trust.</p>
+<p>The catalog reads snapshots from its stores. It runs no member code and needs no member trust. It lays out no data: a version’s site is built from its snapshot’s documents, charts, notebooks, notes and index, which recorded each dataframe’s columns, rows, dates and first rows when the snapshot was made (<a class="extlink-design reference external" href="https://github.com/backofficedev/chartbook/blob/main/docs_src/design/plan-data-reads.md">plan-data-reads</a>).</p>
+<p>After the build, one line on stderr says what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> would clear, if anything: snapshots older than seven days that are neither pinned nor the newest of their pipeline, and how much their removal would free. Nothing is removed unless you ask: <code class="docutils literal notranslate"><span class="pre">--gc</span></code> runs gc then, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span> <span class="pre">--yes</span></code> would, and <code class="docutils literal notranslate"><span class="pre">--no-gc-reminder</span></code> silences the line. With <code class="docutils literal notranslate"><span class="pre">--gc</span></code>, something gc could not remove (another user’s, in a store users share) exits <code class="docutils literal notranslate"><span class="pre">1</span></code> after the site was built, as <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> itself does.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>catalog<span class="w"> </span>build
+<span class="go">...</span>
+<span class="go">Catalog site generated: /Users/x/.chartbook/docs/index.html</span>
+<span class="go">`chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--snapshot</span></code> says the same after its snapshot, and takes <code class="docutils literal notranslate"><span class="pre">--no-gc-reminder</span></code> too. With several stores in the catalog, each that gc could clear is named, with the <code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> that gc takes there.</p>
 </section>
 <section id="catalog-open">
 <h3>catalog open<a class="headerlink" href="#catalog-open" title="Link to this heading">#</a></h3>
@@ -1134,30 +1161,52 @@ disk allows, and the path is the cache’s.</p>
 </pre></div>
 </div>
 <p>Each asset is written as its reference, <code class="docutils literal notranslate"><span class="pre">pipeline:name</span></code>. A pipeline the catalog shows from the store alone is listed as store only, with the dataframes and charts its newest snapshot lists.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--json</span></code> prints the listing as JSON, for a script or an agent: a list with one record per pipeline and per asset, of every kind (models, files assets, notes and notebooks too, which the tree leaves out), none cut off. Each record has <code class="docutils literal notranslate"><span class="pre">kind</span></code> (<code class="docutils literal notranslate"><span class="pre">pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">chart</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">file</span></code>, <code class="docutils literal notranslate"><span class="pre">note</span></code>, <code class="docutils literal notranslate"><span class="pre">notebook</span></code>), <code class="docutils literal notranslate"><span class="pre">id</span></code>, <code class="docutils literal notranslate"><span class="pre">name</span></code> and <code class="docutils literal notranslate"><span class="pre">description</span></code>, and an asset’s has its <code class="docutils literal notranslate"><span class="pre">pipeline</span></code>. The <code class="docutils literal notranslate"><span class="pre">id</span></code> is what <a class="reference internal" href="#chartbook-get-docs"><span class="std std-ref">chartbook get-docs</span></a> and <code class="docutils literal notranslate"><span class="pre">data.load</span></code> take. Each listing takes <code class="docutils literal notranslate"><span class="pre">--json</span></code> as well, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">--json</span> <span class="pre">charts</span></code> is <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">charts</span> <span class="pre">--json</span></code>.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>ls<span class="w"> </span>--json
+<span class="go">[</span>
+<span class="go">  {"kind": "pipeline", "id": "acme/yield_curve", "name": "Yield Curve Analysis", "description": "..."},</span>
+<span class="go">  {"kind": "dataframe", "id": "acme/yield_curve:repo_public", "pipeline": "acme/yield_curve", "name": "Repo Public Data", "description": "..."},</span>
+<span class="go">  ...</span>
+<span class="go">]</span>
+</pre></div>
+</div>
 <section id="ls-stores">
 <h3>ls stores<a class="headerlink" href="#ls-stores" title="Link to this heading">#</a></h3>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook ls stores</span>
 </pre></div>
 </div>
-<p>List catalog stores in order, including read-only and unreachable stores. The group’s <code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code> selects another catalog.</p>
+<p>List catalog stores in order, including read-only and unreachable stores. The group’s <code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code> selects another catalog. With <code class="docutils literal notranslate"><span class="pre">--json</span></code>, each is <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">url</span></code>, <code class="docutils literal notranslate"><span class="pre">read_only</span></code> and <code class="docutils literal notranslate"><span class="pre">reachable</span></code>.</p>
 </section>
 <section id="ls-versions">
 <h3>ls versions<a class="headerlink" href="#ls-versions" title="Link to this heading">#</a></h3>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook ls versions</span>
 </pre></div>
 </div>
-<p>List every snapshot across the catalog’s stores, newest first, showing the store name. Duplicate copies are listed once.</p>
+<p>List every snapshot across the catalog’s stores, newest first, showing the store name. Duplicate copies are listed once. With <code class="docutils literal notranslate"><span class="pre">--json</span></code>, each is <code class="docutils literal notranslate"><span class="pre">pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">commit</span></code>, <code class="docutils literal notranslate"><span class="pre">made_at</span></code> and <code class="docutils literal notranslate"><span class="pre">store</span></code>.</p>
 </section>
+</section>
+<section id="chartbook-get-docs">
+<span id="id5"></span><h2>chartbook get-docs<a class="headerlink" href="#chartbook-get-docs" title="Link to this heading">#</a></h2>
+<p>Print what a person reads on a cataloged asset’s page, in Markdown, for a script or an agent. Name the asset by its ID, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code> prints it, or with keywords:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook get-docs yield_curve                                  # the pipeline's README</span>
+<span class="go">chartbook get-docs yield_curve:repo_public                      # a dataframe's page</span>
+<span class="go">chartbook get-docs yield_curve:chart/repo_rates                 # a chart's write-up</span>
+<span class="go">chartbook get-docs --pipeline yield_curve --chart repo_rates    # the same, with keywords</span>
+<span class="go">chartbook get-docs --pipeline rate_forecast --model forecaster  # a model's</span>
+<span class="go">chartbook get-docs yield_curve:repo_public --path               # where the write-up's file is</span>
+</pre></div>
+</div>
+<p>The keywords are <code class="docutils literal notranslate"><span class="pre">--pipeline</span></code> and one of <code class="docutils literal notranslate"><span class="pre">--dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">--chart</span></code>, <code class="docutils literal notranslate"><span class="pre">--model</span></code>, <code class="docutils literal notranslate"><span class="pre">--file</span></code> (a files asset) or <code class="docutils literal notranslate"><span class="pre">--note</span></code>; with no asset, the pipeline’s README. A bare name is a pipeline, since this reads the catalog. In an ID the last colon divides the pipeline from the asset, so a pipeline may be named by its scoped ID or its repository URL: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span> <span class="pre">https://github.com/acme/yield_curve:chart/repo_rates</span></code>; a URL alone is the README. A dataframe’s page is what its snapshot’s index recorded of it: its name, description and ID; its sources, providers and license; how it is pulled; its rows and the span of its dates; the snapshot it is from; then its write-up and a table of its columns and their types. Pipe it through <code class="docutils literal notranslate"><span class="pre">head</span></code> for the top alone. For any other asset it is the write-up: the asset’s <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> or inline <code class="docutils literal notranslate"><span class="pre">docs</span></code>, and a note’s own text; a notebook has no write-up apart from itself, and is refused, saying so. <code class="docutils literal notranslate"><span class="pre">--path</span></code> prints where the file is instead of its text: the <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>, the <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> that holds inline <code class="docutils literal notranslate"><span class="pre">docs</span></code>, or the note. Each is read from the pipeline’s newest snapshot in the catalog’s stores. <code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code> overrides the configured catalog. In Python, <code class="docutils literal notranslate"><span class="pre">assets.get_docs_page(pipeline,</span> <span class="pre">&quot;repo_public&quot;)</span></code> is the page, <code class="docutils literal notranslate"><span class="pre">assets.get_docs(pipeline,</span> <span class="pre">&quot;chart/repo_rates&quot;)</span></code> the write-up alone, and <code class="docutils literal notranslate"><span class="pre">assets.get_docs_path(...)</span></code> where it is.</p>
 </section>
 <section id="chartbook-data">
 <h2>chartbook data<a class="headerlink" href="#chartbook-data" title="Link to this heading">#</a></h2>
 <p>Look up a cataloged dataframe from the shell. <code class="docutils literal notranslate"><span class="pre">--pipeline</span></code> accepts a bare name (when unambiguous), a scoped ID, or a repo URL; ambiguous bare names error with the candidates listed.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook data get-path      --pipeline yield_curve --dataframe repo_public   # parquet path</span>
-<span class="go">chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # write-up content</span>
+<span class="go">chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # its page</span>
 <span class="go">chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public   # write-up source file</span>
 </pre></div>
 </div>
-<p>All three take <code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code> to override the configured catalog. The Python equivalents live in <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> — see <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>.</p>
+<p>All three take <code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code> to override the configured catalog. <a class="reference internal" href="#chartbook-get-docs"><span class="std std-ref">chartbook get-docs</span></a> reads any asset’s write-up, and a pipeline’s README. The Python equivalents live in <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> — see <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Stores</span></a>.</p>
 </section>
 <section id="chartbook-create-data-glimpses">
 <h2>chartbook create-data-glimpses<a class="headerlink" href="#chartbook-create-data-glimpses" title="Link to this heading">#</a></h2>
@@ -1170,8 +1219,8 @@ disk allows, and the path is the cache’s.</p>
 <p>The report reads the files the manifest names, so in a folder you have not trusted it reads as a build of files from a store does: a manifest that names a file outside the folder stops it, naming the entry, no query is run, and the command says how to trust the folder (<a class="reference internal" href="#chartbook-trust"><span class="std std-ref">chartbook trust</span></a>).</p>
 </section>
 <section id="chartbook-snapshot">
-<span id="id4"></span><h2>chartbook snapshot<a class="headerlink" href="#chartbook-snapshot" title="Link to this heading">#</a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep]</span>
+<span id="id6"></span><h2>chartbook snapshot<a class="headerlink" href="#chartbook-snapshot" title="Link to this heading">#</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep] [--store NAME] [--no-gc-reminder]</span>
 </pre></div>
 </div>
 <p>Declare this pipeline’s build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a <strong>snapshot</strong>.</p>
@@ -1189,6 +1238,7 @@ disk allows, and the path is the cache’s.</p>
 </pre></div>
 </div>
 <p>Or both in one command, which is the better habit: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--snapshot</span></code>. See <a class="reference internal" href="#run-then-snapshot"><span class="std std-ref">below</span></a>.</p>
+<p>After a snapshot, one line on stderr says what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> would clear, if anything, as <a class="reference internal" href="#chartbook-catalog"><span class="std std-ref">catalog build</span></a> says it; <code class="docutils literal notranslate"><span class="pre">--no-gc-reminder</span></code> silences it. Nothing is removed unless you ask. The first snapshot of a pipeline leaves a <code class="docutils literal notranslate"><span class="pre">README.txt</span></code> in the pipeline’s folder of the store, for whoever finds the folder: a later snapshot’s folder holds only what changed, so folders are removed with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> and never by hand (<a class="reference internal" href="#chartbook-store"><span class="std std-ref">store ls</span></a>).</p>
 <p><strong>Why.</strong> People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.</p>
 <p>Three rules:</p>
 <ol class="arabic simple">
@@ -1200,7 +1250,7 @@ disk allows, and the path is the cache’s.</p>
 <span class="go">Error: ftsfr/fed_yield_curve has changes that are not committed:</span>
 <span class="go">   M fed_yield_curve/src/pull_fred.py</span>
 <span class="go">  ?? fed_yield_curve/src/new_script.py</span>
-<span class="go">A snapshot is labelled with the commit it was built from, so everything in the pipeline&#39;s folder must be committed first.</span>
+<span class="go">A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.</span>
 </pre></div>
 </div>
 <p><strong>New data, same code.</strong> A pipeline that pulls data from outside builds other bytes on another day, with no file changed. Build again and snapshot again: the commit is the same and the snapshot is new. If nothing was rebuilt, and <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins what it pinned, nothing is made:</p>
@@ -1215,7 +1265,7 @@ disk allows, and the path is the cache’s.</p>
 <p><strong>The snapshot holds the description of its data.</strong> With the bytes, a snapshot keeps the pipeline’s own index at that commit, without any path of your machine, and the files a site needs that are not assets: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>, the README, every write-up (<code class="docutils literal notranslate"><span class="pre">docs_path</span></code>), the pipeline’s own site pages and its logo and favicon. Only files git tracks are taken, so a <code class="docutils literal notranslate"><span class="pre">.env</span></code> or an ignored draft never reaches the store; only plain paths inside the pipeline’s folder, and no file that is a link or under one. Each document named and not kept is listed (<code class="docutils literal notranslate"><span class="pre">document</span> <span class="pre">not</span> <span class="pre">kept:</span> <span class="pre">…</span></code>). So the data dictionary of each version is kept as it stood when the data was made, and a version’s site can be built from the store alone, with the repository gone: <code class="docutils literal notranslate"><span class="pre">chartbook.snapshot.materialize(taken,</span> <span class="pre">folder)</span></code> lays the version out as a folder, under the pipeline’s own ID whatever the folder is called, with each model’s recorded scores written back to its <code class="docutils literal notranslate"><span class="pre">metrics_path</span></code>, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>snapshot
 <span class="go">ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store</span>
-<span class="go">  index not recorded: Chart &#39;curve&#39; has no &#39;dataframe&#39; key linking it to a dataframe in the [dataframes] section. The bytes and the documents are in the store; `chartbook check` says what a docs build would refuse.</span>
+<span class="go">  index not recorded: Chart 'curve' has no 'dataframe' key linking it to a dataframe in the [dataframes] section. The bytes and the documents are in the store; `chartbook check` says what a docs build would refuse.</span>
 <span class="go">Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.</span>
 </pre></div>
 </div>
@@ -1284,8 +1334,8 @@ disk allows, and the path is the cache’s.</p>
 </ul>
 <p id="chartbook-restore"><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> writes this snapshot to that catalog store; repeat it to write to several. Without it, catalog routing applies, then the first store. A read-only or unreachable destination is refused before any write. The command reports its destinations.</p>
 </section>
-<section id="id5">
-<h2>chartbook restore<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
+<section id="id7">
+<h2>chartbook restore<a class="headerlink" href="#id7" title="Link to this heading">#</a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook restore [NAMES...] [OPTIONS] [--project-dir PATH]</span>
 </pre></div>
 </div>
@@ -1305,8 +1355,9 @@ disk allows, and the path is the cache’s.</p>
 </pre></div>
 </div>
 <p>Declare that this pipeline reads another, by the other’s ID, and pin it. It writes the entry under <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, leaving the rest of the file as it is (its comments and order), then runs <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.</p>
+<p>A bare name is the one pipeline in the stores whose ID ends in it, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span></code> and <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=...)</span></code> read one, and that full ID is written: with the store holding <code class="docutils literal notranslate"><span class="pre">tutorial/treasury_curve</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span> <span class="pre">treasury_curve</span></code> writes <code class="docutils literal notranslate"><span class="pre">&quot;tutorial/treasury_curve&quot;</span> <span class="pre">=</span> <span class="pre">{}</span></code>. A bare ID the stores hold is written as it is. When several pipelines end in the name, the command lists them and writes nothing; when none does, it says which IDs the stores hold, or that they hold none, and writes nothing. Either way <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> are as they were.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>add<span class="w"> </span>acme/rates<span class="w"> </span>--as<span class="w"> </span>rates
-<span class="go">Added to [dependencies] in /work/forecast/chartbook.toml: &quot;rates&quot; = { id = &quot;acme/rates&quot; }</span>
+<span class="go">Added to [dependencies] in /work/forecast/chartbook.toml: "rates" = { id = "acme/rates" }</span>
 <span class="go">rates: 2 pinned</span>
 <span class="go">Wrote chartbook.lock.</span>
 </pre></div>
@@ -1330,10 +1381,10 @@ disk allows, and the path is the cache’s.</p>
 </tbody>
 </table>
 </div>
-<p>A key already in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, or a <code class="docutils literal notranslate"><span class="pre">commit</span></code> that is not the start of one, writes nothing. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> refuses it, <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is put back as it was, and the command says the dependency was not added. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves the pin to a newer snapshot once its owner makes one.</p>
+<p>A key already in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, or a <code class="docutils literal notranslate"><span class="pre">commit</span></code> that is not the start of one, writes nothing. An entry under a bare name that no store has a snapshot of, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span></code> before 0.5.0 wrote and left when it could not pin it, can never be pinned, and code that names the bare name reads it rather than the full ID: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span></code> says so, of the name you give or of the full ID’s last part, and that the way out is to delete its line in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> refuses it, <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is put back as it was, and the command says the dependency was not added. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves the pin to a newer snapshot once its owner makes one.</p>
 </section>
-<section id="id6">
-<h2>chartbook pin<a class="headerlink" href="#id6" title="Link to this heading">#</a></h2>
+<section id="id8">
+<h2>chartbook pin<a class="headerlink" href="#id8" title="Link to this heading">#</a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook pin [--project-dir PATH] [OPTIONS] [--frozen]</span>
 </pre></div>
 </div>
@@ -1464,7 +1515,7 @@ disk allows, and the path is the cache’s.</p>
 <p><strong>A pipeline whose ID changed.</strong> A dependency named by its ID stays at the last snapshot made under that ID. When the store has newer snapshots of the same repository and folder under another ID (the owner added a remote, so the pipeline has a scope now; see <a class="reference internal" href="configuration.html#pipeline-identity"><span class="std std-ref">Pipeline Identity</span></a>), <code class="docutils literal notranslate"><span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">update</span></code> say so each time, and name the entry that follows it:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>update
 <span class="go">first_pipeline: 1 already pinned</span>
-<span class="go">  the store has newer snapshots of the same repository and folder under another ID, testorg/first_pipeline (the newest made 2026-10-17 16:54 UTC): the pipeline probably calls itself that now, as one does when it gets a git remote or a [project] id. To follow it, write &quot;first_pipeline&quot; = { id = &quot;testorg/first_pipeline&quot; } under [dependencies], then `chartbook update first_pipeline`.</span>
+<span class="go">  the store has newer snapshots of the same repository and folder under another ID, testorg/first_pipeline (the newest made 2026-10-17 16:54 UTC): the pipeline probably calls itself that now, as one does when it gets a git remote or a [project] id. To follow it, write "first_pipeline" = { id = "testorg/first_pipeline" } under [dependencies], then `chartbook update first_pipeline`.</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">id</span></code> keeps the name your code uses, <code class="docutils literal notranslate"><span class="pre">first_pipeline:rates</span></code>.</p>
@@ -1481,7 +1532,7 @@ disk allows, and the path is the cache’s.</p>
 <p>Keeping it would leave the lockfile naming one commit beside data built from another, which nobody else could get back. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> then builds the new commit and pins what it builds.</p>
 </section>
 <section id="chartbook-lineage">
-<span id="id7"></span><h2>chartbook lineage<a class="headerlink" href="#chartbook-lineage" title="Link to this heading">#</a></h2>
+<span id="id9"></span><h2>chartbook lineage<a class="headerlink" href="#chartbook-lineage" title="Link to this heading">#</a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook lineage [--project-dir PATH] [--check] [--rehash] [OPTIONS] [--json]</span>
 </pre></div>
 </div>
@@ -1496,7 +1547,7 @@ disk allows, and the path is the cache’s.</p>
 <span class="go">acme/forecast (this folder)</span>
 <span class="go">├── fred: acme/fred 49780a2, made 2026-10-16 23:51:46 UTC</span>
 <span class="go">└── rates: acme/rates 49780a2, made 2026-10-16 23:51:46 UTC</span>
-<span class="go">       gap: its manifest declares the dependency &#39;fred&#39;, and the snapshot records no pin of it: it was made before snapshots checked their pins, or from a lockfile that did not list it</span>
+<span class="go">       gap: its manifest declares the dependency 'fred', and the snapshot records no pin of it: it was made before snapshots checked their pins, or from a lockfile that did not list it</span>
 <span class="go">2 snapshot(s) upstream; 1 gap(s).</span>
 </pre></div>
 </div>
@@ -1525,13 +1576,13 @@ disk allows, and the path is the cache’s.</p>
 </div>
 </section>
 <section id="chartbook-run">
-<span id="id8"></span><h2>chartbook run<a class="headerlink" href="#chartbook-run" title="Link to this heading">#</a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [OPTIONS] [--project-dir PATH]</span>
+<span id="id10"></span><h2>chartbook run<a class="headerlink" href="#chartbook-run" title="Link to this heading">#</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [OPTIONS] [--project-dir PATH]</span>
 </pre></div>
 </div>
 <p>Run a script in this pipeline. <code class="docutils literal notranslate"><span class="pre">SCRIPT</span></code> is a name from <a class="reference internal" href="configuration.html#scripts"><span class="std std-ref">[scripts]</span></a>. With none given it is <code class="docutils literal notranslate"><span class="pre">build</span></code>, the script that makes a pipeline’s data current.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[scripts]</span>
-<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;doit&quot;</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"doit"</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>run
@@ -1610,7 +1661,7 @@ disk allows, and the path is the cache’s.</p>
 </table>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">run</span></code> stays at the commit in <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>. A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency that commits its data and has no <code class="docutils literal notranslate"><span class="pre">build</span></code> script is not built and not mentioned.</p>
-<p><strong>Build, and declare it ready.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--snapshot</span></code> makes a <a class="reference internal" href="#run-then-snapshot"><span class="std std-ref">snapshot</span></a> after the build, in the same command.</p>
+<p><strong>Build, and declare it ready.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--snapshot</span></code> makes a <a class="reference internal" href="#run-then-snapshot"><span class="std std-ref">snapshot</span></a> after the build, in the same command, and says what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> would clear as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> does (<code class="docutils literal notranslate"><span class="pre">--no-gc-reminder</span></code> silences it).</p>
 <p><strong>Another script.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">test</span></code> runs <code class="docutils literal notranslate"><span class="pre">test</span></code> in this pipeline, and that is all it does. Only <code class="docutils literal notranslate"><span class="pre">build</span></code> pins, and only <code class="docutils literal notranslate"><span class="pre">build</span></code> reaches what the pipeline depends on.</p>
 <p><strong>In a catalog</strong>, the script is run in each of the catalog’s pipelines, one that another of them depends on first. A pipeline of the catalog that has no script by that name is passed over, and named.</p>
 <p><strong>What it is not.</strong> It is not a task runner. A script is one string. Scripts do not depend on each other, and there are no retries, no schedule and no history. What is out of date inside a pipeline is for the pipeline’s own tool to decide (doit, Make, Snakemake); <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> runs that tool every time.</p>
@@ -1645,20 +1696,20 @@ Nothing was built.
 <span class="go">    content_hash: sha256:2c7ffc38b1c1… -&gt; sha256:9ab40d12e77e…</span>
 <span class="go">    row_count: 17043 -&gt; 17044</span>
 <span class="go">  Model ftsfr/rate_forecast:model/rate_forecaster: out of date; pins moved</span>
-<span class="go">    stale_inputs: [] -&gt; [&quot;fed_yield_curve:treasury_rates&quot;]</span>
+<span class="go">    stale_inputs: [] -&gt; ["fed_yield_curve:treasury_rates"]</span>
 <span class="go">  Pipeline ftsfr/fed_yield_curve: assets changed</span>
 </pre></div>
 </div>
-<p>A changed record is described in a reviewer’s words: <em>data changed</em> (a content or definition hash, a size, a row count, columns or files; a chart or a notebook says <em>rendered differently</em>, since each is a rendering of its dataframes), <em>pins moved</em> (a dependency’s pinned hash, on a pipeline; or a model’s pinned inputs), <em>dependencies changed</em> (a dependency added, removed or relocated without a pin moving), <em>N new version(s)</em> and <em>N version(s) gone</em>, <em>labels moved</em>, <em>out of date</em> or <em>up to date again</em>, <em>scores changed</em>, <em>trained on other data</em>, <em>assets changed</em>, <em>inputs changed</em>, <em>moved</em>, <em>write-up changed</em>, <em>data reaches further</em> or <em>less far</em> (a dated dataframe’s last date), <em>source changed</em> (a pipeline’s code, write-ups or manifest were committed), and <em>declared differently</em> with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different <code class="docutils literal notranslate"><span class="pre">root</span></code> or <code class="docutils literal notranslate"><span class="pre">schema</span></code> between the two files is said first: they may not be the same site, or not written the same way. <code class="docutils literal notranslate"><span class="pre">--json</span></code> prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. <code class="docutils literal notranslate"><span class="pre">--exit-code</span></code> exits <code class="docutils literal notranslate"><span class="pre">1</span></code> when the two differ, as <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">--exit-code</span></code> does, so CI can ask “did this change what the site says?”. This is the first reader of the index (<a class="reference internal" href="../design/index-schema.html"><span class="doc">Design: the index</span></a>, “What this unblocks”).</p>
+<p>A changed record is described in a reviewer’s words: <em>data changed</em> (a content or definition hash, a size, a row count, columns or files; a chart or a notebook says <em>rendered differently</em>, since each is a rendering of its dataframes), <em>pins moved</em> (a dependency’s pinned hash, on a pipeline; or a model’s pinned inputs), <em>dependencies changed</em> (a dependency added, removed or relocated without a pin moving), <em>N new version(s)</em> and <em>N version(s) gone</em>, <em>labels moved</em>, <em>out of date</em> or <em>up to date again</em>, <em>scores changed</em>, <em>trained on other data</em>, <em>assets changed</em>, <em>inputs changed</em>, <em>moved</em>, <em>write-up changed</em>, <em>data reaches further</em> or <em>less far</em> (a dated dataframe’s last date), <em>source changed</em> (a pipeline’s code, write-ups or manifest were committed), and <em>declared differently</em> with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different <code class="docutils literal notranslate"><span class="pre">root</span></code> or <code class="docutils literal notranslate"><span class="pre">schema</span></code> between the two files is said first: they may not be the same site, or not written the same way. <code class="docutils literal notranslate"><span class="pre">--json</span></code> prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. <code class="docutils literal notranslate"><span class="pre">--exit-code</span></code> exits <code class="docutils literal notranslate"><span class="pre">1</span></code> when the two differ, as <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">--exit-code</span></code> does, so CI can ask “did this change what the site says?”. This is the first reader of the index (<a class="extlink-design reference external" href="https://github.com/backofficedev/chartbook/blob/main/docs_src/design/index-schema.md">index-schema</a>, “What this unblocks”).</p>
 <p><strong>Across a commit, a pipeline always says <em>source changed</em>:</strong> its <code class="docutils literal notranslate"><span class="pre">code_changed_at</span></code> moves with every commit that touches <code class="docutils literal notranslate"><span class="pre">src</span></code>, <code class="docutils literal notranslate"><span class="pre">docs_src</span></code> or the manifest, so <code class="docutils literal notranslate"><span class="pre">--exit-code</span></code> is <code class="docutils literal notranslate"><span class="pre">1</span></code> for any two builds on either side of one. That is a fact; read it as such.</p>
 <p><strong>Two things that look like changes and are not.</strong> A chart file that Plotly writes without a fixed <code class="docutils literal notranslate"><span class="pre">div_id</span></code> has a fresh id in it on every render, so its hash moves with nothing changed; pass <code class="docutils literal notranslate"><span class="pre">div_id=</span></code> to <code class="docutils literal notranslate"><span class="pre">write_html</span></code> (the examples and the template do; ChartBook’s own plotting helpers always do). An executed notebook’s HTML carries ids and times from the run, and moves on every render; read <em>rendered differently</em> on a notebook as the run, not the data. And a model’s <code class="docutils literal notranslate"><span class="pre">versions</span></code>, <code class="docutils literal notranslate"><span class="pre">trained_with</span></code> and <code class="docutils literal notranslate"><span class="pre">stale_inputs</span></code> are read from the store of the machine that built the index, so two indexes from two machines differ in them for no change.</p>
 </section>
 <section id="chartbook-store">
-<span id="id9"></span><h2>chartbook store<a class="headerlink" href="#chartbook-store" title="Link to this heading">#</a></h2>
+<span id="id11"></span><h2>chartbook store<a class="headerlink" href="#chartbook-store" title="Link to this heading">#</a></h2>
 <p>The store keeps files under the hash of what is in them. It is a folder on this machine, a folder machines share (on a shared disk, or synced by a service such as Google Drive), or a bucket. It is where <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> puts what a pipeline built, and where <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> finds it.</p>
 <p>It is at <code class="docutils literal notranslate"><span class="pre">~/.chartbook/store/</span></code>. To put it somewhere else, set <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_STORE</span></code>, or add this to <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>, or to the organization’s settings file (<code class="docutils literal notranslate"><span class="pre">/etc/chartbook/settings.toml</span></code>, or the file <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_SYSTEM_SETTINGS</span></code> names), which every user on the machine shares and the user’s file overrides:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[store]</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/a/bigger/disk/chartbook-store&quot;</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/a/bigger/disk/chartbook-store"</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">info</span></code> says which one this machine uses, and what set it.</p>
@@ -1678,6 +1729,23 @@ Nothing was built.
 </div>
 <p>What set it is one of: <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_STORE</span></code>; <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code> in your settings file; <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code> in the organization’s settings file; or the default, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/store</span></code>. A folder that does not exist yet is said (<code class="docutils literal notranslate"><span class="pre">nothing</span> <span class="pre">is</span> <span class="pre">there</span> <span class="pre">yet</span></code>): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a <code class="docutils literal notranslate"><span class="pre">scheme://</span></code> store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[s3]</span></code>, and exits <code class="docutils literal notranslate"><span class="pre">1</span></code>, rather than at the first pin or read; so is a scheme nothing installed provides.</p>
 <p><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> shows just that catalog store. Without it, every store is shown, including read-only and unreachable stores.</p>
+</section>
+<section id="store-ls">
+<h3>store ls<a class="headerlink" href="#store-ls" title="Link to this heading">#</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook store ls [PIPELINE] [--store NAME]</span>
+</pre></div>
+</div>
+<p>List the snapshots in the store, one line each, newest last within its pipeline: the folder’s name (when it was made and the commit), whether it is <strong>standalone</strong> or <strong>shared</strong>, and how much its own folder holds.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>store<span class="w"> </span>ls<span class="w"> </span>acme/news_headlines
+<span class="go">acme/news_headlines (3 snapshot(s))</span>
+<span class="go">  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here</span>
+<span class="go">  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders</span>
+<span class="go">  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in other folders</span>
+<span class="go">A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.</span>
+</pre></div>
+</div>
+<p>Every snapshot is a complete version: its record, <code class="docutils literal notranslate"><span class="pre">_chartbook/snapshot.json</span></code>, lists every file of every asset and says which folder keeps each. The store keeps each file once, usually in the first snapshot that had it, so a snapshot’s folder may hold only what is new or changed (shared) rather than every file of its version (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot’s folder is not to be deleted by hand, since another snapshot may keep files in it: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> removes snapshots and keeps every file a remaining one uses. A <code class="docutils literal notranslate"><span class="pre">README.txt</span></code> in each pipeline’s folder of the store says the same, for whoever finds the folder. For one complete copy of a version, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span> <span class="pre">PIPELINE</span> <span class="pre">--latest</span> <span class="pre">--to</span> <span class="pre">FOLDER</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PIPELINE</span></code> lists one pipeline’s snapshots; <code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin’s) is passed over.</p>
 </section>
 <section id="store-verify">
 <h3>store verify<a class="headerlink" href="#store-verify" title="Link to this heading">#</a></h3>
@@ -1841,7 +1909,7 @@ made is written; with <code class="docutils literal notranslate"><span class="pr
 file it needs in its own folder and readable without ChartBook; with <code class="docutils literal notranslate"><span class="pre">--snapshot</span></code>, each one named,
 by its commit (or its start) and, where one commit has several, <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> and when it was made. Only what
 a snapshot’s record names goes: its data, its documents and its index, never anything that runs.</p>
-<p><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.</p>
+<p>With several stores in the catalog, the one that holds the pipeline is used, and <code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> chooses when more than one does.</p>
 </section>
 <section id="store-import">
 <h3>store import<a class="headerlink" href="#store-import" title="Link to this heading">#</a></h3>
@@ -1861,7 +1929,7 @@ and <code class="docutils literal notranslate"><span class="pre">chartbook</span
 <span class="go">Imported 2 snapshot(s), 2.1 GB copied.</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> selects one catalog store; with several stores in the catalog it is required.</p>
 </section>
 <section id="store-migrate">
 <h3>store migrate<a class="headerlink" href="#store-migrate" title="Link to this heading">#</a></h3>
@@ -1870,7 +1938,7 @@ and <code class="docutils literal notranslate"><span class="pre">chartbook</span
 </div>
 <p>Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
 each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
-commit, and each file once, under its own name (<a class="reference internal" href="../design/plan-0.3.0.html"><span class="doc">Design: the plan for 0.3.0</span></a>). A store of 0.2 is
+commit, and each file once, under its own name (<a class="extlink-design reference external" href="https://github.com/backofficedev/chartbook/blob/main/docs_src/design/plan-0.3.0.md">plan-0.3.0</a>). A store of 0.2 is
 refused until it is moved, with a message that says to run this.</p>
 <ul class="simple">
 <li><p><strong>Upgrade every machine first.</strong> A machine still on ChartBook 0.2 cannot read the store once it
@@ -1889,12 +1957,12 @@ folder, run this, and sync it back.</p></li>
 </ul>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>store<span class="w"> </span>migrate<span class="w"> </span>--dry-run
 <span class="go">The store at /Volumes/GoogleDrive/My Drive/chartbook_store has the layout of ChartBook 0.2.</span>
-<span class="go">Would move 14 snapshot(s) of 14 into their pipelines&#39; folders, from 61 object(s), 2.3 GB.</span>
+<span class="go">Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s), 2.3 GB.</span>
 <span class="go">2.0 GB of globs and documents is read once, to hash each file.</span>
 <span class="go">Nothing was moved (--dry-run).</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--store</span> <span class="pre">NAME</span></code> selects one catalog store; with several stores in the catalog it is required.</p>
 </section>
 <section id="store-add">
 <h3>store add<a class="headerlink" href="#store-add" title="Link to this heading">#</a></h3>
@@ -1915,7 +1983,7 @@ folder, run this, and sync it back.</p></li>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook store move PIPELINE --to NAME [OPTIONS]</span>
 </pre></div>
 </div>
-<p>Copy every snapshot to <code class="docutils literal notranslate"><span class="pre">--to</span> <span class="pre">NAME</span></code>, checking hashes and copying retention and origin notes before removing source snapshots. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> reports the count and bytes. <code class="docutils literal notranslate"><span class="pre">--keep</span></code> keeps the source copies; <code class="docutils literal notranslate"><span class="pre">--no-route</span></code> leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.</p>
+<p>Copy every snapshot to <code class="docutils literal notranslate"><span class="pre">--to</span> <span class="pre">NAME</span></code>, checking hashes and copying retention and origin notes before removing source snapshots. Once the copies are verified, the moved pipeline’s files are removed from each source, as <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> would, and no other pipeline’s folder is looked in; a source that refuses a removal is reported after routing, saying the snapshots moved and which files stayed. Two names for one store (a folder in another letter case, or reached through a link) are refused before anything is touched. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> reports the count and bytes. <code class="docutils literal notranslate"><span class="pre">--keep</span></code> keeps the source copies; <code class="docutils literal notranslate"><span class="pre">--no-route</span></code> leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.</p>
 </section>
 </section>
 <section id="chartbook-config">
@@ -1935,14 +2003,14 @@ folder, run this, and sync it back.</p></li>
 </div>
 <p><strong>Which ChartBook a copy is for.</strong> The skill’s <code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code> names the version it was written for, in its front matter:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">metadata</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">chartbook-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.4.0&quot;</span>
+<span class="w">  </span><span class="nt">chartbook-version</span><span class="p">:</span><span class="w"> </span><span class="s">"0.5.0"</span>
 </pre></div>
 </div>
-<p>A copy for an older version is replaced, and the command says which: <code class="docutils literal notranslate"><span class="pre">Updated</span> <span class="pre">the</span> <span class="pre">skill</span> <span class="pre">in</span> <span class="pre">~/.claude/skills/chartbook</span> <span class="pre">from</span> <span class="pre">ChartBook</span> <span class="pre">0.3.0</span> <span class="pre">to</span> <span class="pre">0.4.0</span></code>. A copy installed before 0.2.0 says its version only in a <code class="docutils literal notranslate"><span class="pre">.chartbook-skill-version</span></code> file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment’s ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with <code class="docutils literal notranslate"><span class="pre">-f</span></code>. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.</p>
+<p>A copy for an older version is replaced, and the command says which: <code class="docutils literal notranslate"><span class="pre">Updated</span> <span class="pre">the</span> <span class="pre">skill</span> <span class="pre">in</span> <span class="pre">~/.claude/skills/chartbook</span> <span class="pre">from</span> <span class="pre">ChartBook</span> <span class="pre">0.4.0</span> <span class="pre">to</span> <span class="pre">0.5.0</span></code>. A copy installed before 0.2.0 says its version only in a <code class="docutils literal notranslate"><span class="pre">.chartbook-skill-version</span></code> file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment’s ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with <code class="docutils literal notranslate"><span class="pre">-f</span></code>. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.</p>
 <p><strong>Finding a stale copy.</strong> Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project’s, is for an older ChartBook, and names the command that installs this version’s. The project’s copy is <code class="docutils literal notranslate"><span class="pre">.claude/skills/chartbook/</span></code> in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> says the same as a <code class="docutils literal notranslate"><span class="pre">warning:</span></code> line, which fails nothing. The command was called <code class="docutils literal notranslate"><span class="pre">install</span> <span class="pre">skill</span></code> before 0.2.0, and that spelling says the new name.</p>
 </section>
 <section id="chartbook-link">
-<span id="id10"></span><h2>chartbook link<a class="headerlink" href="#chartbook-link" title="Link to this heading">#</a></h2>
+<span id="id12"></span><h2>chartbook link<a class="headerlink" href="#chartbook-link" title="Link to this heading">#</a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook link PIPELINE FOLDER [OPTIONS]</span>
 </pre></div>
 </div>
@@ -1987,7 +2055,8 @@ folder, run this, and sync it back.</p></li>
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1995,9 +2064,9 @@ folder, run this, and sync it back.</p></li>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-init">chartbook init</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-docs">chartbook docs</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-docs">chartbook docs</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#docs-build">docs build</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#docs-open">docs open</a></li>
 </ul>
@@ -2006,7 +2075,7 @@ folder, run this, and sync it back.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-trust">chartbook trust</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-path">chartbook path</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-publish">chartbook publish</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog">chartbook catalog</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog">chartbook catalog</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-init">catalog init</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-migrate">catalog migrate</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-disable-enable">catalog disable / enable</a></li>
@@ -2014,17 +2083,18 @@ folder, run this, and sync it back.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-open">catalog open</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls">chartbook ls</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls">chartbook ls</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ls-stores">ls stores</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ls-versions">ls versions</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-get-docs">chartbook get-docs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data">chartbook data</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-create-data-glimpses">chartbook create-data-glimpses</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-snapshot">chartbook snapshot</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">chartbook restore</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">chartbook restore</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-add">chartbook add</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">chartbook pin</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">chartbook pin</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#working-on-two-pipelines-at-once">Working on two pipelines at once</a></li>
 </ul>
 </li>
@@ -2032,8 +2102,9 @@ folder, run this, and sync it back.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-lineage">chartbook lineage</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-run">chartbook run</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-index">chartbook index</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-store">chartbook store</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-store">chartbook store</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-info">store info</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-ls">store ls</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-verify">store verify</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-gc">store gc</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#store-export">store export</a></li>
@@ -2095,8 +2166,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

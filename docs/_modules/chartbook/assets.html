@@ -28,19 +28,19 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=f4c13ce8" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/documentation_options.js?v=f7ee7eb5"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
@@ -50,8 +50,17 @@
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
+<meta property="og:type" content="website">
+<meta property="og:title" content="chartbook.assets · ChartBook">
+<meta property="og:description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+<meta property="og:image" content="https://backofficedev.github.io/chartbook/_static/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
   </head>
   
   
@@ -224,8 +233,8 @@ document.write(`
       
     
     
-    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo-light.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo-dark.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -250,26 +259,35 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get started</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/explore-a-catalog.html">Explore a Catalog</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">How-to guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/starting-a-project.html">Start a Project From the Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-and-writing-data.html">Reading and Writing Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Stores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/agents.html">Let Your Agent Use the Catalog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -314,6 +332,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.replacing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.replacing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
@@ -337,24 +356,10 @@ document.write(`
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -528,7 +533,7 @@ document.write(`
     <span class="n">KindMismatchError</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">chartbook.refs</span> <span class="kn">import</span> <span class="n">parse_asset_ref</span> <span class="k">as</span> <span class="n">parse</span>
-<span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">FileLocation</span><span class="p">,</span> <span class="n">caller_start_dirs</span><span class="p">,</span> <span class="n">require_file</span><span class="p">,</span> <span class="n">resolve</span>
+<span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">FileLocation</span><span class="p">,</span> <span class="n">caller_start_dirs</span><span class="p">,</span> <span class="n">require_single_path</span><span class="p">,</span> <span class="n">resolve</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;DEFAULT_KIND&quot;</span><span class="p">,</span>
@@ -536,6 +541,10 @@ document.write(`
     <span class="s2">&quot;AssetRef&quot;</span><span class="p">,</span>
     <span class="s2">&quot;KindMismatchError&quot;</span><span class="p">,</span>
     <span class="s2">&quot;files&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;gathered&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_docs&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_docs_page&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_docs_path&quot;</span><span class="p">,</span>
     <span class="s2">&quot;index&quot;</span><span class="p">,</span>
     <span class="s2">&quot;parse&quot;</span><span class="p">,</span>
     <span class="s2">&quot;path&quot;</span><span class="p">,</span>
@@ -553,7 +562,44 @@ document.write(`
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">asset</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">)</span>
     <span class="n">location</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">start_dirs</span><span class="o">=</span><span class="n">start_dirs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">require_file</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Several files read from the store have no one path (require_single_path)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">require_single_path</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">ref</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span class="p">),</span> <span class="n">asset</span><span class="o">.</span><span class="n">kind</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span class="n">is_local</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;content_hash&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">_make_room</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>  <span class="c1"># this pipeline&#39;s own, where its build writes: the folder is there for the first write</span>
+    <span class="k">return</span> <span class="n">path</span>
+
+
+<span class="k">def</span> <span class="nf">_make_room</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make the folder a file of this pipeline&#39;s own is written into, so that the first write does not fail for want of it.</span>
+
+<span class="sd">    The file&#39;s parent folder: a folder dataset&#39;s own folder is made by</span>
+<span class="sd">    polars when it writes with ``partition_by``, and a path with no ending</span>
+<span class="sd">    may be a file. A glob&#39;s is the folder its pattern starts in, judged by</span>
+<span class="sd">    the path inside the pipeline, so a pipeline whose own folder is named</span>
+<span class="sd">    with a ``[`` is not taken for a glob. Only inside the pipeline&#39;s folder:</span>
+<span class="sd">    a declared path that climbs out of it makes nothing. Nothing is made for</span>
+<span class="sd">    another pipeline&#39;s asset, read where the store keeps it or, linked,</span>
+<span class="sd">    in its own folder. A folder that cannot be made is left to the write</span>
+<span class="sd">    to say so.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">hashing</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">find_manifest_dir</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">find_manifest_dir</span><span class="p">(</span><span class="o">*</span><span class="n">start_dirs</span><span class="p">)))</span>
+        <span class="n">inside</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">))</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">):</span>  <span class="c1"># noqa: BLE001 - no manifest, or a path outside it: nothing is made</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">hashing</span><span class="o">.</span><span class="n">is_pattern</span><span class="p">(</span><span class="n">inside</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()):</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">root</span> <span class="o">/</span> <span class="n">hashing</span><span class="o">.</span><span class="n">glob_root</span><span class="p">(</span><span class="n">inside</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="n">inside</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">root</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">folder</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">pass</span>
 
 
 <div class="viewcode-block" id="path">
@@ -574,7 +620,10 @@ document.write(`
 <span class="sd">    and a build definition can use the same call for what it reads and what</span>
 <span class="sd">    it writes. The path is whatever ``path`` the entry declares, made</span>
 <span class="sd">    absolute; nothing checks that the file exists, so a target can be named</span>
-<span class="sd">    before it is built.</span>
+<span class="sd">    before it is built. For this pipeline&#39;s own asset the folder it is</span>
+<span class="sd">    written into is made if it is not there yet, so the first write of a</span>
+<span class="sd">    new pipeline does not fail for want of ``_data/``; polars makes a</span>
+<span class="sd">    folder dataset&#39;s own folder when it writes with ``partition_by``.</span>
 
 <span class="sd">    Each kind of asset has its own names: ``[dataframes.gdp]`` and</span>
 <span class="sd">    ``[charts.gdp]`` are two assets, ``gdp`` and ``chart/gdp``. Asking for a</span>
@@ -595,6 +644,17 @@ document.write(`
 <span class="sd">    So it does not change while the other pipeline is being worked on, and</span>
 <span class="sd">    moves only when you run ``chartbook update``. It must have been pinned</span>
 <span class="sd">    (``chartbook pin``), and is for reading: never write to it.</span>
+
+<span class="sd">    **Another pipeline&#39;s folder or glob of files has no one path.** The</span>
+<span class="sd">    store keeps each file once, so a snapshot&#39;s files may sit in other</span>
+<span class="sd">    snapshots&#39; folders. Asking raises</span>
+<span class="sd">    :class:`~chartbook.errors.NoSinglePathError`, whatever the folders</span>
+<span class="sd">    happen to hold today, so that a call that works does not stop working</span>
+<span class="sd">    when the upstream takes another snapshot. :func:`files` lists the</span>
+<span class="sd">    files, :func:`chartbook.data.load` reads a dataframe&#39;s where they are,</span>
+<span class="sd">    and :func:`gathered` lays them out in a temporary folder for a loader</span>
+<span class="sd">    that needs one. Your own pipeline&#39;s folder asset is the declared folder,</span>
+<span class="sd">    as before.</span>
 
 <span class="sd">    :param ref: A reference to the asset: ``&quot;name&quot;`` for a dataframe,</span>
 <span class="sd">        ``&quot;kind/name&quot;`` for anything else, ``&quot;pipeline:name&quot;`` for another</span>
@@ -620,6 +680,8 @@ document.write(`
 <span class="sd">    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the</span>
 <span class="sd">        starting directory.</span>
 <span class="sd">    :raises KindMismatchError: If the reference names a kind other than *kind*.</span>
+<span class="sd">    :raises NoSinglePathError: If the asset is another pipeline&#39;s folder or</span>
+<span class="sd">        glob of files, which has no one path (above).</span>
 <span class="sd">    :raises ValueError: If the reference does not follow the grammar, uses</span>
 <span class="sd">        syntax that is reserved and not yet supported, or the entry has no</span>
 <span class="sd">        ``path``.</span>
@@ -650,12 +712,11 @@ document.write(`
 <span class="k">def</span> <span class="nf">_found</span><span class="p">(</span><span class="n">asset</span><span class="p">:</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="n">FileLocation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Each file of an asset, by its path in the asset, sorted as a hash lists them.&quot;&quot;&quot;</span>
     <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">hashing</span>
-    <span class="kn">from</span> <span class="nn">chartbook.store</span> <span class="kn">import</span> <span class="n">on_disk</span><span class="p">,</span> <span class="n">plain_parts</span>
 
-    <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">listed</span><span class="p">:</span>
-        <span class="c1"># A folder from the store: the files its record lists, and nothing else the folder may hold</span>
-        <span class="n">listed</span> <span class="o">=</span> <span class="p">[(</span><span class="n">relative</span><span class="p">,</span> <span class="n">plain_parts</span><span class="p">(</span><span class="n">relative</span><span class="p">))</span> <span class="k">for</span> <span class="n">relative</span> <span class="ow">in</span> <span class="n">location</span><span class="o">.</span><span class="n">listed</span><span class="p">]</span>
-        <span class="k">return</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">relative</span><span class="p">,</span> <span class="n">on_disk</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">parts</span><span class="p">))</span> <span class="k">for</span> <span class="n">relative</span><span class="p">,</span> <span class="n">parts</span> <span class="ow">in</span> <span class="n">listed</span> <span class="k">if</span> <span class="n">parts</span><span class="p">)</span>
+    <span class="n">inside</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;inside&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">inside</span><span class="p">:</span>
+        <span class="c1"># From the store: the files its record lists, each where the store keeps it, and nothing else</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">relative</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">where</span><span class="p">))</span> <span class="k">for</span> <span class="n">relative</span><span class="p">,</span> <span class="n">where</span> <span class="ow">in</span> <span class="n">inside</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
     <span class="n">found</span> <span class="o">=</span> <span class="n">hashing</span><span class="o">.</span><span class="n">find_files</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">found</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">_not_there</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">location</span><span class="p">)</span>
@@ -681,9 +742,12 @@ document.write(`
 <span class="sd">    ones its content hash is made of (:mod:`chartbook.hashing`): every file</span>
 <span class="sd">    under a folder or matched by a glob, but ``.DS_Store`` and the few</span>
 <span class="sd">    others operating systems write by themselves. Of another pipeline&#39;s</span>
-<span class="sd">    asset they are the files of the pinned copy, as its record lists them.</span>
-<span class="sd">    They are sorted by their path inside the asset, so a dataset of a file</span>
-<span class="sd">    a year is read in order of the years.</span>
+<span class="sd">    asset they are the files of the pinned copy, as its record lists them,</span>
+<span class="sd">    each where the store keeps it: the store keeps each file once, so they</span>
+<span class="sd">    may sit in several snapshots&#39; folders, and this is the call to read</span>
+<span class="sd">    them by (polars and DuckDB take a list of files; so does a ``dodo.py``</span>
+<span class="sd">    for its ``file_dep``). They are sorted by their path inside the asset,</span>
+<span class="sd">    so a dataset of a file a year is read in order of the years.</span>
 
 <span class="sd">    It works for every asset with files: a files asset, a dataframe of</span>
 <span class="sd">    many parts (to read one at a time), a model that is a folder.</span>
@@ -698,6 +762,69 @@ document.write(`
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">asset</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="n">_located</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">file</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">_found</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">location</span><span class="p">)]</span></div>
+
+
+
+<span class="k">class</span> <span class="nc">_Gathered</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A temporary folder an asset&#39;s files are laid out in (:func:`gathered`).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_found</span> <span class="o">=</span> <span class="n">found</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">shutil</span>
+        <span class="kn">import</span> <span class="nn">tempfile</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;chartbook-gathered-&quot;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">relative</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">:</span>
+                <span class="n">target</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="o">*</span><span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span><span class="o">.</span><span class="n">cleanup</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">raise</span>
+        <span class="k">return</span> <span class="n">root</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span><span class="o">.</span><span class="n">cleanup</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temporary</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="gathered">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.assets.html#chartbook.assets.gathered">[docs]</a>
+<span class="k">def</span> <span class="nf">gathered</span><span class="p">(</span>
+    <span class="n">ref</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Gathered</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Lay an asset&#39;s files out together in a temporary folder, for a loader that needs one; the folder goes when the block ends.</span>
+
+<span class="sd">    &gt;&gt;&gt; from chartbook import assets</span>
+<span class="sd">    &gt;&gt;&gt; with assets.gathered(&quot;forecasting:model/rate_forecaster&quot;) as folder:  # doctest: +SKIP</span>
+<span class="sd">    ...     model = AutoModel.from_pretrained(folder)</span>
+
+<span class="sd">    For a model or a files asset whose loader takes a directory. The files</span>
+<span class="sd">    are copied, so a loader may write beside them; nothing is kept once the</span>
+<span class="sd">    block ends, and nothing is kept between runs. A dataframe needs none of</span>
+<span class="sd">    this: :func:`chartbook.data.load` reads its files where they are, and</span>
+<span class="sd">    :func:`files` lists them for any other reader.</span>
+
+<span class="sd">    :param ref: A reference to the asset, as for :func:`path`.</span>
+<span class="sd">    :param kind: The kind of asset expected, as for :func:`path`.</span>
+<span class="sd">    :param project_dir: Where to look for the pipeline, as for :func:`path`.</span>
+<span class="sd">    :returns: A context manager whose value is the folder.</span>
+<span class="sd">    :raises FileNotFoundError: If nothing is there: the asset is not built.</span>
+<span class="sd">    :raises TypeError: If the asset is a table or a query in a source.</span>
+<span class="sd">    :raises AssetNotDeclaredError: As for :func:`path`, and the rest of its errors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">asset</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="n">_located</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">_Gathered</span><span class="p">(</span><span class="n">_found</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">location</span><span class="p">))</span></div>
 
 
 
@@ -723,11 +850,18 @@ document.write(`
     <span class="kn">from</span> <span class="nn">chartbook.utils</span> <span class="kn">import</span> <span class="n">is_glob_pattern</span>
 
     <span class="n">declared</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
-    <span class="n">single</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">declared</span><span class="p">))</span> <span class="ow">and</span> <span class="n">declared</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
+    <span class="n">inside</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;inside&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">single</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">location</span><span class="o">.</span><span class="n">listed</span> <span class="k">if</span> <span class="n">inside</span> <span class="k">else</span> <span class="ow">not</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">declared</span><span class="p">))</span> <span class="ow">and</span> <span class="n">declared</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
     <span class="n">listed</span> <span class="o">=</span> <span class="n">default_store</span><span class="p">()</span><span class="o">.</span><span class="n">listing</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span> <span class="n">single</span><span class="p">)</span> <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">content_hash</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">listed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">listed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">inside</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">single</span><span class="p">:</span>
             <span class="c1"># One file, read by the name its asset gives it: the same bytes may be two assets&#39;</span>
+            <span class="p">((</span><span class="n">relative</span><span class="p">,</span> <span class="n">where</span><span class="p">),)</span> <span class="o">=</span> <span class="n">inside</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="n">Path</span><span class="p">(</span><span class="n">where</span><span class="p">),</span> <span class="n">relative</span><span class="p">,</span> <span class="n">listed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size_bytes</span><span class="p">,</span> <span class="n">listed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">content_hash</span><span class="p">)]</span>
+        <span class="c1"># Each where the store keeps it, which may be another snapshot&#39;s folder</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">Path</span><span class="p">(</span><span class="n">inside</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">path</span><span class="p">]),</span> <span class="n">entry</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">size_bytes</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">content_hash</span><span class="p">)</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">path</span> <span class="ow">in</span> <span class="n">inside</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">listed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">single</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[(</span><span class="n">declared</span><span class="p">,</span> <span class="n">declared</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">listed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size_bytes</span><span class="p">,</span> <span class="n">listed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">content_hash</span><span class="p">)]</span>
         <span class="n">root</span> <span class="o">=</span> <span class="n">listing_root</span><span class="p">(</span><span class="n">declared</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">[</span>
@@ -811,6 +945,351 @@ document.write(`
     <span class="n">schema</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">String</span><span class="p">,</span> <span class="s2">&quot;size_bytes&quot;</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">Int64</span><span class="p">,</span> <span class="s2">&quot;sha256&quot;</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">String</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">String</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">}}</span>
     <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span></div>
 
+
+
+<span class="c1">#: The kinds whose entry carries a write-up, ``docs`` or ``docs_path``. A</span>
+<span class="c1">#: note is a write-up itself, and a notebook&#39;s page is the notebook.</span>
+<span class="n">WRITE_UP_KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="s2">&quot;chart&quot;</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">)</span>
+
+<span class="c1">#: The most of a write-up, a README or a stored ``chartbook.toml`` that is</span>
+<span class="c1">#: read: anyone who can write to a shared store wrote these.</span>
+<span class="n">WRITE_UP_LIMIT</span> <span class="o">=</span> <span class="mi">8</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+
+
+<span class="k">def</span> <span class="nf">_newest_snapshot</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">pipeline_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A cataloged pipeline&#39;s newest snapshot in the catalog&#39;s stores, with the stores.</span>
+
+<span class="sd">    :raises KeyError: If the stores hold no snapshot of it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">snapshot</span>
+    <span class="kn">from</span> <span class="nn">chartbook.hubs</span> <span class="kn">import</span> <span class="n">selected_snapshots</span>
+
+    <span class="n">stores</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;stores&quot;</span><span class="p">]</span>
+    <span class="n">found</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">readable_snapshots</span><span class="p">(</span><span class="n">stores</span><span class="p">)</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="n">selected_snapshots</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">pipeline_key</span><span class="p">,</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline_notes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pipeline_key</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;repository&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">chosen</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> has no snapshot. Run `chartbook snapshot` in its pipeline.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">stores</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_docs_info</span><span class="p">(</span>
+    <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">]],</span> <span class="n">manifest</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">newest</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Where a cataloged pipeline&#39;s write-up of an asset is, or its README with no asset.</span>
+
+<span class="sd">    *manifest* is the catalog&#39;s, loaded, and *newest* the stores and the</span>
+<span class="sd">    pipeline&#39;s newest snapshot (:func:`_newest_snapshot`), when the caller</span>
+<span class="sd">    has them already; each is read here if None.</span>
+
+<span class="sd">    :returns: ``(&quot;path&quot;, declared, file)`` for a write-up in a file, the</span>
+<span class="sd">        file where it is: in the pipeline&#39;s folder, or where the store keeps</span>
+<span class="sd">        it; ``(&quot;str&quot;, text, manifest)`` for an inline ``docs``, with the</span>
+<span class="sd">        ``chartbook.toml`` that holds it.</span>
+<span class="sd">    :raises KeyError: If the pipeline, the asset or its write-up is not there.</span>
+<span class="sd">    :raises ValueError: If the asset is a notebook, which has no write-up,</span>
+<span class="sd">        or the stored ``chartbook.toml`` is not one ChartBook can read.</span>
+<span class="sd">    :raises chartbook.store.StoreError: If the store does not have a file</span>
+<span class="sd">        of the snapshot yet, as a synced folder still downloading.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">load_manifest</span>
+    <span class="kn">from</span> <span class="nn">chartbook.refs</span> <span class="kn">import</span> <span class="n">KIND_TABLES</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">locate_in_catalog</span>
+
+    <span class="n">ref</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span> <span class="k">if</span> <span class="n">asset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">pipeline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">part</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">rev</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> is more than kind/name: give the pipeline on its own, and the asset as kind/name&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ref</span><span class="o">.</span><span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">WRITE_UP_KINDS</span><span class="p">,</span> <span class="s2">&quot;note&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ref</span><span class="si">}</span><span class="s2"> is a </span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">, which has no write-up of its own: its page on the catalog&#39;s site is the </span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="n">shown</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;README&quot;</span>
+
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">manifest</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">catalog_path</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+    <span class="n">pipeline_key</span> <span class="o">=</span> <span class="n">locate_in_catalog</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stores&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">tomli</span>
+
+        <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">snapshot</span>
+
+        <span class="n">stores</span><span class="p">,</span> <span class="n">taken</span> <span class="o">=</span> <span class="n">newest</span> <span class="k">if</span> <span class="n">newest</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_newest_snapshot</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">taken</span><span class="o">.</span><span class="n">documents</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> has no stored documents&quot;</span><span class="p">)</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">documents</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">],</span> <span class="n">pipeline_key</span><span class="p">)</span><span class="o">.</span><span class="n">by_relative</span><span class="p">()</span>
+        <span class="n">manifest_file</span> <span class="o">=</span> <span class="n">kept</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">manifest_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> keeps no chartbook.toml among its documents&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">_read_regular_file</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">),</span> <span class="n">WRITE_UP_LIMIT</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">UnicodeDecodeError</span><span class="p">,</span> <span class="n">tomli</span><span class="o">.</span><span class="n">TOMLDecodeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> keeps a chartbook.toml that cannot be read: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
+
+        <span class="k">def</span> <span class="nf">table</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="c1"># A shared store&#39;s manifest was written by anyone who can write to it</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> keeps a chartbook.toml whose [</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">] is not a table&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">value</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">readme</span> <span class="o">=</span> <span class="n">table</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;readme&quot;</span><span class="p">)</span>
+            <span class="n">declared</span> <span class="o">=</span> <span class="n">readme</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">readme</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">readme</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;README.md&quot;</span>
+            <span class="n">plain</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">safe_relative</span><span class="p">(</span><span class="n">declared</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">plain</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">plain</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> keeps no </span><span class="si">{</span><span class="n">declared</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">plain</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">kept</span><span class="p">[</span><span class="n">plain</span><span class="p">])</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">table</span><span class="p">(</span><span class="n">KIND_TABLES</span><span class="p">[</span><span class="n">ref</span><span class="o">.</span><span class="n">kind</span><span class="p">])</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> declares no </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> in its newest snapshot&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ref</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;note&quot;</span><span class="p">:</span>
+            <span class="c1"># A note is an asset, and a page of the documents: by its own path there, as declared</span>
+            <span class="n">declared</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">plain</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">safe_relative</span><span class="p">(</span><span class="n">declared</span><span class="p">)</span> <span class="k">if</span> <span class="n">declared</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">plain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">plain</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">plain</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">kept</span><span class="p">[</span><span class="n">plain</span><span class="p">])</span>
+            <span class="c1"># Else as the store keeps the asset, its one file</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">))</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content_hash&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> keeps no file of </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">],</span> <span class="n">pipeline_key</span><span class="p">)</span><span class="o">.</span><span class="n">files</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2">&#39;s </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files, not one page&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">declared</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;docs_path&quot;</span><span class="p">,</span> <span class="s2">&quot;docs&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2">&#39;s </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has a </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> that is not text in its newest snapshot&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs_path&quot;</span><span class="p">):</span>
+            <span class="n">plain</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">safe_relative</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;docs_path&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">plain</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">plain</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The documentation path is not inside the snapshot&#39;s documents&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">plain</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">kept</span><span class="p">[</span><span class="n">plain</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2">&#39;s </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has no write-up: neither docs nor docs_path&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;docs&quot;</span><span class="p">],</span> <span class="n">Path</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">)</span>
+
+    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_key</span><span class="p">]</span>
+    <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">readme</span> <span class="o">=</span> <span class="p">(</span><span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;readme&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;README.md&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">readme</span><span class="p">,</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">readme</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">declared</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">KIND_TABLES</span><span class="p">[</span><span class="n">ref</span><span class="o">.</span><span class="n">kind</span><span class="p">])</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">ref</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">declared</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2">. Declared: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">declared</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">declared</span><span class="p">[</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ref</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;note&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">],</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs_path&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;docs_path&quot;</span><span class="p">],</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;docs_path&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2">&#39;s </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has no write-up: neither docs nor docs_path&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;docs&quot;</span><span class="p">],</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="get_docs_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.assets.html#chartbook.assets.get_docs_path">[docs]</a>
+<span class="k">def</span> <span class="nf">get_docs_path</span><span class="p">(</span>
+    <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">asset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path to the write-up of a cataloged pipeline&#39;s asset, or to its README.</span>
+
+<span class="sd">    The file is the asset&#39;s ``docs_path``, or the ``chartbook.toml`` that</span>
+<span class="sd">    holds its inline ``docs``; a note&#39;s own file; with no asset, the</span>
+<span class="sd">    pipeline&#39;s README. It is where the store keeps it, from the pipeline&#39;s</span>
+<span class="sd">    newest snapshot; the store keeps the same bytes once, so the file may</span>
+<span class="sd">    be named for another of the same bytes. :func:`chartbook.data.get_docs_path` is this for a</span>
+<span class="sd">    dataframe.</span>
+
+<span class="sd">    :param pipeline: The pipeline reference: a bare name, a scoped ID or a</span>
+<span class="sd">        repository URL.</span>
+<span class="sd">    :param asset: The asset within the pipeline, as ``kind/name``</span>
+<span class="sd">        (``&quot;chart/gdp&quot;``, ``&quot;model/forecaster&quot;``, ``&quot;file/filings&quot;``,</span>
+<span class="sd">        ``&quot;note/methodology&quot;``) or a bare name for a dataframe; None for the</span>
+<span class="sd">        pipeline&#39;s README.</span>
+<span class="sd">    :param catalog_path: The catalog to look in; the default one if None.</span>
+<span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
+<span class="sd">    :raises KeyError: If the pipeline, the asset or its write-up is not there.</span>
+<span class="sd">    :raises ValueError: If the asset is a notebook, which has no write-up.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">resolve_catalog_path</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">docs_file</span> <span class="o">=</span> <span class="n">_docs_info</span><span class="p">(</span><span class="n">resolve_catalog_path</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">),</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">asset</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">docs_file</span></div>
+
+
+
+<div class="viewcode-block" id="get_docs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.assets.html#chartbook.assets.get_docs">[docs]</a>
+<span class="k">def</span> <span class="nf">get_docs</span><span class="p">(</span>
+    <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">asset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the write-up of a cataloged pipeline&#39;s asset as text, or its README.</span>
+
+<span class="sd">    What a person reads on the asset&#39;s page, for a program or an agent that</span>
+<span class="sd">    reads no site: the content of its ``docs_path`` or its inline ``docs``;</span>
+<span class="sd">    a note&#39;s own text; with no asset, the pipeline&#39;s README::</span>
+
+<span class="sd">        assets.get_docs(&quot;yield_curve&quot;)                     # its README</span>
+<span class="sd">        assets.get_docs(&quot;yield_curve&quot;, &quot;chart/repo_rates&quot;) # a chart&#39;s write-up</span>
+<span class="sd">        assets.get_docs(&quot;rate_forecast&quot;, &quot;model/forecaster&quot;)</span>
+
+<span class="sd">    Read from the pipeline&#39;s newest snapshot in the catalog&#39;s stores.</span>
+<span class="sd">    :func:`chartbook.data.get_docs` is this for a dataframe.</span>
+
+<span class="sd">    :param pipeline: The pipeline reference, as for :func:`get_docs_path`.</span>
+<span class="sd">    :param asset: The asset, as for :func:`get_docs_path`.</span>
+<span class="sd">    :param catalog_path: The catalog to look in; the default one if None.</span>
+<span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
+<span class="sd">    :raises KeyError: If the pipeline, the asset or its write-up is not there.</span>
+<span class="sd">    :raises ValueError: If the asset is a notebook, which has no write-up.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">resolve_catalog_path</span>
+
+    <span class="k">return</span> <span class="n">_read_docs</span><span class="p">(</span><span class="o">*</span><span class="n">_docs_info</span><span class="p">(</span><span class="n">resolve_catalog_path</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">),</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">asset</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_read_docs</span><span class="p">(</span><span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">docs_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The text of a write-up, from where :func:`_docs_info` says it is.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.snapshot</span> <span class="kn">import</span> <span class="n">_read_regular_file</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;path&quot;</span><span class="p">:</span>
+        <span class="c1"># Not a link, a device or a pipe, which a shared store&#39;s writer could leave there</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_read_regular_file</span><span class="p">(</span><span class="n">docs_file</span><span class="p">,</span> <span class="n">WRITE_UP_LIMIT</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">UnicodeDecodeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The write-up </span><span class="si">{</span><span class="n">docs_file</span><span class="si">}</span><span class="s2"> cannot be read as text: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<div class="viewcode-block" id="get_docs_page">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.assets.html#chartbook.assets.get_docs_page">[docs]</a>
+<span class="k">def</span> <span class="nf">get_docs_page</span><span class="p">(</span>
+    <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">asset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What ``chartbook get-docs`` prints: a dataframe&#39;s whole page, or another asset&#39;s write-up.</span>
+
+<span class="sd">    A dataframe&#39;s page is in Markdown, from what its newest snapshot&#39;s index</span>
+<span class="sd">    recorded of it: its name, ID and description; its sources, providers</span>
+<span class="sd">    and license; how it is pulled; its rows and the span of its dates; the</span>
+<span class="sd">    snapshot it is from; then its write-up, and a table of its columns and</span>
+<span class="sd">    their types::</span>
+
+<span class="sd">        print(assets.get_docs_page(&quot;yield_curve&quot;, &quot;repo_public&quot;))</span>
+
+<span class="sd">    Any other asset, and the README with no asset, is its write-up, as</span>
+<span class="sd">    :func:`get_docs` gives it. So is a dataframe whose snapshot&#39;s index</span>
+<span class="sd">    has no record of it.</span>
+
+<span class="sd">    :param pipeline: The pipeline reference, as for :func:`get_docs_path`.</span>
+<span class="sd">    :param asset: The asset, as for :func:`get_docs_path`.</span>
+<span class="sd">    :param catalog_path: The catalog to look in; the default one if None.</span>
+<span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
+<span class="sd">    :raises KeyError: If the pipeline or the asset is not there, or an</span>
+<span class="sd">        asset other than a dataframe has no write-up.</span>
+<span class="sd">    :raises ValueError: If the asset is a notebook, which has no write-up.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">load_manifest</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">locate_in_catalog</span><span class="p">,</span> <span class="n">resolve_catalog_path</span>
+    <span class="kn">from</span> <span class="nn">chartbook.snapshot</span> <span class="kn">import</span> <span class="n">_stored_records</span>
+
+    <span class="n">ref</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span> <span class="k">if</span> <span class="n">asset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">kind</span> <span class="o">!=</span> <span class="s2">&quot;dataframe&quot;</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">pipeline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">part</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_docs</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">asset</span><span class="p">,</span> <span class="n">catalog_path</span><span class="p">)</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_catalog_path</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">)</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">resolved</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stores&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_read_docs</span><span class="p">(</span><span class="o">*</span><span class="n">_docs_info</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">manifest</span><span class="p">))</span>
+    <span class="n">newest</span> <span class="o">=</span> <span class="n">_newest_snapshot</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">locate_in_catalog</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">))</span>
+    <span class="n">stores</span><span class="p">,</span> <span class="n">taken</span> <span class="o">=</span> <span class="n">newest</span>
+    <span class="n">asset_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">record</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">_stored_records</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span> <span class="n">stores</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;Dataframe&quot;</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">asset_id</span><span class="p">),</span>
+        <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">write_up</span> <span class="o">=</span> <span class="n">_read_docs</span><span class="p">(</span><span class="o">*</span><span class="n">_docs_info</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">manifest</span><span class="p">,</span> <span class="n">newest</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="n">write_up</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># the page is still its facts and columns</span>
+    <span class="k">return</span> <span class="n">write_up</span> <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_dataframe_page</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">taken</span><span class="p">,</span> <span class="n">write_up</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_dataframe_page</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">taken</span><span class="p">,</span> <span class="n">write_up</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A dataframe&#39;s page in Markdown, from its record in a stored index; see :func:`get_docs_page`.</span>
+
+<span class="sd">    The record is whatever its owner put in the store, so each field is</span>
+<span class="sd">    read as one line of what can be seen, and anything not of its shape is</span>
+<span class="sd">    left out.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">plain_line</span>
+
+    <span class="k">def</span> <span class="nf">line</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">plain_line</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">2000</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">listed</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="p">(</span><span class="n">line</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">text</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="n">line</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;# </span><span class="si">{</span><span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">))</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)):</span>
+        <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]),</span> <span class="s2">&quot;&quot;</span><span class="p">]</span>
+    <span class="n">facts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;ID&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">))),</span>
+        <span class="p">(</span><span class="s2">&quot;Sources&quot;</span><span class="p">,</span> <span class="n">listed</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sources&quot;</span><span class="p">))),</span>
+        <span class="p">(</span><span class="s2">&quot;Providers&quot;</span><span class="p">,</span> <span class="n">listed</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;providers&quot;</span><span class="p">))),</span>
+        <span class="p">(</span><span class="s2">&quot;Provider links&quot;</span><span class="p">,</span> <span class="n">listed</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;provider_links&quot;</span><span class="p">))),</span>
+        <span class="p">(</span><span class="s2">&quot;License&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;license&quot;</span><span class="p">))),</span>
+        <span class="p">(</span><span class="s2">&quot;Pulled&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pull_method&quot;</span><span class="p">))),</span>
+        <span class="p">(</span><span class="s2">&quot;Tags&quot;</span><span class="p">,</span> <span class="n">listed</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">))),</span>
+    <span class="p">]</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;row_count&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="n">facts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;Rows&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">rows</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+    <span class="n">span</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;date_range&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">span</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;first&quot;</span><span class="p">))</span> <span class="ow">and</span> <span class="n">line</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last&quot;</span><span class="p">)):</span>
+        <span class="n">dates</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_day</span><span class="p">(</span><span class="n">line</span><span class="p">(</span><span class="n">span</span><span class="p">[</span><span class="s1">&#39;first&#39;</span><span class="p">]))</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">_day</span><span class="p">(</span><span class="n">line</span><span class="p">(</span><span class="n">span</span><span class="p">[</span><span class="s1">&#39;last&#39;</span><span class="p">]))</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;date_col&quot;</span><span class="p">)):</span>
+            <span class="n">dates</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;, in column </span><span class="si">{</span><span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;date_col&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">facts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;Dates&quot;</span><span class="p">,</span> <span class="n">dates</span><span class="p">))</span>
+    <span class="n">made</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">&quot;Z&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;Z&quot;</span>  <span class="c1"># to the second</span>
+    <span class="n">facts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;Snapshot&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">made</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+    <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;- </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">facts</span> <span class="k">if</span> <span class="n">value</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">write_up</span> <span class="ow">and</span> <span class="n">write_up</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="c1"># A write-up often starts with the dataframe&#39;s name, which the page has</span>
+        <span class="n">first</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">write_up</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">first</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="n">line</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="ow">and</span> <span class="n">first</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;# &quot;</span><span class="p">):</span>
+            <span class="n">write_up</span> <span class="o">=</span> <span class="n">rest</span>
+        <span class="k">if</span> <span class="n">write_up</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="n">write_up</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="s2">&quot;&quot;</span><span class="p">]</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;columns&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;columns&quot;</span><span class="p">),</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">))]</span>
+    <span class="k">if</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;## Columns&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;| Column | Type |&quot;</span><span class="p">,</span> <span class="s2">&quot;|---|---|&quot;</span><span class="p">]</span>
+        <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;| </span><span class="si">{</span><span class="n">_cell</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">))</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">_cell</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dtype&#39;</span><span class="p">))</span><span class="si">}</span><span class="s2"> |&quot;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_day</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An ISO 8601 date or time as written, but a midnight as its day alone.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">&quot;T00:00:00&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_cell</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Text as one cell of a Markdown table: one line, its bars escaped.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">plain_line</span>
+
+    <span class="k">return</span> <span class="n">plain_line</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">|&quot;</span><span class="p">)</span>
 </pre></div>
 
                 </article>

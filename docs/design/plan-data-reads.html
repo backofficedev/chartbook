@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: the plan for data reads &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=f7ee7eb5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/plan-data-reads';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Design: the plan for 0.4.0" href="plan-0.4.0.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-and-writing-data.html">Reading and Writing Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Stores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the plan for data reads</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/plan-data-reads.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: the plan for data reads</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem-in-plain-terms">The problem, in plain terms</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-snapshot-is">What a snapshot is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-user-does">What the user does</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-design">The design</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-hands-out-files-not-folders">1. The store hands out files, not folders</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-catalog-reads-no-data">2. The catalog reads no data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-read-calls">3. The read calls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#writing">4. Writing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#standalone-and-shared-in-words-a-person-reads">5. Standalone and shared, in words a person reads</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-leftover-views-folder">6. The leftover <code class="docutils literal notranslate"><span class="pre">views/</span></code> folder</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#deliberately-not-now">Deliberately not now</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-documentation">The documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#order-of-work">Order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built">As built</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decisions-dated">Decisions, dated</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-whoever-implements-this">For whoever implements this</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-the-plan-for-data-reads">
+<h1>Design: the plan for data reads<a class="headerlink" href="#design-the-plan-for-data-reads" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A plan, written 2026-10-31, the day after 0.4.0 was released, from a conversation with the
+maintainer that day. It says what is wrong with how ChartBook reads data today, what replaces it,
+and what the end user sees. What the maintainer decided on 2026-10-31 is marked <em>decided</em>. The
+version is <strong>0.5.0</strong> (<em>decided 2026-10-31</em>): <code class="docutils literal notranslate"><span class="pre">data.path</span></code> on another pipeline’s folder dataset
+and the Store plugin contract both change, so it is more than a patch. Status: <strong>built</strong> (#150–#153, merged 2026-10-31, then tried on a real store);
+released as 0.5.0 on 2026-11-01.</p>
+</div>
+<section id="the-problem-in-plain-terms">
+<h2>The problem, in plain terms<a class="headerlink" href="#the-problem-in-plain-terms" title="Link to this heading">#</a></h2>
+<p>The store keeps each file once. A later snapshot of a pipeline holds only the files that are new
+or changed; its record says where the rest are kept. So one version of a dataset can have its files
+in several snapshot folders:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pipelines/news_headlines/
+  2026-05-01T120000Z_a1b2c3d4/   _data/articles/year=2018/  year=2019/  year=2020/
+  2026-06-01T120000Z_e5f6a7b8/   _data/articles/year=2021/            (2018–2020: kept in the first)
+  2026-07-01T120000Z_c9d0e1f2/   _data/articles/year=2022/            (2018–2021: kept in the first two)
+</pre></div>
+</div>
+<p>This is the standard design. A Git commit is a full tree whose objects are shared between commits.
+A Delta table version is a list of parquet files shared with earlier versions. It is what keeps a
+2.5 GB dataset from costing 2.5 GB more on every snapshot in a synced Google Drive folder, which
+keeps no hard links. The maintainer confirmed on 2026-10-31 that this stays.</p>
+<p>The mistake was built on top of it. The store’s one way to hand out an asset, <code class="docutils literal notranslate"><span class="pre">Store.get</span></code>, returns
+a <em>folder</em>. A version spread over three folders has no folder, so <code class="docutils literal notranslate"><span class="pre">FolderStore.get</span></code> builds one:
+it links or copies every file into <code class="docutils literal notranslate"><span class="pre">~/.chartbook/cache/views/&lt;hash&gt;/</span></code> and returns that. This
+“view” is what the pre-plan and the code call the cache. Three things follow:</p>
+<ul class="simple">
+<li><p><strong>It grows without bound.</strong> Nothing removes <code class="docutils literal notranslate"><span class="pre">views/</span></code>. One <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">build</span></code> on the
+maintainer’s Mac made it 2.3 GB.</p></li>
+<li><p><strong>It pulls every byte local.</strong> A clone or a copy needs the bytes, so the build most likely makes
+Google Drive download every dataset it touches. On Windows, where the ladder has no symlink and
+Drive is its own volume, they are most likely full copies.</p></li>
+<li><p><strong>Nobody needed the folder.</strong> Polars and DuckDB read a list of files. The catalog needs row
+counts and date ranges that the snapshot’s own <code class="docutils literal notranslate"><span class="pre">index.json</span></code> already holds. <code class="docutils literal notranslate"><span class="pre">restore</span></code> and
+<code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">move</span></code> copy files to a destination anyway.</p></li>
+</ul>
+<p>The pre-plan is <code class="docutils literal notranslate"><span class="pre">_temp/preplan-data-reads.md</span></code> in the maintainer’s checkout (not in the repository);
+the measurements there are from 2026-10-31 on ChartBook 0.4.0.</p>
+</section>
+<section id="what-a-snapshot-is">
+<h2>What a snapshot is<a class="headerlink" href="#what-a-snapshot-is" title="Link to this heading">#</a></h2>
+<p>A <strong>snapshot</strong> is a complete version of a pipeline: its record, <code class="docutils literal notranslate"><span class="pre">_chartbook/snapshot.json</span></code>, lists
+every file of every asset with its hash, its size, and the folder that keeps it. The record is
+always complete. The folder is not.</p>
+<ul class="simple">
+<li><p>A snapshot’s folder is <strong>standalone</strong> when it holds every file of its version.</p></li>
+<li><p>It is <strong>shared</strong> when it holds only what is new or changed, and the rest sit in other snapshots’ folders
+of the same pipeline.</p></li>
+</ul>
+<p>A snapshot is not a diff: no snapshot has to be “applied” to another. But a shared snapshot’s
+folder cannot be read alone, and deleting another snapshot’s folder by hand can take files from it. Only
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> removes safely: it clears a snapshot’s record, leaves any file a later
+snapshot uses, writes <code class="docutils literal notranslate"><span class="pre">_chartbook/CLEARED.txt</span></code> saying why, and removes the folder once nothing
+points into it. <em>Decided 2026-10-31:</em> shared folders stay the default, and ChartBook says so where
+a person would look.</p>
+</section>
+<section id="what-the-user-does">
+<h2>What the user does<a class="headerlink" href="#what-the-user-does" title="Link to this heading">#</a></h2>
+<p>Every example is in a pipeline made by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code>, whose <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> declares
+<code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">=</span> <span class="pre">&quot;./_data/&lt;name&gt;.parquet&quot;</span></code> for each dataframe.</p>
+<p><strong>Write your own outputs.</strong> <code class="docutils literal notranslate"><span class="pre">data.path</span></code> finds <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> by walking up from the file that
+called it, so a script three folders deep in <code class="docutils literal notranslate"><span class="pre">src/</span></code> gets the same answer wherever it is run from.
+The file need not exist; the declaration must.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># src/pull/pull_repo.py, run from anywhere</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">fetch_from_fred</span><span class="p">()</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write_parquet</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"repo_public"</span><span class="p">))</span>             <span class="c1"># &lt;project&gt;/_data/repo_public.parquet</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># a dataset of many files: declare its path as a folder, path = "./_data/articles"</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write_parquet</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"articles"</span><span class="p">),</span> <span class="n">partition_by</span><span class="o">=</span><span class="s2">"year"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If <code class="docutils literal notranslate"><span class="pre">_data/</span></code> does not exist yet, <code class="docutils literal notranslate"><span class="pre">data.path</span></code> makes it, so the first run of a new pipeline does not
+fail with “No such file or directory” from the writer. An undeclared name raises at once, naming
+the <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> it searched and the stanza to add. ChartBook never invents a path: a dataset
+with no declaration has no description, no page and no snapshot.</p>
+<p><strong>Read anyone’s data, any shape, one call.</strong> Your own dataset is read from your working folder.
+Another pipeline’s is read from the store, at the snapshot your lockfile pins, from wherever its
+files sit. No copy is made.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"fed_yield_curve:treasury_rates"</span><span class="p">)</span>     <span class="c1"># one parquet file</span>
+<span class="n">news</span>  <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"news_headlines:articles"</span><span class="p">)</span>            <span class="c1"># Hive folder, spread over 3 snapshot folders</span>
+<span class="n">mine</span>  <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">)</span>                       <span class="c1"># my own, from my working folder</span>
+<span class="n">joined</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="s2">"select * from {news_headlines:articles} a join </span><span class="si">{merged_rates}</span><span class="s2"> m using (date)"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Name dependencies in <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code>.</strong> A build tool wants files. <code class="docutils literal notranslate"><span class="pre">data.files</span></code> gives every file of a
+dataset, sorted, wherever each is kept.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">file_dep</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">"news_headlines:articles"</span><span class="p">)</span>
+<span class="n">targets</span>  <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p><strong>Ask for a path to another pipeline’s many-file dataset</strong>, and get told the fix. <em>Decided
+2026-10-31 (choice A):</em></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"news_headlines:articles"</span><span class="p">)</span>
+<span class="c1"># ChartBook: 'news_headlines:articles' is a dataset of 14 files kept in 3 places; there is no one</span>
+<span class="c1"># folder. Read it with data.load("news_headlines:articles"), or hand</span>
+<span class="c1"># data.files("news_headlines:articles") to your own reader.</span>
+</pre></div>
+</div>
+<p>The rule is by declaration: another pipeline’s dataset declared as a folder or a glob always
+raises here, whether or not its files happen to sit together today. So a call that works never
+starts failing because the upstream took another snapshot. The alternative, returning a list, was
+turned down because Polars reads a list of files without parsing Hive partitions unless told to,
+so the <code class="docutils literal notranslate"><span class="pre">year</span></code> column would vanish silently; <code class="docutils literal notranslate"><span class="pre">data.load</span></code> passes that flag.</p>
+<p><strong>Throwaway files.</strong> <code class="docutils literal notranslate"><span class="pre">data.scratch()</span></code> is a folder inside the project for intermediates that are
+not assets, made on first use, ignored by git. <em>Proposed:</em> <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">scratch</span> <span class="pre">=</span> <span class="pre">&quot;./_data/_scratch&quot;</span></code>
+in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> names where it is; the default is today’s place.</p>
+<p><strong>Look in the store.</strong> A person browsing <code class="docutils literal notranslate"><span class="pre">pipelines/&lt;pipeline&gt;/</span></code> finds a <code class="docutils literal notranslate"><span class="pre">README.txt</span></code> that says
+what a shared folder is and that <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> is how to remove snapshots.
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">ls</span> <span class="pre">&lt;pipeline&gt;</span></code> lists each snapshot, when it was made, its commit, its size, and
+whether it is standalone or shared.</p>
+<p><strong>Send one version to someone.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span> <span class="pre">&lt;pipeline&gt;</span> <span class="pre">--latest</span> <span class="pre">--to</span> <span class="pre">&lt;folder&gt;</span></code> already
+writes one complete snapshot, readable without ChartBook. This is the one honest use of gathering
+a version’s files into one place: an output the user asked for, in a place they named.</p>
+<p><strong>Be reminded about gc.</strong> After <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">build</span></code>, one line when
+there is something to clear:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>The store holds 6 snapshots older than 7 days that `chartbook store gc` would clear (2.1 GB).
+</pre></div>
+</div>
+<p>Nothing is removed unless asked. <code class="docutils literal notranslate"><span class="pre">--gc</span></code> on <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span></code> runs it then; a flag silences the line.
+<em>Decided 2026-10-31:</em> the line is on by default.</p>
+</section>
+<section id="the-design">
+<h2>The design<a class="headerlink" href="#the-design" title="Link to this heading">#</a></h2>
+<section id="the-store-hands-out-files-not-folders">
+<h3>1. The store hands out files, not folders<a class="headerlink" href="#the-store-hands-out-files-not-folders" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">Store.get(content_hash,</span> <span class="pre">pipeline,</span> <span class="pre">name)</span> <span class="pre">-&gt;</span> <span class="pre">Path</span></code> goes. In its place:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Store</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">content_hash</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">StoredFile</span><span class="p">]</span>
+<span class="c1"># StoredFile: relative (its path inside the asset, POSIX), location (Path), size, content_hash</span>
+</pre></div>
+</div>
+<p>Every caller takes the list. <code class="docutils literal notranslate"><span class="pre">resolve.py</span></code> (the reads behind <code class="docutils literal notranslate"><span class="pre">data.path</span></code>, <code class="docutils literal notranslate"><span class="pre">data.load</span></code>, <code class="docutils literal notranslate"><span class="pre">data.sql</span></code>,
+<code class="docutils literal notranslate"><span class="pre">assets.files</span></code>) hands the list to the reader. <code class="docutils literal notranslate"><span class="pre">snapshot.materialize</span></code> copies file by file into the
+destination it was given, which <code class="docutils literal notranslate"><span class="pre">restore</span></code>, <code class="docutils literal notranslate"><span class="pre">run</span> <span class="pre">--upstream</span></code> and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">move</span></code> already want.
+<code class="docutils literal notranslate"><span class="pre">lineage</span></code> and <code class="docutils literal notranslate"><span class="pre">data.get_docs</span></code> read the one or two files they need from the list. <code class="docutils literal notranslate"><span class="pre">gather</span></code>,
+<code class="docutils literal notranslate"><span class="pre">VIEW_LINKS</span></code>, <code class="docutils literal notranslate"><span class="pre">VIEWS_DIR</span></code>, <code class="docutils literal notranslate"><span class="pre">FolderStore.views</span></code> and the <code class="docutils literal notranslate"><span class="pre">views/</span></code> folder are deleted, not pruned. The
+S3 store, which reads through a local copy laid out as a folder store, returns paths in that copy.
+<code class="docutils literal notranslate"><span class="pre">chartbook.formats</span></code> and <code class="docutils literal notranslate"><span class="pre">assets.index</span></code> already accept lists. Hive keys stay in each file’s path
+inside the store, so <code class="docutils literal notranslate"><span class="pre">hive_partitioning=True</span></code> on the list reads them as before.</p>
+<p>The checks in today’s <code class="docutils literal notranslate"><span class="pre">get</span></code> (a link that leads out of the store is refused; a file not yet synced
+is reported) move to <code class="docutils literal notranslate"><span class="pre">files</span></code> unchanged.</p>
+</section>
+<section id="the-catalog-reads-no-data">
+<h3>2. The catalog reads no data<a class="headerlink" href="#the-catalog-reads-no-data" title="Link to this heading">#</a></h3>
+<p>A version page needs a dataframe’s columns, row count, date range, a glimpse of its first rows,
+and the last valid date per column. The first three are already in the snapshot’s <code class="docutils literal notranslate"><span class="pre">index.json</span></code>.
+The glimpse and the last dates are computed by the pipeline’s own <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code>, from the
+files, when the index is made; they are added to the dataframe’s index record then, so the
+snapshot’s <code class="docutils literal notranslate"><span class="pre">index.json</span></code> carries them. (A table or query in a source already renders from the
+stored parquet copy, not the database.)</p>
+<p><code class="docutils literal notranslate"><span class="pre">versions.render</span></code> then lays out only what the site is made from: the documents asset (README,
+<code class="docutils literal notranslate"><span class="pre">docs_src/</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>), charts, notebooks, notes and the stored <code class="docutils literal notranslate"><span class="pre">index.json</span></code>. Dataframe
+and file assets are not laid out. The writer, rendering a version from a store, takes the glimpse
+and the dates from the record and opens no data file. A pipeline’s own <code class="docutils literal notranslate"><span class="pre">docs</span> <span class="pre">build</span></code> in its working
+folder reads its files as it does today.</p>
+<p>This also makes the version build cheap enough that keeping the pipeline’s built site in the
+snapshot, which the pre-plan asked about, is not needed now.</p>
+</section>
+<section id="the-read-calls">
+<h3>3. The read calls<a class="headerlink" href="#the-read-calls" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Call</p></th>
+<th class="head"><p>Gives</p></th>
+<th class="head"><p>Your own dataset</p></th>
+<th class="head"><p>Another pipeline’s dataset</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data.path(ref)</span></code></p></td>
+<td><p>one <code class="docutils literal notranslate"><span class="pre">Path</span></code></p></td>
+<td><p>the declared path, file or folder; parent folder made</p></td>
+<td><p>the one file; a folder or glob raises, naming <code class="docutils literal notranslate"><span class="pre">data.load</span></code> and <code class="docutils literal notranslate"><span class="pre">data.files</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data.files(ref)</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">list[Path]</span></code></p></td>
+<td><p>the files at the declared path</p></td>
+<td><p>every file, wherever kept</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data.load(ref)</span></code></p></td>
+<td><p>a frame</p></td>
+<td><p>read from the working folder</p></td>
+<td><p>read from the store, no copy</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data.sql(query)</span></code></p></td>
+<td><p>a frame</p></td>
+<td><p>the same, through DuckDB</p></td>
+<td><p>the same</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data.scratch()</span></code></p></td>
+<td><p>a folder</p></td>
+<td><p>inside the project</p></td>
+<td><p>not applicable</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">data.files</span></code> is new: the dataframe-only front door to <code class="docutils literal notranslate"><span class="pre">assets.files</span></code>, as <code class="docutils literal notranslate"><span class="pre">data.path</span></code> is to
+<code class="docutils literal notranslate"><span class="pre">assets.path</span></code>. The reference string <code class="docutils literal notranslate"><span class="pre">&quot;pipeline:name&quot;</span></code> stays, and so does
+<code class="docutils literal notranslate"><span class="pre">data.load(pipeline=...,</span> <span class="pre">dataframe=...)</span></code>, which already exists for those who want the explicit
+spelling. The dot was weighed and turned down in <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>.</p>
+</section>
+<section id="writing">
+<h3>4. Writing<a class="headerlink" href="#writing" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">data.path</span></code> of your own asset makes the parent folder of a file, or the folder itself for a
+folder dataset. It never makes anything for another pipeline’s asset, and never anything else.
+(<code class="docutils literal notranslate"><span class="pre">data.scratch</span></code> already behaves this way.)</p></li>
+<li><p>The declaration decides the format, as it does for reading: the <code class="docutils literal notranslate"><span class="pre">format</span></code> field, else the
+extension of the declared path. The guide shows the writer that matches.</p></li>
+<li><p>A dataset of many files is declared as a folder. A glob stays allowed for an odd layout that
+needs one, but a glob is not a place to write, and the guide does not teach it.</p></li>
+</ul>
+</section>
+<section id="standalone-and-shared-in-words-a-person-reads">
+<h3>5. Standalone and shared, in words a person reads<a class="headerlink" href="#standalone-and-shared-in-words-a-person-reads" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> writes <code class="docutils literal notranslate"><span class="pre">pipelines/&lt;pipeline&gt;/README.txt</span></code> if it is not there: snapshots share
+files, which ones, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> as the way to remove. Nothing already in the store is
+rewritten.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">ls</span> <span class="pre">[PIPELINE]</span></code> lists snapshots with their size and standalone/shared.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">info</span></code> says how many snapshots <code class="docutils literal notranslate"><span class="pre">gc</span></code> would clear, and the size.</p></li>
+</ul>
+</section>
+<section id="the-leftover-views-folder">
+<h3>6. The leftover <code class="docutils literal notranslate"><span class="pre">views/</span></code> folder<a class="headerlink" href="#the-leftover-views-folder" title="Link to this heading">#</a></h3>
+<p>The cache is defined as disposable (“everything in it can be removed: it is read again from the
+store”). The first command on this version that opens the cache removes a leftover <code class="docutils literal notranslate"><span class="pre">views/</span></code> and
+says so in one line. The changelog’s “Read this first” says the same.</p>
+</section>
+</section>
+<section id="deliberately-not-now">
+<h2>Deliberately not now<a class="headerlink" href="#deliberately-not-now" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span> <span class="pre">--standalone</span></code></strong>, an opt-in for a version to keep whole. Small; the
+maintainer likes it; after this plan.</p></li>
+<li><p><strong>Consolidating</strong>: a standalone snapshot of the version to keep, then <code class="docutils literal notranslate"><span class="pre">gc</span></code> of the older ones, as
+one command. Nothing in a synced store is ever rewritten, so this is the only safe shape. Later.</p></li>
+<li><p><strong>A location object</strong> (<code class="docutils literal notranslate"><span class="pre">data.locate(ref)</span></code> with <code class="docutils literal notranslate"><span class="pre">.files</span></code>, <code class="docutils literal notranslate"><span class="pre">.path</span></code>, <code class="docutils literal notranslate"><span class="pre">.kind</span></code>). The honest type, but
+one more thing to learn for what <code class="docutils literal notranslate"><span class="pre">data.load</span></code> does. Turned down 2026-10-31.</p></li>
+<li><p><strong>The site’s weight.</strong> Each version’s site is kept three times (<code class="docutils literal notranslate"><span class="pre">~/.chartbook/docs/versions</span></code>,
+<code class="docutils literal notranslate"><span class="pre">~/.chartbook/cache/versions</span></code>, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/_docs</span></code>), each Plotly chart twice per version, a logo
+per version. Real, separate, and smaller. After the cache is gone.</p></li>
+<li><p><strong>Warehouses that keep the data.</strong> Tables pinned in place by a version or timestamp where the
+engine has time travel. Roadmap, as before (<a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a>).</p></li>
+<li><p><strong>A loading DSL.</strong> References never select columns or rows.</p></li>
+</ul>
+</section>
+<section id="the-documentation">
+<h2>The documentation<a class="headerlink" href="#the-documentation" title="Link to this heading">#</a></h2>
+<p>The guide is rewritten around what a person is trying to do. Each page opens with a complete
+worked example a reader can run in a template project, then the two or three next most common
+scenarios, then nothing. A page is under 800 words of prose plus its code. What a page does not
+need to teach goes to the reference, which is generated and checked against the code.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Page</p></th>
+<th class="head"><p>Replaces</p></th>
+<th class="head"><p>Teaches, in order</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Getting started</p></td>
+<td><p>the same</p></td>
+<td><p>install, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, open the site</p></td>
+</tr>
+<tr class="row-odd"><td><p>Reading and writing data</p></td>
+<td><p>new, the heart of this plan</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">data.path</span></code> to write, <code class="docutils literal notranslate"><span class="pre">data.load</span></code> and <code class="docutils literal notranslate"><span class="pre">data.sql</span></code> to read, your own and others’, a folder dataset, <code class="docutils literal notranslate"><span class="pre">data.files</span></code> in <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code>, scratch</p></td>
+</tr>
+<tr class="row-even"><td><p>Depending on pipelines</p></td>
+<td><p>the same, cut from 2,200 words</p></td>
+<td><p>declare, pin, read, update; what a snapshot is; standalone and shared; <code class="docutils literal notranslate"><span class="pre">gc</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Catalogs and stores</p></td>
+<td><p>catalogs-and-data</p></td>
+<td><p>a Drive folder as a store, several stores, <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span></code>, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">export</span></code>, <code class="docutils literal notranslate"><span class="pre">gc</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Documenting a pipeline</p></td>
+<td><p>the same, cut from 2,600 words</p></td>
+<td><p>the TOML stanza, <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>, the page it makes</p></td>
+</tr>
+<tr class="row-odd"><td><p>Keeping costly outputs</p></td>
+<td><p>the same</p></td>
+<td><p>unchanged in substance</p></td>
+</tr>
+<tr class="row-even"><td><p>Reading a warehouse</p></td>
+<td><p>the same</p></td>
+<td><p>unchanged in substance</p></td>
+</tr>
+<tr class="row-odd"><td><p>Plotting, backends, gallery</p></td>
+<td><p>the same</p></td>
+<td><p>out of scope here</p></td>
+</tr>
+<tr class="row-even"><td><p>How the build works</p></td>
+<td><p>the same, cut from 3,000 words</p></td>
+<td><p>one page, for the reader who wants the machinery</p></td>
+</tr>
+<tr class="row-odd"><td><p>Vocabulary</p></td>
+<td><p>the same</p></td>
+<td><p>adds standalone and shared; drops the cache</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The reference pages change only where a command or field changed: <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">--gc</span></code>, the
+reminder’s flag, <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">scratch</span></code>, <code class="docutils literal notranslate"><span class="pre">data.files</span></code>, and the removal of <code class="docutils literal notranslate"><span class="pre">[cache]</span> <span class="pre">path</span></code> from
+anything a user is told to care about (it stays for hashes, locks and a bucket’s local copy).</p>
+</section>
+<section id="order-of-work">
+<h2>Order of work<a class="headerlink" href="#order-of-work" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>The store hands out files</strong> (design item 1), the <code class="docutils literal notranslate"><span class="pre">views/</span></code> cache deleted, <code class="docutils literal notranslate"><span class="pre">data.files</span></code> added,
+<code class="docutils literal notranslate"><span class="pre">data.path</span></code> choice A, the leftover <code class="docutils literal notranslate"><span class="pre">views/</span></code> removed once. Tests: a dataset spread over three
+snapshot folders reads correctly with <code class="docutils literal notranslate"><span class="pre">data.load</span></code>, <code class="docutils literal notranslate"><span class="pre">data.sql</span></code>, <code class="docutils literal notranslate"><span class="pre">data.files</span></code>; <code class="docutils literal notranslate"><span class="pre">data.path</span></code> raises
+with the message; nothing is written under the cache. Run against a scratch copy of the
+maintainer’s Drive store before merging.</p></li>
+<li><p><strong>The catalog reads no data</strong> (item 2): glimpse and last dates recorded in the index;
+<code class="docutils literal notranslate"><span class="pre">versions.render</span></code> lays out no data assets. Test: a catalog build over a store opens no dataframe
+file (count opens in the test).</p></li>
+<li><p><strong>Writing</strong> (item 4) and <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">scratch</span></code> (item 5 of the user section).</p></li>
+<li><p><strong>Standalone and shared</strong> (item 5): README, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">info</span></code> counts, the reminder line
+and its flag, <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span> <span class="pre">--gc</span></code>.</p></li>
+<li><p><strong>The documentation</strong>, as above, with the changelog entry under <code class="docutils literal notranslate"><span class="pre">##</span> <span class="pre">[Unreleased]</span></code> and the
+“Read this first” note.</p></li>
+</ol>
+<p>Each step is a pull request, reviewed by an adversarial sub-agent and merged by the agent, per
+the standing arrangement. The whole plan ships as 0.5.0 (<em>decided 2026-10-31</em>). Step 1 and step 2 are the ones that end the disk growth; if the version
+ships before the rest, they are enough.</p>
+</section>
+<section id="as-built">
+<h2>As built<a class="headerlink" href="#as-built" title="Link to this heading">#</a></h2>
+<p><em>Step 1, PR #150 (2026-10-31).</em> <code class="docutils literal notranslate"><span class="pre">Store.files(content_hash,</span> <span class="pre">pipeline,</span> <span class="pre">name)</span></code> returns a <code class="docutils literal notranslate"><span class="pre">KeptFiles</span></code>:
+the asset’s files sorted by their path inside it, each where the store keeps it, and <code class="docutils literal notranslate"><span class="pre">home</span></code>, the
+folder the asset is listed from in the snapshot that recorded it. <code class="docutils literal notranslate"><span class="pre">FileLocation</span></code> gains <code class="docutils literal notranslate"><span class="pre">inside</span></code>,
+that mapping, and the reader (<code class="docutils literal notranslate"><span class="pre">chartbook.formats</span></code>) derives Hive keys from each file’s path inside
+the asset, so a dataset spread over snapshots reads as one in a folder; a TSV a bucket’s cache keeps
+under its hash is told by its name inside the asset. <code class="docutils literal notranslate"><span class="pre">data.path</span></code>, <code class="docutils literal notranslate"><span class="pre">assets.path</span></code>, <code class="docutils literal notranslate"><span class="pre">models.path</span></code> and
+<code class="docutils literal notranslate"><span class="pre">data.get_data_path</span></code> raise <code class="docutils literal notranslate"><span class="pre">NoSinglePathError</span></code> for a folder or glob read from the store, by
+declaration (<code class="docutils literal notranslate"><span class="pre">resolve.require_single_path</span></code>). <code class="docutils literal notranslate"><span class="pre">data.files</span></code> is the dataframe front door to
+<code class="docutils literal notranslate"><span class="pre">assets.files</span></code>. <code class="docutils literal notranslate"><span class="pre">assets.gathered(ref)</span></code> was added: a folder model’s loader needs a directory, and
+the context manager lays the files out in a temporary one. The first command finds a leftover
+<code class="docutils literal notranslate"><span class="pre">views/</span></code> folder, removes it, says so, and leaves a marker so it is done once. The glimpses report
+reads a store pipeline’s dataframe as its files.</p>
+<p><em>Step 2, PR #151 (2026-10-31).</em> The index records <code class="docutils literal notranslate"><span class="pre">glimpse</span></code> and <code class="docutils literal notranslate"><span class="pre">last_dates</span></code> for a dataframe and
+<code class="docutils literal notranslate"><span class="pre">preview</span></code> for a files asset when it describes the files. <code class="docutils literal notranslate"><span class="pre">snapshot.materialize(...,</span> <span class="pre">data=False)</span></code>
+lays out documents, charts, notebooks, notes and the stored index, and <code class="docutils literal notranslate"><span class="pre">versions.render</span></code> uses it;
+<code class="docutils literal notranslate"><span class="pre">index.stored_index_records</span></code> gives a laid-out version’s build the facts the snapshot recorded of
+each data asset, and the build counts those files as not missing. A version builds even when its
+data is not in the store. A 0.4 snapshot’s version page says the first rows were not recorded.
+After review: a table or query in a source, which has a <code class="docutils literal notranslate"><span class="pre">definition_hash</span></code> and no <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>,
+is shown from the index too, and the index records its glimpse (<code class="docutils literal notranslate"><span class="pre">utils.source_glimpse</span></code>) and dates;
+the snapshot’s own index is required whole in the store before a version is laid out, and a
+half-synced one is tried again later rather than kept as a version with no data; every fact taken
+from a stored index is checked for shape (<code class="docutils literal notranslate"><span class="pre">index._well_formed</span></code>), since anyone can write a store;
+a glimpse is capped (<code class="docutils literal notranslate"><span class="pre">utils.GLIMPSE_MAX_CHARS</span></code>); a folder of parts gets <code class="docutils literal notranslate"><span class="pre">N/A</span></code> for its last dates
+rather than being read whole; a CSV’s text dates parse under polars 2.</p>
+<p><em>Step 3, PR #152 (2026-10-31, with step 4).</em> <code class="docutils literal notranslate"><span class="pre">data.path</span></code>, <code class="docutils literal notranslate"><span class="pre">assets.path</span></code> and <code class="docutils literal notranslate"><span class="pre">models.path</span></code> of a pipeline’s own asset
+make the folder the file is written into (<code class="docutils literal notranslate"><span class="pre">assets._make_room</span></code>): the file’s parent, or a glob’s
+root, inside the pipeline’s folder only; polars makes a folder dataset’s own folder when it writes
+with <code class="docutils literal notranslate"><span class="pre">partition_by</span></code>, and a path with no ending may be a file. <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">scratch</span></code> names the scratch
+folder (<code class="docutils literal notranslate"><span class="pre">data._scratch_declared</span></code> reads the manifest’s text alone; the manifest refuses a value
+that is not a plain path inside the pipeline). The reference says a dataset of many files is
+declared as a folder, not a glob.</p>
+<p><em>Step 4, PR #152 (2026-10-31, with step 3).</em> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">ls</span> <span class="pre">[PIPELINE]</span></code> lists snapshots as standalone or
+shared with the size each folder holds; the first snapshot of a pipeline writes <code class="docutils literal notranslate"><span class="pre">README.txt</span></code> in the
+pipeline’s store folder (<code class="docutils literal notranslate"><span class="pre">store.write_readme</span></code>, never rewritten, removed by <code class="docutils literal notranslate"><span class="pre">gc</span></code> with the last
+snapshot); after
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">build</span></code> one line says what gc would clear
+(<code class="docutils literal notranslate"><span class="pre">cli._remind_of_gc</span></code>, from the gc plan, read-only), <code class="docutils literal notranslate"><span class="pre">--no-gc-reminder</span></code> silences it, and
+<code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span> <span class="pre">--gc</span></code> runs gc as <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span> <span class="pre">--yes</span></code> would. <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">export</span> <span class="pre">--latest</span></code> already writes a
+standalone copy, so nothing was added for that.</p>
+<p><em>Step 5, PR #153 (2026-10-31).</em> The guide: <code class="docutils literal notranslate"><span class="pre">reading-and-writing-data.md</span></code> is new;
+<code class="docutils literal notranslate"><span class="pre">depending-on-pipelines.md</span></code>, <code class="docutils literal notranslate"><span class="pre">catalogs-and-data.md</span></code> (titled “Catalogs and Stores”, the file name
+kept for its links), <code class="docutils literal notranslate"><span class="pre">documenting-a-pipeline.md</span></code> and <code class="docutils literal notranslate"><span class="pre">how-the-build-works.md</span></code> are cut to the common
+path, each opening with a runnable example; <code class="docutils literal notranslate"><span class="pre">getting-started.md</span></code> writes with <code class="docutils literal notranslate"><span class="pre">data.path</span></code>; the
+vocabulary’s store and object rows say files are kept once and read where they are. The reference
+pages were changed only where commands changed, in steps 1 to 4.</p>
+</section>
+<section id="decisions-dated">
+<h2>Decisions, dated<a class="headerlink" href="#decisions-dated" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Date</p></th>
+<th class="head"><p>Decision</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>2026-10-31</p></td>
+<td><p>Snapshots keep sharing files (each file once); <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> is the only remover; ChartBook says so in a README and in <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">ls</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>2026-10-31</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">views/</span></code> cache is deleted, not pruned. Readers take lists of files.</p></td>
+</tr>
+<tr class="row-even"><td><p>2026-10-31</p></td>
+<td><p>The catalog reads no data: glimpse and last dates are recorded at snapshot time.</p></td>
+</tr>
+<tr class="row-odd"><td><p>2026-10-31</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">data.path</span></code> returns one path or raises (choice A); <code class="docutils literal notranslate"><span class="pre">data.files</span></code> is the list; <code class="docutils literal notranslate"><span class="pre">data.load</span></code> and <code class="docutils literal notranslate"><span class="pre">data.sql</span></code> read anything. No location object.</p></td>
+</tr>
+<tr class="row-even"><td><p>2026-10-31</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">data.path</span></code> of your own asset makes its parent folder. Folder datasets are declared as folders, not globs.</p></td>
+</tr>
+<tr class="row-odd"><td><p>2026-10-31</p></td>
+<td><p>The reference string <code class="docutils literal notranslate"><span class="pre">&quot;pipeline:name&quot;</span></code> stays, alongside the keyword form <code class="docutils literal notranslate"><span class="pre">data.load</span></code> already has.</p></td>
+</tr>
+<tr class="row-even"><td><p>2026-10-31</p></td>
+<td><p>A gc reminder prints by default after <code class="docutils literal notranslate"><span class="pre">snapshot</span></code> and <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span></code>, with a flag to silence it; nothing is removed unless asked.</p></td>
+</tr>
+<tr class="row-odd"><td><p>2026-10-31</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">snapshot</span> <span class="pre">--standalone</span></code> and consolidation wait. The site’s weight is a separate, later fix.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="for-whoever-implements-this">
+<h2>For whoever implements this<a class="headerlink" href="#for-whoever-implements-this" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>The maintainer’s real catalog is <code class="docutils literal notranslate"><span class="pre">~/.chartbook/catalog.toml</span></code> and the only real store is a Google
+Drive folder. Never run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">…</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">…</span></code> or
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">…</span></code> against the real home. Any call outside pytest sets <code class="docutils literal notranslate"><span class="pre">HOME</span></code>,
+<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_STORE</span></code>, <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_CACHE</span></code>, <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_GIT_CACHE</span></code> and <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_SYSTEM_SETTINGS</span></code> to a
+scratch folder.</p></li>
+<li><p>Never stash <code class="docutils literal notranslate"><span class="pre">tests/conftest.py</span></code>. Never run the examples during tests.</p></li>
+<li><p>Tests: <code class="docutils literal notranslate"><span class="pre">.venv/bin/python</span> <span class="pre">-m</span> <span class="pre">pytest</span> <span class="pre">tests/...</span> <span class="pre">-q</span> <span class="pre">-p</span> <span class="pre">no:cacheprovider</span></code>; the full suite with
+<code class="docutils literal notranslate"><span class="pre">.hatch/hatch-test.py3.13/bin/python</span> <span class="pre">-m</span> <span class="pre">pytest</span> <span class="pre">tests</span> <span class="pre">-q</span> <span class="pre">-n</span> <span class="pre">auto</span></code> (about five minutes).</p></li>
+<li><p>Text I/O names its encoding and newline (Windows CI).</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="plan-0.4.0.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: the plan for 0.4.0</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem-in-plain-terms">The problem, in plain terms</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-snapshot-is">What a snapshot is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-user-does">What the user does</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-design">The design</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-hands-out-files-not-folders">1. The store hands out files, not folders</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-catalog-reads-no-data">2. The catalog reads no data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-read-calls">3. The read calls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#writing">4. Writing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#standalone-and-shared-in-words-a-person-reads">5. Standalone and shared, in words a person reads</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-leftover-views-folder">6. The leftover <code class="docutils literal notranslate"><span class="pre">views/</span></code> folder</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#deliberately-not-now">Deliberately not now</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-documentation">The documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#order-of-work">Order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built">As built</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decisions-dated">Decisions, dated</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-whoever-implements-this">For whoever implements this</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

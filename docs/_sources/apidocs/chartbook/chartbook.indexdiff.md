@@ -67,6 +67,10 @@
   - ```{autodoc2-docstring} chartbook.indexdiff.RENDERED_KINDS
     :summary:
     ```
+* - {py:obj}`SHOWN_FIELDS <chartbook.indexdiff.SHOWN_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.indexdiff.SHOWN_FIELDS
+    :summary:
+    ```
 ````
 
 ### API
@@ -226,6 +230,16 @@
    ('Chart', 'Notebook')
 
 ```{autodoc2-docstring} chartbook.indexdiff.RENDERED_KINDS
+```
+
+````
+
+````{py:data} SHOWN_FIELDS
+:canonical: chartbook.indexdiff.SHOWN_FIELDS
+:value: >
+   ('glimpse', 'last_dates', 'preview')
+
+```{autodoc2-docstring} chartbook.indexdiff.SHOWN_FIELDS
 ```
 
 ````

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -16,73 +15,83 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=f4c13ce8" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=f7ee7eb5"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.cli';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="chartbook.claude_skill" href="chartbook.claude_skill.html" />
     <link rel="prev" title="chartbook.plotting.backends" href="chartbook.plotting.backends.html" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="en"/>
-  </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+<meta property="og:type" content="website">
+<meta property="og:title" content="chartbook.cli · ChartBook">
+<meta property="og:description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+<meta property="og:image" content="https://backofficedev.github.io/chartbook/_static/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Data pipelines with provenance: each builds on another&#39;s exact, versioned output, traced to its sources and verified by hash, in one catalog for people and agents.">
+  </head>
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -90,7 +99,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -98,17 +106,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -121,15 +129,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -142,8 +153,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -154,7 +164,7 @@ document.write(`
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -168,7 +178,8 @@ document.write(`
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -181,15 +192,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,8 +216,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,22 +242,18 @@ document.write(`
       
     
     
-    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo-light.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo-dark.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -255,20 +264,29 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get started</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/explore-a-catalog.html">Explore a Catalog</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">How-to guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/starting-a-project.html">Start a Project From the Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-and-writing-data.html">Reading and Writing Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Stores</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/agents.html">Let Your Agent Use the Catalog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current nav bd-sidenav">
@@ -290,7 +308,7 @@ document.write(`
 <li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
@@ -319,6 +337,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.replacing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.replacing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
@@ -342,24 +361,10 @@ document.write(`
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -368,9 +373,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -467,24 +477,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -507,11 +516,11 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.STORE_ONLY"><code class="docutils literal notranslate"><span class="pre">STORE_ONLY</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.add_command"><code class="docutils literal notranslate"><span class="pre">add_command()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.catalog"><code class="docutils literal notranslate"><span class="pre">catalog()</span></code></a></li>
@@ -531,6 +540,7 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.docs"><code class="docutils literal notranslate"><span class="pre">docs()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.docs_generate"><code class="docutils literal notranslate"><span class="pre">docs_generate()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.docs_open"><code class="docutils literal notranslate"><span class="pre">docs_open()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.get_docs_command"><code class="docutils literal notranslate"><span class="pre">get_docs_command()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.index_diff"><code class="docutils literal notranslate"><span class="pre">index_diff()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.index_group"><code class="docutils literal notranslate"><span class="pre">index_group()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.init"><code class="docutils literal notranslate"><span class="pre">init()</span></code></a></li>
@@ -559,6 +569,7 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_gc"><code class="docutils literal notranslate"><span class="pre">store_gc()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_import"><code class="docutils literal notranslate"><span class="pre">store_import()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_info"><code class="docutils literal notranslate"><span class="pre">store_info()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_ls"><code class="docutils literal notranslate"><span class="pre">store_ls()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_migrate"><code class="docutils literal notranslate"><span class="pre">store_migrate()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_move"><code class="docutils literal notranslate"><span class="pre">store_move()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_remove"><code class="docutils literal notranslate"><span class="pre">store_remove()</span></code></a></li>
@@ -625,7 +636,7 @@ document.write(`
 <td><p>Data operations (get paths, docs).</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.data_get_docs" title="chartbook.cli.data_get_docs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_get_docs</span></code></a></p></td>
-<td><p>Print documentation content for a dataframe.</p></td>
+<td><p>Print a dataframe’s page: its facts, its write-up and its columns.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.data_get_docs_path" title="chartbook.cli.data_get_docs_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_get_docs_path</span></code></a></p></td>
 <td><p>Get the path to a dataframe’s documentation source.</p></td>
@@ -642,89 +653,95 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.docs_open" title="chartbook.cli.docs_open"><code class="xref py py-obj docutils literal notranslate"><span class="pre">docs_open</span></code></a></p></td>
 <td><p>Open the generated site in your default browser.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.index_diff" title="chartbook.cli.index_diff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">index_diff</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.get_docs_command" title="chartbook.cli.get_docs_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_docs_command</span></code></a></p></td>
+<td><p>Print the documentation of a cataloged pipeline’s asset, or with no asset its README.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.index_diff" title="chartbook.cli.index_diff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">index_diff</span></code></a></p></td>
 <td><p>Say what changed between two builds, from their index.json files.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.index_group" title="chartbook.cli.index_group"><code class="xref py py-obj docutils literal notranslate"><span class="pre">index_group</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.index_group" title="chartbook.cli.index_group"><code class="xref py py-obj docutils literal notranslate"><span class="pre">index_group</span></code></a></p></td>
 <td><p>Read the index.json a build writes beside the site.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.init" title="chartbook.cli.init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.init" title="chartbook.cli.init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init</span></code></a></p></td>
 <td><p>Initialize a new chartbook project from the cookiecutter template.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.install" title="chartbook.cli.install"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.install" title="chartbook.cli.install"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install</span></code></a></p></td>
 <td><p>Install bundled resources: user-level by default, or into the current directory with –project.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.install_claude_skill" title="chartbook.cli.install_claude_skill"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install_claude_skill</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.install_claude_skill" title="chartbook.cli.install_claude_skill"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install_claude_skill</span></code></a></p></td>
 <td><p>Install the Claude Code skill that comes with this ChartBook.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.lineage_command" title="chartbook.cli.lineage_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lineage_command</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.lineage_command" title="chartbook.cli.lineage_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lineage_command</span></code></a></p></td>
 <td><p>Show where this pipeline’s data comes from: every snapshot upstream, and any gap.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.link_command" title="chartbook.cli.link_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">link_command</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.link_command" title="chartbook.cli.link_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">link_command</span></code></a></p></td>
 <td><p>Read a dependency’s working files until chartbook.links.toml is removed.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.ls" title="chartbook.cli.ls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.ls" title="chartbook.cli.ls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls</span></code></a></p></td>
 <td><p>List catalog objects (pipelines, dataframes, charts).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.ls_charts" title="chartbook.cli.ls_charts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_charts</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.ls_charts" title="chartbook.cli.ls_charts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_charts</span></code></a></p></td>
 <td><p>List all charts across pipelines.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.ls_dataframes" title="chartbook.cli.ls_dataframes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_dataframes</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.ls_dataframes" title="chartbook.cli.ls_dataframes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_dataframes</span></code></a></p></td>
 <td><p>List all dataframes across pipelines.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.ls_pipelines" title="chartbook.cli.ls_pipelines"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_pipelines</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.ls_pipelines" title="chartbook.cli.ls_pipelines"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_pipelines</span></code></a></p></td>
 <td><p>List all pipelines.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.ls_stores" title="chartbook.cli.ls_stores"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_stores</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.ls_stores" title="chartbook.cli.ls_stores"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_stores</span></code></a></p></td>
 <td><p>List stores in catalog order.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.ls_versions" title="chartbook.cli.ls_versions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_versions</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.ls_versions" title="chartbook.cli.ls_versions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls_versions</span></code></a></p></td>
 <td><p>List every snapshot, newest first, with its store.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.main" title="chartbook.cli.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.main" title="chartbook.cli.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a></p></td>
 <td><p>chartbook CLI tool for generating documentation websites.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.path_command" title="chartbook.cli.path_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_command</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.path_command" title="chartbook.cli.path_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_command</span></code></a></p></td>
 <td><p>Print the path of an asset: this pipeline’s, or a pinned copy of another’s.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.pin" title="chartbook.cli.pin"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pin</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.pin" title="chartbook.cli.pin"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pin</span></code></a></p></td>
 <td><p>Freeze what this pipeline depends on.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.publish" title="chartbook.cli.publish"><code class="xref py py-obj docutils literal notranslate"><span class="pre">publish</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.publish" title="chartbook.cli.publish"><code class="xref py py-obj docutils literal notranslate"><span class="pre">publish</span></code></a></p></td>
 <td><p>Stage a pipeline’s publishable files into a directory.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.push" title="chartbook.cli.push"><code class="xref py py-obj docutils literal notranslate"><span class="pre">push</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.push" title="chartbook.cli.push"><code class="xref py py-obj docutils literal notranslate"><span class="pre">push</span></code></a></p></td>
 <td><p>Reserved: send a pipeline to a registry. Not yet supported.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.resolve_project_dir" title="chartbook.cli.resolve_project_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_project_dir</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.resolve_project_dir" title="chartbook.cli.resolve_project_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_project_dir</span></code></a></p></td>
 <td><p>Resolve the project directory to an absolute path.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.restore_command" title="chartbook.cli.restore_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore_command</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.restore_command" title="chartbook.cli.restore_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore_command</span></code></a></p></td>
 <td><p>Put this pipeline’s own assets back on disk, from its snapshots in the store.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.run_command" title="chartbook.cli.run_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_command</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.run_command" title="chartbook.cli.run_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_command</span></code></a></p></td>
 <td><p>Run a script in this pipeline: <code class="docutils literal notranslate"><span class="pre">build</span></code>, unless another is named.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.snapshot" title="chartbook.cli.snapshot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">snapshot</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.snapshot" title="chartbook.cli.snapshot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">snapshot</span></code></a></p></td>
 <td><p>Declare this pipeline’s build ready for the pipelines that depend on it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store" title="chartbook.cli.store"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store" title="chartbook.cli.store"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store</span></code></a></p></td>
 <td><p>Look after the named stores that keep pinned files and snapshots.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store_add" title="chartbook.cli.store_add"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_add</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store_add" title="chartbook.cli.store_add"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_add</span></code></a></p></td>
 <td><p>Add a store to the catalog; keep comments and list what it holds.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store_export" title="chartbook.cli.store_export"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_export</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store_export" title="chartbook.cli.store_export"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_export</span></code></a></p></td>
 <td><p>Write one pipeline’s snapshots into a folder, to send to someone.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store_gc" title="chartbook.cli.store_gc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_gc</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store_gc" title="chartbook.cli.store_gc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_gc</span></code></a></p></td>
 <td><p>Remove from the store what nothing needs any more.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store_import" title="chartbook.cli.store_import"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_import</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store_import" title="chartbook.cli.store_import"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_import</span></code></a></p></td>
 <td><p>Copy the snapshots a folder holds into this machine’s store.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store_info" title="chartbook.cli.store_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_info</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store_info" title="chartbook.cli.store_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_info</span></code></a></p></td>
 <td><p>List configured stores, their reachability and snapshot counts.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.cli.store_ls" title="chartbook.cli.store_ls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_ls</span></code></a></p></td>
+<td><p>List the snapshots in the store, each standalone or shared.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.cli.store_migrate" title="chartbook.cli.store_migrate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_migrate</span></code></a></p></td>
 <td><p>Move a store made by ChartBook 0.2 to the layout of 0.3.</p></td>
@@ -776,9 +793,13 @@ chartbook.toml, leaving the rest of the file as it is, then runs
 <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>. The pipeline is read from its snapshots in the store
 alone: no folder of it here, and no clone. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves the
 pin to a newer snapshot.</p>
+<p>A bare name (<code class="docutils literal notranslate"><span class="pre">rates</span></code>) is the one pipeline in the stores whose ID ends in
+it, and that ID is written. If several do, or none, nothing is written
+and the IDs the stores hold are listed.</p>
 <p>
 Examples:
 chartbook add acme/rates
+chartbook add rates
 chartbook add acme/rates –as rates
 chartbook add acme/rates –commit 3f2a9c1</p>
 </dd></dl>
@@ -805,7 +826,7 @@ Re-enable with <code class="docutils literal notranslate"><span class="pre">char
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.catalog_generate">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">catalog_generate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">force_write</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">watch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">watch_interval</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.catalog_generate" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">catalog_generate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_write</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">watch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">watch_interval</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_gc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_gc_reminder</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.catalog_generate" title="Link to this definition">#</a></dt>
 <dd><p>Render the global catalog’s site, into docs/ beside its catalog.toml.</p>
 <p>The catalog is the one ~/.chartbook/settings.toml names, or else
 ~/.chartbook/catalog.toml. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">open</span></code> opens the site.</p>
@@ -815,6 +836,9 @@ changed since: for most of a large catalog, most of the time, nothing.
 Nothing runs in between; it is a record on disk that the next build
 reads. –clean discards it and rebuilds everything. –watch keeps
 rebuilding as files change.</p>
+<p>After the build, one line says what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> would clear,
+if anything; –gc runs it then, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span> <span class="pre">--yes</span></code> would.
+Nothing is removed from the store unless you ask.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -903,8 +927,10 @@ chartbook create-data-glimpses –size-threshold 100</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.data_get_docs">
 <span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">data_get_docs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.data_get_docs" title="Link to this definition">#</a></dt>
-<dd><p>Print documentation content for a dataframe.</p>
-<p>Examples:
+<dd><p>Print a dataframe’s page: its facts, its write-up and its columns.</p>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span></code> does this for any asset, and a pipeline’s README.</p>
+<p>
+Examples:
 chartbook data get-docs –pipeline yield_curve –dataframe repo_public</p>
 </dd></dl>
 
@@ -967,6 +993,28 @@ Examples:
 chartbook docs open
 chartbook docs open ./my-docs
 chartbook docs open –project-dir /path/to/project</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.cli.get_docs_command">
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">get_docs_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asset_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chart</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.get_docs_command" title="Link to this definition">#</a></dt>
+<dd><p>Print the documentation of a cataloged pipeline’s asset, or with no asset its README.</p>
+<p>What a person reads on the asset’s page in the catalog, for a script or
+an agent, in Markdown. A dataframe’s is its whole page: its name,
+description, sources and license, its rows and dates, its write-up, and
+a table of its columns and their types. A chart’s, model’s or files
+asset’s is its write-up (its docs or docs_path), and a note’s its text.
+Name the asset by its ID, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code> prints it, or with keywords.
+A bare name is a pipeline, so <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span> <span class="pre">yield_curve</span></code> is its
+README. A notebook has no write-up apart from itself. Read from the
+pipeline’s newest snapshot in the catalog’s stores.</p>
+<p>
+Examples:
+chartbook get-docs yield_curve
+chartbook get-docs yield_curve:chart/repo_rates
+chartbook get-docs –pipeline yield_curve –chart repo_rates
+chartbook get-docs –pipeline rate_forecast –model forecaster
+chartbook get-docs yield_curve:repo_public –path</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1066,44 +1114,49 @@ chartbook lineage –rehash –json</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.ls">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_json</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls" title="Link to this definition">#</a></dt>
 <dd><p>List catalog objects (pipelines, dataframes, charts).</p>
 <p>Without a subcommand, lists all objects in a tree format.
 Use subcommands to list specific object types.</p>
-<p>Examples:
+<p>With –json, a list of records, one per pipeline and per asset of every
+kind (models, files, notes and notebooks too): kind, id, name,
+description, and an asset’s pipeline. The id is what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">get-docs</span></code> and <code class="docutils literal notranslate"><span class="pre">data.load</span></code> take.</p>
+<p>
+Examples:
 chartbook ls
 chartbook ls pipelines
 chartbook ls dataframes
-chartbook ls charts</p>
+chartbook ls charts
+chartbook ls –json</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.ls_charts">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_charts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_charts" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_charts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_json</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_charts" title="Link to this definition">#</a></dt>
 <dd><p>List all charts across pipelines.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.ls_dataframes">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_dataframes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_dataframes" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_dataframes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_json</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_dataframes" title="Link to this definition">#</a></dt>
 <dd><p>List all dataframes across pipelines.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.ls_pipelines">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_pipelines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_pipelines" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_pipelines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_json</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_pipelines" title="Link to this definition">#</a></dt>
 <dd><p>List all pipelines.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.ls_stores">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_stores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_stores" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_stores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_json</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_stores" title="Link to this definition">#</a></dt>
 <dd><p>List stores in catalog order.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.ls_versions">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_versions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_versions" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">ls_versions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_json</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.ls_versions" title="Link to this definition">#</a></dt>
 <dd><p>List every snapshot, newest first, with its store.</p>
 </dd></dl>
 
@@ -1139,7 +1192,10 @@ fed_yield_curve:chart/curve_today</p>
 <p>The pipeline must be in [dependencies], and what is printed is the path
 of the copy that chartbook.lock pins, in the store: not the other
 pipeline’s own directory. Run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> first. That copy stays as
-it is until <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>.</p>
+it is until <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>. Another pipeline’s folder or glob of
+files has no one path, since the store keeps each file once and a
+snapshot’s files may sit in other snapshots’ folders: print them with
+–files.</p>
 <p>With –files, the asset’s files are printed instead, one per line: the
 file, a folder’s files, or a glob’s matches, as
 <code class="docutils literal notranslate"><span class="pre">chartbook.assets.files()</span></code> gives them.</p>
@@ -1248,7 +1304,7 @@ chartbook restore model/forecaster chart/curve</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.run_command">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">run_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_snapshot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frozen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remake</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upstream</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.run_command" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">run_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_snapshot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frozen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remake</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upstream</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_gc_reminder</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.run_command" title="Link to this definition">#</a></dt>
 <dd><p>Run a script in this pipeline: <code class="docutils literal notranslate"><span class="pre">build</span></code>, unless another is named.</p>
 <p>SCRIPT is a name from [scripts] in chartbook.toml.</p>
 <p>
@@ -1299,7 +1355,7 @@ that fails stops the run.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.snapshot">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deep</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.snapshot" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deep</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_gc_reminder</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.snapshot" title="Link to this definition">#</a></dt>
 <dd><p>Declare this pipeline’s build ready for the pipelines that depend on it.</p>
 <p>Every asset the pipeline declares and has built is copied into the
 store, labelled with the commit the pipeline is at. That is a snapshot,
@@ -1349,7 +1405,9 @@ into their store’s pipelines/ by hand.</p>
 <p>Every snapshot its owner made is written, or with –latest the newest
 alone (one complete snapshot, readable without ChartBook), or each
 –snapshot named. Only what a snapshot’s record names is written: its
-data, its documents and its index, never anything that runs.</p>
+data, its documents and its index, never anything that runs. With
+several stores in the catalog, the one that holds the pipeline is
+used; –store NAME chooses when more than one does.</p>
 <p>
 Examples:
 chartbook store export ftsfr/fed_yield_curve –to ~/Desktop/for-alice
@@ -1440,6 +1498,27 @@ Use –store NAME to inspect one named store.</p>
 Examples:
 chartbook store info
 CHARTBOOK_STORE=/shared/store chartbook store info</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.cli.store_ls">
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">store_ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.store_ls" title="Link to this definition">#</a></dt>
+<dd><p>List the snapshots in the store, each standalone or shared.</p>
+<p>One line per snapshot, newest last within its pipeline: when it was
+made, its commit, whether its folder is standalone (it holds every
+file of its version) or shared (it holds only what changed, and the
+rest of its files sit in other snapshots’ folders), and how much
+its own folder holds. The store keeps each file once, which is what
+keeps a large dataset from costing its size again on every snapshot.</p>
+<p>Because of that, a snapshot’s folder is not to be deleted by hand:
+another snapshot may keep files in it. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> removes
+snapshots safely. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span> <span class="pre">PIPELINE</span> <span class="pre">--latest</span> <span class="pre">--to</span> <span class="pre">FOLDER</span></code> writes one complete copy of the newest version wherever you
+say.</p>
+<p>
+Examples:
+chartbook store ls
+chartbook store ls acme/news_headlines
+chartbook store ls –store team</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1580,7 +1659,8 @@ chartbook update fed_yield_curve</p>
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1588,11 +1668,11 @@ chartbook update fed_yield_curve</p>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.STORE_ONLY"><code class="docutils literal notranslate"><span class="pre">STORE_ONLY</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.add_command"><code class="docutils literal notranslate"><span class="pre">add_command()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.catalog"><code class="docutils literal notranslate"><span class="pre">catalog()</span></code></a></li>
@@ -1612,6 +1692,7 @@ chartbook update fed_yield_curve</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.docs"><code class="docutils literal notranslate"><span class="pre">docs()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.docs_generate"><code class="docutils literal notranslate"><span class="pre">docs_generate()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.docs_open"><code class="docutils literal notranslate"><span class="pre">docs_open()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.get_docs_command"><code class="docutils literal notranslate"><span class="pre">get_docs_command()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.index_diff"><code class="docutils literal notranslate"><span class="pre">index_diff()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.index_group"><code class="docutils literal notranslate"><span class="pre">index_group()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.init"><code class="docutils literal notranslate"><span class="pre">init()</span></code></a></li>
@@ -1640,6 +1721,7 @@ chartbook update fed_yield_curve</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_gc"><code class="docutils literal notranslate"><span class="pre">store_gc()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_import"><code class="docutils literal notranslate"><span class="pre">store_import()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_info"><code class="docutils literal notranslate"><span class="pre">store_info()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_ls"><code class="docutils literal notranslate"><span class="pre">store_ls()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_migrate"><code class="docutils literal notranslate"><span class="pre">store_migrate()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_move"><code class="docutils literal notranslate"><span class="pre">store_move()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.cli.store_remove"><code class="docutils literal notranslate"><span class="pre">store_remove()</span></code></a></li>
@@ -1698,8 +1780,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

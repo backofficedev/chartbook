@@ -209,6 +209,14 @@
 
 ````
 
+````{py:method} files(content_hash, pipeline=None, name=None)
+:canonical: chartbook.multi_store.Stores.files
+
+```{autodoc2-docstring} chartbook.multi_store.Stores.files
+```
+
+````
+
 ````{py:method} files_of(content_hash)
 :canonical: chartbook.multi_store.Stores.files_of
 
@@ -229,14 +237,6 @@
 :canonical: chartbook.multi_store.Stores.for_writing
 
 ```{autodoc2-docstring} chartbook.multi_store.Stores.for_writing
-```
-
-````
-
-````{py:method} get(content_hash, pipeline=None, name=None)
-:canonical: chartbook.multi_store.Stores.get
-
-```{autodoc2-docstring} chartbook.multi_store.Stores.get
 ```
 
 ````

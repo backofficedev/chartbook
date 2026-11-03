@@ -316,6 +316,22 @@ Bases: {py:obj}`Exception`
 
 `````
 
+````{py:exception} NoSinglePathError(ref: str, kind: str, count: int, places: int)
+:canonical: chartbook.errors.NoSinglePathError
+
+Bases: {py:obj}`ValueError`
+
+```{autodoc2-docstring} chartbook.errors.NoSinglePathError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.NoSinglePathError.__init__
+```
+
+````
+
 ````{py:exception} ProjectRootNotFoundError(start_path: pathlib.Path, markers: tuple[str, ...], max_levels: int)
 :canonical: chartbook.errors.ProjectRootNotFoundError
 

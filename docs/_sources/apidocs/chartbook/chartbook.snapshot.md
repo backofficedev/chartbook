@@ -271,6 +271,10 @@
   - ```{autodoc2-docstring} chartbook.snapshot.A_LINK
     :summary:
     ```
+* - {py:obj}`DATA_KINDS <chartbook.snapshot.DATA_KINDS>`
+  - ```{autodoc2-docstring} chartbook.snapshot.DATA_KINDS
+    :summary:
+    ```
 * - {py:obj}`FUTURE_SLACK_SECONDS <chartbook.snapshot.FUTURE_SLACK_SECONDS>`
   - ```{autodoc2-docstring} chartbook.snapshot.FUTURE_SLACK_SECONDS
     :summary:
@@ -381,6 +385,16 @@
 ````
 
 `````
+
+````{py:data} DATA_KINDS
+:canonical: chartbook.snapshot.DATA_KINDS
+:value: >
+   'frozenset(...)'
+
+```{autodoc2-docstring} chartbook.snapshot.DATA_KINDS
+```
+
+````
 
 ````{py:data} FUTURE_SLACK_SECONDS
 :canonical: chartbook.snapshot.FUTURE_SLACK_SECONDS
@@ -530,6 +544,17 @@
    None
 
 ```{autodoc2-docstring} chartbook.snapshot.Materialized.folder
+```
+
+````
+
+````{py:attribute} from_index
+:canonical: chartbook.snapshot.Materialized.from_index
+:type: list[str]
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.snapshot.Materialized.from_index
 ```
 
 ````
@@ -1220,7 +1245,7 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 ```
 ````
 
-````{py:function} materialize(taken: chartbook.snapshot.Snapshot, into: typing.Union[str, pathlib.Path], store: typing.Optional[chartbook.store.Store] = None) -> chartbook.snapshot.Materialized
+````{py:function} materialize(taken: chartbook.snapshot.Snapshot, into: typing.Union[str, pathlib.Path], store: typing.Optional[chartbook.store.Store] = None, data: bool = True) -> chartbook.snapshot.Materialized
 :canonical: chartbook.snapshot.materialize
 
 ```{autodoc2-docstring} chartbook.snapshot.materialize

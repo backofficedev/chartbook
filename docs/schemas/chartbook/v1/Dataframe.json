@@ -324,6 +324,26 @@
     "snapshots": {
       "type": "array",
       "description": "Catalog hub versions, newest first, with presence and consecutive-index changes."
+    },
+    "glimpse": {
+      "type": "string",
+      "description": "The first rows as text, as the dataframe's page shows them, read when the index described the file. A version rendered from the store shows this without the data. Anyone who can write to a store can write it: shown as text, never read as markup."
+    },
+    "last_dates": {
+      "type": "object",
+      "description": "The least and greatest of each column's last non-null date, as text (`N/A` without a date column; `N/A (large file)` over the size threshold), read when the index described the file. Absent when they could not be read.",
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "string"
+        },
+        "max": {
+          "type": "string"
+        }
+      }
     }
   },
   "additionalProperties": true

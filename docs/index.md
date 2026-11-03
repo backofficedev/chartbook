@@ -1,0 +1,278 @@
+# ChartBook
+
+<div class="cb-hero">
+<p class="cb-eyebrow">Data pipelines with provenance</p>
+<p class="cb-hero-title">Know exactly where every number came from.</p>
+<p class="cb-hero-sub">ChartBook connects your team's data pipelines, in any language, so each one builds on
+another's exact, versioned output. Every chart traces back to its sources, every input is
+verified by hash, and everything lands in one catalog your team browses and your agents build
+on.</p>
+</div>
+
+```{code-block} console
+:class: cb-hero-install
+pip install chartbook
+```
+
+<div class="cb-hero-actions">
+<a class="sd-btn sd-btn-primary cb-hero-button" href="getting-started.html">Quickstart: five minutes</a>
+<a class="sd-btn sd-btn-outline-primary cb-hero-button" href="tutorials/explore-a-catalog.html">Explore a catalog</a>
+</div>
+
+```{image} _static/screenshots/quickstart-chart-light.png
+:alt: A chart's page in a ChartBook site: the chart, its write-up, and a Provenance table that names the dataframe it was made from and that dataframe's content hash
+:class: only-light cb-screenshot
+:width: 760px
+:align: center
+```
+
+```{image} _static/screenshots/quickstart-chart-dark.png
+:alt: A chart's page in a ChartBook site: the chart, its write-up, and a Provenance table that names the dataframe it was made from and that dataframe's content hash
+:class: only-dark cb-screenshot
+:width: 760px
+:align: center
+```
+
+<p class="cb-caption">Every chart gets a page: the chart, its write-up, and exactly what it was
+made from, with the hash of that data in this build. This one is the Quickstart's.</p>
+
+## What ChartBook does
+
+::::{grid} 1 2 2 2
+:gutter: 3
+
+:::{grid-item-card} {octicon}`package-dependencies;1.5em` Depend
+:link: guide/depending-on-pipelines
+:link-type: doc
+Build on another pipeline's exact output, the way you depend on a package.
+`chartbook add acme/rates` pins its newest snapshot in `chartbook.lock`, and what you read
+changes only when you run `chartbook update`.
+:::
+
+:::{grid-item-card} {octicon}`git-commit;1.5em` Trace
+:link: chartbook-lineage
+:link-type: ref
+Every dataframe, chart and model records what it was made from, by content hash.
+`chartbook lineage` walks the chain back to the first source and checks every hash on the way.
+:::
+
+:::{grid-item-card} {octicon}`history;1.5em` Rebuild
+:link: guide/keeping-costly-outputs
+:link-type: doc
+A snapshot keeps the exact bytes a pipeline made, labelled with its commit. Rebuild from the
+same inputs, and put back an output that took a day to compute with `chartbook restore`.
+:::
+
+:::{grid-item-card} {octicon}`search;1.5em` Discover
+:link: guide/catalogs-and-data
+:link-type: doc
+Many pipelines become one catalog: a searchable website for your team, and an index, an
+`llms.txt` and a command line your agents work from.
+:::
+
+::::
+
+## Ask the catalog from the command line
+
+What a person browses on the site, a script or an agent can ask for at the terminal: which
+datasets there are, what each one holds, and the data itself.
+
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: chartbook ls dataframes lists the catalog's three datasets; chartbook get-docs prints one dataset's page, with its sources, license, rows, dates, write-up and a table of its columns; chartbook path prints where its parquet file is; and in Python, data.load reads it and shows its last five rows">
+<source src="_static/tapes/catalog.webm" type="video/webm">
+<source src="_static/tapes/catalog.mp4" type="video/mp4">
+</video>
+```
+
+<p class="cb-caption"><code>chartbook ls</code> lists what the catalog holds, <code>chartbook get-docs</code>
+prints a dataset's page with its columns, <code>chartbook path</code> hands its file to R, Stata or
+a shell, and <code>data.load</code> reads it in Python. This catalog is the
+<a href="tutorials/explore-a-catalog.html">tutorial's</a>.</p>
+
+## For your team and for your agents
+
+The catalog is one set of facts with two ways in. A person browses the site; an agent asks the
+command line the same questions and gets the same answers.
+
+| | Your team, in the browser | Your agents, from the command line |
+|---|---|---|
+| **What is there?** | The catalog's home page and search | `chartbook ls --json`, or the site's `llms.txt` |
+| **What is it?** | The dataset's or chart's page | `chartbook get-docs yield_curve:repo_public` |
+| **Use it** | Copy the snippet on the page | `data.load("yield_curve:repo_public")`, `chartbook path`, `chartbook add yield_curve` |
+| **Can I trust it?** | The Provenance table and the Versions page | `chartbook lineage --json`, and `chartbook.lock` in git |
+
+`chartbook install claude-skill` teaches Claude Code all of this, and every site ChartBook builds
+ships an [llms.txt](https://llmstxt.org/) at its root.
+
+## In any language
+
+```{image} _static/diagrams/ecosystem-light.svg
+:alt: Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it
+:class: only-light
+:align: center
+```
+
+```{image} _static/diagrams/ecosystem-dark.svg
+:alt: Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it
+:class: only-dark
+:align: center
+```
+
+A pipeline's build is whatever command you name: a Python script, R, Stata,
+SQL, a Makefile. ChartBook runs it, records what it made, and lets the next pipeline read it,
+from Python with `data.load()` or from anything else with `chartbook path`.
+
+## A pipeline, in three files
+
+A pipeline is a folder: a manifest that says what it makes, the code that makes it, and a README.
+The {doc}`Quickstart <getting-started>` builds this one.
+
+::::{tab-set}
+
+:::{tab-item} chartbook.toml
+```toml
+[project]
+name = "My Pipeline"
+description = "A demo pipeline: two random walks and a chart of them"
+
+[dataframes.walks]
+name = "Random Walks"
+description = "Two simulated random walk series"
+sources = ["Simulated"]
+path = "./_data/walks.parquet"
+date_col = "date"
+docs = "365 daily observations of two cumulative-sum series."
+
+[charts.random_walks]
+name = "Two Random Walks"
+description = "Cumulative sums of daily standard-normal draws"
+dataframe = "walks"
+path = "./_output/random_walks.html"
+docs = "Both series are pure noise. Any pattern you see is your brain's doing."
+```
+:::
+
+:::{tab-item} src/build_chart.py
+```python
+import numpy as np
+import pandas as pd
+
+import chartbook
+from chartbook import data
+
+rng = np.random.default_rng(seed=42)
+df = pd.DataFrame({
+    "date": pd.date_range("2024-01-01", periods=365, freq="D"),
+    "walk_a": rng.standard_normal(365).cumsum() + 100,
+    "walk_b": rng.standard_normal(365).cumsum() + 100,
+})
+df.to_parquet(data.path("walks"))  # chartbook.toml says where "walks" goes
+
+chartbook.plotting.line(
+    df, x="date", y=["walk_a", "walk_b"], title="Two Random Walks",
+).save(chart_id="random_walks", output_dir="_output")
+```
+:::
+
+:::{tab-item} Terminal
+```console
+$ python src/build_chart.py      # writes _data/walks.parquet and the chart
+$ chartbook docs build           # writes the site, and index.json beside it
+$ chartbook docs open
+```
+:::
+
+::::
+
+Once it takes a snapshot (`chartbook snapshot`), any other pipeline can read that dataset by
+name, pinned to the exact bytes this one made:
+
+```python
+from chartbook import data
+
+walks = data.load("my_pipeline:walks")   # the pinned copy, never the other folder
+```
+
+## Where next
+
+::::{grid} 1 2 2 2
+:gutter: 3
+
+:::{grid-item-card} Quickstart
+:link: getting-started
+:link-type: doc
+Build a pipeline and its site in five minutes, from three files.
+:::
+
+:::{grid-item-card} Explore a catalog
+:link: tutorials/explore-a-catalog
+:link-type: doc
+Download a real catalog of public data, browse it, and point your agent at it.
+:::
+
+:::{grid-item-card} Depend on another pipeline
+:link: guide/depending-on-pipelines
+:link-type: doc
+Pin exactly what another pipeline built, and read it by name.
+:::
+
+:::{grid-item-card} Let your agent use the catalog
+:link: guide/agents
+:link-type: doc
+How an agent finds, reads and builds on your team's work.
+:::
+
+::::
+
+```{toctree}
+:hidden:
+:caption: Get started
+
+getting-started
+tutorials/explore-a-catalog
+```
+
+```{toctree}
+:hidden:
+:caption: How-to guides
+
+guide/starting-a-project
+guide/reading-and-writing-data
+guide/documenting-a-pipeline
+guide/depending-on-pipelines
+guide/catalogs-and-data
+guide/agents
+guide/keeping-costly-outputs
+guide/reading-a-warehouse
+guide/plotting
+guide/plotting-backends
+guide/gallery
+```
+
+```{toctree}
+:hidden:
+:caption: Concepts
+
+guide/vocabulary
+guide/how-the-build-works
+```
+
+```{toctree}
+:hidden:
+:caption: Reference
+
+reference/configuration
+reference/cli
+reference/api
+reference/stability
+```
+
+```{toctree}
+:hidden:
+:caption: Project
+
+examples
+changelog
+roadmap
+contributing
+```

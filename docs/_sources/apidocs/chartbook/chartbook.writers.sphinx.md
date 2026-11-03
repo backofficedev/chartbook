@@ -51,6 +51,10 @@
   - ```{autodoc2-docstring} chartbook.writers.sphinx.FILES_SHOWN
     :summary:
     ```
+* - {py:obj}`NO_GLIMPSE_RECORDED <chartbook.writers.sphinx.NO_GLIMPSE_RECORDED>`
+  - ```{autodoc2-docstring} chartbook.writers.sphinx.NO_GLIMPSE_RECORDED
+    :summary:
+    ```
 * - {py:obj}`OVERRIDABLE_TEMPLATES <chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES>`
   - ```{autodoc2-docstring} chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES
     :summary:
@@ -65,6 +69,16 @@
    50
 
 ```{autodoc2-docstring} chartbook.writers.sphinx.FILES_SHOWN
+```
+
+````
+
+````{py:data} NO_GLIMPSE_RECORDED
+:canonical: chartbook.writers.sphinx.NO_GLIMPSE_RECORDED
+:value: >
+   'The first rows were not recorded when this snapshot was made (a snapshot made by ChartBook 0.4 or ea...'
+
+```{autodoc2-docstring} chartbook.writers.sphinx.NO_GLIMPSE_RECORDED
 ```
 
 ````

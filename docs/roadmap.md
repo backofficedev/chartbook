@@ -1,0 +1,92 @@
+# Roadmap
+
+What ChartBook does now, what is an early experiment, and what may come next. Nothing below the first
+section is a promise; it is where the work is pointed.
+
+## Now: catalogs of snapshots across several stores
+
+ChartBook is meant to be useful on one laptop with nothing but `pip install chartbook`:
+
+- A pipeline documents its charts, dataframes, notebooks and models in `chartbook.toml`, and
+  `chartbook docs build` makes a site of them.
+- A catalog lists stores in `catalog.toml` and renders hubs over every pipeline and snapshot in them. New snapshots follow catalog routing; reads search every store.
+- One pipeline reads another's data by name, from a **snapshot** in the **store**, pinned in its
+  lockfile, so that what it read is recorded and can be read again
+  ({doc}`guide/depending-on-pipelines`).
+
+Several machines share by sharing the store: point each one at the same folder, on a network drive
+or in a synced folder such as Google Drive, Dropbox or OneDrive (`CHARTBOOK_STORE`, or `[store] url`
+in the settings; see {doc}`reference/configuration`). A bucket in S3 works the same way, with
+`pip install chartbook[s3]`.
+
+The work now is to make this smooth from end to end, for one person on one machine first.
+
+## 0.3.0
+
+0.3.0 carries out {design}`plan-0.3.0`. At its centre is a store a person can find their way
+around: one folder for each pipeline, which can be sent to someone else and added to their store,
+by hand or with `chartbook store export` and `store import`. Inside it, each snapshot has a folder
+holding the pipeline's files under their own names, and each file is kept once, however many
+snapshots hold it, so a dataset that grows by a file a year no longer stores a full copy each time.
+With it come files that are not tables, tables stored as CSV, JSON lines or Arrow IPC, more for
+datasets of many files, and a clear message about long paths on Windows. A store made by 0.2 is
+moved to it once with `chartbook store migrate` (the {doc}`changelog`, "Read this first").
+
+## 0.4.0
+
+0.4.0 carries out {design}`plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
+every pipeline with a snapshot in any of them, every version of each rendered from the store alone,
+with the data dictionary as it was then and what changed between versions, and a page for the
+stores themselves. A machine may have several stores, one Drive folder per collaborator, say, with
+each pipeline's new snapshots routed to the stores that should hold it, and a dependency may name a
+public store by URL so that a stranger who clones a downstream repository can fetch what its
+lockfile pins. Working folders leave the catalog; a `chartbook.links.toml` beside a pipeline's
+manifest is how two pipelines are worked on at once. `chartbook build` goes: `chartbook run` runs
+the build script, `chartbook docs build` renders the site.
+
+## 0.5.0: data reads
+
+0.5.0 carries out {design}`plan-data-reads` (proposed 2026-10-31, released 2026-11-02). A version of a dataset whose files are kept
+in several snapshot folders is read from where they sit: no gathered copy on each machine, so
+nothing under `~/.chartbook` grows with every catalog build. The catalog renders a version from
+its snapshot's index and documents alone, reading no data. `data.path` writes your own outputs
+and gives one path, `data.load` and `data.sql` read anyone's data in any shape, and `data.files`
+lists the files for a build tool. The store says in plain words which snapshot folders stand
+alone and which share files, and `store gc` is the one way to remove them. The guide is
+rewritten around what a person is trying to do.
+
+## Experimental: Databricks
+
+A dataframe can be a table or a query in a Databricks SQL warehouse
+({doc}`guide/reading-a-warehouse`). It is an early experiment, more so than the rest of ChartBook: it
+has been tested against a stand-in for the warehouse, not yet against a real workspace, and how it
+works may change. It is here to make sure ChartBook can grow adapters for other warehouses: the
+engine behind a source is a plugin (`chartbook.backends`), as a kind of store is
+(`chartbook.stores`).
+
+Reading works: `data.load()`, `data.sql()`, `data.ref()`, and the site's pages for such a dataframe.
+What another pipeline cannot do yet is pin a Databricks table.
+
+## Next, to research
+
+**Pinning a Delta table by its version.** Delta tables keep a history of versions, so a pin could
+name a version, `VERSION AS OF 42`, rather than copy the rows out of the warehouse. This is built,
+and reviewed three times, in [pull request 90](https://github.com/backofficedev/chartbook/pull/90), and is held back for one question about
+Databricks itself: how long an old version stays readable. Delta keeps the files of old versions for
+7 days by default, and newer runtimes refuse to read a version "older than" that. If the 7 days count
+from when a version was written, a pin of a table no one has changed for a week breaks at its next
+commit, and Databricks' own optimization of a Unity Catalog table makes such commits. The way to
+find out is a pin on a real workspace (Databricks Free Edition is enough). If version pins hold up,
+they come in; if not, the choice is between copying a table's rows into the store and asking a
+table's owner to keep more history.
+
+**Snowflake.** The same kind of adapter, for a Snowflake warehouse. Snowflake keeps history for time
+travel too, a day by default, so the same question about pins arises there.
+
+**Other warehouses** (Postgres, BigQuery) as plugins, once two are built and the interface has
+settled.
+
+**A database as the store,** for an organization that keeps everything in one warehouse
+({design}`stores-and-backends` leaves its layout open).
+
+**An MCP server,** so that an assistant can browse a catalog and read what it describes.

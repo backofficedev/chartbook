@@ -19,6 +19,10 @@
   - ```{autodoc2-docstring} chartbook.data.connect
     :summary:
     ```
+* - {py:obj}`files <chartbook.data.files>`
+  - ```{autodoc2-docstring} chartbook.data.files
+    :summary:
+    ```
 * - {py:obj}`get_data_path <chartbook.data.get_data_path>`
   - ```{autodoc2-docstring} chartbook.data.get_data_path
     :summary:
@@ -81,6 +85,13 @@
 :canonical: chartbook.data.connect
 
 ```{autodoc2-docstring} chartbook.data.connect
+```
+````
+
+````{py:function} files(ref: typing.Union[str, chartbook.refs.AssetRef], project_dir: typing.Optional[typing.Union[str, pathlib.Path]] = None) -> list[pathlib.Path]
+:canonical: chartbook.data.files
+
+```{autodoc2-docstring} chartbook.data.files
 ```
 ````
 

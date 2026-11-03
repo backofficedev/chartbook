@@ -47,6 +47,14 @@
   - ```{autodoc2-docstring} chartbook.index.schema_path
     :summary:
     ```
+* - {py:obj}`stored_index_records <chartbook.index.stored_index_records>`
+  - ```{autodoc2-docstring} chartbook.index.stored_index_records
+    :summary:
+    ```
+* - {py:obj}`stored_modified_at <chartbook.index.stored_modified_at>`
+  - ```{autodoc2-docstring} chartbook.index.stored_modified_at
+    :summary:
+    ```
 * - {py:obj}`write_index <chartbook.index.write_index>`
   - ```{autodoc2-docstring} chartbook.index.write_index
     :summary:
@@ -63,12 +71,20 @@
   - ```{autodoc2-docstring} chartbook.index.ASSET_KINDS
     :summary:
     ```
+* - {py:obj}`DEFAULT_SIZE_THRESHOLD_MB <chartbook.index.DEFAULT_SIZE_THRESHOLD_MB>`
+  - ```{autodoc2-docstring} chartbook.index.DEFAULT_SIZE_THRESHOLD_MB
+    :summary:
+    ```
 * - {py:obj}`FILES_LISTED <chartbook.index.FILES_LISTED>`
   - ```{autodoc2-docstring} chartbook.index.FILES_LISTED
     :summary:
     ```
 * - {py:obj}`INDEX_FILE <chartbook.index.INDEX_FILE>`
   - ```{autodoc2-docstring} chartbook.index.INDEX_FILE
+    :summary:
+    ```
+* - {py:obj}`RECORDED_FACTS <chartbook.index.RECORDED_FACTS>`
+  - ```{autodoc2-docstring} chartbook.index.RECORDED_FACTS
     :summary:
     ```
 * - {py:obj}`RECORD_VERSION <chartbook.index.RECORD_VERSION>`
@@ -97,6 +113,16 @@
 
 ````
 
+````{py:data} DEFAULT_SIZE_THRESHOLD_MB
+:canonical: chartbook.index.DEFAULT_SIZE_THRESHOLD_MB
+:value: >
+   50.0
+
+```{autodoc2-docstring} chartbook.index.DEFAULT_SIZE_THRESHOLD_MB
+```
+
+````
+
 ````{py:data} FILES_LISTED
 :canonical: chartbook.index.FILES_LISTED
 :value: >
@@ -113,6 +139,16 @@
    'index.json'
 
 ```{autodoc2-docstring} chartbook.index.INDEX_FILE
+```
+
+````
+
+````{py:data} RECORDED_FACTS
+:canonical: chartbook.index.RECORDED_FACTS
+:value: >
+   ('content_hash', 'size_bytes', 'files', 'file_count', 'extensions', 'columns', 'row_count', 'date_ra...
+
+```{autodoc2-docstring} chartbook.index.RECORDED_FACTS
 ```
 
 ````
@@ -154,7 +190,7 @@
 ```
 ````
 
-````{py:function} build_index(manifest: dict, *, cache: typing.Optional[chartbook.hashing.HashCache] = None, skip_pipelines: typing.Iterable[str] = (), generated_at: typing.Optional[datetime.datetime] = None) -> dict
+````{py:function} build_index(manifest: dict, *, cache: typing.Optional[chartbook.hashing.HashCache] = None, skip_pipelines: typing.Iterable[str] = (), generated_at: typing.Optional[datetime.datetime] = None, size_threshold: float = DEFAULT_SIZE_THRESHOLD_MB) -> dict
 :canonical: chartbook.index.build_index
 
 ```{autodoc2-docstring} chartbook.index.build_index
@@ -175,7 +211,7 @@
 ```
 ````
 
-````{py:function} pipeline_records(pipeline_id: str, pipeline_manifest: dict, cache: typing.Optional[chartbook.hashing.HashCache] = None, known_pipelines: typing.Optional[typing.Mapping[str, pathlib.Path]] = None) -> list[dict]
+````{py:function} pipeline_records(pipeline_id: str, pipeline_manifest: dict, cache: typing.Optional[chartbook.hashing.HashCache] = None, known_pipelines: typing.Optional[typing.Mapping[str, pathlib.Path]] = None, stored: typing.Optional[typing.Mapping[str, dict]] = None, size_threshold: float = DEFAULT_SIZE_THRESHOLD_MB) -> list[dict]
 :canonical: chartbook.index.pipeline_records
 
 ```{autodoc2-docstring} chartbook.index.pipeline_records
@@ -200,6 +236,20 @@
 :canonical: chartbook.index.schema_path
 
 ```{autodoc2-docstring} chartbook.index.schema_path
+```
+````
+
+````{py:function} stored_index_records(base_dir: pathlib.Path) -> dict
+:canonical: chartbook.index.stored_index_records
+
+```{autodoc2-docstring} chartbook.index.stored_index_records
+```
+````
+
+````{py:function} stored_modified_at(was: object) -> typing.Optional[str]
+:canonical: chartbook.index.stored_modified_at
+
+```{autodoc2-docstring} chartbook.index.stored_modified_at
 ```
 ````
 

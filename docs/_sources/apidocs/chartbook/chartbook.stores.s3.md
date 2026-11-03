@@ -47,6 +47,10 @@
   - ```{autodoc2-docstring} chartbook.stores.s3.LISTING_SECONDS
     :summary:
     ```
+* - {py:obj}`NAMED_DIR <chartbook.stores.s3.NAMED_DIR>`
+  - ```{autodoc2-docstring} chartbook.stores.s3.NAMED_DIR
+    :summary:
+    ```
 * - {py:obj}`URL_OPTIONS <chartbook.stores.s3.URL_OPTIONS>`
   - ```{autodoc2-docstring} chartbook.stores.s3.URL_OPTIONS
     :summary:
@@ -101,6 +105,16 @@
    2.0
 
 ```{autodoc2-docstring} chartbook.stores.s3.LISTING_SECONDS
+```
+
+````
+
+````{py:data} NAMED_DIR
+:canonical: chartbook.stores.s3.NAMED_DIR
+:value: >
+   'named'
+
+```{autodoc2-docstring} chartbook.stores.s3.NAMED_DIR
 ```
 
 ````
@@ -167,18 +181,18 @@ Bases: {py:obj}`chartbook.store.Store`
 
 ````
 
-````{py:method} files_of(content_hash: str) -> list[tuple[str, int]]
-:canonical: chartbook.stores.s3.S3Store.files_of
+````{py:method} files(content_hash: str, pipeline: typing.Optional[str] = None, name: typing.Optional[str] = None) -> chartbook.store.KeptFiles
+:canonical: chartbook.stores.s3.S3Store.files
 
-```{autodoc2-docstring} chartbook.stores.s3.S3Store.files_of
+```{autodoc2-docstring} chartbook.stores.s3.S3Store.files
 ```
 
 ````
 
-````{py:method} get(content_hash: str, pipeline: typing.Optional[str] = None, name: typing.Optional[str] = None) -> pathlib.Path
-:canonical: chartbook.stores.s3.S3Store.get
+````{py:method} files_of(content_hash: str) -> list[tuple[str, int]]
+:canonical: chartbook.stores.s3.S3Store.files_of
 
-```{autodoc2-docstring} chartbook.stores.s3.S3Store.get
+```{autodoc2-docstring} chartbook.stores.s3.S3Store.files_of
 ```
 
 ````
@@ -321,19 +335,18 @@ Bases: {py:obj}`chartbook.store.Store`
 
 ````
 
-````{py:method} verify(content_hashes: typing.Optional[typing.Iterable[str]] = None) -> list[chartbook.store.StoreProblem]
-:canonical: chartbook.stores.s3.S3Store.verify
+````{py:method} tidy_pipeline(pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]
+:canonical: chartbook.stores.s3.S3Store.tidy_pipeline
 
-```{autodoc2-docstring} chartbook.stores.s3.S3Store.verify
+```{autodoc2-docstring} chartbook.stores.s3.S3Store.tidy_pipeline
 ```
 
 ````
 
-````{py:property} views
-:canonical: chartbook.stores.s3.S3Store.views
-:type: pathlib.Path
+````{py:method} verify(content_hashes: typing.Optional[typing.Iterable[str]] = None) -> list[chartbook.store.StoreProblem]
+:canonical: chartbook.stores.s3.S3Store.verify
 
-```{autodoc2-docstring} chartbook.stores.s3.S3Store.views
+```{autodoc2-docstring} chartbook.stores.s3.S3Store.verify
 ```
 
 ````

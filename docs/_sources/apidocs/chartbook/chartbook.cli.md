@@ -87,6 +87,10 @@
   - ```{autodoc2-docstring} chartbook.cli.docs_open
     :summary:
     ```
+* - {py:obj}`get_docs_command <chartbook.cli.get_docs_command>`
+  - ```{autodoc2-docstring} chartbook.cli.get_docs_command
+    :summary:
+    ```
 * - {py:obj}`index_diff <chartbook.cli.index_diff>`
   - ```{autodoc2-docstring} chartbook.cli.index_diff
     :summary:
@@ -199,6 +203,10 @@
   - ```{autodoc2-docstring} chartbook.cli.store_info
     :summary:
     ```
+* - {py:obj}`store_ls <chartbook.cli.store_ls>`
+  - ```{autodoc2-docstring} chartbook.cli.store_ls
+    :summary:
+    ```
 * - {py:obj}`store_migrate <chartbook.cli.store_migrate>`
   - ```{autodoc2-docstring} chartbook.cli.store_migrate
     :summary:
@@ -277,7 +285,7 @@
 ```
 ````
 
-````{py:function} catalog_generate(force_write, strict, clean, watch, watch_interval)
+````{py:function} catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run_gc, no_gc_reminder)
 :canonical: chartbook.cli.catalog_generate
 
 ```{autodoc2-docstring} chartbook.cli.catalog_generate
@@ -375,6 +383,13 @@
 ```
 ````
 
+````{py:function} get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as_path, catalog)
+:canonical: chartbook.cli.get_docs_command
+
+```{autodoc2-docstring} chartbook.cli.get_docs_command
+```
+````
+
 ````{py:function} index_diff(before, after, as_json, exit_code)
 :canonical: chartbook.cli.index_diff
 
@@ -424,42 +439,42 @@
 ```
 ````
 
-````{py:function} ls(ctx, catalog)
+````{py:function} ls(ctx, catalog, as_json)
 :canonical: chartbook.cli.ls
 
 ```{autodoc2-docstring} chartbook.cli.ls
 ```
 ````
 
-````{py:function} ls_charts(ctx)
+````{py:function} ls_charts(ctx, as_json)
 :canonical: chartbook.cli.ls_charts
 
 ```{autodoc2-docstring} chartbook.cli.ls_charts
 ```
 ````
 
-````{py:function} ls_dataframes(ctx)
+````{py:function} ls_dataframes(ctx, as_json)
 :canonical: chartbook.cli.ls_dataframes
 
 ```{autodoc2-docstring} chartbook.cli.ls_dataframes
 ```
 ````
 
-````{py:function} ls_pipelines(ctx)
+````{py:function} ls_pipelines(ctx, as_json)
 :canonical: chartbook.cli.ls_pipelines
 
 ```{autodoc2-docstring} chartbook.cli.ls_pipelines
 ```
 ````
 
-````{py:function} ls_stores(ctx)
+````{py:function} ls_stores(ctx, as_json)
 :canonical: chartbook.cli.ls_stores
 
 ```{autodoc2-docstring} chartbook.cli.ls_stores
 ```
 ````
 
-````{py:function} ls_versions(ctx)
+````{py:function} ls_versions(ctx, as_json)
 :canonical: chartbook.cli.ls_versions
 
 ```{autodoc2-docstring} chartbook.cli.ls_versions
@@ -515,14 +530,14 @@
 ```
 ````
 
-````{py:function} run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream)
+````{py:function} run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder)
 :canonical: chartbook.cli.run_command
 
 ```{autodoc2-docstring} chartbook.cli.run_command
 ```
 ````
 
-````{py:function} snapshot(project_dir, deep, store_names)
+````{py:function} snapshot(project_dir, deep, store_names, no_gc_reminder)
 :canonical: chartbook.cli.snapshot
 
 ```{autodoc2-docstring} chartbook.cli.snapshot
@@ -568,6 +583,13 @@
 :canonical: chartbook.cli.store_info
 
 ```{autodoc2-docstring} chartbook.cli.store_info
+```
+````
+
+````{py:function} store_ls(pipeline, store_name)
+:canonical: chartbook.cli.store_ls
+
+```{autodoc2-docstring} chartbook.cli.store_ls
 ```
 ````
 

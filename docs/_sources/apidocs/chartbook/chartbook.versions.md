@@ -39,6 +39,10 @@
   - ```{autodoc2-docstring} chartbook.versions.forget
     :summary:
     ```
+* - {py:obj}`name_of <chartbook.versions.name_of>`
+  - ```{autodoc2-docstring} chartbook.versions.name_of
+    :summary:
+    ```
 * - {py:obj}`render <chartbook.versions.render>`
   - ```{autodoc2-docstring} chartbook.versions.render
     :summary:
@@ -171,6 +175,13 @@
 ```
 ````
 
+````{py:function} name_of(taken, siblings: typing.Iterable = ()) -> str
+:canonical: chartbook.versions.name_of
+
+```{autodoc2-docstring} chartbook.versions.name_of
+```
+````
+
 ````{py:function} render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> chartbook.versions.Rendered
 :canonical: chartbook.versions.render
 
@@ -178,7 +189,7 @@
 ```
 ````
 
-````{py:function} render_listed(index: dict, store=None, echo=print) -> dict
+````{py:function} render_listed(index: dict, store=None, echo=print, into=()) -> dict
 :canonical: chartbook.versions.render_listed
 
 ```{autodoc2-docstring} chartbook.versions.render_listed

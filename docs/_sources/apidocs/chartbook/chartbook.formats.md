@@ -270,7 +270,7 @@
 ```
 ````
 
-````{py:function} files_of(path: typing.Union[str, pathlib.Path], read: chartbook.formats.Reading, files=(), listed=()) -> list[pathlib.Path]
+````{py:function} files_of(path: typing.Union[str, pathlib.Path], read: chartbook.formats.Reading, files=(), listed=(), inside=None) -> list[pathlib.Path]
 :canonical: chartbook.formats.files_of
 
 ```{autodoc2-docstring} chartbook.formats.files_of
@@ -326,7 +326,7 @@
 ```
 ````
 
-````{py:function} scan(path: typing.Union[str, pathlib.Path], format: typing.Optional[str] = None, read_options: typing.Optional[typing.Mapping] = None, *, files=(), listed=(), where: typing.Optional[str] = None, public: bool = False)
+````{py:function} scan(path: typing.Union[str, pathlib.Path], format: typing.Optional[str] = None, read_options: typing.Optional[typing.Mapping] = None, *, files=(), listed=(), inside=None, where: typing.Optional[str] = None, public: bool = False)
 :canonical: chartbook.formats.scan
 
 ```{autodoc2-docstring} chartbook.formats.scan

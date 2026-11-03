@@ -91,6 +91,10 @@
   - ```{autodoc2-docstring} chartbook.resolve.require_file
     :summary:
     ```
+* - {py:obj}`require_single_path <chartbook.resolve.require_single_path>`
+  - ```{autodoc2-docstring} chartbook.resolve.require_single_path
+    :summary:
+    ```
 * - {py:obj}`resolve <chartbook.resolve.resolve>`
   - ```{autodoc2-docstring} chartbook.resolve.resolve
     :summary:
@@ -188,6 +192,17 @@ Bases: {py:obj}`chartbook.resolve.Location`
    'field(...)'
 
 ```{autodoc2-docstring} chartbook.resolve.FileLocation.format
+```
+
+````
+
+````{py:attribute} inside
+:canonical: chartbook.resolve.FileLocation.inside
+:type: typing.Mapping
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.resolve.FileLocation.inside
 ```
 
 ````
@@ -647,6 +662,13 @@ Bases: {py:obj}`UserWarning`
 :canonical: chartbook.resolve.require_file
 
 ```{autodoc2-docstring} chartbook.resolve.require_file
+```
+````
+
+````{py:function} require_single_path(location: chartbook.resolve.Location, what: str, ref: str, kind: str) -> pathlib.Path
+:canonical: chartbook.resolve.require_single_path
+
+```{autodoc2-docstring} chartbook.resolve.require_single_path
 ```
 ````
 
