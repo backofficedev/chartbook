@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f7ee7eb5"></script>
+    <script src="../../_static/documentation_options.js?v=002b6000"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -760,7 +760,7 @@ snapshot the catalog reads, of any pipeline.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.versions.render_listed">
-<span class="sig-prename descclassname"><span class="pre">chartbook.versions.</span></span><span class="sig-name descname"><span class="pre">render_listed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">echo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">print</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">into</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/versions.html#render_listed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.versions.render_listed" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.versions.</span></span><span class="sig-name descname"><span class="pre">render_listed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">echo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">print</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">into</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/versions.html#render_listed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.versions.render_listed" title="Link to this definition">#</a></dt>
 <dd><p>Build (or find kept) the site of every snapshot a catalog’s index lists, and say on each entry whether it was built.</p>
 <p>Called before the catalog’s pages are written, so that a page links to
 a version’s page only when its site was built, and otherwise to the
@@ -772,6 +772,9 @@ version that could not be built is said in one line.</p>
 whose site would be too deep for Windows in one of them (with long
 paths off) is not linked as built: its page says why, and the catalog
 is built all the same.</p>
+<p><em>progress</em>, if given, is told of each version as it is built: a
+version not built on this machine yet takes a Sphinx build, so the
+first catalog build after an upgrade builds every one.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><p>Each version built or found, by <code class="docutils literal notranslate"><span class="pre">(pipeline,</span> <span class="pre">commit,</span> <span class="pre">made_at)</span></code>: the snapshot and its :class:<code class="docutils literal notranslate"><span class="pre">Rendered</span></code>, for</p>

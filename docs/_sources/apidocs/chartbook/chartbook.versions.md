@@ -189,7 +189,7 @@
 ```
 ````
 
-````{py:function} render_listed(index: dict, store=None, echo=print, into=()) -> dict
+````{py:function} render_listed(index: dict, store=None, echo=print, into=(), progress=None) -> dict
 :canonical: chartbook.versions.render_listed
 
 ```{autodoc2-docstring} chartbook.versions.render_listed
