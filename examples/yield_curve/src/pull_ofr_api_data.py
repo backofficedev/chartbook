@@ -9,6 +9,10 @@ from pathlib import Path
 import pandas as pd
 from chartbook.env import get_project_root
 
+# The data window is committed here, not read from .env: two people with
+# different .env files who build the same commit must get the same bytes.
+END_DATE = "2025-12-31"
+
 
 def pull_series_from_ofr_api(mnemonic=None):
     """
@@ -49,7 +53,8 @@ def pull_series_list(series_list=list(series_descriptions.keys())):
         df = pull_series_from_ofr_api(mnemonic=s)
         df_list.append(df)
     df = pd.concat(df_list, axis=1)
-    return df
+    # The API returns each series to today; keep the committed window.
+    return df.sort_index().loc[:END_DATE]
 
 
 if __name__ == "__main__":
