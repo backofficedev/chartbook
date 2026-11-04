@@ -748,7 +748,7 @@ path = "/absolute/path/to/catalog/chartbook.toml"
 
 A relative `path` is relative to the settings file's own folder, as `[store] url`, `[git] path` and `[cache] path` are, never to the folder a command is run from; `~` is your home. The organization's settings file (below) may name a catalog the same way, read where the user's file names none.
 
-When a default catalog is configured (or `~/.chartbook/chartbook.toml` exists), `data.load()` and `data.get_data_path()` work without an explicit `catalog_path` argument:
+`data.load()` and `data.get_data_path()` work without an explicit `catalog_path` argument: they read the catalog the settings name, or `~/.chartbook/catalog.toml`, which the first command or read that needs it makes over the machine's store ({ref}`chartbook catalog <chartbook-catalog>`):
 
 ```python
 from chartbook import data

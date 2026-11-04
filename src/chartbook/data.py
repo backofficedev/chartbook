@@ -304,8 +304,6 @@ def get_data_path(
     :raises NoSinglePathError: If the dataframe is several files read from
         the store, a Hive folder or a glob, which have no one path: read it
         with :func:`load`, or list the files with :func:`files`.
-    :raises CatalogNotConfiguredError: If no catalog is configured, and the
-        store has no snapshot of the pipeline.
     :raises AssetNotPinnedError: If the dataframe has no copy to read: no
         pin in a batch run, a batch run outside any pipeline, and otherwise
         no snapshot and no folder here.
@@ -341,7 +339,6 @@ def get_docs_path(
     :type catalog_path: Optional[Union[str, Path]]
     :returns: The resolved path to the documentation source file.
     :rtype: Path
-    :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
     return _assets.get_docs_path(pipeline, _assets.parse(dataframe, kind="dataframe"), catalog_path)
@@ -372,7 +369,6 @@ def get_docs(
     :type catalog_path: Optional[Union[str, Path]]
     :returns: The documentation content as a string.
     :rtype: str
-    :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
     return _assets.get_docs(pipeline, _assets.parse(dataframe, kind="dataframe"), catalog_path)
@@ -456,8 +452,6 @@ def load(
     :raises AssetNotPinnedError: If another pipeline's dataframe has no
         copy to read: no pin in a batch run, a batch run outside any
         pipeline, and otherwise no snapshot and no folder here.
-    :raises CatalogNotConfiguredError: If a catalog is needed and none is
-        configured, and the store has no snapshot of the pipeline.
     :raises KeyError: If the pipeline or dataframe is in neither the store
         nor the catalog.
     :raises TypeError: If the arguments are neither one reference nor a

@@ -33,10 +33,9 @@ A missing named folder is unreachable: reads warn and continue with the remainin
 
 ## The machine's catalog
 
-The machine uses `[catalog] path` in `~/.chartbook/settings.toml`, or `~/.chartbook/catalog.toml`.
+The machine uses `[catalog] path` in `~/.chartbook/settings.toml`, or `~/.chartbook/catalog.toml`. By default a store and a catalog are one unit: the first command that needs the catalog (`chartbook ls`, `get-docs`, `catalog build`, `catalog open`, a snapshot) makes `~/.chartbook/catalog.toml` over the machine's store, asking at a terminal (`[Y/n]`, Enter says yes) and saying so on stderr where nothing can ask. `chartbook catalog init` makes it ahead of time, with no questions (`--title`).
 
 ```console
-chartbook catalog init
 chartbook store add collaborator /path/to/shared/store --read-only
 chartbook store info
 chartbook catalog build

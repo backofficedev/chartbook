@@ -26,7 +26,7 @@ Thank you for your interest in contributing to chartbook!
 
    `uv run` puts the environment's tools first on the path for that command and its subprocesses, so the nested doit of the examples, `sphinx-build` and `hatch` are the project's own. Nothing to activate. Plain `doit` runs the notebooks, the package docs, the three example pipelines and their catalog, the wheel and sdist, and then the test matrix; `uv run doit build_package` stops before the tests, and `uv run doit list` shows every task.
 
-   The example catalog is built only from folders you have trusted: once, `uv run chartbook trust --members` in `examples/catalog`.
+   The example pipelines are built only once you have trusted their folders: once, `uv run chartbook trust examples` (a folder's trust covers every pipeline under it).
 
 ## Making Changes
 

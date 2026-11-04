@@ -80,7 +80,7 @@ chartbook store export ID --to DIR   # One pipeline's snapshots into DIR/pipelin
 chartbook store import DIR    # Copy the snapshots in DIR (an export, or a pipeline's folder) into this store, each file checked against its record
 chartbook config             # Configure default catalog path
 chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
-chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml
+chartbook catalog init       # Make the machine's catalog, ~/.chartbook/catalog.toml, ahead of time (the first command that needs it makes it over your store, asking at a terminal)
 chartbook store add NAME URL  # Add a store; a pipeline enters by snapshot
 chartbook catalog disable <id>  # Leave a pipeline out of the catalog's builds; `chartbook catalog enable <id>` brings it back
 chartbook catalog build   # Render the catalog site

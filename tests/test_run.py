@@ -18,7 +18,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import index, lock, run, snapshot
+from chartbook import config, index, lock, run, snapshot
 from chartbook.cli import main
 from chartbook.gitcache import GitCache, forget_built, is_built, mark_built
 from chartbook.manifest import load_manifest, read_scripts
@@ -663,6 +663,8 @@ class TestRunThenSnapshot:
             "`chartbook update`.",
             "Stores: default",
             "Ran build in 1 pipeline(s).",
+            f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
+            "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
         ]
         result = CliRunner().invoke(main, ["run", "--snapshot", "--no-gc-reminder"])
         assert result.exit_code == 0, result.output

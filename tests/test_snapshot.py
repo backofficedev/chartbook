@@ -22,7 +22,7 @@ import tomli_w
 from click.testing import CliRunner
 
 from chartbook import store as store_module
-from chartbook import data, index, lock, snapshot
+from chartbook import config, data, index, lock, snapshot
 from chartbook.cli import main
 from chartbook.manifest import load_manifest
 from chartbook.snapshot import SnapshotError
@@ -1210,7 +1210,11 @@ class TestCommands:
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
             "Stores: default",
+            # By default a store and a catalog are one unit: the first snapshot makes the catalog that shows it
+            f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
+            "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
         ]
+        assert config.get_global_catalog_path().is_file()
 
     def test_snapshot_again(self, maker, monkeypatch):
         monkeypatch.chdir(maker)
@@ -1218,8 +1222,8 @@ class TestCommands:
         result = self._run("snapshot")
         assert result.exit_code == 0
         last = result.output.splitlines()[-2]
-        assert last.startswith("Nothing has changed since the snapshot of 20")
-        assert last.endswith(" UTC. No new one was made.")
+        assert last.startswith("No new snapshot: the same bytes and the same pins as the one made 20")
+        assert last.endswith(" UTC.")
 
     def test_snapshot_says_what_is_not_built(self, maker, work):
         (maker / "_output" / "curve.html").unlink()

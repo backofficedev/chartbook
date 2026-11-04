@@ -1278,28 +1278,19 @@ def _say_trust_level(manifest, project_dir):
 
     `check` reads and runs nothing, so it is not gated; it says the level
     the folder is trusted at (``docs_src/design/trust.md``) when that is
-    not `run`, and the command that trusts it. For a catalog, the lowest
-    level among its own folder and its member folders on this machine.
+    not `run`, and the command that trusts it. A catalog never gets here:
+    `check` refuses one before, and a catalog's stores need no trust.
     """
-    from chartbook.config import TRUST_LEVELS, trust_of
-    from chartbook.manifest import get_pipeline_dirs
+    from chartbook.config import trust_of
 
     try:
-        folders = [project_dir]
-        if manifest["project"]["type"] == "catalog":
-            folders += list(get_pipeline_dirs(manifest).values())
-        levels = [trust_of(folder) for folder in folders]
+        lowest = trust_of(project_dir)
     except (ValueError, OSError):
         return  # the record is faulty: the build says so
-    if all(level == "run" for level in levels):
+    if lowest == "run":
         return
-    lowest = None if None in levels else min(levels, key=TRUST_LEVELS.index)
-    if manifest["project"]["type"] == "catalog":
-        standing = "Not every folder of this catalog is trusted" + (" to run" if lowest == "render" else "")
-        command = "`chartbook trust --members` here trusts the catalog's folder and each member folder on this machine"
-    else:
-        standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
-        command = "`chartbook trust` here trusts it"
+    standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
+    command = "`chartbook trust` here trusts it"
     refused = "`chartbook run` refuses to run the build script"
     if lowest is None:
         refused += (
@@ -1489,14 +1480,13 @@ def _load_catalog_for_cli(catalog_path=None):
     :rtype: tuple
     :raises SystemExit: If no catalog is configured.
     """
-    from chartbook.errors import CatalogNotConfiguredError
     from chartbook.manifest import load_manifest
     from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 
+    if catalog_path is None:
+        _catalog_or_make_one()
     try:
         resolved = _resolve_catalog_path(catalog_path)
-    except CatalogNotConfiguredError:
-        resolved = _prompt_catalog_init()
     except ValueError as error:  # the settings file that names the default catalog is faulty
         raise click.ClickException(str(error)) from None
 
@@ -1916,40 +1906,71 @@ def _load_raw_catalog(catalog_toml_path):
 
 
 
-def _prompt_catalog_init():
-    """Prompt the user to create a global catalog if running interactively.
+def _catalog_or_make_one(required=True, to_show_a_snapshot=False):
+    """The catalog this machine uses, made over its store if there is none yet.
 
-    :returns: The resolved catalog path if created, otherwise raises SystemExit.
-    :rtype: Path
-    :raises SystemExit: If the user declines or stdin is not a TTY.
+    By default a store and a catalog are one unit, so the first command
+    that needs the catalog makes it, `~/.chartbook/catalog.toml`, listing
+    the machine's store and nothing else. At a terminal it asks first, and
+    Enter says yes; a script, a pipe or CI gets it made and told so on
+    stderr, since nothing is lost by making it. A catalog the settings
+    name is used as it is.
+
+    :param required: Whether the command cannot go on without one: a
+        refusal then stops it with the commands that make or name one.
+        Otherwise a refusal returns None.
+    :param to_show_a_snapshot: Asked after a snapshot, which the catalog
+        would show.
+    :returns: The catalog's path; None when it was declined and not required.
     """
-    import sys
+    path = _default_catalog_path()
+    if path is not None:
+        return path
+    from chartbook.config import get_store_url, make_default_catalog, shown_store_url
 
-    from chartbook.config import create_global_catalog, get_global_catalog_path
+    store = shown_store_url(get_store_url())
+    if _can_ask():
+        click.echo("No catalog yet" + (", to show it in." if to_show_a_snapshot else "."), err=True)
+        try:
+            agreed = click.confirm(f"Create one over your store at {store}?", default=True, err=True)
+        except click.Abort:  # Ctrl-C, or the end of input
+            if not required:
+                click.echo("", err=True)
+                return None
+            raise
+        if not agreed:
+            if not required:
+                return None
+            click.echo(
+                "Run `chartbook catalog init` to make one, or `chartbook config` to point at one you have.",
+                err=True,
+            )
+            raise SystemExit(1)
+        path, _ = make_default_catalog()
+        click.echo(f"Made {path}.", err=True)
+        return path
+    from chartbook.config import said_catalog_made
 
-    if not sys.stdin.isatty():
-        click.echo(
-            "Run 'chartbook catalog init' to create a new catalog, "
-            "or 'chartbook config' to point to an existing one.",
-            err=True,
-        )
-        raise SystemExit(1)
+    path, made = make_default_catalog()
+    if made:
+        click.echo(said_catalog_made(path), err=True)
+    return path
 
-    click.echo("No catalog found.", err=True)
-    if click.confirm("Create a new global catalog now?", default=False):
-        title = click.prompt("Catalog title", default="My Catalog")
-        catalog_path = create_global_catalog(title=title)
-        click.echo(f"Created global catalog: {catalog_path}")
-        click.echo("")
-        return get_global_catalog_path()
 
-    click.echo("", err=True)
-    click.echo(
-        "Run 'chartbook catalog init' to create a new catalog, "
-        "or 'chartbook config' to point to an existing one.",
-        err=True,
-    )
-    raise SystemExit(1)
+def _say_where_a_snapshot_shows():
+    """After a snapshot, make the catalog that shows it if there is none yet (asking at a terminal), and say how to see it.
+
+    The snapshot is made: nothing here fails the command. A catalog that
+    cannot be read (an old one, wanting `catalog migrate`) is said, as a
+    note.
+    """
+    try:
+        if _default_catalog_path() is not None:
+            return
+        if _catalog_or_make_one(required=False, to_show_a_snapshot=True) is not None:
+            click.echo("`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.", err=True)
+    except click.ClickException as error:
+        click.echo(f"Note: no catalog to show it in: {error.format_message()}", err=True)
 
 
 def _resolve_catalog_toml_path(catalog_path):
@@ -1961,13 +1982,14 @@ def _resolve_catalog_toml_path(catalog_path):
     :rtype: Path
     :raises SystemExit: If no catalog is configured.
     """
-    from chartbook.errors import CatalogNotConfiguredError
     from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 
+    if catalog_path is None:
+        _catalog_or_make_one()
     try:
         return _resolve_catalog_path(catalog_path)
-    except CatalogNotConfiguredError:
-        return _prompt_catalog_init()
+    except ValueError as error:  # the settings file that names the default catalog is faulty
+        raise click.ClickException(str(error)) from None
 
 
 @main.group(cls=_Catalog)
@@ -1977,32 +1999,30 @@ def catalog():
 
 
 @catalog.command("init")
-@click.option("--title", default=None, help="Title for the catalog site")
+@click.option("--title", default="My Catalog", show_default=True, help="The catalog site's title")
 def catalog_init(title):
-    """Initialize the global catalog at ~/.chartbook/catalog.toml.
+    """Make this machine's catalog, ~/.chartbook/catalog.toml, over its store.
 
-    Creates a catalog with the default store.
-    A pipeline enters it when its owner runs ``chartbook snapshot``.
+    By default a store and a catalog are one unit: the first command that
+    needs the catalog (`chartbook ls`, `catalog build`, a snapshot) makes
+    this one for you. This makes it ahead of time, or with a title. A
+    pipeline enters it when its owner runs `chartbook snapshot`; other
+    stores join it with `chartbook store add`.
     """
-    from chartbook.config import create_global_catalog, get_global_catalog_path
+    from chartbook.config import create_global_catalog, get_global_catalog_path, said_catalog_made
 
-    catalog_path = get_global_catalog_path()
-    if catalog_path.is_file():
-        click.echo(f"Global catalog already exists: {catalog_path}")
+    # The settings may name one, and an old ~/.chartbook/chartbook.toml wants `catalog migrate`
+    named = _default_catalog_path()
+    if named is not None and named.is_file():
+        click.echo(f"Global catalog already exists: {named}")
+        return
+    if get_global_catalog_path().is_file():
+        click.echo(f"Global catalog already exists: {get_global_catalog_path()}")
         return
 
-    if title is None:
-        title = click.prompt("Catalog title", default="My Catalog")
-
     catalog_path = create_global_catalog(title=title)
-    click.echo(f"Created global catalog: {catalog_path}")
-    click.echo("")
-    click.echo("Next steps:")
-    click.echo("  chartbook snapshot --project-dir /path/to/pipeline   # publish a pipeline")
-    click.echo("  chartbook catalog build                # render its site")
-    click.echo("  chartbook catalog open                    # open it in the browser")
-
-
+    click.echo(said_catalog_made(catalog_path))
+    click.echo("`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.")
 
 
 def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
@@ -2126,11 +2146,11 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
     _check_sphinx_installed()
 
 
-    catalog_path = _default_catalog_path()
-    if catalog_path is None or not catalog_path.is_file():
-        click.echo("Error: No global catalog found.", err=True)
+    catalog_path = _catalog_or_make_one()
+    if not catalog_path.is_file():
+        click.echo(f"Error: the settings name a catalog at {catalog_path}, and there is no file there.", err=True)
         click.echo("", err=True)
-        click.echo("Run 'chartbook catalog init' to create one.", err=True)
+        click.echo("Run 'chartbook config' to point at one, or 'chartbook catalog init' to make one.", err=True)
         raise SystemExit(1)
 
     project_dir = catalog_path.parent
@@ -2202,12 +2222,7 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
 def catalog_open():
     """Open the global catalog's site in your default browser."""
 
-    catalog_path = _default_catalog_path()
-    if catalog_path is None:
-        click.echo("Error: No global catalog found.", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook catalog init' to create one.", err=True)
-        raise SystemExit(1)
+    catalog_path = _catalog_or_make_one()
 
     index_path = catalog_path.parent / "docs" / "index.html"
     if not index_path.is_file():
@@ -2246,17 +2261,13 @@ def data_get_path(pipeline, dataframe, catalog):
         chartbook data get-path --pipeline yield_curve --dataframe repo_public
     """
     from chartbook.data import get_data_path
-    from chartbook.errors import CatalogNotConfiguredError
 
+    if catalog is None:
+        _catalog_or_make_one()
     try:
         # The command is in the working directory's pipeline: the calling file is this one
         path = get_data_path(pipeline, dataframe, catalog_path=catalog, project_dir=Path.cwd())
         click.echo(str(path))
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
-        raise SystemExit(1)
     except (LookupError, OSError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -2276,18 +2287,14 @@ def data_get_docs(pipeline, dataframe, catalog):
         chartbook data get-docs --pipeline yield_curve --dataframe repo_public
     """
     from chartbook.assets import get_docs_page
-    from chartbook.errors import CatalogNotConfiguredError
     from chartbook.refs import parse_asset_ref
     from chartbook.store import StoreError
 
+    if catalog is None:
+        _catalog_or_make_one()
     try:
         docs = get_docs_page(pipeline, parse_asset_ref(dataframe, kind="dataframe"), catalog_path=catalog)
         click.echo(docs.rstrip("\n"))
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
-        raise SystemExit(1)
     except (KeyError, ValueError, StoreError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -2307,17 +2314,13 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public
     """
     from chartbook.data import get_docs_path
-    from chartbook.errors import CatalogNotConfiguredError
     from chartbook.store import StoreError
 
+    if catalog is None:
+        _catalog_or_make_one()
     try:
         path = get_docs_path(pipeline, dataframe, catalog_path=catalog)
         click.echo(str(path))
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
-        raise SystemExit(1)
     except (KeyError, ValueError, StoreError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
@@ -2412,7 +2415,6 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
         chartbook get-docs yield_curve:repo_public --path
     """
     from chartbook.assets import get_docs_page, get_docs_path
-    from chartbook.errors import CatalogNotConfiguredError
     from chartbook.store import StoreError
 
     keyword = _named_by_options({"dataframe": dataframe, "chart": chart, "model": model, "file": file, "note": note})
@@ -2427,6 +2429,8 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
         pipeline, asset = asset_id or pipeline, keyword
     if not pipeline:
         raise click.UsageError("Name a pipeline: chartbook get-docs PIPELINE[:kind/name], or --pipeline PIPELINE.")
+    if catalog is None:
+        _catalog_or_make_one()
     try:
         if as_path:
             click.echo(str(get_docs_path(pipeline, asset, catalog_path=catalog)))
@@ -2435,11 +2439,6 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
     except StoreError as e:
         # The store's own words, as a synced folder still downloading the snapshot
         click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
     except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
@@ -3018,6 +3017,7 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
         raise SystemExit(1)
 
     _echo_snapshot(report)
+    _say_where_a_snapshot_shows()
     _remind_of_gc(no_gc_reminder)
 
 
@@ -3266,8 +3266,7 @@ def _echo_snapshot(report, upstream=False):
         )
     else:
         click.echo(
-            f"Nothing has changed since the snapshot of {_when(taken.made_at)}. "
-            f"No new one was made."
+            f"No new snapshot: the same bytes and the same pins as the one made {_when(taken.made_at)}."
         )
 
     if getattr(report, "stores", None):
@@ -3318,6 +3317,8 @@ def _run_script(
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
+    if report.snapshots:  # once the run is over, for the catalog that shows them
+        _say_where_a_snapshot_shows()
 
 
 @main.command("restore")
@@ -4398,12 +4399,6 @@ def _trust_to_render_if_untrusted(folder, pipeline_id) -> bool:
     default=False,
     help="Trust the folder's origin repository instead of the folder: every clone of it, wherever it is",
 )
-@click.option(
-    "--members",
-    is_flag=True,
-    default=False,
-    help="In a catalog: trust the catalog's folder and each member folder on this machine",
-)
 @click.option("--list", "list_", is_flag=True, default=False, help="Show what is trusted, and how")
 @click.option(
     "--forget",
@@ -4411,7 +4406,7 @@ def _trust_to_render_if_untrusted(folder, pipeline_id) -> bool:
     default=False,
     help="No longer trust the folder (or, with --repository, its repository)",
 )
-def trust(path, render_only, repository, members, list_, forget):
+def trust(path, render_only, repository, list_, forget):
     """Trust a pipeline's folder, so that a build of it runs as your own.
 
     A build of a folder you have not trusted runs as a build of files from
@@ -4444,20 +4439,16 @@ def trust(path, render_only, repository, members, list_, forget):
         chartbook trust --list
         chartbook trust --forget
     """
-    if members:
-        raise click.ClickException("Catalogs read snapshots and have no working members to trust. Trust a pipeline folder directly.")
     import os
 
     from chartbook import config
     from chartbook.identity import derive_pipeline_id, get_git_remote_url, repository_key
     from chartbook.manifest import _read_manifest_file, catalog_member_dirs, resolve_project_type
 
-    if list_ and (path or render_only or repository or members or forget):
+    if list_ and (path or render_only or repository or forget):
         raise click.UsageError("--list shows what is trusted; it takes no PATH and no other option.")
-    if forget and (render_only or members):
-        raise click.UsageError("--forget takes a PATH, and --repository; a level or --members means nothing to it.")
-    if repository and members:
-        raise click.UsageError("--repository trusts one repository and --members a catalog's folders: one or the other.")
+    if forget and render_only:
+        raise click.UsageError("--forget takes a PATH, and --repository; a level means nothing to it.")
 
     def fail(message):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(message), err=True)
@@ -4744,6 +4735,8 @@ def catalog_migrate(catalog_path):
 def ls_stores(ctx, as_json):
     """List stores in catalog order."""
     from chartbook.multi_store import Stores
+    if ctx.obj.get("catalog") is None:
+        _catalog_or_make_one()
     stores = Stores.configured(ctx.obj.get("catalog"))
     if as_json or ctx.obj.get("json"):
         _echo_json([
@@ -4765,6 +4758,8 @@ def ls_versions(ctx, as_json):
     """List every snapshot, newest first, with its store."""
     from chartbook.multi_store import Stores
     from chartbook.snapshot import readable_snapshots
+    if ctx.obj.get("catalog") is None:
+        _catalog_or_make_one()
     stores = Stores.configured(ctx.obj.get("catalog"))
     found, unreadable = readable_snapshots(stores)
     if as_json or ctx.obj.get("json"):
@@ -4804,6 +4799,8 @@ def store_add(name, url, pipelines, read_only, catalog_path):
     from chartbook.catalog_config import edit_store
     from chartbook.store import StoreError, store_for_url
     from chartbook.snapshot import readable_snapshots
+    if catalog_path is None:
+        _catalog_or_make_one()  # the machine's own store is listed first, before the one added
     try:
         from chartbook.config import get_default_catalog_path, get_global_catalog_path, _absolute_if_folder
         catalog_file = Path(catalog_path) if catalog_path else (get_default_catalog_path() or get_global_catalog_path())

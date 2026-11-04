@@ -12,7 +12,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
-| `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
+| `chartbook catalog init/disable/enable/build/open` | Manage a catalog and its site; the first command that needs the catalog makes it |
 | `chartbook ls [pipelines\|dataframes\|charts] [--json]` | List cataloged objects |
 | `chartbook get-docs` | Print a dataframe's page, any other cataloged asset's write-up, or a pipeline's README |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
@@ -241,7 +241,7 @@ Where more than one run differs (`transcripts_2026_q4` beside the other quarters
 ## chartbook trust
 
 ```console
-chartbook trust [PATH] [--render] [--repository] [--members] [--list] [OPTIONS] [--forget]
+chartbook trust [PATH] [--render] [--repository] [--list] [OPTIONS] [--forget]
 ```
 
 Say that a pipeline's folder is yours to build. Usually you need not: the first build of a folder asks you, at a terminal (below). A build of a folder you have not trusted, where no one is asked (a script, CI), runs as a build of files from a store does: `chartbook docs build` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook run` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
@@ -266,7 +266,6 @@ Trust this folder? [y/r/N]:
 | `PATH` | The folder; this one by default. Its trust covers the folders inside it, so `chartbook trust ~/GitRepositories/ftsfr` trusts every pipeline under it, and the command says so when the folder has no `chartbook.toml` |
 | `--render` | Trust it to render only: queries run for glimpses and the index, and the files its manifest names are read wherever they are. `build` and `run` still refuse, saying "trusted to render, not to run" |
 | `--repository` | Trust the folder's `origin` repository instead of the folder: every clone of it, wherever it is on this machine. The folder must have an `origin` remote |
-| `--members` | Removed: catalogs render stored snapshots and have no working members to trust |
 | `--list` | What is trusted, and how: each folder and repository with its level and when it was recorded, and whether `CHARTBOOK_TRUST=all` or `CI` trusts more |
 | `--forget` | Take the folder (or, with `--repository`, its repository) out of the record. A parent folder's entry that covers it is left as it is |
 
@@ -396,11 +395,22 @@ It copies the files the manifest names, so in a folder you have not trusted it r
 (chartbook-catalog)=
 ## chartbook catalog
 
-Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` (`chartbook config` can point these commands at a different catalog). Concepts and the auto-discovery alternative: {doc}`../guide/catalogs-and-data`.
+Manage a catalog — by default the machine's, `~/.chartbook/catalog.toml` (`chartbook config` can point these commands at a different catalog). Concepts: {doc}`../guide/catalogs-and-data`.
+
+**By default a store and a catalog are one unit.** The first command that needs the catalog and finds none (`chartbook ls`, `get-docs`, `data`, `catalog build`, `catalog open`, and `chartbook snapshot` or `run --snapshot` once the snapshot is made) makes `~/.chartbook/catalog.toml` over the store this machine uses, and nothing else. At a terminal it asks first, and Enter says yes:
+
+```console
+$ chartbook ls
+No catalog yet.
+Create one over your store at /Users/x/.chartbook/store? [Y/n]:
+Made /Users/x/.chartbook/catalog.toml.
+```
+
+`n` stops a command that needs one, with the commands that make or name one; after a snapshot it only leaves the catalog unmade. A script, a pipe or CI is not asked: the catalog is made and one line on stderr says so (`Made …: a catalog over your store at …`), since it names the machine's store and nothing is lost by making it. So does `data.load(pipeline=…, dataframe=…)` in Python. A catalog the settings name (`chartbook config`) is used as it is, and an old `~/.chartbook/chartbook.toml` stops the command and names `chartbook catalog migrate`.
 
 ### catalog init
 
-Create the global catalog with an empty `[pipelines]` section. Its folder is recorded as trusted to run ({ref}`chartbook trust <chartbook-trust>`): you made it.
+Make the machine's catalog ahead of time, or with a title. Asks nothing: the title is "My Catalog" unless `--title` says otherwise. Other stores join it with `chartbook store add`.
 
 ```console
 chartbook catalog init [OPTIONS] [--title TITLE]
@@ -594,12 +604,12 @@ Error: ftsfr/fed_yield_curve has changes that are not committed:
 A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.
 ```
 
-**New data, same code.** A pipeline that pulls data from outside builds other bytes on another day, with no file changed. Build again and snapshot again: the commit is the same and the snapshot is new. If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
+**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time, holding only the files that changed, since the store keeps each file once. If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
 
 ```console
 $ chartbook snapshot
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Nothing has changed since the snapshot of 2026-10-13 18:22 UTC. No new one was made.
+No new snapshot: the same bytes and the same pins as the one made 2026-10-13 18:22 UTC.
 ```
 
 A snapshot records what the pipeline was pinned to, so after `chartbook update` it is made again with the same bytes: a pipeline that pins this one then reads where they came from. Two checkouts of one pipeline that share a store and pin differently (a lockfile git ignores) each make their own when they snapshot, and the newest is the one a pin takes.
@@ -1309,7 +1319,7 @@ Copy every snapshot to `--to NAME`, checking hashes and copying retention and or
 
 ## chartbook config
 
-Interactively set the default catalog path (stored as `catalog.path` in `~/.chartbook/settings.toml`). This is what `data.load()`, `chartbook ls`, `chartbook data`, and the `catalog` commands use when no explicit `--catalog`/`catalog_path` is given.
+Interactively set the default catalog path (stored as `catalog.path` in `~/.chartbook/settings.toml`). This is what `data.load()`, `chartbook ls`, `chartbook data`, and the `catalog` commands use when no explicit `--catalog`/`catalog_path` is given. With nothing set, they use `~/.chartbook/catalog.toml`, made over the machine's store the first time one of them needs it ({ref}`chartbook catalog <chartbook-catalog>`).
 
 ```console
 chartbook config

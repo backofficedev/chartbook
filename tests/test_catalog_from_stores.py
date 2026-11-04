@@ -107,8 +107,8 @@ def test_catalog_reads_no_working_members_and_needs_no_member_trust(tmp_path, mo
     result = CliRunner().invoke(main, ["catalog", "build", "-f"])
     assert result.exit_code == 0, result.output
     assert "Trust" not in result.output and config.read_trust() == []
-    for words, hint in ((["run"], "stored snapshots"), (["check"], "Diagnostics"), (["trust", "--members"], "no working members")):
-        result = CliRunner().invoke(main, [*words, "--project-dir", str(path.parent)] if words[0] != "trust" else words)
+    for words, hint in ((["run"], "stored snapshots"), (["check"], "Diagnostics")):
+        result = CliRunner().invoke(main, [*words, "--project-dir", str(path.parent)])
         assert result.exit_code != 0
         assert hint in result.output
     assert config.read_trust() == []
