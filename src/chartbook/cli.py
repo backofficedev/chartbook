@@ -1278,28 +1278,19 @@ def _say_trust_level(manifest, project_dir):
 
     `check` reads and runs nothing, so it is not gated; it says the level
     the folder is trusted at (``docs_src/design/trust.md``) when that is
-    not `run`, and the command that trusts it. For a catalog, the lowest
-    level among its own folder and its member folders on this machine.
+    not `run`, and the command that trusts it. A catalog never gets here:
+    `check` refuses one before, and a catalog's stores need no trust.
     """
-    from chartbook.config import TRUST_LEVELS, trust_of
-    from chartbook.manifest import get_pipeline_dirs
+    from chartbook.config import trust_of
 
     try:
-        folders = [project_dir]
-        if manifest["project"]["type"] == "catalog":
-            folders += list(get_pipeline_dirs(manifest).values())
-        levels = [trust_of(folder) for folder in folders]
+        lowest = trust_of(project_dir)
     except (ValueError, OSError):
         return  # the record is faulty: the build says so
-    if all(level == "run" for level in levels):
+    if lowest == "run":
         return
-    lowest = None if None in levels else min(levels, key=TRUST_LEVELS.index)
-    if manifest["project"]["type"] == "catalog":
-        standing = "Not every folder of this catalog is trusted" + (" to run" if lowest == "render" else "")
-        command = "`chartbook trust --members` here trusts the catalog's folder and each member folder on this machine"
-    else:
-        standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
-        command = "`chartbook trust` here trusts it"
+    standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
+    command = "`chartbook trust` here trusts it"
     refused = "`chartbook run` refuses to run the build script"
     if lowest is None:
         refused += (
@@ -3275,8 +3266,7 @@ def _echo_snapshot(report, upstream=False):
         )
     else:
         click.echo(
-            f"Nothing has changed since the snapshot of {_when(taken.made_at)}. "
-            f"No new one was made."
+            f"No new snapshot: the same bytes and the same pins as the one made {_when(taken.made_at)}."
         )
 
     if getattr(report, "stores", None):
@@ -4409,12 +4399,6 @@ def _trust_to_render_if_untrusted(folder, pipeline_id) -> bool:
     default=False,
     help="Trust the folder's origin repository instead of the folder: every clone of it, wherever it is",
 )
-@click.option(
-    "--members",
-    is_flag=True,
-    default=False,
-    help="In a catalog: trust the catalog's folder and each member folder on this machine",
-)
 @click.option("--list", "list_", is_flag=True, default=False, help="Show what is trusted, and how")
 @click.option(
     "--forget",
@@ -4422,7 +4406,7 @@ def _trust_to_render_if_untrusted(folder, pipeline_id) -> bool:
     default=False,
     help="No longer trust the folder (or, with --repository, its repository)",
 )
-def trust(path, render_only, repository, members, list_, forget):
+def trust(path, render_only, repository, list_, forget):
     """Trust a pipeline's folder, so that a build of it runs as your own.
 
     A build of a folder you have not trusted runs as a build of files from
@@ -4455,20 +4439,16 @@ def trust(path, render_only, repository, members, list_, forget):
         chartbook trust --list
         chartbook trust --forget
     """
-    if members:
-        raise click.ClickException("Catalogs read snapshots and have no working members to trust. Trust a pipeline folder directly.")
     import os
 
     from chartbook import config
     from chartbook.identity import derive_pipeline_id, get_git_remote_url, repository_key
     from chartbook.manifest import _read_manifest_file, catalog_member_dirs, resolve_project_type
 
-    if list_ and (path or render_only or repository or members or forget):
+    if list_ and (path or render_only or repository or forget):
         raise click.UsageError("--list shows what is trusted; it takes no PATH and no other option.")
-    if forget and (render_only or members):
-        raise click.UsageError("--forget takes a PATH, and --repository; a level or --members means nothing to it.")
-    if repository and members:
-        raise click.UsageError("--repository trusts one repository and --members a catalog's folders: one or the other.")
+    if forget and render_only:
+        raise click.UsageError("--forget takes a PATH, and --repository; a level means nothing to it.")
 
     def fail(message):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(message), err=True)

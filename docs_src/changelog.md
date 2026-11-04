@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The store was made silently on the first write, and the catalog was a separate thing to set up: `chartbook ls`, `chartbook get-docs` and `chartbook catalog build` refused without one, `ls` offered to make one with a `[y/N]` and a title question, and `chartbook catalog init` asked for a title. Now the first command that needs the catalog makes it, `~/.chartbook/catalog.toml`, over the store this machine uses: at a terminal it asks `No catalog yet. Create one over your store at …? [Y/n]`, and Enter says yes; a script, a pipe or CI is not asked, and one line on stderr says it was made, since it names the machine's store and nothing is lost by making it. `chartbook snapshot` and `chartbook run --snapshot` offer the same once the snapshot is made, so that `chartbook catalog build` is the next command that works; `n` there leaves the catalog unmade and the command succeeds. `data.load(pipeline=…, dataframe=…)` makes it the same way, and says so on stderr, so `CatalogNotConfiguredError` is gone. `chartbook catalog init` stays, for making the catalog ahead of time or with a title, and asks nothing: the title is "My Catalog" unless `--title` says otherwise. A catalog the settings name is used as it is, and an old `~/.chartbook/chartbook.toml` still stops the command and names `chartbook catalog migrate`.
 
 And one rule a catalog read had skipped: `data.load(pipeline=…, dataframe=…)` in a batch run (`chartbook run`, `CHARTBOOK_BATCH=1`) outside any pipeline now refuses as a reference does, since nothing would record the read; it had read the newest snapshot through the catalog.
+### Changed — `chartbook snapshot` says plainly when it made nothing
+
+When the build's bytes and the lockfile's pins are those of a snapshot already at this commit, the command now says `No new snapshot: the same bytes and the same pins as the one made 2026-10-13 18:22 UTC.` where it said "Nothing has changed since the snapshot of …". The rule is written down under `chartbook snapshot` in the CLI reference and in {doc}`guide/depending-on-pipelines`: a snapshot is the hash of every file the build made, so the same bytes make no new one, and new data at the same commit makes one that holds only the files that changed.
+
+### Fixed — a hint named a flag that always errored
+
+`chartbook run`, refusing untrusted folders, could say to run `chartbook trust --members`, a flag that did nothing but error since catalogs stopped having working members, and the contributing page said the same. The flag is gone, and the hint says `chartbook trust FOLDER`, which trusts a folder and every pipeline under it. `chartbook check`'s trust line, which had a catalog branch nothing could reach, speaks of pipelines only.
+
+### Changed — the repository's README is the landing page's pitch
+
+It said "a developer platform for data science teams" and showed commands from before 0.2. It now says what the documentation's front page says, shows the Quickstart's three files and its commands through the first snapshot, and links the guides.
 
 ## [0.5.1] - 2026-11-03
 

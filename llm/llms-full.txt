@@ -1,6 +1,6 @@
 # ChartBook
 
-> A developer platform for data science teams to discover, document, and share analytics work. Provides a centralized catalog for pipelines, charts, and dataframes with automatic documentation website generation.
+> Data pipelines with provenance. ChartBook connects a team's data pipelines, in any language, so each one builds on another's exact, versioned output: every chart traces back to its sources, every input is verified by hash, and everything lands in one catalog that people browse and agents build on.
 
 ChartBook organizes analytics work into **pipelines** (self-contained projects) or **catalogs** (multi-pipeline collections). All configuration uses TOML format (`chartbook.toml`).
 
