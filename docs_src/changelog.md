@@ -13,7 +13,7 @@ When the build's bytes and the lockfile's pins are those of a snapshot already a
 
 ### Fixed — a hint named a flag that always errored
 
-`chartbook run` and `chartbook check`, refusing untrusted folders, said to run `chartbook trust --members`, a flag that did nothing but error since catalogs stopped having working members. The flag is gone; the hint says `chartbook trust FOLDER`, which trusts a folder and every pipeline under it.
+`chartbook run`, refusing untrusted folders, could say to run `chartbook trust --members`, a flag that did nothing but error since catalogs stopped having working members, and the contributing page said the same. The flag is gone, and the hint says `chartbook trust FOLDER`, which trusts a folder and every pipeline under it. `chartbook check`'s trust line, which had a catalog branch nothing could reach, speaks of pipelines only.
 
 ### Changed — the repository's README is the landing page's pitch
 

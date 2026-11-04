@@ -1278,28 +1278,19 @@ def _say_trust_level(manifest, project_dir):
 
     `check` reads and runs nothing, so it is not gated; it says the level
     the folder is trusted at (``docs_src/design/trust.md``) when that is
-    not `run`, and the command that trusts it. For a catalog, the lowest
-    level among its own folder and its member folders on this machine.
+    not `run`, and the command that trusts it. A catalog never gets here:
+    `check` refuses one before, and a catalog's stores need no trust.
     """
-    from chartbook.config import TRUST_LEVELS, trust_of
-    from chartbook.manifest import get_pipeline_dirs
+    from chartbook.config import trust_of
 
     try:
-        folders = [project_dir]
-        if manifest["project"]["type"] == "catalog":
-            folders += list(get_pipeline_dirs(manifest).values())
-        levels = [trust_of(folder) for folder in folders]
+        lowest = trust_of(project_dir)
     except (ValueError, OSError):
         return  # the record is faulty: the build says so
-    if all(level == "run" for level in levels):
+    if lowest == "run":
         return
-    lowest = None if None in levels else min(levels, key=TRUST_LEVELS.index)
-    if manifest["project"]["type"] == "catalog":
-        standing = "Not every folder of this catalog is trusted" + (" to run" if lowest == "render" else "")
-        command = "`chartbook trust FOLDER` trusts a member's folder and every pipeline under it"
-    else:
-        standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
-        command = "`chartbook trust` here trusts it"
+    standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
+    command = "`chartbook trust` here trusts it"
     refused = "`chartbook run` refuses to run the build script"
     if lowest is None:
         refused += (

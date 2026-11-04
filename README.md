@@ -84,7 +84,7 @@ Then, in the folder:
 
 ```bash
 python src/build_chart.py      # writes _data/walks.parquet and the chart
-chartbook docs build           # writes the site, and index.json beside it
+chartbook docs build           # writes the site, and index.json beside it (the first time it asks whether the folder is yours: y)
 chartbook docs open
 git add -A && git commit -m "First pipeline"
 chartbook snapshot             # the build, by hash, into your store, labelled with the commit
