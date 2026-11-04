@@ -1242,8 +1242,14 @@ def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
         "stores": {"default": {"url": get_store_url()}},
     }
 
-    with open(catalog_path, "wb") as f:
-        tomli_w.dump(catalog, f)
+    # "x": two processes making it at once make one; the second gets
+    # FileExistsError and reads the first's. Written in one call, whole
+    written = tomli_w.dumps(catalog).encode("utf-8")
+    try:
+        with open(catalog_path, "xb") as f:
+            f.write(written)
+    except FileExistsError:
+        raise FileExistsError(f"Global catalog already exists: {catalog_path}") from None
 
     return catalog_path
 

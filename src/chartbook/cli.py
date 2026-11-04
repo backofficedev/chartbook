@@ -1967,11 +1967,19 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False):
 
 
 def _say_where_a_snapshot_shows():
-    """After a snapshot, make the catalog that shows it if there is none yet (asking at a terminal), and say how to see it."""
-    if _default_catalog_path() is not None:
-        return
-    if _catalog_or_make_one(required=False, to_show_a_snapshot=True) is not None:
-        click.echo("`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.", err=True)
+    """After a snapshot, make the catalog that shows it if there is none yet (asking at a terminal), and say how to see it.
+
+    The snapshot is made: nothing here fails the command. A catalog that
+    cannot be read (an old one, wanting `catalog migrate`) is said, as a
+    note.
+    """
+    try:
+        if _default_catalog_path() is not None:
+            return
+        if _catalog_or_make_one(required=False, to_show_a_snapshot=True) is not None:
+            click.echo("`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.", err=True)
+    except click.ClickException as error:
+        click.echo(f"Note: no catalog to show it in: {error.format_message()}", err=True)
 
 
 def _resolve_catalog_toml_path(catalog_path):
@@ -2012,9 +2020,13 @@ def catalog_init(title):
     """
     from chartbook.config import create_global_catalog, get_global_catalog_path, said_catalog_made
 
-    catalog_path = get_global_catalog_path()
-    if catalog_path.is_file():
-        click.echo(f"Global catalog already exists: {catalog_path}")
+    # The settings may name one, and an old ~/.chartbook/chartbook.toml wants `catalog migrate`
+    named = _default_catalog_path()
+    if named is not None and named.is_file():
+        click.echo(f"Global catalog already exists: {named}")
+        return
+    if get_global_catalog_path().is_file():
+        click.echo(f"Global catalog already exists: {get_global_catalog_path()}")
         return
 
     catalog_path = create_global_catalog(title=title)
@@ -3288,7 +3300,6 @@ def _run_script(
             click.echo(f"{step.id}: pinning what it depends on")
             _echo_pin_report(pins)
 
-    snapshots = []  # made in this run, for the catalog that shows them to be offered once it is over
     try:
         report = runner.run(
             project_dir,
@@ -3297,7 +3308,7 @@ def _run_script(
             on_pin=show_pins,
             force=force,
             snapshot=snapshot,
-            on_snapshot=lambda step, made: (snapshots.append(made), _echo_snapshot(made, upstream=step.snapshot_first), None if step.snapshot_first else _remind_of_gc(no_gc_reminder)),
+            on_snapshot=lambda step, made: (_echo_snapshot(made, upstream=step.snapshot_first), None if step.snapshot_first else _remind_of_gc(no_gc_reminder)),
             frozen=frozen,
             on_verify=_echo_frozen_report,
             remake=remake,
@@ -3316,7 +3327,7 @@ def _run_script(
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
-    if snapshots:
+    if report.snapshots:  # once the run is over, for the catalog that shows them
         _say_where_a_snapshot_shows()
 
 
@@ -4744,6 +4755,8 @@ def catalog_migrate(catalog_path):
 def ls_stores(ctx, as_json):
     """List stores in catalog order."""
     from chartbook.multi_store import Stores
+    if ctx.obj.get("catalog") is None:
+        _catalog_or_make_one()
     stores = Stores.configured(ctx.obj.get("catalog"))
     if as_json or ctx.obj.get("json"):
         _echo_json([
@@ -4765,6 +4778,8 @@ def ls_versions(ctx, as_json):
     """List every snapshot, newest first, with its store."""
     from chartbook.multi_store import Stores
     from chartbook.snapshot import readable_snapshots
+    if ctx.obj.get("catalog") is None:
+        _catalog_or_make_one()
     stores = Stores.configured(ctx.obj.get("catalog"))
     found, unreadable = readable_snapshots(stores)
     if as_json or ctx.obj.get("json"):
@@ -4804,6 +4819,8 @@ def store_add(name, url, pipelines, read_only, catalog_path):
     from chartbook.catalog_config import edit_store
     from chartbook.store import StoreError, store_for_url
     from chartbook.snapshot import readable_snapshots
+    if catalog_path is None:
+        _catalog_or_make_one()  # the machine's own store is listed first, before the one added
     try:
         from chartbook.config import get_default_catalog_path, get_global_catalog_path, _absolute_if_folder
         catalog_file = Path(catalog_path) if catalog_path else (get_default_catalog_path() or get_global_catalog_path())

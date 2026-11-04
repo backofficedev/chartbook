@@ -12,7 +12,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
-| `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
+| `chartbook catalog init/disable/enable/build/open` | Manage a catalog and its site; the first command that needs the catalog makes it |
 | `chartbook ls [pipelines\|dataframes\|charts] [--json]` | List cataloged objects |
 | `chartbook get-docs` | Print a dataframe's page, any other cataloged asset's write-up, or a pipeline's README |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |

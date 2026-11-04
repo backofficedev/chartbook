@@ -147,3 +147,60 @@ class TestLeftAlone:
         assert frame is not None
         assert config.get_global_catalog_path().is_file()
         assert capsys.readouterr().err.strip() == _made_line()
+
+
+class TestWhatTheReviewFound:
+    def test_catalog_init_refuses_beside_an_old_catalog(self, tmp_path):
+        old = config.get_global_config_dir() / "chartbook.toml"
+        old.parent.mkdir(parents=True, exist_ok=True)
+        old.write_text('[project]\ntype = "catalog"\nname = "Old"\n', encoding="utf-8")
+        result = CliRunner().invoke(main, ["catalog", "init"])
+        assert result.exit_code != 0
+        assert "chartbook catalog migrate" in result.output
+        assert not config.get_global_catalog_path().exists()
+
+    def test_a_snapshot_beside_an_old_catalog_is_still_made(self, tmp_path, monkeypatch):
+        """CHARTBOOK_STORE names the store, so the snapshot never reads the catalog; the old one is a note, not a failure."""
+        folder = pipeline(tmp_path)
+        old = config.get_global_config_dir() / "chartbook.toml"
+        old.parent.mkdir(parents=True, exist_ok=True)
+        old.write_text('[project]\ntype = "catalog"\nname = "Old"\n', encoding="utf-8")
+        monkeypatch.chdir(folder)
+        result = CliRunner().invoke(main, ["snapshot"])
+        assert result.exit_code == 0, result.output
+        assert "Snapshot made." in result.output
+        assert "Note: no catalog to show it in:" in result.output and "chartbook catalog migrate" in result.output
+        assert not config.get_global_catalog_path().exists()
+
+    def test_an_error_hint_makes_no_catalog(self, tmp_path):
+        """A read of an undeclared pipeline asks the catalog where it is, to say so: the catalog that is there, never one made for it."""
+        from chartbook import data
+        from chartbook.errors import DependencyNotDeclaredError
+
+        folder = pipeline(tmp_path)
+        with pytest.raises(DependencyNotDeclaredError):
+            data.load("acme/other:thing", project_dir=folder)
+        assert not config.get_global_catalog_path().exists()
+
+    def test_store_add_makes_it_first_so_the_machines_store_is_listed_first(self, stored, tmp_path):
+        from chartbook.store import FolderStore
+
+        other = FolderStore(tmp_path / "other")
+        other._check_layout(create=True)
+        result = CliRunner().invoke(main, ["store", "add", "team", str(other.root)])
+        assert result.exit_code == 0, result.output
+        assert list(_stores_of(config.get_global_catalog_path())) == ["default", "team"]
+
+    def test_ls_stores_makes_it(self, stored):
+        result = CliRunner().invoke(main, ["ls", "stores"])
+        assert result.exit_code == 0, result.output
+        assert _made_line() in result.output
+        assert f"default: {config.get_store_url()} (writable)" in result.output
+
+    def test_two_at_once_make_one(self, stored):
+        made = config.get_global_catalog_path()
+        first = config.create_global_catalog(title="First")
+        with pytest.raises(FileExistsError):
+            config.create_global_catalog(title="Second")
+        assert first == made and tomli.loads(made.read_text(encoding="utf-8"))["project"]["name"] == "First"
+        assert config.make_default_catalog() == (made, False)

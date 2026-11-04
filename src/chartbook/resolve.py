@@ -727,7 +727,10 @@ def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, Opti
     from chartbook.manifest import load_manifest
 
     try:
-        catalog = load_manifest(base_dir=resolve_catalog_path().parent)
+        found = get_default_catalog_path()  # the catalog that is there; a hint makes none
+        if found is None:
+            return None
+        catalog = load_manifest(base_dir=found.parent)
         return locate_in_catalog(catalog, pipeline), None
     except Exception:  # noqa: BLE001 - a hint is never worth failing for
         return None
@@ -1784,7 +1787,11 @@ def _in_a_catalog_folder(catalog_path=None):
     def working(asset: AssetRef, why: str, error: Exception) -> Location:
         wanted = asset.pipeline_id
         try:
-            folders = get_pipeline_dirs(_catalog_manifest(resolve_catalog_path(catalog_path)))
+            # The catalog that is there; none is made to find a folder in
+            found = resolve_catalog_path(catalog_path) if catalog_path is not None else get_default_catalog_path()
+            if found is None:
+                raise error
+            folders = get_pipeline_dirs(_catalog_manifest(found))
         except Exception:  # noqa: BLE001 - no catalog: no folder to read
             raise error from None
         found = []
