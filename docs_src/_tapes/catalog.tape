@@ -6,8 +6,8 @@ Set Width 1300
 Set Height 860
 
 Hide
-Type `export CHARTBOOK_STORE=/store && cd /work && cp /zip/chartbook-tutorial-store.zip . && unzip -q chartbook-tutorial-store.zip && chartbook store import chartbook-tutorial-store > /dev/null && chartbook catalog init --title "My Catalog" > /dev/null` Enter
-Type `rm -rf chartbook-tutorial-store* && export PS1='\[\e[38;5;75m\]~\[\e[0m\] $ ' && clear` Enter
+Source "/tapes/_tutorial_store.tape"
+Type `export PS1='\[\e[38;5;75m\]~\[\e[0m\] $ ' && clear` Enter
 Sleep 3s
 Show
 

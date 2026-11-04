@@ -4,7 +4,7 @@ Output "/out/agent.webm"
 Source "/tapes/_settings.tape"
 
 Hide
-Type `cd /work && cp /zip/chartbook-tutorial-store.zip . && unzip -q chartbook-tutorial-store.zip && chartbook store import chartbook-tutorial-store > /dev/null && chartbook catalog init --title "My Catalog" > /dev/null` Enter
+Source "/tapes/_tutorial_store.tape"
 Type `cp -r /src /work/my-pipeline && cd /work/my-pipeline && git init -q && export PS1='\[\e[38;5;75m\]my-pipeline\[\e[0m\] $ ' && clear` Enter
 Sleep 3s
 Show

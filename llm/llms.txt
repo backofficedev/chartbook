@@ -7,7 +7,7 @@ A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declar
 ## Get started
 
 - [Quickstart](docs_src/getting-started.md): `pip install chartbook`; a pipeline from three files (manifest, script, README); `chartbook docs build`; what `index.json` records
-- [Explore a Catalog](docs_src/tutorials/explore-a-catalog.md): download the tutorial store from the latest release, `chartbook store import`, `chartbook catalog init` / `build` / `open`, follow a model to its source through a pin, ask an agent, `chartbook add tutorial/treasury_curve`
+- [Explore a Catalog](docs_src/tutorials/explore-a-catalog.md): clone and build three pipelines (`chartbook run --snapshot` in each; the third pins the other two, so `chartbook update` first), `chartbook catalog build` / `open`, follow a model to its source through a pin, ask an agent, `chartbook add tutorial/treasury_curve`
 - [Let Your Agent Use the Catalog](docs_src/guide/agents.md): what is there (`chartbook ls --json`), what it is (`chartbook get-docs ID`), use it (`chartbook add`, `data.load`, `chartbook path`), can it be trusted (`chartbook lineage`)
 - [Start a Project From the Template](docs_src/guide/starting-a-project.md): `chartbook init`; each data source chosen brings a dataframe and a chart
 - [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool

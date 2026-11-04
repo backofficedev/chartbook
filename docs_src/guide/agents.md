@@ -120,6 +120,6 @@ right is still a person's call; the catalog says whose, and at which commit.
 
 ## Next
 
-- {doc}`../tutorials/explore-a-catalog`: the catalog these examples use, to download
+- {doc}`../tutorials/explore-a-catalog`: the catalog these examples use, built from three pipelines you clone
 - {doc}`depending-on-pipelines`: pins, the lockfile and `chartbook update`
 - {doc}`../reference/cli`: every command, and every option of these
