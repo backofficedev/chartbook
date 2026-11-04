@@ -174,7 +174,7 @@ Build a pipeline and its site in five minutes, from three files.
 :::{grid-item-card} Explore a catalog
 :link: tutorials/explore-a-catalog
 :link-type: doc
-Download a real catalog of public data, browse it, and point your agent at it.
+Build a real catalog from three pipelines on public data, browse it, and point your agent at it.
 :::
 
 :::{grid-item-card} Depend on another pipeline

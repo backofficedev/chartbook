@@ -1,8 +1,0 @@
-# What the build makes
-/_data/
-/_output/
-/_models/
-_docs/
-_docs_src/
-__pycache__/
-*.py[cod]

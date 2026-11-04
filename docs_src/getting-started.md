@@ -136,6 +136,32 @@ chartbook docs open
 
 Click **Two Random Walks** under Pipeline Charts, then the dataframe it names.
 
+## 5. Take a snapshot
+
+The site shows what the pipeline made. A **snapshot** declares it ready for other pipelines to
+read: every asset, by content hash, into your store, labelled with the commit it was built from.
+So commit first (the `.gitignore` leaves the data and the site out, and git keeps the code):
+
+```console
+git add -A && git commit -m "First pipeline"
+chartbook snapshot
+```
+
+```text
+my_pipeline at ad2f29a: 2 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Stores: default
+No catalog yet, to show it in.
+Create one over your store at /Users/you/.chartbook/store? [Y/n]:
+```
+
+Press Enter. The store is a folder, `~/.chartbook/store`, made on this first write; the
+**catalog** is the site over everything in it, and by default the two are one unit, so ChartBook
+makes the catalog over your store the first time something needs it. Any other pipeline on this
+machine can now read `my_pipeline:walks` by name, pinned to these exact bytes, and
+`chartbook catalog build` shows it beside every other snapshot here. Run `chartbook snapshot`
+again and nothing is written: the same bytes at the same commit are the snapshot already there.
+
 ## What just happened
 
 - **The manifest declared two assets**, each with a name, a place and a write-up. Your code
@@ -146,6 +172,8 @@ Click **Two Random Walks** under Pipeline Charts, then the dataframe it names.
   the hash that dataset has in this build.
 - **The dataframe got a page of its own**: its columns and first rows, its date range, and which
   charts use it.
+- **The snapshot put the build in your store**, by hash, under the commit, where another pipeline
+  reads it with `data.load("my_pipeline:walks")` and never from this folder.
 
 ```{image} _static/screenshots/quickstart-chart-light.png
 :alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from

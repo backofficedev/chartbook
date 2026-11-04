@@ -7,8 +7,9 @@ The PNGs under ``docs_src/_static/screenshots/`` are what the pages show (``only
 ``only-dark``); this script is how they are changed. Nothing imports it.
 
 With ``--catalog DOCS``, it photographs the tutorial's catalog too: the site ``chartbook catalog
-build`` wrote after importing the tutorial's store (``examples/tutorial/make_store.py``), as the
-tutorial does; ``DOCS`` is that site's folder, ``~/.chartbook/docs`` for the default catalog.
+build`` wrote after the tutorial's three pipelines (github.com/backofficedev/treasury_curve,
+macro_basics and rate_outlook) were cloned, built and snapshotted as the tutorial says; ``DOCS``
+is that site's folder, ``~/.chartbook/docs`` for the default catalog.
 
 It needs the ChartBook of this checkout (``uv run python ...``) and Chrome or Edge installed;
 ``CHROME`` names the browser's executable where it is somewhere else. Nothing under ``~/.chartbook``

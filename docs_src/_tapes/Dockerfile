@@ -9,7 +9,8 @@ RUN apt-get update \
 RUN python3 -m venv /opt/chartbook
 ENV PATH=/opt/chartbook/bin:$PATH
 COPY chartbook-*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/chartbook-*.whl && rm /tmp/chartbook-*.whl
+# doit runs the tutorial pipelines' builds; it is not a dependency of ChartBook
+RUN pip install --no-cache-dir /tmp/chartbook-*.whl doit && rm /tmp/chartbook-*.whl
 
 # Plotting's static images are drawn by a headless Chrome; VHS ships Chromium
 ENV BROWSER_PATH=/usr/bin/chromium
