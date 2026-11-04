@@ -631,7 +631,6 @@ def get_docs_path(
         ``"note/methodology"``) or a bare name for a dataframe; None for the
         pipeline's README.
     :param catalog_path: The catalog to look in; the default one if None.
-    :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline, the asset or its write-up is not there.
     :raises ValueError: If the asset is a notebook, which has no write-up.
     """
@@ -662,7 +661,6 @@ def get_docs(
     :param pipeline: The pipeline reference, as for :func:`get_docs_path`.
     :param asset: The asset, as for :func:`get_docs_path`.
     :param catalog_path: The catalog to look in; the default one if None.
-    :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline, the asset or its write-up is not there.
     :raises ValueError: If the asset is a notebook, which has no write-up.
     """
@@ -708,7 +706,6 @@ def get_docs_page(
     :param pipeline: The pipeline reference, as for :func:`get_docs_path`.
     :param asset: The asset, as for :func:`get_docs_path`.
     :param catalog_path: The catalog to look in; the default one if None.
-    :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or the asset is not there, or an
         asset other than a dataframe has no write-up.
     :raises ValueError: If the asset is a notebook, which has no write-up.

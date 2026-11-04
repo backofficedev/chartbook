@@ -57,11 +57,10 @@ from typing import ClassVar, Iterable, Mapping, Optional, Union
 
 import tomli
 
-from chartbook.config import get_default_catalog_path, get_global_settings_path
+from chartbook.config import get_default_catalog_path, make_default_catalog, said_catalog_made
 from chartbook.errors import (
     AssetNotDeclaredError,
     AssetNotPinnedError,
-    CatalogNotConfiguredError,
     DependencyNotDeclaredError,
     ManifestNotFoundError,
     VersionNotFoundError,
@@ -442,14 +441,17 @@ def resolve_catalog_path(catalog_path: Optional[Union[str, Path]] = None) -> Pat
 
     Priority:
     1. Explicit *catalog_path* argument
-    2. Global settings (``~/.chartbook/settings.toml``)
-    3. Raise :class:`CatalogNotConfiguredError`
+    2. Global settings (``~/.chartbook/settings.toml``), or ``~/.chartbook/catalog.toml``
+    3. A catalog made now over this machine's store, ``~/.chartbook/catalog.toml``
+       (:func:`chartbook.config.make_default_catalog`), with a line on stderr
+       that says so: by default a store and a catalog are one unit
 
     :param catalog_path: Explicit path to a catalog ``catalog.toml`` or its parent directory.
     :type catalog_path: Optional[Union[str, Path]]
     :returns: Resolved path to the catalog's ``catalog.toml``.
     :rtype: Path
-    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises ValueError: If the settings are faulty, or the catalog there is
+        one of ChartBook 0.3.
     """
     if catalog_path is not None:
         catalog_path = Path(catalog_path)
@@ -460,8 +462,14 @@ def resolve_catalog_path(catalog_path: Optional[Union[str, Path]] = None) -> Pat
     default_path = get_default_catalog_path()
     if default_path is not None:
         return default_path
+    # By default a store and a catalog are one unit: the first read that
+    # needs the catalog makes it over this machine's store, and says so
+    path, made = make_default_catalog()
+    if made:
+        import sys
 
-    raise CatalogNotConfiguredError(get_global_settings_path())
+        sys.stderr.write(said_catalog_made(path) + "\n")
+    return path
 
 
 def find_manifest_dir(*starts: Union[str, Path]) -> Path:
@@ -719,7 +727,10 @@ def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, Opti
     from chartbook.manifest import load_manifest
 
     try:
-        catalog = load_manifest(base_dir=resolve_catalog_path().parent)
+        found = get_default_catalog_path()  # the catalog that is there; a hint makes none
+        if found is None:
+            return None
+        catalog = load_manifest(base_dir=found.parent)
         return locate_in_catalog(catalog, pipeline), None
     except Exception:  # noqa: BLE001 - a hint is never worth failing for
         return None
@@ -1414,8 +1425,6 @@ def resolve(
     :raises AssetNotPinnedError: If another pipeline's asset has no pinned
         copy: there is no pin, or the store does not have its bytes.
     :raises UnsupportedReferenceError: For reserved reference syntax.
-    :raises CatalogNotConfiguredError: If a catalog is needed and none is
-        configured.
     :raises KeyError: If the pipeline or dataframe is not in the catalog.
     """
     if pipeline is None:
@@ -1443,7 +1452,7 @@ def resolve(
         listed = _catalog_manifest(catalog)
         key = locate_in_catalog(listed, pipeline)
         folder = listed.get("pipelines", {}).get(key, {}).get("pipeline_base_dir")
-    except (CatalogNotConfiguredError, KeyError, OSError, ValueError) as error:
+    except (KeyError, OSError, ValueError) as error:
         why_not = error  # the store may still have it
     try:
         asset = AssetRef(name=str(ref)).in_pipeline((_own_id(Path(folder)) if folder else None) or key)
@@ -1465,6 +1474,8 @@ def resolve(
         from chartbook import lock
         if why_not is not None:
             raise why_not from None
+        # The same rule as a reference: a batch run outside any pipeline reads nothing
+        _refuse_a_batch_read_outside_a_pipeline(asset)
         stores = listed["stores"]
         found = _snapshots_in(stores)
         repository = listed.get("pipeline_notes", {}).get(key, {}).get("repository")
@@ -1776,7 +1787,11 @@ def _in_a_catalog_folder(catalog_path=None):
     def working(asset: AssetRef, why: str, error: Exception) -> Location:
         wanted = asset.pipeline_id
         try:
-            folders = get_pipeline_dirs(_catalog_manifest(resolve_catalog_path(catalog_path)))
+            # The catalog that is there; none is made to find a folder in
+            found = resolve_catalog_path(catalog_path) if catalog_path is not None else get_default_catalog_path()
+            if found is None:
+                raise error
+            folders = get_pipeline_dirs(_catalog_manifest(found))
         except Exception:  # noqa: BLE001 - no catalog: no folder to read
             raise error from None
         found = []
@@ -1791,6 +1806,20 @@ def _in_a_catalog_folder(catalog_path=None):
     return working
 
 
+def _refuse_a_batch_read_outside_a_pipeline(asset: AssetRef) -> None:
+    """A batch run reads only what a lockfile pins, and outside any pipeline nothing records a read."""
+    if batch():
+        raise AssetNotPinnedError(
+            str(asset),
+            "no_pipeline",
+            f"{asset} cannot be read: this is no pipeline (no {MANIFEST_NAME} encloses the calling file "
+            f"or the working directory, or the one that does is a catalog's), so nothing would record "
+            f"what was read, and a batch run (`chartbook run`, or {BATCH_ENV_VAR}=1) reads only what a "
+            f"lockfile pins. Run it from the pipeline whose [dependencies] declare "
+            f"{asset.pipeline_id} (in Python, project_dir says which one).",
+        )
+
+
 def _read_outside_a_pipeline(asset: AssetRef, working) -> Location:
     """Another pipeline's asset, read from a script in no pipeline: its newest snapshot, quietly.
 
@@ -1802,16 +1831,7 @@ def _read_outside_a_pipeline(asset: AssetRef, working) -> Location:
     that pipeline's rules wherever it is run from, since the pipeline is
     found from the calling file before the working directory.
     """
-    if batch():
-        raise AssetNotPinnedError(
-            str(asset),
-            "no_pipeline",
-            f"{asset} cannot be read: this is no pipeline (no {MANIFEST_NAME} encloses the calling file "
-            f"or the working directory, or the one that does is a catalog's), so nothing would record "
-            f"what was read, and a batch run (`chartbook run`, or {BATCH_ENV_VAR}=1) reads only what a "
-            f"lockfile pins. Run it from the pipeline whose [dependencies] declare "
-            f"{asset.pipeline_id} (in Python, project_dir says which one).",
-        )
+    _refuse_a_batch_read_outside_a_pipeline(asset)
     location, why, _, settled = _newest_snapshot_of(asset)
     if location is not None:
         return location

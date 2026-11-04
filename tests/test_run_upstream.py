@@ -151,7 +151,12 @@ class TestUpstream:
         result = CliRunner().invoke(main, ["run", "--upstream"])
         assert result.exit_code == 0, result.output
         assert "Upstream with no snapshot to pin, built and snapshotted first:" in result.output
-        assert result.output.splitlines()[-1] == "Ran build in 2 pipeline(s)."
+        assert result.output.splitlines()[-3:] == [
+            "Ran build in 2 pipeline(s).",
+            # By default a store and a catalog are one unit: the first snapshot makes the catalog that shows it
+            f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
+            "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
+        ]
         assert _order(work) == ["up", "down"]
 
 

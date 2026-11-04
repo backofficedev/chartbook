@@ -1,18 +1,19 @@
 # Catalogs and Stores
 
 A **store** is a folder that holds snapshots. A **catalog** is a list of stores, and a site over
-every snapshot in them. Neither reads a working folder, and neither copies data anywhere.
+every snapshot in them. Neither reads a working folder, and neither copies data anywhere. By
+default the two are one unit: ChartBook makes the catalog over your store the first time you need
+it, and asks first at a terminal.
 
 ```console
-$ chartbook catalog init
-$ chartbook store add team "~/Google Drive/chartbook-store-team"
-$ chartbook catalog build
+$ chartbook catalog build       # the first time: "No catalog yet. Create one over your store at …? [Y/n]"
 $ chartbook catalog open
+$ chartbook store add team "~/Google Drive/chartbook-store-team"   # a second store joins it
 ```
 
 The catalog lists every snapshot of every pipeline in its stores, each its own site as its owner
 declared it ready, and which pipeline pins it. {doc}`../tutorials/explore-a-catalog` builds this one
-from a store you download:
+from three pipelines you clone and build:
 
 ```{image} ../_static/screenshots/tutorial-versions-light.png
 :alt: The catalog's Versions page: each pipeline's snapshots by commit and time, and which pipeline pins each
@@ -51,7 +52,9 @@ this machine uses and what set them.
 
 ## The catalog is its stores
 
-The machine's catalog is `~/.chartbook/catalog.toml`. Its `[stores]` table lists the stores to read,
+The machine's catalog is `~/.chartbook/catalog.toml`, made over the machine's store the first time a
+command needs it (`chartbook catalog init` makes it ahead of time, or with a title). Its `[stores]`
+table lists the stores to read,
 in order; the first is where new snapshots go unless a store's `pipelines` list routes a pipeline
 elsewhere.
 

@@ -81,7 +81,7 @@ def get_global_config_dir() -> Path:
 def get_global_catalog_path() -> Path:
     """Return the path to the default global catalog.
 
-    :returns: ``~/.chartbook/chartbook.toml``
+    :returns: ``~/.chartbook/catalog.toml``
     :rtype: Path
     """
     return get_global_config_dir() / "catalog.toml"
@@ -1213,7 +1213,7 @@ def set_default_catalog_path(catalog_path: Path) -> None:
 
 
 def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
-    """Create a minimal global catalog at ``~/.chartbook/chartbook.toml``.
+    """Create a minimal global catalog at ``~/.chartbook/catalog.toml``, over the store this machine uses.
 
     Also creates the ``~/.chartbook/artifacts/`` directory.
 
@@ -1221,9 +1221,9 @@ def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
     :type title: str
     :param author: Author name for the catalog.
     :type author: str
-    :returns: Path to the created ``chartbook.toml``.
+    :returns: Path to the created ``catalog.toml``.
     :rtype: Path
-    :raises FileExistsError: If ``~/.chartbook/chartbook.toml`` already exists.
+    :raises FileExistsError: If ``~/.chartbook/catalog.toml`` already exists.
     """
     config_dir = get_global_config_dir()
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -1242,7 +1242,40 @@ def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
         "stores": {"default": {"url": get_store_url()}},
     }
 
-    with open(catalog_path, "wb") as f:
-        tomli_w.dump(catalog, f)
+    # "x": two processes making it at once make one; the second gets
+    # FileExistsError and reads the first's. Written in one call, whole
+    written = tomli_w.dumps(catalog).encode("utf-8")
+    try:
+        with open(catalog_path, "xb") as f:
+            f.write(written)
+    except FileExistsError:
+        raise FileExistsError(f"Global catalog already exists: {catalog_path}") from None
 
     return catalog_path
+
+
+def make_default_catalog() -> tuple[Path, bool]:
+    """The catalog this machine uses, made over its store if there is none yet.
+
+    By default a store and a catalog are one unit: the first command that
+    needs the catalog makes ``~/.chartbook/catalog.toml``, listing the
+    store :func:`get_store_url` names and nothing else, so that
+    ``chartbook catalog build`` shows every snapshot made here. Nothing is
+    made when the settings name a catalog, or one is there already.
+
+    :returns: The catalog's path, and whether this call made it.
+    :raises ValueError: If the settings are faulty, or ``~/.chartbook``
+        holds a catalog of ChartBook 0.3 (``chartbook catalog migrate``).
+    """
+    found = get_default_catalog_path()
+    if found is not None:
+        return found, False
+    try:
+        return create_global_catalog(), True
+    except FileExistsError:  # another process made it first
+        return get_global_catalog_path(), False
+
+
+def said_catalog_made(path: Path) -> str:
+    """The one line that says a catalog was made for you, and over which store."""
+    return f"Made {path}: a catalog over your store at {shown_store_url(get_store_url())}."
