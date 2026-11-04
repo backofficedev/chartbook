@@ -396,11 +396,22 @@ It copies the files the manifest names, so in a folder you have not trusted it r
 (chartbook-catalog)=
 ## chartbook catalog
 
-Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` (`chartbook config` can point these commands at a different catalog). Concepts and the auto-discovery alternative: {doc}`../guide/catalogs-and-data`.
+Manage a catalog — by default the machine's, `~/.chartbook/catalog.toml` (`chartbook config` can point these commands at a different catalog). Concepts: {doc}`../guide/catalogs-and-data`.
+
+**By default a store and a catalog are one unit.** The first command that needs the catalog and finds none (`chartbook ls`, `get-docs`, `data`, `catalog build`, `catalog open`, and `chartbook snapshot` or `run --snapshot` once the snapshot is made) makes `~/.chartbook/catalog.toml` over the store this machine uses, and nothing else. At a terminal it asks first, and Enter says yes:
+
+```console
+$ chartbook ls
+No catalog yet.
+Create one over your store at /Users/x/.chartbook/store? [Y/n]:
+Made /Users/x/.chartbook/catalog.toml.
+```
+
+`n` stops a command that needs one, with the commands that make or name one; after a snapshot it only leaves the catalog unmade. A script, a pipe or CI is not asked: the catalog is made and one line on stderr says so (`Made …: a catalog over your store at …`), since it names the machine's store and nothing is lost by making it. So does `data.load(pipeline=…, dataframe=…)` in Python. A catalog the settings name (`chartbook config`) is used as it is, and an old `~/.chartbook/chartbook.toml` stops the command and names `chartbook catalog migrate`.
 
 ### catalog init
 
-Create the global catalog with an empty `[pipelines]` section. Its folder is recorded as trusted to run ({ref}`chartbook trust <chartbook-trust>`): you made it.
+Make the machine's catalog ahead of time, or with a title. Asks nothing: the title is "My Catalog" unless `--title` says otherwise. Other stores join it with `chartbook store add`.
 
 ```console
 chartbook catalog init [OPTIONS] [--title TITLE]
@@ -1309,7 +1320,7 @@ Copy every snapshot to `--to NAME`, checking hashes and copying retention and or
 
 ## chartbook config
 
-Interactively set the default catalog path (stored as `catalog.path` in `~/.chartbook/settings.toml`). This is what `data.load()`, `chartbook ls`, `chartbook data`, and the `catalog` commands use when no explicit `--catalog`/`catalog_path` is given.
+Interactively set the default catalog path (stored as `catalog.path` in `~/.chartbook/settings.toml`). This is what `data.load()`, `chartbook ls`, `chartbook data`, and the `catalog` commands use when no explicit `--catalog`/`catalog_path` is given. With nothing set, they use `~/.chartbook/catalog.toml`, made over the machine's store the first time one of them needs it ({ref}`chartbook catalog <chartbook-catalog>`).
 
 ```console
 chartbook config

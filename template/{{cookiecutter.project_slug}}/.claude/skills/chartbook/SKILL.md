@@ -74,7 +74,7 @@ chartbook store import DIR  # Copy the snapshots DIR holds (an export, or a pipe
 chartbook config            # Configure default catalog path (interactive)
 chartbook install claude-skill            # Install THIS skill user-level (~/.claude/skills/chartbook, or $CLAUDE_CONFIG_DIR); the front matter above names the ChartBook it is for
 chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for an older ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
-chartbook catalog init      # Create ~/.chartbook/catalog.toml
+chartbook catalog init      # Make ~/.chartbook/catalog.toml ahead of time; the first command that needs the catalog (ls, get-docs, catalog build, a snapshot) makes it over the machine's store, asking at a terminal
 chartbook catalog migrate   # Upgrade an old folder catalog, keeping a backup
 chartbook store add team /path/to/shared/store --pipelines acme/rates
 chartbook store remove team # Remove the definition; keep the files

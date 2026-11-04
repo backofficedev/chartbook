@@ -7,7 +7,6 @@ import polars as pl
 import pytest
 
 from chartbook import config, data
-from chartbook.errors import CatalogNotConfiguredError
 
 
 @pytest.fixture
@@ -166,13 +165,23 @@ def test_invalid_format(catalog_project):
         )
 
 
-# --- CatalogNotConfiguredError ---
+# --- No catalog yet ---
 
 
-def test_no_catalog_configured_raises(fake_config_dir):
-    """CatalogNotConfiguredError when no catalog is configured and no path given."""
-    with pytest.raises(CatalogNotConfiguredError, match="chartbook config"):
+def test_no_catalog_is_made_over_the_store(fake_config_dir, capsys):
+    """With no catalog, a read through one makes the machine's catalog over its store, says so, and finds nothing."""
+    with pytest.raises(KeyError):
         data.load(pipeline="any", dataframe="any")
+    made = fake_config_dir / "catalog.toml"
+    assert made.is_file()
+    assert capsys.readouterr().err.splitlines() == [f"Made {made}: a catalog over your store at {config.get_store_url()}."]
+    import tomli
+
+    assert tomli.loads(made.read_text(encoding="utf-8"))["stores"] == {"default": {"url": config.get_store_url()}}
+    # Made once: the second read says nothing
+    with pytest.raises(KeyError):
+        data.load(pipeline="any", dataframe="any")
+    assert capsys.readouterr().err == ""
 
 
 # --- Loading via global config ---

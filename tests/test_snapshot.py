@@ -22,7 +22,7 @@ import tomli_w
 from click.testing import CliRunner
 
 from chartbook import store as store_module
-from chartbook import data, index, lock, snapshot
+from chartbook import config, data, index, lock, snapshot
 from chartbook.cli import main
 from chartbook.manifest import load_manifest
 from chartbook.snapshot import SnapshotError
@@ -1210,7 +1210,11 @@ class TestCommands:
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
             "Stores: default",
+            # By default a store and a catalog are one unit: the first snapshot makes the catalog that shows it
+            f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
+            "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
         ]
+        assert config.get_global_catalog_path().is_file()
 
     def test_snapshot_again(self, maker, monkeypatch):
         monkeypatch.chdir(maker)
