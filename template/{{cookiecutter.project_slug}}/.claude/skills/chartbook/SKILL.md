@@ -2,7 +2,7 @@
 name: chartbook
 description: Help users work with ChartBook - a data science documentation platform for organizing pipelines, charts, and dataframes
 metadata:
-  chartbook-version: "0.5.1"
+  chartbook-version: "0.5.2"
 ---
 
 # ChartBook Assistant
