@@ -488,7 +488,6 @@ class TestTheCommand:
     def test_forget_takes_no_level(self, work, monkeypatch):
         monkeypatch.chdir(work)
         assert _trust("--forget", "--render").exit_code == 2
-        assert _trust("--repository", "--members").exit_code == 1
 
     def test_a_record_that_cannot_be_read_is_one_plain_line(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)

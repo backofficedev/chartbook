@@ -790,13 +790,10 @@ def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
         f"  {step.id}: {step.directory} ({standing(level)}{', an upstream --upstream would build' if step.source == 'upstream' else ''})"
         for step, level in refused
     )
-    if any(step.source == "upstream" for step, _ in refused):
-        remedy = "`chartbook trust` in a folder trusts that one, once you have read what its build runs."
-    else:
-        remedy = (
-            f"`chartbook trust --members` in {here} trusts the catalog's folder and each member folder "
-            f"on this machine; `chartbook trust` in one folder trusts that one."
-        )
+    remedy = (
+        "`chartbook trust` in a folder trusts that one, once you have read what its build runs; "
+        "`chartbook trust FOLDER` trusts a folder and every pipeline under it."
+    )
     raise RunError(
         f"These pipelines are not trusted to run, so nothing was run:\n{listed}\n"
         f"A build script is code, and it runs here once you say the pipeline is yours to run: {remedy}"

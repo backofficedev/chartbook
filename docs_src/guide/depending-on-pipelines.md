@@ -79,6 +79,11 @@ $ chartbook run --snapshot      # build it, and copy what it built into the stor
 
 That is a snapshot, and it is what of theirs you read. Their folder is never read.
 
+Run it again and nothing new is written: a snapshot is the hash of every file the build made, and
+the same bytes and the same pins at the same commit are the snapshot already there (`No new
+snapshot: the same bytes and the same pins as the one made …`). New data at the same commit makes a
+new one, holding only the files that changed.
+
 ## You pin it, read it, and update when you choose
 
 ```console

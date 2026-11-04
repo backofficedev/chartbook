@@ -1218,8 +1218,8 @@ class TestCommands:
         result = self._run("snapshot")
         assert result.exit_code == 0
         last = result.output.splitlines()[-2]
-        assert last.startswith("Nothing has changed since the snapshot of 20")
-        assert last.endswith(" UTC. No new one was made.")
+        assert last.startswith("No new snapshot: the same bytes and the same pins as the one made 20")
+        assert last.endswith(" UTC.")
 
     def test_snapshot_says_what_is_not_built(self, maker, work):
         (maker / "_output" / "curve.html").unlink()
