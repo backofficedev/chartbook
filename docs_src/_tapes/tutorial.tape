@@ -20,7 +20,7 @@ Hide
 Wait+Screen@600s /Create one over your store/
 Show
 Sleep 2s
-Type "" Enter
+Enter
 Sleep 3s
 Type "clear && cd .. && chartbook catalog build" Sleep 300ms Enter
 Wait+Screen@300s /catalog open/

@@ -41,7 +41,7 @@ committed and has no timestamp on purpose: a `git diff` of it means "a pin moved
 
 On the catalog's page of what you built, the pin is named: what it was made from, *as pinned*, the
 snapshot and the hash of the bytes it read. Here, the tutorial's model, trained on another
-pipeline's yield curve ({doc}`../tutorials/explore-a-catalog` downloads it):
+pipeline's yield curve ({doc}`../tutorials/explore-a-catalog` builds it):
 
 ```{image} ../_static/screenshots/tutorial-model-light.png
 :alt: A model's page: trained on another pipeline's dataframe as pinned, the snapshot at 59a435b, and the hash of the input it read

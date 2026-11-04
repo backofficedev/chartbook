@@ -3,7 +3,7 @@
 FROM ghcr.io/charmbracelet/vhs
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 python3-venv git unzip jq \
+ && apt-get install -y --no-install-recommends python3 python3-venv git jq \
  && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m venv /opt/chartbook

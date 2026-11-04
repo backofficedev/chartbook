@@ -46,7 +46,7 @@ A pipeline's build is code, so ChartBook runs one only in a folder you have said
 Say it once for the whole folder, then build each pipeline and declare the build ready:
 
 ```console
-chartbook trust                 # this folder, and every pipeline inside it
+chartbook trust
 cd treasury_curve
 chartbook run --snapshot
 cd ../macro_basics
@@ -54,10 +54,12 @@ chartbook run --snapshot
 cd ..
 ```
 
-`chartbook run` runs the pipeline's build script (here `doit`: pull the data, draw the charts,
-render the site), and `--snapshot` then copies everything it built into your **store**, each file
-by its content hash, labelled with the commit it was built from. That is a **snapshot**, and it is
-what other pipelines read. The first one ends like this:
+`chartbook trust` with no path trusts the folder you are in, and every pipeline inside it, so the
+third pipeline you clone into it later is covered too. `chartbook run` runs the pipeline's build
+script (here `doit`: pull the data, draw the charts, render the site), and `--snapshot` then
+copies everything it built into your **store**, each file by its content hash, labelled with the
+commit it was built from. That is a **snapshot**, and it is what other pipelines read. Among the
+site builder's own output, the first run prints these lines, and ends with a question:
 
 ```text
 tutorial/treasury_curve: build
@@ -290,7 +292,7 @@ chartbook add tutorial/treasury_curve
 ```
 
 ```text
-Added to [dependencies] in my-pipeline/chartbook.toml: "tutorial/treasury_curve" = {}
+Added to [dependencies] in /Users/you/my-pipeline/chartbook.toml: "tutorial/treasury_curve" = {}
 tutorial/treasury_curve: 3 pinned
   From its snapshot at e686c8f, made 2026-11-04 14:39 UTC, which says it was made in https://github.com/backofficedev/treasury_curve, in store default.
 Wrote chartbook.lock.
