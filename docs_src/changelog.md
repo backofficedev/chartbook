@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-04
+
 ### Changed — the tutorial clones and builds; nothing is downloaded
 
 {doc}`tutorials/explore-a-catalog` downloaded a zip of the tutorial's store from the 0.5.0 release and imported it. Its three pipelines are now repositories of their own, [backofficedev/treasury_curve](https://github.com/backofficedev/treasury_curve), [macro_basics](https://github.com/backofficedev/macro_basics) and [rate_outlook](https://github.com/backofficedev/rate_outlook), and the tutorial clones the first two, builds and snapshots each (`chartbook run --snapshot`), builds the catalog over them, then clones the third, whose committed `chartbook.lock` pins the author's snapshots: `chartbook run --snapshot` refuses, since your store has your own, `chartbook update` moves the pins to them, and `git diff chartbook.lock` shows every hash that moved. That is the lesson: a pin never moves by itself. `rate_outlook`'s manifest names each dependency's repository, since the pipelines moved out of this one. `examples/tutorial/` and its `make_store.py` are gone from this repository, no zip is attached to a release, and the {doc}`getting-started` ends with a commit and the first snapshot. The terminal recordings and screenshots of the tutorial are of these steps.
