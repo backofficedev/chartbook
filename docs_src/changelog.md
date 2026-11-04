@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `chartbook snapshot` says plainly when it made nothing
+
+When the build's bytes and the lockfile's pins are those of a snapshot already at this commit, the command now says `No new snapshot: the same bytes and the same pins as the one made 2026-10-13 18:22 UTC.` where it said "Nothing has changed since the snapshot of …". The rule is written down under `chartbook snapshot` in the CLI reference and in {doc}`guide/depending-on-pipelines`: a snapshot is the hash of every file the build made, so the same bytes make no new one, and new data at the same commit makes one that holds only the files that changed.
+
+### Fixed — a hint named a flag that always errored
+
+`chartbook run` and `chartbook check`, refusing untrusted folders, said to run `chartbook trust --members`, a flag that did nothing but error since catalogs stopped having working members. The flag is gone; the hint says `chartbook trust FOLDER`, which trusts a folder and every pipeline under it.
+
+### Changed — the repository's README is the landing page's pitch
+
+It said "a developer platform for data science teams" and showed commands from before 0.2. It now says what the documentation's front page says, shows the Quickstart's three files and its commands through the first snapshot, and links the guides.
+
 ## [0.5.1] - 2026-11-03
 
 ### Changed — the template's data window is committed, not read from `.env`

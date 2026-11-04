@@ -794,8 +794,8 @@ def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
         remedy = "`chartbook trust` in a folder trusts that one, once you have read what its build runs."
     else:
         remedy = (
-            f"`chartbook trust --members` in {here} trusts the catalog's folder and each member folder "
-            f"on this machine; `chartbook trust` in one folder trusts that one."
+            "`chartbook trust FOLDER` trusts a folder and every pipeline under it, so one parent folder "
+            "covers them all; `chartbook trust` in one folder trusts that one."
         )
     raise RunError(
         f"These pipelines are not trusted to run, so nothing was run:\n{listed}\n"
