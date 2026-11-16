@@ -2611,7 +2611,7 @@ def _run_pin(project_dir, dependencies=None, on_refused=None):
 
 
 def _echo_frozen_report(step, report):
-    """Print what `--frozen` found: one line when all is well, else each problem."""
+    """Print what `pin --check` or `run --frozen` found: one line when all is well, else each problem."""
     who = f"{step.id}: " if step is not None else ""
     if not report.problems and not report.dependencies:
         click.echo(f"{who}no dependencies to check. Nothing written.")
@@ -2643,11 +2643,18 @@ def _echo_frozen_report(step, report):
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
 @click.option(
+    "--check",
+    "check_only",
+    is_flag=True,
+    help="Write nothing: say whether the lockfile is complete and every pin is in the store; exit 1 if not",
+)
+@click.option(
     "--frozen",
     is_flag=True,
-    help="Write nothing but the store's note for gc: say whether the lockfile is complete and every pin is in the store",
+    hidden=True,
+    help="Deprecated name of --check that also writes the store's note for gc, as it did before",
 )
-def pin(project_dir, frozen):
+def pin(project_dir, check_only, frozen):
     """Freeze what this pipeline depends on.
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
@@ -2669,21 +2676,27 @@ def pin(project_dir, frozen):
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
 
-    --frozen pins nothing and writes nothing but, where the store can be
-    written, its note that this machine reads these pins, so that `store
-    gc` on another machine keeps them: not the lockfile, no object. It says
-    whether the pipeline can be built from its lockfile alone, every
-    dependency pinned and every pin in the store, and exits 1 if not. For
-    CI, and for a store you may only read.
+    --check pins nothing and writes nothing: not the lockfile, no object,
+    and not the store's note for `store gc`. It says whether the pipeline
+    can be built from its lockfile alone, every dependency pinned and every
+    pin in the store, and exits 1 if not. For CI, and for a store you may
+    only read. `chartbook run --frozen`, which builds from the lockfile,
+    is what leaves the note that this machine reads these pins.
 
     \b
     Examples:
         chartbook pin
         chartbook pin --project-dir ../rate_forecast
-        chartbook pin --frozen
+        chartbook pin --check
     """
     if frozen:
-        _run_frozen(project_dir)
+        click.echo(
+            "warning: `chartbook pin --frozen` is now `chartbook pin --check`, which writes nothing; "
+            "--frozen still leaves the store's note for `store gc`, and will be removed.",
+            err=True,
+        )
+    if check_only or frozen:
+        _run_check(project_dir, note=frozen)
         return
     _run_pin(project_dir)
 
@@ -2704,7 +2717,7 @@ def _explain_os_error(error):
         return _said(
             f"{error} This had to write it: a git dependency's first pin and a "
             f"snapshot both put files into the store. Do it where the store can be written; or, "
-            f"if the store already has what the lockfile names, use --frozen."
+            f"if the store already has what the lockfile names, use `run --frozen` (or `pin --check` to only check)."
         )
     if isinstance(error, OSError) and lock.is_read_only(error):
         try:
@@ -2718,18 +2731,23 @@ def _explain_os_error(error):
                 f"it: a git dependency's first pin and a snapshot "
                 f"both put files into the store. Do it where the store can be "
                 f"written; or, if the store already has what the lockfile names, "
-                f"use --frozen. ({error})"
+                f"use `run --frozen` (or `pin --check` to only check). ({error})"
             )
     return _said(error)
 
 
-def _run_frozen(project_dir):
-    """Say whether a pipeline can be built from its lockfile alone; exit 1 if not."""
+def _run_check(project_dir, note=False):
+    """Say whether a pipeline can be built from its lockfile alone; exit 1 if not.
+
+    :param note: Whether to leave the store's note that this machine reads
+        these pins, as the deprecated ``pin --frozen`` did. ``pin --check``
+        writes nothing.
+    """
     from chartbook import lock
     from chartbook.store import StoreError
 
     try:
-        report = lock.verify(resolve_project_dir(project_dir), note=True)
+        report = lock.verify(resolve_project_dir(project_dir), note=note)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -3182,7 +3200,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     the store can be written, its note that this machine reads these pins:
     not the lockfile, no object, and no git dependency is fetched or built.
     The build runs only if the lockfile is complete and every pin is in
-    the store (`chartbook pin --frozen` says the same without building).
+    the store (`chartbook pin --check` says the same without building).
     For CI, and for a store you may only read.
 
     An asset chartbook.toml marks `keep = true` cost something to make. If

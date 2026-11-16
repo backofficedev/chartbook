@@ -944,7 +944,7 @@ class TestWhatTheGuardsReviewFound:
         fred, rates, forecast = would_be
         _pin_anyway(fred)
         monkeypatch.chdir(fred)
-        result = CliRunner().invoke(main, ["pin", "--frozen"])
+        result = CliRunner().invoke(main, ["pin", "--check"])
         assert result.exit_code == 1, result.output
         assert "Error: acme/fred: these pipelines depend on each other, so there is no order to build in." in result.output
 

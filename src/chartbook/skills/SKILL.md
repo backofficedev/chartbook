@@ -56,7 +56,7 @@ chartbook restore           # The mirror of snapshot: puts this pipeline's asset
 chartbook lineage           # Every snapshot upstream of this pipeline, walked through the pins and checked by hash; --check for CI, --rehash to re-hash the bytes. `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates    # Declare a dependency by its ID ("acme/rates" = {} under [dependencies]) and pin its newest snapshot from the store: no folder of it, no clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
-chartbook pin --frozen      # Writes nothing but, where it can, the store's note that this machine reads these pins (so gc elsewhere keeps them). Exit 1 unless chartbook.lock is complete and every pin is in the store. For CI and a read-only shared store
+chartbook pin --check       # Writes nothing. Exit 1 unless chartbook.lock is complete and every pin is in the store. For CI and a read-only shared store (`run --frozen` builds from the lockfile and leaves the store's note that keeps these pins from gc elsewhere; `pin --frozen` is the deprecated name)
 chartbook index diff BEFORE AFTER  # What changed between two builds from their index.json (or site folders): data, pins, versions, labels, staleness. --json, --exit-code
 chartbook update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin)
 chartbook run               # Pin what has no pin, then run this pipeline's [scripts] build. Never moves a pin. NEVER builds in a folder it depends on

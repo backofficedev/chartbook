@@ -154,12 +154,12 @@ class TestAFileThereBeforeAllOfItsBytes:
         updated = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
         assert updated.exit_code == 1
         assert "not fully synced: acme/rates:treasury: nothing was moved" in updated.output
-        frozen = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(forecast)])
+        frozen = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(forecast)])
         assert frozen.exit_code == 0  # still pinned to the first snapshot, which is whole
         held.write_bytes(whole)
         lock.update(forecast)
         _cut(held, whole[:10])
-        frozen = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(forecast)])
+        frozen = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(forecast)])
         assert frozen.exit_code == 1 and "not fully synced yet" in frozen.output
 
 
@@ -810,10 +810,22 @@ class TestAMachineThatOnlyReads:
         store = default_store()
         lock.run_gc(lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0), store)
 
-    def test_frozen_keeps_its_pins(self, reader):
+    def test_check_writes_no_note(self, reader):
+        """`pin --check` only checks: the note that keeps these pins from gc is left to `run --frozen` and reads."""
+        work, machine, rates, old, project, clone = reader
+        roots = default_store().root / "roots"
+        before = sorted(p.name for p in roots.iterdir())
+        result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(clone)])
+        assert result.exit_code == 0
+        assert "all in the store. Nothing written." in result.output
+        assert sorted(p.name for p in roots.iterdir()) == before
+
+    def test_the_old_frozen_still_keeps_its_pins(self, reader):
+        """`pin --frozen`, deprecated, still leaves the note it left before, and says to use --check."""
         work, machine, rates, old, project, clone = reader
         result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
         assert result.exit_code == 0
+        assert "`chartbook pin --frozen` is now `chartbook pin --check`" in result.output
         assert "Nothing written but the store's note that this machine reads these pins." in result.output
         again = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
         assert "all in the store. Nothing written." in again.output  # the note names it all already
@@ -1457,7 +1469,7 @@ class TestAStoreAtAPathWithAPassword:
         monkeypatch.setenv("CHARTBOOK_STORE", "//alice:s3cr3tpw@fileserver/share/store")
         for args in (
             ["pin", "--project-dir", str(project)],
-            ["pin", "--frozen", "--project-dir", str(project)],
+            ["pin", "--check", "--project-dir", str(project)],
             ["update", "--project-dir", str(project)],
             ["snapshot", "--project-dir", str(rates)],
             ["store", "info"],

@@ -150,7 +150,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
 | Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads. Since 2026-10-16 it holds the version's own index and documents, and `materialize()` lays a version out from the store alone ({doc}`versioned-catalog`) |
-| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --frozen` and `run --frozen` write no lockfile and no object (only, where the store can be written, this machine's note for `store gc`, since 2026-10-17) and say whether every pin can be had |
+| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --check` and `run --frozen` write no lockfile and no object and say whether every pin can be had; `run --frozen` leaves, where the store can be written, this machine's note for `store gc` (since 2026-10-17), and `pin --check` writes nothing (since 0.5.3, when it replaced `pin --frozen`, which left the note too) |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `writers/sphinx.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -1660,7 +1660,7 @@ machine that may only read it build.
 | What | Where |
 |---|---|
 | `verify()`: can the pipeline be built from its lockfile alone, nothing written | `chartbook/lock.py`, `FrozenReport`, `FrozenProblem` |
-| `chartbook pin --frozen`, `chartbook run --frozen` | `chartbook/cli.py`, `chartbook/run.py` (`frozen=`, `on_verify=`) |
+| `chartbook pin --check`, `chartbook run --frozen` | `chartbook/cli.py` (`_run_check`), `chartbook/run.py` (`frozen=`, `on_verify=`) |
 | A read-only store does not fail `pin` | `chartbook/lock.py`, `_sync()`, `PinReport.unrooted` |
 | Labels travel with snapshots, so `gc` on another machine knows them | `chartbook/snapshot.py`, `Snapshot.labels`, `labels_of()`, `_labels_in()` |
 | The tests | `tests/test_lock.py` (`TestFrozen`), `tests/test_run.py` (`TestFrozen`), `tests/test_snapshot.py` |

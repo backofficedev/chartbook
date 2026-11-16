@@ -664,7 +664,7 @@ class TestPinning:
         assert not lock.verify(downstream).problems
         monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(work / "fresh_cache"))
         monkeypatch.chdir(downstream)
-        for command in (["pin", "--frozen"], ["run", "--frozen"]):
+        for command in (["pin", "--check"], ["run", "--frozen"]):
             result = CliRunner().invoke(main, command)
             assert result.exit_code == 0, result.output
         assert (downstream / LOCK_FILE).read_bytes() == before

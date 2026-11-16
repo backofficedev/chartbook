@@ -700,7 +700,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     every pin whole (``chartbook run --frozen`` reads nothing else). The
     store is looked in only when it is a folder: a check uses no network,
     and with a bucket the lockfile is taken at its word, which ``chartbook
-    pin --frozen`` checks.
+    pin --check`` checks.
     """
     from chartbook import lock, snapshot
     from chartbook.config import without_credentials
@@ -742,7 +742,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     if not whole:
         return (
             f"directory not found: {directory}, and the store does not have all that the lockfile "
-            f"pins of it (`chartbook pin --frozen` says what). {advice}",
+            f"pins of it (`chartbook pin --check` says what). {advice}",
             False,
         )
     return (
@@ -772,7 +772,7 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     yet, and ``chartbook pin`` (or ``chartbook run``) pins its newest
     snapshot, as the first read of it does. That is a warning and not a
     problem because a fresh clone is in that state on purpose, and
-    ``--frozen`` is the gate that fails on it.
+    ``pin --check`` and ``run --frozen`` are the gates that fail on it.
     """
     problems = []
     in_build = get_pipeline_dirs(manifest)
