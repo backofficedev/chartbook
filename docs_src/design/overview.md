@@ -124,6 +124,7 @@ Decided by the maintainer, 2026-10-12.
 | 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; built by 2026-10-29 |
 | 12 | {doc}`plan-0.4.0` | What 0.4.0 is for: a catalog is its stores and a machine may have several; the catalog's pages as hubs over versions; a link file for two pipelines at once; `run`, `docs build`, `catalog build` | Proposed and built 2026-10-30 |
 | 13 | {doc}`plan-data-reads` | The store hands out files, never a gathered folder; the catalog reads no data; `data.path`, `data.files`, `data.load`; standalone and shared snapshots; the guide rewritten around use cases | Proposed 2026-10-31; built and released as 0.5.0, 2026-11-01 |
+| 14 | {doc}`pins-and-rebuilds` | A lockfile that a rebuild can meet: only dataframes and models in it; a dataframe pinned by its rows in periods, up to its last date; what each command and read then does | Proposed 2026-11-16; nothing built |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
