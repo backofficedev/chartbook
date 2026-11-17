@@ -246,6 +246,36 @@ class TestWhatItDoesNotTake:
         with pytest.raises(NotHashed, match="its columns cannot be put in one form"):
             hash_frame(pl.DataFrame({"t": [9223372036854776, 1]}, schema={"t": pl.Datetime("ms")}))
 
+    @pytest.mark.parametrize(
+        "kind,past",
+        [
+            (pl.Date, 106751992),
+            (pl.Date, -106751992),
+            (pl.Datetime("ms"), 9223372036854776),
+            (pl.Datetime("ms"), -9223372036854776),
+            (pl.Datetime("ms", "America/Chicago"), 9223372036854776),
+            (pl.Duration("ms"), 9223372036854776),
+        ],
+    )
+    def test_a_time_past_what_microseconds_hold_is_refused_by_chartbook_itself(self, kind, past):
+        """Whatever this polars does with it (one stops, one panics, one wraps it round): refused, and by name."""
+        whole = pl.Int32 if kind == pl.Date else pl.Int64
+        frame = pl.DataFrame({"when": [past, 1]}, schema={"when": whole}).cast({"when": kind})
+        with pytest.raises(NotHashed, match="column 'when' has a time past what 64 bits of microseconds hold"):
+            hash_frame(frame)
+
+    @pytest.mark.parametrize(
+        "kind,most,each",
+        [(pl.Date, 106751991, 86_400_000_000), (pl.Datetime("ms"), 9223372036854775, 1000), (pl.Duration("ms"), 9223372036854775, 1000)],
+    )
+    def test_the_last_time_microseconds_hold_is_hashed(self, kind, most, each):
+        whole = pl.Int32 if kind == pl.Date else pl.Int64
+        for value in (most, -most):
+            frame = pl.DataFrame({"when": [value, 1]}, schema={"when": whole}).cast({"when": kind})
+            finer = pl.Datetime("us") if kind != pl.Duration("ms") else pl.Duration("us")
+            same = pl.DataFrame({"when": [value * each, each]}, schema={"when": pl.Int64}).cast({"when": finer})
+            assert hash_frame(frame) == hash_frame(same)
+
     def test_a_number_past_64_bits(self):
         if not hasattr(pl, "Int128"):
             pytest.skip("this polars has no 128-bit whole numbers")
