@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a snapshot records a dataframe's rows, by period, up to its last date
+
+`chartbook snapshot` now records, for each dataframe, the hash of its rows beside the hash of its bytes, and `chartbook pin` and `chartbook update` copy it into `chartbook.lock`:
+
+```json
+"date_col": "ds",
+"as_of": "2026-10-30",
+"rows": {
+  "1961-06-14/1961-12-29": "sha256:7d02…",
+  "2026-01-02/2026-10-30": "sha256:a31a…"
+},
+"row_count": 382802
+```
+
+`as_of` is the table's own last date, never the clock's. `rows` has a line for each period: a calendar year, or a month or a day of one where a year's rows count for more than 128 MB (eight bytes a value, and sixteen and its own bytes for one of text, counted from the rows, so that the same rows give the same lines whatever file they came in), written by the first and the last timestamp seen in it. Rows with no date are the period `none`, and a dataframe with no `date_col` has the one line `all`. When a pin moves, the lines before the last stay as they were unless a value in them changed, so a lockfile's diff shows which periods did. A folder of files, a glob and one file of the same rows give the same lines, and so does a table or a query written out from a DuckDB file. Nothing checks a pin by its rows yet: that is the next step ({design}`pins-and-rebuilds`).
+
+A table is never held whole to be hashed. Its files are read a few thousand rows at a time, each row goes to a scratch file for its period in ChartBook's cache folder, and each period is sorted and hashed alone. On the four tables the design names, the largest 28 million rows of text, the peak was 1.36 GB, under the target of 2 GB that keeps a machine with 8 GB safe; `tests/test_rows_memory.py` holds that under a memory limit. The same bytes are hashed once: a later snapshot of them takes what an earlier one said. A snapshot from before this release has no rows, so the same commit and the same bytes make one new snapshot, once, to say them.
+
+Some dataframes have no rows hash, and `chartbook snapshot` says which and why (`rows not hashed: …`): a column of lists or structs; one day, the rows with no date, or a table with no `date_col`, over 128 MB; more than 256 columns; a CSV or JSON lines table of more than 32 MB of text, which is read whole, and an Arrow IPC file, whose size in memory its file does not say; a date outside the years 1 to 9999, or dates in more than 1,024 calendar years; and a parquet file written so that it cannot be read a little at a time (a row group's largest pages and dictionaries more than 768 MB together, a value of text that may be more than 128 MB or one of a fixed length of more than a megabyte, a footer of more than 16 MB), which is told from the file's page headers before a row of it is read, and says that the same rows written with fewer values a page can be hashed. pandas with fastparquet and DuckDB write such files of large or wide tables (one page to a column chunk), and pyarrow of values of megabytes (a thousand to a page). Such a dataframe is pinned by its bytes alone, as before. A snapshot is never stopped by the rows: where they could not be hashed for want of room for the scratch files, say, it is made all the same, says `rows not hashed this time: …`, and the next `chartbook snapshot` hashes them.
+
 ### Added — a rows hash: a hash of a table's rows, and not of its file
 
 `chartbook.rowhash.hash_frame(frame, date_col)` gives the hash of a polars DataFrame's rows. The same values give one hash whatever wrote them: another parquet writer, another compression, the rows or the columns in another order, whole numbers and floats in another width that holds them, dates in nanoseconds or microseconds, a category or its text. (An empty value is not NaN: pandas writes a float's NaN as an empty value, which is another value, and hashes otherwise.) Any value that differs gives another, down to one return changed in its ninth decimal place. A content hash cannot say "the same rows", and two people who build one table rarely write the same bytes. The form is ChartBook's own, since polars' `hash_rows` changes from one version of polars to the next, and it is written out byte by byte in the index specification ({design}`index-schema`, "The rows hash"): each column in the one type of its kind, the rows sorted on every column, the columns in the order of their names, and the values fed to SHA-256 with a bit for each empty one. A table with a column of lists or of structs has no rows hash yet. Nothing uses the hash in this step; a snapshot records it, by period, in the next ({design}`pins-and-rebuilds`).

@@ -251,6 +251,48 @@ and holds the module to it; and holds two tables' hashes, with every kind betwee
 values written down there. They are the same on polars 1.33.1 with pyarrow 16.1.0, numpy 1.26.4
 and Python 3.10, the oldest of each ChartBook takes, and on polars 2.1.0 with Python 3.13.
 
+**A dataframe's rows in a record.** *(As built 2026-11-16, in a snapshot's record and a
+lockfile's; {doc}`pins-and-rebuilds`, "A dataframe's record".)* A dataframe is hashed by its rows
+a **period** at a time, and its record says:
+
+```json
+"content_hash": "sha256:4c04…", "size_bytes": 5123456,
+"date_col": "ds",
+"as_of": "2026-10-30",
+"rows": { "1961-06-14/1961-12-29": "sha256:7d02…", "2026-01-02/2026-10-30": "sha256:a31a…" },
+"row_count": 382802
+```
+
+- `date_col` — the column its rows are dated by: the one its entry declares, when the table has
+  it and it holds dates, or text written as dates.
+- `as_of` — the last timestamp in that column: the data's own last date, never the clock's.
+  Absent with no `date_col`, or no dated row.
+- `rows` — the rows hash of each period, by the period: the first and the last timestamp seen in
+  it, both included, joined by `/`. `"none"` is the rows with no date. With no `date_col` there
+  is one entry, `"all"`. The periods are whoever made the record's to choose, and whoever
+  checks a pin reads them from the record and hashes their own rows in those same periods,
+  leaving out the rows after `as_of`. So the rule that chooses them can change, and only the
+  form of the hash has to stay. ChartBook's rule is whole calendar years; a year whose rows
+  count for more than 128 MB as its months; such a month as its days; where a value counts for
+  eight bytes, one of text or binary for sixteen and its own bytes, a decimal for sixteen, and
+  an empty value for eight. That is counted from the rows alone, so the same rows give the same
+  periods, whatever file they came in.
+- `row_count` — how many rows it has.
+- `not_hashed` — in place of `rows`, `as_of` and `row_count`, why its rows have no hash: a column
+  of lists or structs; a day, or its rows with no date, or the whole of a table with no
+  `date_col`, counting for more than 128 MB; more than 256 columns; a CSV or JSON lines table
+  of more than 32 MB of text, or an Arrow IPC file; a date no record can write, or dates in
+  more than 1,024 calendar years; a parquet file written so that it cannot be read a little at
+  a time (pages, dictionaries or a footer too large: it says which, and that the same rows
+  written with fewer values a page can be hashed). `date_col`
+  stands beside it where the rows would be dated by one. It names no folder of the machine that
+  wrote it. Its pin is its bytes alone.
+
+A timestamp is written in UTC: a date alone at midnight (`2026-10-30`), else with its time
+(`2026-10-30T16:00:00`), with a fraction of six digits where it has microseconds and nine where
+it has nanoseconds. A date, a datetime in any unit and zone, and text written as ISO 8601 are
+all dates; a row whose date is empty, or is text written any other way, has no date.
+
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
 ```json

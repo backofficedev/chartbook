@@ -328,6 +328,14 @@ class SnapshotReport:
         documents_skipped: The documents the manifest names that were not
             kept, each with why: not a plain path inside the folder, a
             link, not a file.
+        not_hashed: The dataframes whose rows have no hash, each with why
+            (:class:`chartbook.rowhash.NotHashed`): a pin of one is met by
+            the same file and by nothing else.
+        not_hashed_now: The dataframes whose rows could not be hashed this
+            time, for no fault of theirs, each with why
+            (:class:`chartbook.rowhash.NotNow`): the record says nothing
+            of their rows, and the next snapshot of the same bytes hashes
+            them.
     """
 
     snapshot: Snapshot
@@ -338,6 +346,8 @@ class SnapshotReport:
     index_skipped: Optional[str] = None
     documents_skipped: list[tuple[str, str]] = field(default_factory=list)
     stores: list[str] = field(default_factory=list)
+    not_hashed: list[tuple[str, str]] = field(default_factory=list)
+    not_hashed_now: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -556,7 +566,7 @@ def not_whole(store: Store, record: dict) -> Optional[str]:
 
 
 def materialize_in_source(
-    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"]
+    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"], rows=None
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
     """Write each table or query dataframe out as parquet, into the store: a snapshot being made, at ``_chartbook/tables/<name>.parquet``.
 
@@ -571,6 +581,8 @@ def materialize_in_source(
     whatever order the engine found them in; a query the author ordered
     keeps that order.
 
+    :param rows: What says a record's rows, given the record and the
+        parquet file written out (:func:`_rows_of`); nothing by default.
     :returns: For each such dataframe, in name order: its local reference,
         its record, and why it was not written out, or None.
     """
@@ -667,7 +679,10 @@ def materialize_in_source(
                 stored = store.put(out, place=f"{TABLES_DIR}/{name}.parquet", links=("reflink", "copy"))
             else:
                 stored = store.put(out, links=("reflink", "copy"))
-        record = source_record(ref, pipeline, entry, source, stored, keep=keep, locked=locked)
+            record = source_record(ref, pipeline, entry, source, stored, keep=keep, locked=locked)
+            if rows is not None:
+                # While the file is still there: its rows, as any dataframe's
+                record.update(rows(str(local), record, out, entry, None))
         if stored.stored:
             record["stored"] = stored.stored  # where it is kept, which make() takes off the record
         found.append((local, record, None))
@@ -2432,6 +2447,30 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     held: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
     marked, locked = keeps_of(raw), locks_of(raw)
+    earlier: list = []  # this pipeline's snapshots, read once if a dataframe asks
+
+    not_now: list[tuple[str, str]] = []  # the dataframes whose rows could not be hashed this time, each with why
+
+    def rows(name: str, record: dict, path: Path, entry, reading: Optional[dict]) -> dict:
+        """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one.
+
+        A snapshot is of the bytes, and is made whatever becomes of this:
+        where the rows could not be hashed, for want of room for the
+        scratch files say, the record says nothing of them and the report
+        says why.
+        """
+        from chartbook import rowhash
+
+        if not earlier:
+            try:
+                earlier.append(history(directory, store))
+            except SnapshotError:
+                earlier.append([])
+        try:
+            return _rows_of(name, record, path, entry, reading, earlier[0])
+        except rowhash.NotNow as error:
+            not_now.append((record.get("id") or name, str(error)))
+            return {}
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
         found = hashing.find_files(absolute)
@@ -2450,12 +2489,15 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
                 # Kept with the version, so two versions can be compared
                 # after the metrics file has been written over
                 record["metrics"] = scores
+        if local.kind == "dataframe":
+            # Its rows as well as its bytes, by period: what a rebuild can meet
+            record.update(rows(str(local), record, absolute, (raw.get("dataframes") or {}).get(local.name), reading))
         assets[str(local)] = record
 
     # A dataframe that is a table or a query in a DuckDB file has no file of
     # its own: it is written out as parquet into the store, so that a pin
     # copies it like any file and another pipeline reads it by name
-    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending):
+    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending, rows=rows):
         if "stored" in record:
             held[str(local)] = record.pop("stored")
         assets[str(local)] = record
@@ -2531,7 +2573,16 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         # has lost its index or its documents (its assets were put back
         # above): an index is made again with the time it is made, so it is
         # not the same object, and the new snapshot holds both
-        says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags
+        # Or the rows of a dataframe, which a snapshot made before rows were hashed does not
+        # say, and one made before its entry named its dates says otherwise
+        from chartbook import rowhash
+
+        says_its_rows = all(
+            not any(key in record for key in ("rows", "not_hashed"))
+            or all(record.get(key) == (same.assets.get(name) or {}).get(key) for key in rowhash.FIELDS)
+            for name, record in snapshot.assets.items()
+        )
+        says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags and says_its_rows
         lost = [
             part["content_hash"] for part in (same.index, same.documents)
             if part and (not store.has(part["content_hash"]) or store.incomplete(part["content_hash"], part.get("size_bytes")))
@@ -2541,7 +2592,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-            return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
+            return SnapshotReport(
+                same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same), not_hashed_now=not_now
+            )
         if same.built_by_run:
             # Made again for what the one before lacks: the bytes are still
             # the ones a run built, from these same pins
@@ -2582,7 +2635,67 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         labels_skipped(raw),
         index_skipped=index_skipped,
         documents_skipped=documents_skipped,
+        not_hashed=_not_hashed(snapshot),
+        not_hashed_now=not_now,
     )
+
+
+def _not_hashed(taken: Snapshot) -> list:
+    """The dataframes of a snapshot whose rows have no hash, each with why."""
+    return [
+        (record["id"], record["not_hashed"])
+        for name, record in sorted(taken.assets.items()) if isinstance(record.get("not_hashed"), str)
+    ]
+
+
+def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict], earlier: list) -> dict:
+    """What a dataframe's record says of its rows: their hash by period, up to its last date (:mod:`chartbook.rowhash`).
+
+    ``date_col``, ``as_of``, ``rows`` and ``row_count``; or ``not_hashed``,
+    why its rows have no hash, with the ``date_col`` they would be dated
+    by; or nothing, for a file that cannot be read as a table
+    (``docs_src/design/pins-and-rebuilds.md``, "A dataframe's record").
+    Hashing reads every row, so what an earlier snapshot of the same bytes
+    said, read the same way and dated by the same column, is taken as it
+    is: its rows, or why it has none. The column is the one that dates
+    the rows now, which is the entry's ``date_col`` where the table has it
+    and it holds dates: so an entry that declares one since, or another,
+    is hashed again, and one that names a column of numbers is not hashed
+    again at every snapshot.
+
+    :param record: Its record so far, with its ``content_hash``.
+    :param path: Its file, glob or folder, on disk.
+    :param entry: Its entry in the manifest, for its ``date_col``.
+    :param reading: Its ``format`` and ``read_options``, if it has them.
+    :param earlier: This pipeline's snapshots, oldest first.
+    :raises chartbook.rowhash.NotNow: If its rows could not be hashed this
+        time, for no fault of the table's.
+    """
+    from chartbook import rowhash
+
+    if not record.get("content_hash"):
+        return {}
+    declared = entry.get("date_col") if isinstance(entry, dict) else None
+    declared = declared if isinstance(declared, str) and declared else None
+    reading = reading or {}
+    table = rowhash.Table(path, reading.get("format"), reading.get("read_options"))
+    try:
+        dated = rowhash.dated_by(table, declared)
+    except rowhash.NotRead:
+        return {}
+    except rowhash.NotHashed:
+        dated = None  # a file not read at all, its footer too large: said below, with why
+    except (OSError, MemoryError) as error:
+        # A file that may not be opened now, no memory: this machine's, this time
+        raise rowhash.NotNow(f"{type(error).__name__}: {rowhash._first_line(error)}") from None
+    for taken in reversed(earlier):
+        before = taken.assets.get(name) or {}
+        if before.get("content_hash") != record["content_hash"] or before.get("location") != record.get("location"):
+            continue
+        said = {key: before[key] for key in rowhash.FIELDS if key in before}
+        if ("rows" in said or "not_hashed" in said) and said.get("date_col") == dated:
+            return said
+    return rowhash.fields_of(table, declared)
 
 
 #: The one file in a snapshot's index object.
