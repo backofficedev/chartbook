@@ -34,7 +34,7 @@ ftsfr/fed_yield_curve: your build of c1e5899 does not match the pin
 - Where the store has neither the pinned bytes nor a build of yours, `pin --check` now says so once for each dependency, with each way on in a line, the first being how to build it yourself: `` in ../fed_yield_curve, `git checkout a27e383` and `chartbook run --snapshot` ``. `chartbook pin` and a read name the same way.
 - A read raises `AssetNotPinnedError` with the new reason `"differs"` when a build of yours is there and does not match.
 
-A read through `data.load` still hands over the newer rows of a build that stands in; leaving them out is the next step ({doc}`design/pins-and-rebuilds`, "Reads").
+A read through `data.load` still hands over the newer rows of a build that stands in; leaving them out is the next step ({design}`pins-and-rebuilds`, "Reads").
 
 ### Added — a snapshot records a dataframe's rows, by period, up to its last date
 
