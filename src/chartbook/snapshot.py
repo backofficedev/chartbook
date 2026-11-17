@@ -1945,7 +1945,9 @@ def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
         for entry in taken.inputs if isinstance(taken.inputs, list) else []:
             location = entry.get("location") if isinstance(entry, dict) else None
             if isinstance(location, dict) and isinstance(location.get("commit"), str) and isinstance(entry.get("snapshot"), str):
-                for upstream in by_moment.get((location["commit"], entry["snapshot"]), []):
+                # The snapshot its pin named, and the build of yours that stood in for it where that was not here
+                stood = entry.get("stood_in") if isinstance(entry.get("stood_in"), str) else None
+                for upstream in by_moment.get((location["commit"], entry["snapshot"]), []) + by_moment.get((location["commit"], stood), []):
                     rescued.append((upstream, "a snapshot that is kept was made from it"))
                     # What was pinned from it held its labels' versions too
                     for holder in holding_labelled(upstream):
@@ -2032,16 +2034,28 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     that do not go through the lockfile (a load through a catalog, a model
     version named by its hash) are not seen here.
 
+    Where the store has the snapshot a pin names, what the lockfile
+    records of each dataframe's rows must be what that snapshot records:
+    a build of someone else's is told to hold the pinned rows by them, so
+    a lockfile whose rows were changed by hand, or merged from two, would
+    pass here and fail for everyone who builds the other pipeline.
+
     :raises LockError: If the lockfile is there and cannot be read.
     :raises ValueError: If the manifest's ``[dependencies]`` is malformed.
     """
-    from chartbook.lock import LOCK_FILE, read_lock, verify
+    return _lineage_of_pins(directory, store)[0]
+
+
+def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None) -> tuple[list[str], dict]:
+    """The gaps in a pipeline's lineage (:func:`lineage_gaps`); and, for each dependency whose pinned snapshot the store does not have, the snapshot of yours that stands in for it, by the dependency's key."""
+    from chartbook import rowhash, standins
+    from chartbook.lock import LOCK_FILE, _read_pipeline, names_a_snapshot, read_lock, verify
 
     directory = Path(directory)
     store = store if store is not None else default_store()
     checked = verify(directory, store)
     locked = read_lock(directory / LOCK_FILE)
-    gaps, said = [], set()
+    gaps, said, stood_in = [], set(), {}
     for problem in checked.problems:
         if problem.kind in ("not_built", "nothing_pinned"):
             continue
@@ -2059,7 +2073,9 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
             + "; ".join(line.strip() for line in problem.message.splitlines())
         )
     if locked is None:
-        return gaps
+        return gaps, stood_in
+    # The folder of each dependency named by its path, which says whose snapshots its pins came from
+    folders = {key: declared.get("_resolved_path") for key, declared in _read_pipeline(directory.resolve())[1].items()}
     found = unreadable = None
     for entry in locked.dependencies:
         key = entry.get("id")
@@ -2067,7 +2083,17 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         hashed = {
             asset_id: record for asset_id, record in locked.assets_of(key).items() if record.get("content_hash")
         }
-        if location.get("kind") not in ("path", "store") or not hashed:
+        if location.get("kind") not in ("path", "store"):
+            continue
+        if not hashed:
+            if names_a_snapshot(entry):
+                # Pinned by its entry alone: where the store does not have the snapshot
+                # it names, what is read of it is read from your newest build of that commit
+                if found is None:
+                    found, unreadable = readable_snapshots(store)
+                yours = standins.candidates(entry, found, folders.get(key))
+                if yours:
+                    stood_in[key] = yours[0]
             continue
         commit, made_at = location.get("commit"), entry.get("snapshot")
         if not (commit and made_at):
@@ -2086,20 +2112,20 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         at_moment = [t for t in found if t.same_moment(commit, made_at)]
         held = [t for t in at_moment if all(t.content().get(local_name(r)) == r["content_hash"] for r in plain.values())]
         if not at_moment:
-            # A snapshot of yours of that commit that holds every pin of it,
-            # by the same bytes or by the same rows, stands in for the one named
-            from chartbook import standins
-
-            stood = standins.find(entry, locked.assets_of(key), store, found)
-            if stood.stands_in and all(met.held for met in stood.met.values()):
+            # A snapshot of yours of that commit that meets every pin of it, by
+            # the same file or by the same rows, stands in for the one named: the
+            # same question `chartbook pin --check` asks, with the same answer
+            stood = standins.find(entry, locked.assets_of(key), store, found, folders.get(key))
+            if stood.stands_in:
+                stood_in[key] = stood.snapshot
                 continue
             why = next((reason for path, reason in unreadable if is_at(path, commit)), None)
             if key in said and not why:
                 continue  # its pins are not in the store, which is why its snapshot is not: said above, with what to do
-            said = f": a record at that commit cannot be read ({why})" if why else ""
+            unread = f": a record at that commit cannot be read ({why})" if why else ""
             gaps.append(
                 f"{key}: the lockfile pins its snapshot at {commit[:7]}, made {made_at}, and the store at "
-                f"{store} has no such snapshot{said}, so nothing says what it was made from. "
+                f"{store} has no such snapshot{unread}, so nothing says what it was made from. "
                 f"`chartbook update {key}` pins one the store has."
             )
             continue
@@ -2118,6 +2144,15 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
                     f"was changed by hand. `chartbook update {key}` pins it again."
                 )
             continue
+        # What the lockfile says of each table's rows is what that snapshot says
+        for asset_id, record in sorted(plain.items()):
+            theirs = held[0].assets.get(local_name(record)) or {}
+            if any(record.get(name) != theirs.get(name) for name in rowhash.FIELDS):
+                gaps.append(
+                    f"{asset_id}: what the lockfile records of its rows is not what its snapshot at {commit[:7]} "
+                    f"records: the lockfile was changed by hand, or merged from two. Restore it from git, or "
+                    f"`chartbook update {key}` pins it again."
+                )
         # A label names a version: some snapshot of that pipeline must hold it
         pipelines = {t.pipeline for t in held}
         for asset_id, record in sorted(labels.items()):
@@ -2128,18 +2163,21 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
                     f"snapshot of it in the store holds: the lockfile was changed by hand, or came from "
                     f"another store. `chartbook update {key}` pins it again."
                 )
-    return gaps
+    return gaps, stood_in
 
 
-def require_lineage(directory: Union[str, Path], pipeline: str, store: Optional[Store] = None) -> None:
+def require_lineage(directory: Union[str, Path], pipeline: str, store: Optional[Store] = None) -> dict:
     """Refuse a snapshot whose pins do not give its full lineage (:func:`lineage_gaps`).
 
+    :returns: For each dependency whose pinned snapshot the store does not
+        have, the snapshot of yours that stands in for it, by the
+        dependency's key: what the snapshot records it was made from.
     :raises SnapshotError: Listing each gap and what to run.
     """
     from chartbook.lock import LockError
 
     try:
-        gaps = lineage_gaps(directory, store)
+        gaps, stood_in = _lineage_of_pins(directory, store)
     except (LockError, ValueError) as error:
         raise SnapshotError(f"{pipeline} cannot have a snapshot: {error}") from None
     if gaps:
@@ -2148,6 +2186,7 @@ def require_lineage(directory: Union[str, Path], pipeline: str, store: Optional[
             f"{pipeline} cannot have a snapshot: its pins do not account for every dependency, and a "
             f"snapshot carries its lineage.\n{shown}\nThen commit chartbook.lock, and snapshot again."
         )
+    return stood_in
 
 
 def require_acyclic(directory: Union[str, Path], pipeline: str, store: Optional[Store] = None) -> None:
@@ -2258,12 +2297,17 @@ def _built_with(run: bool, lineage: str = "pins") -> dict:
     }
 
 
-def _inputs(directory: Path) -> list:
+def _inputs(directory: Path, stood_in: Optional[dict] = None) -> list:
     """What a pipeline is itself pinned to: the dependencies of its lockfile.
 
     Read from the file as it is, so that a snapshot says what it was built
-    from. They hold no absolute path and no password.
+    from. They hold no absolute path and no password. Where a snapshot of
+    yours stood in for the one an entry names, which the store does not
+    have, the entry gains ``stood_in``, when that snapshot was made: what
+    was read was read from it, and the lineage goes on up from it.
 
+    :param stood_in: The snapshots that stood in, by the dependency's key
+        (:func:`require_lineage`).
     :raises SnapshotError: If there is a lockfile and it cannot be read.
     """
     lockfile = directory / "chartbook.lock"
@@ -2274,7 +2318,11 @@ def _inputs(directory: Path) -> list:
             records = json.load(f)["records"]
         for record in records:
             if record.get("kind") == "Pipeline":
-                return list(record.get("dependencies") or [])
+                return [
+                    {**entry, "stood_in": stood_in[entry["id"]].made_at}
+                    if stood_in and isinstance(entry, dict) and entry.get("id") in stood_in else entry
+                    for entry in record.get("dependencies") or []
+                ]
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read {lockfile}: {error}") from None
     return []
@@ -2392,8 +2440,8 @@ def make(
         # remains recoverable: repeating the command skips existing snapshots.
         # The lineage is checked in every store, where the pins were read
         # from: a snapshot pinned from a read-only store is written to another
-        _check_lineage(directory, pipeline, stores, deep)
-        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep)
+        stood_in = _check_lineage(directory, pipeline, stores, deep)
+        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in)
         if len(targets) > 1:
             from chartbook.transfer import copy_snapshot
             for target in targets[1:]:
@@ -2405,16 +2453,19 @@ def make(
         return report
 
     store = store if store is not None else default_store()
-    _check_lineage(directory, pipeline, store, deep)
-    return _make_in(directory, pipeline, code, store, made_at, built_by_run, deep)
+    stood_in = _check_lineage(directory, pipeline, store, deep)
+    return _make_in(directory, pipeline, code, store, made_at, built_by_run, deep, stood_in)
 
 
-def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> None:
+def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> dict:
     """Refuse a snapshot whose lineage, read in ``store`` (one, or all of a catalog's), has a gap or a cycle.
 
+    :returns: The snapshots of yours that stood in for ones its pins name
+        and the store does not have, by the dependency's key
+        (:func:`require_lineage`).
     :raises SnapshotError: Saying what is wrong and what to run.
     """
-    require_lineage(directory, pipeline, store)
+    stood_in = require_lineage(directory, pipeline, store)
     require_acyclic(directory, pipeline, store)
     if deep:
         from chartbook.lineage import walk
@@ -2427,10 +2478,11 @@ def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> 
                 f"{pipeline} cannot have a snapshot with --deep: a snapshot upstream has a gap in its "
                 f"own lineage.\n{shown}{more}\n`chartbook lineage` shows the whole graph."
             )
+    return stood_in
 
 
 def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at: Optional[str],
-             built_by_run: bool, deep: bool) -> SnapshotReport:
+             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None) -> SnapshotReport:
     """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`)."""
     raw = _read_manifest_file(directory)
     check_within(directory, pipeline)
@@ -2438,7 +2490,7 @@ def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at
     made_at = made_at or _now()
     pending = store.begin(pipeline, code.commit, made_at, base=directory)
     try:
-        report = _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep)
+        report = _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in)
         report.stores = [str(store)]
         return report
     except BaseException:
@@ -2465,7 +2517,7 @@ def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
 
 
 def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
-          built_by_run: bool, deep: bool) -> SnapshotReport:
+          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None) -> SnapshotReport:
     """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written."""
     assets: dict[str, dict] = {}
     held: dict[str, dict] = {}
@@ -2560,7 +2612,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         made_at,
         assets,
         built_with=_built_with(built_by_run, "deep" if deep else "pins"),
-        inputs=_inputs(directory),
+        inputs=_inputs(directory, stood_in),
         labels=labels_of(raw),
         tags=_tags_at(directory, code.commit),
         repository=web_link(remote_to_web_url(get_git_remote_url(code.top))),

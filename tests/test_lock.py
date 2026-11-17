@@ -265,21 +265,25 @@ class TestFrozen:
         store.delete(HELLO)
         checked = lock.verify(downstream, store)
         (problem,) = checked.problems
-        # Pinned from a snapshot: one the store has, or a build of that commit made again
+        # Pinned from a snapshot, which the store has: one the store has, or that snapshot made again.
+        # No build of another's stands in for a snapshot that is here (tests/test_standins.py)
         commit = lock.read_lock(downstream).dependencies[0]["location"]["commit"][:7]
         assert problem.kind == "not_in_store"
         assert (
-            f"`chartbook update acme/rates` moves to a snapshot the store has; or build it yourself, in ../rates, "
-            f"`git checkout {commit}` and `chartbook run --snapshot`" in problem.message
+            "`chartbook update acme/rates` moves to a snapshot the store has, or `chartbook snapshot` "
+            "in its folder at that commit makes it again" in problem.message
         )
+        assert "build it yourself" not in problem.message
         # And said once for the dependency, with each way on in a line
-        header, build, shared, move = checked.not_in_store["acme/rates"]
+        header, wait, lost = checked.not_in_store["acme/rates"]
         assert header.startswith("1 of its 4 pins is not in the store at ") and header.endswith(
-            f"and no build of yours at {commit} stands in: treasury"
+            ", which has the snapshot it is of: treasury"
         )
-        assert build.startswith(f"  To build it yourself: in ../rates, `git checkout {commit}` and `chartbook run --snapshot`")
-        assert shared.startswith("  Where a store is shared: point CHARTBOOK_STORE at the one that has it")
-        assert move == "  To move the pin to a snapshot the store has: chartbook update acme/rates"
+        assert wait == "  In a synced folder, wait for the sync to finish, here and on the machine that made the snapshot."
+        assert lost == (
+            f"  Otherwise it is lost from the store: `chartbook snapshot` in its folder at {commit} puts back a file "
+            f"that builds to the same bytes."
+        )
         # A pin that names no commit, as one in a lockfile changed by hand
         name_no_snapshot(downstream, "acme/rates")
         (problem,) = lock.verify(downstream, store).problems
@@ -497,10 +501,12 @@ class TestPin:
 
         report = pin_from_snapshots(downstream, store)
         (problem,) = report.problems
-        # Its owner's new snapshot of that commit is another file, and no table whose rows could meet the pin
-        assert problem.status == "differs" and problem.asset == "acme/rates:treasury"
+        # The store has the snapshot that was pinned: its owner's new snapshot of that commit does not stand in
+        assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
-        assert "only the same file meets it" in problem.detail and "your build's file is another" in problem.detail
+        assert "it is not in the store at " in problem.detail and "a sync that has not finished" in problem.detail
+        assert "Otherwise a snapshot puts it there: `chartbook update`" in problem.detail
+        assert "build it yourself" not in problem.detail
         # The pin is not quietly moved to what the newest snapshot has
         assert (downstream / LOCK_FILE).read_bytes() == before
 
