@@ -22,8 +22,8 @@ upstream at the commit the lockfile names, runs `chartbook run --snapshot` there
 It did not work, twice (the course's discussion #31, November 2026):
 
 1. **New data.** A student's rebuilt tables had other sizes than the pinned ones. The Fed and Ken
-   French had published since the pin, so the check and the build both failed with
-   `AssetNotPinnedError`.
+   French had published since the pin, so the check exited 1 ("is pinned at … and the store … does
+   not have it") and the build stopped with `AssetNotPinnedError`.
 2. **Charts and notebooks.** Another student's dataframes matched and the report built, but the
    check still failed on 17 pins: the 10 charts and 7 notebooks of the 34 assets pinned. No rebuild
    can match those. Rendered twice, a second apart, a Plotly HTML chart differs by a random id in
