@@ -942,8 +942,6 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     if not store.has(content_hash):
         # A snapshot of yours of the pinned commit may hold the same rows, and stand in:
         # for the dependency whole, so one that meets this pin and not another is not read
-        from chartbook import standins
-
         stood = locks.your_build(listed, of_dependency, store, lambda: _snapshots_in(store), _folder_of(dependency))
         met = stood.met.get(asset_id) if stood is not None and stood.stands_in else None
         if met is not None and met.record is not None:
@@ -954,24 +952,11 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
                 as_of=record.get("as_of"), date_col=record.get("date_col"), stands_in=True,
             )
         if stood is not None:
-            own = next((unmet for unmet in stood.unmet if unmet.asset == asset_id), None)
-            if own is not None:
-                why = f": {own.why}"
-            else:
-                # This one it does hold; a build stands in for a dependency whole, or not at all
-                why = "".join(f"; {unmet.asset.split(':', 1)[-1]}: {unmet.why}" for unmet in stood.unmet).replace("; ", ": ", 1)
-            with_index = [unmet.asset.split(":", 1)[-1] for unmet in stood.unmet if unmet.index_column]
-            index = f". {locks.index_column_said(with_index)}" if with_index else ""
-            yours = (
-                f" To read your build instead: `chartbook update {dependency.id}` in {manifest_dir}."
-                if locks.read_yours_said(dependency.id, stood) else ""
-            )
             raise AssetNotPinnedError(
                 asset_id,
                 "differs",
                 f"{asset_id!r} is pinned at {content_hash}, and the store at {store} does not have it. "
-                f"Your build of {dependency.id!r} at {standins.build_said(stood.snapshot)}, does not match the pin"
-                f"{why}{index}.{yours}",
+                f"{_your_build_differs(asset_id, dependency.id, stood, manifest_dir)}",
             )
         # A build of yours stands in only where the store does not have the snapshot pinned
         build = "" if locks.has_named(listed, _snapshots_in(store), _folder_of(dependency)) else locks.build_it_said(listed)
@@ -1007,6 +992,32 @@ def _say_it_stands_in(manifest_dir: Path, dependency: str, taken) -> None:
     sys.stderr.write(
         f"{dependency}: read from your own build of {standins.build_said(taken)}. The store does not have the "
         f"bytes chartbook.lock pins, and your build holds the same rows.\n"
+    )
+
+
+def _your_build_differs(asset_id: str, dependency: str, stood, manifest_dir: Path) -> str:
+    """What a read says of a build of yours that does not meet every pin of its dependency: which pins, where, and the way on.
+
+    A build stands in for a dependency whole, or not at all: so a read of
+    an asset it does hold says which other pin it fails.
+    """
+    from chartbook import lock as locks
+    from chartbook import standins
+
+    own = next((unmet for unmet in stood.unmet if unmet.asset == asset_id), None)
+    if own is not None:
+        why = f": {own.why}"
+    else:
+        why = "".join(f"; {unmet.asset.split(':', 1)[-1]}: {unmet.why}" for unmet in stood.unmet).replace("; ", ": ", 1)
+    with_index = [unmet.asset.split(":", 1)[-1] for unmet in stood.unmet if unmet.index_column]
+    index = f". {locks.index_column_said(with_index)}" if with_index else ""
+    yours = (
+        f" To read your build instead: `chartbook update {dependency}` in {manifest_dir}."
+        if locks.read_yours_said(dependency, stood) else ""
+    )
+    return (
+        f"Your build of {dependency!r} at {standins.build_said(stood.snapshot)}, does not match the pin"
+        f"{why}{index}.{yours}"
     )
 
 
@@ -1095,12 +1106,21 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
     every = _snapshots_in(store)
     at_commit = locks.read_from(entry, every, folder)
     named = bool(at_commit) and isinstance(made_at, str) and at_commit[0].same_moment(commit, made_at)
-    if not named and len(at_commit) > 1 and locked is not None:
-        # Where a build of yours stands in for what the lockfile pins of it, that build is
-        # the one read, whole: a chart from the build its table is read from, not a newer one
+    if not named and at_commit and locked is not None:
+        # Where a build of yours stands in for what the lockfile pins of the dependency, that
+        # build is the one read, whole: a chart from the build its table is read from, not a
+        # newer one. And where the dependency has pins that no build of yours meets, none is
+        # read: a chart drawn from rows that are not the pinned ones is not the pinned chart
         stood = locks.your_build(entry, locked.assets_of(dependency.id), store, lambda: every, folder)
         if stood is not None and stood.stands_in:
             at_commit = [stood.snapshot] + [taken for taken in at_commit if taken is not stood.snapshot]
+        elif stood is not None:
+            raise AssetNotPinnedError(
+                asset_id, "differs",
+                f"{not_pinned}. It is read from a build of yours that stands in for the snapshot the lockfile "
+                f"names, which the store at {store} does not have. "
+                f"{_your_build_differs(asset_id, dependency.id, stood, manifest_dir)}",
+            )
     name = pinned.local_name
     not_built = lacking = ""
 

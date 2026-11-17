@@ -427,7 +427,9 @@ class TestWithNoBuildOfYours:
         assert result.exit_code == 1
         (lost,) = [line for line in result.output.splitlines() if line.startswith("  lost")]
         assert lost.startswith("  lost, each of codes, model/ar1, treasury: it is not in the store at ")
-        assert f"or build it yourself, in ../rates, `git checkout {commit}` and `chartbook run --snapshot`" in lost
+        assert f"Otherwise build it yourself, in ../rates, `git checkout {commit}` and `chartbook run --snapshot`" in lost
+        # The store has no snapshot of it: `chartbook update` would find none, and is not offered
+        assert "chartbook update" not in result.output
 
     def test_a_read_says_how_to_build_it(self, report, student):
         commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
@@ -655,11 +657,15 @@ class TestWhatIsRemembered:
             ({**self.PINNED, "as_of": "2026-01-10"}, self.THEIRS),
             ({**self.PINNED, "date_col": "day"}, self.THEIRS),
             (self.PINNED, {**self.THEIRS, "content_hash": "sha256:bc"}),
+            (self.PINNED, {**self.THEIRS, "location": {"kind": "file", "path": "_data/year=2025/t.parquet"}}),
         ]
         assert len({asked, *(standins._answers(*other) for other in others)}) == len(others) + 1
-        # And by the ChartBook that compared: what another version found is not what this one would
+        # And by the ChartBook that compared, and the form its rows hash has: what another found is not what this one would
         monkeypatch.setattr("chartbook.__version__", "0.0.0+another")
-        assert standins._answers(self.PINNED, self.THEIRS) != asked
+        another = standins._answers(self.PINNED, self.THEIRS)
+        monkeypatch.undo()
+        monkeypatch.setattr(rowhash, "FORM", b"chartbook/rows/v2\n")
+        assert len({asked, another, standins._answers(self.PINNED, self.THEIRS)}) == 3
 
     def test_a_file_that_is_not_what_was_written_is_not_believed(self, report, rates, student, work):
         _rebuild(rates, student, _yields(48, revised=date(2025, 12, 14)))
@@ -917,3 +923,101 @@ class TestWhatIsSaidOfBuildingItYourself:
         # A repository named as the pipeline is holds that pipeline alone: no folder to name
         own = {**entry, "location": {**entry["location"], "repository": "https://github.com/acme/rates.git"}}
         assert lock.build_it_said(own).startswith("in a clone of https://github.com/acme/rates.git, `git checkout abcdef1` and ")
+
+
+class TestWhatTheSecondReviewFound:
+
+    def test_a_chart_is_not_read_from_a_build_that_fails_a_pin(self, report, rates, student, capsys):
+        """The table read stops, and so does the chart's: a chart drawn from rows that are not the pinned ones is not the pinned chart."""
+        built = _rebuild(rates, student, _yields(48, revised=date(2025, 12, 14)))
+        with pytest.raises(AssetNotPinnedError) as raised:
+            assets.path("acme/rates:chart/curve", project_dir=report)
+        assert raised.value.reason == "differs"
+        said = str(raised.value)
+        assert "'acme/rates:chart/curve' is not in " in said and "a chart is drawn anew by every build" in said
+        assert (
+            f"Your build of 'acme/rates' at {_said(built)}, does not match the pin: treasury: the rows of "
+            f"2025-12-01 to 2025-12-31 differ. To read your build instead: `chartbook update acme/rates`" in said
+        )
+        result = CliRunner().invoke(main, ["path", "acme/rates:chart/curve", "--project-dir", str(report)])
+        assert result.exit_code == 1
+        # Nor from the newest of two that both fail
+        (rates / "_output" / "curve.html").write_bytes(b"<html>second differing build</html>")
+        _rebuild(rates, student, _yields(49, revised=date(2025, 12, 14)))
+        (rates / "_output" / "curve.html").write_bytes(b"<html>second differing build</html>")
+        with pytest.raises(AssetNotPinnedError):
+            assets.path("acme/rates:chart/curve", project_dir=report)
+
+    def test_a_dependency_of_charts_alone_is_read_from_your_newest_build(self, work, student, monkeypatch):
+        """It has no pin for a build to fail: nothing is checked, as the page says of an asset that is not in the lockfile."""
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "author"))
+        author = FolderStore(work / "author")
+        charts = work / "charts"
+        _write_manifest(charts, {"project": {"id": "acme/charts"}, "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}}})
+        (charts / "_output").mkdir()
+        (charts / "_output" / "curve.html").write_bytes(b"<html>the author's</html>")
+        commit_pipeline(charts)
+        snapshot.make(charts, store=author)
+        reader = work / "reader"
+        _write_manifest(reader, {"project": {"id": "acme/reader"}, "dependencies": {"acme/charts": {"path": "../charts"}}})
+        assert not lock.pin(reader, author).problems
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "student"))
+        (charts / "_output" / "curve.html").write_bytes(b"<html>the student's</html>")
+        snapshot.make(charts, store=student)
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"<html>the student's</html>"
+
+    def test_a_snapshot_of_the_same_bytes_and_pins_is_not_made_again_for_a_newer_build_upstream(self, report, rates, student):
+        """What stays recorded is the build that stood in when those bytes were declared ready."""
+        first = _rebuild(rates, student, _yields(48))
+        TestLineageOfWhatReadAStandIn()._with_an_asset(report)
+        made = snapshot.make(report, store=student)
+        assert made.made and made.snapshot.inputs[0]["stood_in"] == first.made_at
+        # The upstream is built again at the same commit; the report is not
+        second = _rebuild(rates, student, _yields(50))
+        assert second.made_at > first.made_at
+        again = snapshot.make(report, store=student)
+        assert not again.made and again.snapshot.inputs[0]["stood_in"] == first.made_at
+
+    def test_pin_offers_update_only_where_it_would_find_a_snapshot(self, report, rates, student, work):
+        result = CliRunner().invoke(main, ["pin", "--project-dir", str(report)])
+        assert result.exit_code == 1 and "chartbook update" not in result.output
+        # And where the store has the pinned snapshot, with a file lost and no newer one: the snapshot made again
+        author = FolderStore(work / "author")
+        author.delete(lock.read_lock(report).assets["acme/rates:treasury"]["content_hash"])
+        (lost,) = lock.pin(report, author).problems
+        assert lost.status == "lost" and "chartbook update" not in lost.detail
+        assert "Otherwise a snapshot puts it there: `chartbook snapshot` in its folder at that commit makes it again" in lost.detail
+        # With a newer one of it in the store, `update` has one to move to
+        _rebuild(rates, author, _yields(48))
+        (lost,) = lock.pin(report, author).problems
+        assert "Otherwise a snapshot puts it there: `chartbook update` moves to the newest one, or `chartbook snapshot`" in lost.detail
+
+    def test_update_is_offered_as_update_looks(self, report, rates, student):
+        """A snapshot of a later commit than the folder is on is none `chartbook update` takes."""
+        entry = lock.read_lock(report).dependencies[0]
+        pinned_commit = entry["location"]["commit"]
+        (rates / "chartbook.toml").write_text(
+            (rates / "chartbook.toml").read_text(encoding="utf-8") + "\n# a later commit\n", encoding="utf-8", newline="\n"
+        )
+        commit_pipeline(rates)
+        later = _rebuild(rates, student, _yields(48))
+        assert later.commit != pinned_commit
+        assert lock.one_to_move_to(entry, rates, student, lambda: [later])
+        import subprocess
+
+        subprocess.run(["git", "-C", str(rates), "checkout", "--quiet", pinned_commit], check=True)
+        assert not lock.one_to_move_to(entry, rates, student, lambda: [later])
+        assert not lock.one_to_move_to(entry, None, student, lambda: [later])  # its folder is not on this machine
+        # One named by its ID has no folder to look from: any other snapshot of its pipeline
+        by_id = {**entry, "location": {"kind": "store", "pipeline": "acme/rates", "commit": pinned_commit}}
+        assert lock.one_to_move_to(by_id, None, student, lambda: [later])
+        assert not lock.one_to_move_to(by_id, None, student, lambda: [])
+
+    def test_a_pin_in_the_store_in_part_is_said_for_what_it_is(self, report, rates, student):
+        """The student has a build that holds the pinned rows, and one pinned file half there: it is not told to build."""
+        pinned = lock.read_lock(report).assets["acme/rates:codes"]
+        _rebuild(rates, student, _yields(48))
+        _cut_short(student, pinned["content_hash"])
+        header = lock.verify(report, student).not_in_store["acme/rates"][0]
+        assert header.endswith(", and no build is read in its place while codes is in the store in part: treasury")
+        assert "no build of yours" not in header
