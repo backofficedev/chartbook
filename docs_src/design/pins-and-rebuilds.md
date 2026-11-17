@@ -707,10 +707,10 @@ process that stops itself the moment its memory passes 2 GB.
 
 | Table | Rows by columns | Periods | Hashed in | Checked in | Peak memory |
 |---|---|---|---|---|---|
-| The class's yield curve | 383 thousand by 4 | 66 | 0.5 s | 0.1 s | 0.21 GB |
-| CRSP daily | 27.8 million by 8 | 26 | 6.8 s | 6.2 s | 1.09 GB |
-| GKX characteristics | 2.6 million by 99 | 42 | 3.4 s | 2.7 s | 1.45 GB |
-| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 28.5 s | 28.0 s | 1.21 GB |
+| The class's yield curve | 383 thousand by 4 | 66 | 0.4 s | 0.1 s | 0.21 GB |
+| CRSP daily | 27.8 million by 8 | 26 | 6.7 s | 6.0 s | 1.04 GB |
+| GKX characteristics | 2.6 million by 99 | 42 | 3.0 s | 2.7 s | 1.34 GB |
+| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 29.5 s | 28.8 s | 1.15 GB |
 
 Hashing the bytes of the same files took under a second each. The time for the rows is paid once
 for each snapshot of new bytes, and in a check only when the files differ, and then only for the
@@ -753,42 +753,72 @@ takes by reading some first: 256 rows of 7 MB were 1.8 GB before anything was me
 *So what reading a row group takes is told from the file before a row of it is read. Proposed by
 Claude, 2026-11-17:* every page of a parquet file begins with a header that says what it takes
 unpacked and how many values it has, and a dictionary page says each value's length. ChartBook
-reads those, a few bytes a page (1.8 s for RavenPack's 39,615 pages), and from them:
+reads those, a few bytes a page (2 s for RavenPack's 39,615 pages), and from them:
 
-- **how many rows to read at once**, so that no run of rows can take more than is held, at worst
-  (each row of text held by a dictionary its longest value; each page of other text wholly in
-  the run). Nothing is learnt by reading too much first, and no row group is begun again;
+- **how many rows to read at once**, so that no run of rows can take more than is held, at worst:
+  a column of one width, that width a row (a column of values of one fixed length, its length);
+  text held by a dictionary, the dictionary's longest value a row; other text, the pages the run
+  lies in, counted whole, since what one value of a page takes is said nowhere but in the page.
+  A run is read to 32 MB at worst, which is a few megabytes as a rule, and handed on 8 MB at a
+  time. Nothing is learnt by reading too much first, and no row group is begun again;
+- **which columns to read together.** The two pages a run begins and ends in, of each column of
+  text, are megabytes at worst and bytes as a rule: 150 columns of text would be 300 MB at worst.
+  Past 64 MB of that, the columns of text are read apart, a few together, and what each few took
+  is seen before the next are read. A run that has taken more than 96 MB already is read no
+  further, and the file has no rows hash ("rows too unevenly large");
 - **whether the file can be read within the limit at all.** It is refused, unread, with why and
   what would mend it, where a row group's largest pages and dictionaries are more than 640 MB
-  together (256 columns of a megabyte page and a megabyte dictionary are within that); where one
-  row may be more than 192 MB of text; and where the footer is more than 16 MB (said by the
-  file's last eight bytes: 164 MB of footer, of 6,000 row groups of 251 columns, took 1.8 GB to
-  read once, and was read three times).
+  together (256 columns of a megabyte page and a megabyte dictionary are within that; a
+  dictionary of text counts twice, and a category's six times, as they are held); where one
+  value may be more than 128 MB; and where the footer is more than 16 MB (said by the file's
+  last eight bytes: 164 MB of footer, of 6,000 row groups of 251 columns, took 1.8 GB to read
+  once, and was read three times).
 
 **Such a refusal is of the file as it is written, not of its rows:** the same rows written with
-smaller pages have a rows hash, and `not_hashed` says so ("Written with smaller pages, its rows
-can be hashed"). That is the one place where what is recorded depends on more than the rows. A
-table that is read is recorded by its rows alone, as before: the test writes one table four ways
-and gets one record. The other way, to hash such a file whatever it takes, is the 5 GB the review
-measured. *(The maintainer's to overrule.)*
+fewer values a page have a rows hash, and `not_hashed` says so. That is the one place where what
+is recorded depends on more than the rows. A table that is read is recorded by its rows alone, as
+before: the test writes one table four ways and gets one record. The other way, to hash such a
+file whatever it takes, is the 5 GB the review measured. *(The maintainer's to overrule.)* Two
+writers this refuses by their defaults, where a table is large: **pandas with fastparquet**,
+which puts one page to a column chunk and one row group to a file (refused from about 80 million
+values); and **pyarrow with values of megabytes**, which puts a thousand to a page (written by
+polars, or with `write_batch_size` small, they are read).
+
+**A fourth review, of that reader, broke it four more ways, and it is held to its own limits
+now.** A column of values of one fixed length had been counted at sixteen bytes a row (50,000
+bytes a value: 4.5 GB). The reader of page headers could be made to loop without end by eleven
+bytes, and to read as many bytes as a header said: it now reads no more than a header can be (16
+MB, and never past its chunk), in a bounded number of steps, and takes what is no header for the
+worst a chunk can be. A file of seven million pages of one value each took 78 s and 3 GB to
+walk: a column chunk is walked to 200,000 pages and a file to five million, past which it has no
+rows hash; and a row group smaller than may be held has none of its columns of one width walked
+at all. A category with a dictionary of 315 MB was 2.2 GB: counted six times, it is refused.
+And past 128 columns of text a row group had been read one row at a time (327 s for 60,000
+rows), which is what reading columns apart is for.
 
 | A file written so as to be hard to read | What happens | Peak memory |
 |---|---|---|
-| A megabyte once in 67 rows, as pyarrow writes it: pages of 15 MB | Hashed | 0.53 GB |
-| 400 MB of long rows, then 100 thousand short ones, in one row group | Hashed | 0.90 GB |
-| Documents of 2 MB, no two alike, in pages of 190 MB | Hashed | 0.71 GB |
-| One value of 300 MB | Refused: "one row may take 286 MB" | 0.40 GB |
-| 1,200 row groups of 200 columns: a footer of 25 MB | Refused, by its last eight bytes | 0.06 GB |
-| A page to a column chunk, 30 columns, 20 MB a page (600 MB held) | Hashed | 1.39 GB |
-| The same at 25 MB a page (757 MB held) | Refused | 0.09 GB |
-| A dictionary page of 300 MB | Hashed | 0.97 GB |
+| A megabyte once in 67 rows, as pyarrow writes it: pages of 15 MB | Hashed | 0.47 GB |
+| 400 MB of long rows, then 100 thousand short ones, in one row group | Hashed | 0.87 GB |
+| Documents of 2 MB, no two alike, in pages of 95 MB | Hashed | 0.84 GB |
+| The same in pages of 190 MB | Refused: "one value of 'document' may take 191 MB" | 0.10 GB |
+| One value of 300 MB | Refused: "one value of 'doc' may take 286 MB" | 0.40 GB |
+| 1,200 row groups of 200 columns: a footer of 25 MB | Refused, by its last eight bytes | 0.05 GB |
+| A page to a column chunk, 30 columns, 20 MB a page (600 MB held) | Hashed | 1.35 GB |
+| The same at 25 MB a page (757 MB held) | Refused | 0.10 GB |
+| A dictionary page of 300 MB | Hashed | 0.99 GB |
 | A dictionary page of 450 MB | Refused | 0.10 GB |
-| 254 columns of floats, each with a megabyte of dictionary, as pyarrow writes them | Hashed | 1.30 GB |
+| 254 columns of floats, each with a megabyte of dictionary, as pyarrow writes them | Hashed | 1.31 GB |
 | A million dates in ten thousand years, 255 columns | Refused: "more than 1,024 calendar years" | 0.14 GB |
+| Values of one fixed length of 50,000 bytes, a gigabyte of them | Hashed | 0.61 GB |
+| A category with a dictionary of 315 MB | Refused | 0.10 GB |
+| 150 columns of text, each value its own, 60 thousand rows | Hashed, in 1.9 s | 1.03 GB |
+| A page to each value, 900 thousand pages | Hashed (a small row group: nothing walked) | 0.27 GB |
 
-Before, the first six took 6.5, 5.6, 2.4, 2.7, 5.4 and 6.0 GB (measured by the review, at larger
-sizes of the same shapes). The peaks just inside the limits, 1.39 and 1.30 GB, are what the
-limits were set by.
+Before, the first of these and the next two took 6.5, 5.6 and 2.4 GB, the one value 2.7, the
+footer 5.4, the page to a column chunk 6.0, the fixed length 4.5 and the category 2.2 (measured
+by the reviews, at larger sizes of the same shapes). The peaks just inside the limits, 1.35 and
+1.31 GB, are what the limits were set by.
 
 What the memory is, as measured:
 
@@ -855,9 +885,10 @@ What was learned about reading, from the prototype:
   have no date.
 - **A table of more than 256 columns,** for the memory a file's columns take while it is read.
 - **A parquet file written so that it cannot be read a little at a time:** pages or dictionaries
-  of more than 640 MB together in a row group, a row that may be more than 192 MB of text, a
-  footer of more than 16 MB. The same rows written with smaller pages, or fewer row groups, have
-  a rows hash.
+  of more than 640 MB together in a row group, a value that may be more than 128 MB, a footer
+  of more than 16 MB, more than 200,000 pages in a column chunk. The same rows written with
+  fewer values a page, or fewer row groups, have a rows hash. Reading such a file a column at a
+  time, through scratch files, would lift it, and is not built.
 - **Dates in more than 1,024 calendar years.**
 - **A CSV or JSON lines table of more than 32 MB of text,** which is read whole; and **an Arrow
   IPC file** of any size.
