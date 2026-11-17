@@ -914,3 +914,6 @@ class TestWhatIsSaidOfBuildingItYourself:
             "`chartbook run --snapshot`"
         )
         assert lock.build_it_said({**entry, "location": {**entry["location"], "kind": "git"}}) == ""
+        # A repository named as the pipeline is holds that pipeline alone: no folder to name
+        own = {**entry, "location": {**entry["location"], "repository": "https://github.com/acme/rates.git"}}
+        assert lock.build_it_said(own).startswith("in a clone of https://github.com/acme/rates.git, `git checkout abcdef1` and ")
