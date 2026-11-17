@@ -291,6 +291,16 @@ class TestReadALittleAtATime:
             part = frame.filter(pl.col("ds").is_between(low.date(), high.date()))
             assert record.rows[key] == hash_frame(part, "ds"), key
 
+    def test_a_column_named_like_a_pattern(self, tmp_path):
+        """polars reads `^y$` as a pattern: by period, too, such a column is a column, in a file and as a folder's key."""
+        frame = _table(days=20).rename({"y": "^y$"})
+        frame.write_parquet(tmp_path / "one.parquet")
+        record = hash_rows(Table(tmp_path / "one.parquet"), "ds")
+        assert record.rows == {"2022-11-01/2022-11-20": hash_frame(frame, "ds")}
+        frame.with_columns(pl.nth(2) + 1.0).write_parquet(tmp_path / "other.parquet")
+        assert hash_rows(Table(tmp_path / "other.parquet"), "ds").rows != record.rows
+        assert not hash_in(Table(tmp_path / "other.parquet"), "ds", record.rows, record.as_of).same
+
     def test_the_date_column_can_be_a_folders_key(self, tmp_path):
         """``ds=2024-01-02/part.parquet``: the reader makes the column, and its rows are dated by it."""
         frame = _table(days=6, start=date(2024, 12, 29))

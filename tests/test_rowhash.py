@@ -142,6 +142,28 @@ class TestTheSameRows:
         assert hash_frame(frame, "ds") != hash_frame(frame, "ticker")
         assert hash_frame(frame, "no such column") == hash_frame(frame)
 
+    def test_a_column_named_like_a_pattern_is_a_column(self):
+        """polars reads `^a$` as a pattern: taken by its name, such a column was passed over, and its values with it."""
+        one = pl.DataFrame({"^a$": [1, 2], "b": [3, 4]})
+        other = pl.DataFrame({"^a$": [9, 9], "b": [3, 4]})
+        without = pl.DataFrame({"b": [3, 4]})
+        assert len({hash_frame(one), hash_frame(other), hash_frame(without)}) == 3
+        assert hash_frame(pl.DataFrame({"^a$": [1, 2]})) != hash_frame(pl.DataFrame())
+        assert hash_frame(one) == _by_hand([{"^a$": 1, "b": 3}, {"^a$": 2, "b": 4}], {"^a$": "int", "b": "int"})
+        # And one that is sorted on: a pattern for a name sorted on nothing
+        assert hash_frame(one.reverse(), "^a$") == hash_frame(one, "^a$")
+        for name in ("*", "^.*$", "a b", "", "é"):
+            frame = pl.DataFrame({name: [2, 1], "b": [3, 4]})
+            assert hash_frame(frame) == _by_hand([{name: 2, "b": 3}, {name: 1, "b": 4}], {name: "int", "b": "int"}), name
+
+    def test_the_rows_are_sorted_on_every_column(self):
+        """Down to the last: rows alike in all but their last column come in one order however they were written."""
+        frame = pl.DataFrame({"a": [1, 1, 1, 1], "b": ["x", "x", "x", "x"], "c": [0.5, 0.25, None, 0.75], "z": [4, 3, 2, 1]})
+        for seed in range(6):
+            assert hash_frame(frame.sample(fraction=1.0, shuffle=True, seed=seed)) == hash_frame(frame)
+        alike_but_last = pl.DataFrame({"a": [1, 1, 1], "b": ["x", "x", "x"], "z": [3, 1, 2]})
+        assert hash_frame(alike_but_last.reverse()) == hash_frame(alike_but_last) == hash_frame(alike_but_last.sort("z"))
+
     def test_two_rows_alike_are_two_rows(self):
         once = pl.DataFrame({"a": [1, 2]})
         assert hash_frame(pl.concat([once, once])) != hash_frame(once)
@@ -186,6 +208,24 @@ class TestEveryValueIsSeen:
         assert hash_frame(none) == hash_frame(pl.DataFrame(schema={"a": pl.String}))  # no value, no kind to tell
 
 
+class TestWhatPandasWrites:
+    """A limit on "whatever wrote them": pandas writes other values, and other values hash otherwise."""
+
+    def test_a_nan_through_pandas_is_an_empty_value(self, tmp_path):
+        frame = pl.DataFrame({"a": [1, 2, 3], "x": [0.5, float("nan"), 1.5]})
+        frame.to_pandas().to_parquet(tmp_path / "pandas.parquet", index=False)
+        back = pl.read_parquet(tmp_path / "pandas.parquet")
+        assert back.get_column("x").null_count() == 1  # the file holds an empty value where the frame held NaN
+        assert hash_frame(back) != hash_frame(frame)
+        assert hash_frame(back) == hash_frame(frame.with_columns(pl.col("x").fill_nan(None)))
+
+    def test_a_whole_number_with_an_empty_value_through_pandas_is_a_float(self, tmp_path):
+        frame = pl.DataFrame({"n": [1, None, 3]})
+        frame.to_pandas().to_parquet(tmp_path / "pandas.parquet", index=False)
+        back = pl.read_parquet(tmp_path / "pandas.parquet")
+        assert back.schema["n"] == pl.Float64 and hash_frame(back) != hash_frame(frame)
+
+
 class TestWhatItDoesNotTake:
 
     @pytest.mark.parametrize(
@@ -194,6 +234,30 @@ class TestWhatItDoesNotTake:
     def test_a_column_of_lists_or_structs(self, column):
         with pytest.raises(NotHashed, match="column 'x' is .*, and a rows hash takes no such column yet"):
             hash_frame(pl.DataFrame([column]))
+        # With no value in it, too: a column of lists is of no kind
+        with pytest.raises(NotHashed):
+            hash_frame(pl.DataFrame([column]).clear(2))
+
+    def test_a_date_past_what_microseconds_hold(self):
+        """polars panics on it, which is no Exception: said as any table whose rows are not hashed."""
+        far = pl.DataFrame({"d": [106751992, 1]}, schema={"d": pl.Int32}).cast({"d": pl.Date})
+        with pytest.raises(NotHashed, match="its columns cannot be put in one form"):
+            hash_frame(far)
+        with pytest.raises(NotHashed, match="its columns cannot be put in one form"):
+            hash_frame(pl.DataFrame({"t": [9223372036854776, 1]}, schema={"t": pl.Datetime("ms")}))
+
+    def test_a_number_past_64_bits(self):
+        if not hasattr(pl, "Int128"):
+            pytest.skip("this polars has no 128-bit whole numbers")
+        wide = pl.DataFrame({"n": [2**70, 1]}, schema={"n": pl.Int128})
+        with pytest.raises(NotHashed):
+            hash_frame(wide)
+        fits = pl.DataFrame({"n": [2**40, 1]}, schema={"n": pl.Int128})
+        assert hash_frame(fits) == hash_frame(fits.cast({"n": pl.Int64}))
+
+    def test_a_frame_that_is_not_one(self):
+        with pytest.raises(TypeError, match="hash_frame takes a polars DataFrame, and was given a LazyFrame"):
+            hash_frame(pl.DataFrame({"a": [1]}).lazy())
 
 
 class TestTimestampsAsARecordWritesThem:
@@ -214,21 +278,41 @@ class TestTimestampsAsARecordWritesThem:
         assert rowhash.stamp_text(micro, left) == text
         assert rowhash.stamp_of(text) == (micro, left)
 
-    def test_one_that_is_none(self):
-        for text in ("2026-13-01", "yesterday", "2026-10-30T16:00:00.25"):
-            with pytest.raises(ValueError):
-                rowhash.stamp_of(text)
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "2026-13-01", "yesterday", "2026-10-30T16:00:00.25", "2026-10-30T", "2026-10-30T1:2:3", "2026-10-30T25:61:61",
+            "2026-10-30T-1:00:00", "20261030", "2026-W44-5", "2026-10-30 16:00:00", "2026-10-30T16:00", " 2026-10-30",
+            "٢٠٢٦-١٠-٣٠", "2026-10-30T16:00:00.1234567", "",
+        ],
+    )
+    def test_one_that_is_none(self, text):
+        with pytest.raises(ValueError, match="is not a timestamp a record writes"):
+            rowhash.stamp_of(text)
+
+    def test_a_year_no_record_can_write(self):
+        with pytest.raises(NotHashed, match="outside the years 1 to 9999"):
+            rowhash.stamp_text(2932897 * 86_400_000_000)
 
 
 # --- The form, written a second time ---------------------------------------------
 
 
-def _by_hand(rows: list, kinds: dict) -> str:
+def _decimal_as_text(value: Decimal) -> str:
+    """A decimal as the form writes it: plain digits, no zero after its last digit, no point with nothing after it, and no -0."""
+    text = format(value, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return "0" if text == "-0" else text
+
+
+def _by_hand(rows: list, kinds: dict, first: str = None) -> str:
     """The rows hash of a table given as rows of plain Python values, worked out from the specification alone.
 
-    *kinds* says each column's kind. A timestamp is a pair, its whole
-    microseconds from 1970 and the nanoseconds left over; a decimal is its
-    text. None is an empty value.
+    *kinds* says each column's kind by its type; *first* is the date
+    column. A timestamp or a duration is a pair, its whole microseconds
+    and the nanoseconds left over; a time of day is its nanoseconds; a
+    decimal is a ``Decimal``; binary is bytes. None is an empty value.
     """
     names = sorted(kinds, key=lambda name: name.encode("utf-8"))
 
@@ -239,23 +323,21 @@ def _by_hand(rows: list, kinds: dict) -> str:
             return (1,)
         if kind == "text":
             return (0, value.encode("utf-8"))
-        if kind == "decimal":
-            return (0, Decimal(value))
         return (0, value)
 
-    def key(row, first):
-        return [order(row[first], kinds[first])] + [order(row[name], kinds[name]) for name in names if name != first]
+    def key(row):
+        by = ([first] if first in kinds else []) + [name for name in names if name != first]
+        return [order(row[name], kinds[name]) for name in by]
 
-    first = "ds" if "ds" in kinds else names[0]
-    ordered = sorted(rows, key=lambda row: key(row, first))
+    ordered = sorted(rows, key=key)
     digest = hashlib.sha256()
     digest.update(b"chartbook/rows/v1\n")
     digest.update(struct.pack("<QQ", len(ordered), len(names)))
     for name in names:
         kind = kinds[name]
         values = [row[name] for row in ordered]
-        if values and all(value is None for value in values):
-            kind = "null"
+        if all(value is None for value in values):
+            kind = "null"  # no value in any row, and so in a table with no rows
         raw = name.encode("utf-8")
         digest.update(struct.pack("<Q", len(raw)) + raw + struct.pack("<B", len(kind)) + kind.encode("ascii"))
         empty = [value is None for value in values]
@@ -269,8 +351,10 @@ def _by_hand(rows: list, kinds: dict) -> str:
             digest.update(b"\x00")
         if kind == "null":
             continue
-        if kind == "int":
+        if kind in ("int", "time"):
             digest.update(b"".join(struct.pack("<q", value or 0) for value in values))
+        elif kind == "uint64":
+            digest.update(b"".join(struct.pack("<Q", value or 0) for value in values))
         elif kind == "float":
             for value in values:
                 if value is None:
@@ -282,10 +366,12 @@ def _by_hand(rows: list, kinds: dict) -> str:
                 if value:
                     bits[i // 8] |= 0x80 >> (i % 8)
             digest.update(bytes(bits))
-        elif kind in ("text", "decimal"):
-            encoded = [(value or "").encode("utf-8") for value in values]
+        elif kind in ("text", "decimal", "binary"):
+            if kind == "decimal":
+                values = [None if value is None else _decimal_as_text(value) for value in values]
+            encoded = [b"" if value is None else value if kind == "binary" else value.encode("utf-8") for value in values]
             digest.update(b"".join(struct.pack("<Q", len(one)) for one in encoded) + b"".join(encoded))
-        elif kind == "timestamp":
+        elif kind in ("timestamp", "duration"):
             digest.update(b"".join(struct.pack("<q", value[0] if value else 0) for value in values))
             if any(value and value[1] for value in values):
                 digest.update(b"\x01" + b"".join(struct.pack("<q", value[1] if value else 0) for value in values))
@@ -294,6 +380,41 @@ def _by_hand(rows: list, kinds: dict) -> str:
         else:
             raise AssertionError(kind)
     return "sha256:" + digest.hexdigest()
+
+
+def _others() -> pl.DataFrame:
+    """A table of the kinds :func:`_frame` has none of: bytes, lengths of time, times of day, an unsigned number past 63 bits, a decimal; ten rows, so that a bit a row runs into a second byte."""
+    return pl.DataFrame(
+        {
+            "raw": [b"\x00\x01", None, b"", b"\xff", b"ab", b"a", b"b", None, b"\x00", b"z"],
+            "held": [1_000_000_001, 1_000_000_000, None, -1, 5, 5, 86_400_000_000_000, 0, 1, 999],
+            "at": [time(9, 30), time(16, 0), None, time(0, 0, 0, 1), time(23, 59, 59), time(9, 30), time(9, 30), time(12), time(1), time(2)],
+            "big": [2**64 - 1, 1, None, 2**63, 0, 7, 7, 8, 9, 10],
+            "price": [Decimal("1.50"), Decimal("-0.25"), None, Decimal("100.00"), Decimal("0.00"), Decimal("-0.00"), Decimal("0.05"), Decimal("12.30"), Decimal("7.00"), Decimal("-7.10")],
+            "up": [True, False, None, True, True, False, False, True, False, True],
+        },
+        schema={"raw": pl.Binary, "held": pl.Duration("ns"), "at": pl.Time, "big": pl.UInt64, "price": pl.Decimal(12, 2), "up": pl.Boolean},
+    )
+
+
+def _others_by_hand() -> tuple:
+    frame = _others()
+    rows = []
+    for raw, _, at, big, price, up in frame.rows():
+        rows.append(
+            {
+                "raw": raw,
+                # A length of time as polars hands it back has lost its nanoseconds: taken from the column itself
+                "held": None,
+                "at": None if at is None else ((at.hour * 60 + at.minute) * 60 + at.second) * 1_000_000_000 + at.microsecond * 1000,
+                "big": big,
+                "price": price,
+                "up": up,
+            }
+        )
+    for row, exact in zip(rows, frame.get_column("held").cast(pl.Int64).to_list()):
+        row["held"] = None if exact is None else divmod(exact, 1000)
+    return rows, {"raw": "binary", "held": "duration", "at": "time", "big": "uint64", "price": "decimal", "up": "bool"}
 
 
 class TestTheFormWrittenTwice:
@@ -308,7 +429,10 @@ class TestTheFormWrittenTwice:
             {"ds": None, "permno": 10003, "ret": float("nan"), "ticker": "", "listed": True},
         ]
         kinds = {"ds": "timestamp", "permno": "int", "ret": "float", "ticker": "text", "listed": "bool"}
-        assert hash_frame(_frame(), "ds") == _by_hand(rows, kinds)
+        assert hash_frame(_frame(), "ds") == _by_hand(rows, kinds, "ds")
+        # Sorted on another column first, the rows are fed in another order
+        assert hash_frame(_frame(), "ticker") == _by_hand(rows, kinds, "ticker") != _by_hand(rows, kinds, "ds")
+        assert hash_frame(_frame()) == _by_hand(rows, kinds) == hash_frame(_frame(), "no such column")
 
     def test_text_is_ordered_by_its_bytes_and_names_too(self):
         frame = pl.DataFrame({"é": ["b", "é", "a", "Z", "z"], "z": [1, 2, 3, 4, 5], "Z": [0.5, -0.0, 0.0, None, 2.0]})
@@ -324,16 +448,53 @@ class TestTheFormWrittenTwice:
             schema={"ds": pl.Datetime("ns"), "p": pl.Decimal(12, 2)},
         )
         rows = [
-            {"ds": (1_700_000_000_000_000, 1), "p": "1.5"},
-            {"ds": (1_700_000_000_000_001, 0), "p": "0"},
-            {"ds": None, "p": "100"},
+            {"ds": (1_700_000_000_000_000, 1), "p": Decimal("1.50")},
+            {"ds": (1_700_000_000_000_001, 0), "p": Decimal("-0.00")},
+            {"ds": None, "p": Decimal("100.00")},
         ]
-        assert hash_frame(frame, "ds") == _by_hand(rows, {"ds": "timestamp", "p": "decimal"})
+        assert hash_frame(frame, "ds") == _by_hand(rows, {"ds": "timestamp", "p": "decimal"}, "ds")
+        assert [_decimal_as_text(row["p"]) for row in rows] == ["1.5", "0", "100"]
+
+    def test_a_decimal_with_nothing_after_its_point_keeps_its_zeros(self):
+        """`100` is `100`: only what follows a point is taken off."""
+        whole = pl.DataFrame({"p": [Decimal("100"), Decimal("-20"), Decimal("0")]}, schema={"p": pl.Decimal(12, 0)})
+        rows = [{"p": value} for value in whole.get_column("p").to_list()]
+        assert hash_frame(whole) == _by_hand(rows, {"p": "decimal"})
+        assert [_decimal_as_text(row["p"]) for row in rows] == ["100", "-20", "0"]
+
+    def test_the_other_kinds(self):
+        """Bytes, a length of time with nanoseconds, a time of day, an unsigned number past 63 bits, and more rows than a byte has bits."""
+        rows, kinds = _others_by_hand()
+        frame = _others()
+        assert hash_frame(frame) == _by_hand(rows, kinds)
+        assert hash_frame(frame.sample(fraction=1.0, shuffle=True, seed=4)) == hash_frame(frame)
+        assert hash_frame(frame, "held") == _by_hand(rows, kinds, "held")
+
+    def test_each_kind_is_fed_under_its_own_name(self):
+        """A length of time is no timestamp and a time of day no whole number, though their bytes are the same."""
+        ticks = [1_000_000, 2_000_000, None]
+        as_kind = {
+            "timestamp": pl.Datetime("us"), "duration": pl.Duration("us"), "int": pl.Int64, "time": pl.Time,
+        }
+        hashes = {kind: hash_frame(pl.DataFrame({"x": ticks}, schema={"x": kind_type})) for kind, kind_type in as_kind.items()}
+        assert len(set(hashes.values())) == 4
+        for kind in ("timestamp", "duration"):
+            rows = [{"x": None if tick is None else (tick, 0)} for tick in ticks]
+            assert hashes[kind] == _by_hand(rows, {"x": kind})
+        for kind in ("int", "time"):
+            assert hashes[kind] == _by_hand([{"x": tick} for tick in ticks], {"x": kind})
+
+    def test_a_table_with_no_rows(self):
+        """No row has a value, so every column is of no kind: only the names are told."""
+        none = pl.DataFrame(schema={"a": pl.Int64, "s": pl.String})
+        assert hash_frame(none) == _by_hand([], {"a": "int", "s": "text"}) == _by_hand([], {"a": "null", "s": "null"})
 
     def test_it_is_this_hash(self):
         """The form does not change by accident: a change to it takes a new name and a new prefix."""
         assert hash_frame(_frame(), "ds") == EXPECTED
+        assert hash_frame(_others()) == EXPECTED_OF_THE_OTHERS
 
 
-#: The rows hash of :func:`_frame`, as the form of ``chartbook/rows/v1`` gives it.
+#: The rows hash of :func:`_frame`, and of :func:`_others`, as the form of ``chartbook/rows/v1`` gives it.
 EXPECTED = "sha256:6d30842d6a56f35a1e7f90e21216896e27b0b437213ed08cb9693b813f0cde22"
+EXPECTED_OF_THE_OTHERS = "sha256:25c2b5126867d5cb9f25c068052332600a4eb454c9270b6bba7c86d780046f5b"

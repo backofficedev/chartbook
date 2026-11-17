@@ -309,20 +309,30 @@ What was not settled, and how it is built. *Proposed by Claude, 2026-11-16:*
 - **A decimal type** is its value as text, written one way (`1.5` for `1.50`), and is not a
   float: DuckDB gives decimals, and a float would lose their last digits.
 - **A list or a struct in a column:** no rows hash yet. A dataframe with one is pinned by its
-  bytes alone, as today, and `chartbook snapshot` says so. Hashing what is inside one needs an
-  order for values that have none in polars, and is left for later.
+  bytes alone, as today (`chartbook snapshot` is to say so, from step 4). Hashing what is inside
+  one needs an order for values that have none in polars, and is left for later.
 - **A column with no value in it** has no kind, whatever type its writer gave it: pandas writes
   such a column as "null" and polars as the type it was.
 - **A whole number past 64 signed bits** (an unsigned column that uses its last bit) is a kind of
   its own, so that it is never taken for the negative number with the same bytes.
-- **The date column is part of the form,** as the page had it ("the date first"): the hash of a
-  period is of its rows and of which column is its date. The record says which (`date_col`).
+- **The date column is part of the form,** as the page had it ("the date first"): sorted on
+  another column first, the rows may be fed in another order. The record says which it was
+  (`date_col`).
+- **An empty value is not NaN.** pandas writes a float's NaN as an empty value, and a whole
+  number column with an empty value in it as floats. Those files hold other values than a file
+  polars wrote of the same frame, and hash otherwise: "whatever wrote them" is of the same
+  values. It matters only where the code that writes a table changes from one library to the
+  other; two people running the same code write the same values. Whether NaN and empty should be
+  one in a float column is the maintainer's to say.
+- **A column named like a pattern.** polars reads a name that begins `^` and ends `$` as a
+  pattern, so the columns are taken by their place and never by their name. (A review found
+  such a column passed over, and two tables with one hash.)
 - **The hash is written `sha256:…`,** as the page had it. The form's name is the first thing
   hashed (`chartbook/rows/v1`), and a change to the form takes a new name there and a new prefix,
   as the rule for any hash has it ({doc}`overview`, "Working in the code").
 
-A date column that is text (a CSV's) is parsed as the index already parses it for a dataframe's
-date range.
+A date column that is text (a CSV's) dates its rows where it is written as a date; how is in "A
+dataframe's record", above.
 
 ## Choosing the periods
 

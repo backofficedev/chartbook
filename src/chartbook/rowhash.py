@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import re
 import shutil
 import struct
 import tempfile
@@ -145,26 +146,42 @@ def _kind_of(name: str, kind) -> str:
 
 
 def kinds_of(schema) -> dict:
-    """The kind each column of a polars schema is hashed as, by name; :class:`NotHashed` if one is of no kind."""
+    """The kind each column of a polars schema is hashed as by its type, by name; :class:`NotHashed` if one is of no kind.
+
+    What a column's rows then make of it is told when they are hashed: an
+    unsigned 64-bit column with a number past 63 bits is ``uint64``, and a
+    column with no value in it is ``null``.
+    """
     return {name: _kind_of(name, kind) for name, kind in schema.items()}
 
 
+def _refused():
+    """What polars raises for a value that cannot be put in a column's one type: its errors, and its panics, which are no Exception."""
+    pl = _polars()
+    return (pl.exceptions.PolarsError, pl.exceptions.PanicException)
+
+
 def _normal(frame):
-    """A frame with every column in the one type of its kind, ready to sort; and each column's kind and, for a time, its unit.
+    """A frame with every column in the one type of its kind, ready to sort; each column's kind and, for a time, its unit; and the name each column goes by in it.
 
     A timestamp or a duration is left as a whole number in the unit it
     came in, nanoseconds or microseconds, which sorts as it does; what is
     fed is worked out from it (:func:`_feed`). A decimal is left as it is,
     which sorts by its value.
+
+    The columns are taken by their place and given names of ChartBook's
+    own while they are worked on (``c0``, ``c1``, …): polars reads a name
+    that begins ``^`` and ends ``$`` as a pattern, and a column so named
+    would be passed over without a word.
     """
     pl = _polars()
-    columns, kinds, units = [], {}, {}
-    for name, kind in frame.schema.items():
-        column = pl.col(name)
+    columns, kinds, units, where = [], {}, {}, {}
+    for place, (name, kind) in enumerate(frame.schema.items()):
+        column = pl.nth(place)
         said = _kind_of(name, kind)
         if said == "int":
             if kind == pl.UInt64:
-                most = frame.get_column(name).max()
+                most = frame.to_series(place).max()
                 if most is not None and most > 2**63 - 1:
                     said = "uint64"  # past what 64 signed bits hold: its own kind
                 else:
@@ -177,7 +194,7 @@ def _normal(frame):
             column = (
                 pl.when(column.is_nan()).then(pl.lit(float("nan"), dtype=pl.Float64))
                 .when(column == 0.0).then(pl.lit(0.0, dtype=pl.Float64))
-                .otherwise(column).alias(name)
+                .otherwise(column)
             )
         elif said == "timestamp":
             if kind == pl.Date:
@@ -202,16 +219,20 @@ def _normal(frame):
         elif said == "text" and kind != pl.String:
             column = column.cast(pl.String)
         kinds[name] = said
-        columns.append(column)
+        where[name] = f"c{place}"
+        columns.append(column.alias(where[name]))
     try:
         frame = frame.select(columns)
-    except Exception as error:  # noqa: BLE001 - a number past 64 bits, say
-        raise NotHashed(f"its columns cannot be put in one form: {str(error).splitlines()[0]}") from None
+    except _refused() as error:  # a number past 64 bits, a date past what microseconds hold
+        said = str(error).strip()
+        raise NotHashed(
+            f"its columns cannot be put in one form: {said.splitlines()[0] if said else type(error).__name__}"
+        ) from None
     # A column with no value in it has no kind: whatever type its writer gave it
-    for name in frame.columns:
-        if frame.get_column(name).null_count() == frame.height:
+    for name, held in where.items():
+        if frame.get_column(held).null_count() == frame.height:
             kinds[name] = "null"
-    return frame, kinds, units
+    return frame, kinds, units, where
 
 
 def _names(names: Iterable[str]) -> list:
@@ -219,16 +240,16 @@ def _names(names: Iterable[str]) -> list:
     return sorted(names, key=lambda name: name.encode("utf-8"))
 
 
-def _sorted(frame, first: Optional[str]):
+def _sorted(frame, where: dict, first: Optional[str]):
     """A normal frame's rows sorted on every column: *first* first, then the rest in the order of their names; empty values last."""
-    by = ([first] if first in frame.columns else []) + [name for name in _names(frame.columns) if name != first]
+    by = ([where[first]] if first in where else []) + [where[name] for name in _names(where) if name != first]
     if not by or frame.height < 2:
         return frame
     return frame.sort(by, nulls_last=True)
 
 
 def _decimal_text(series):
-    """A decimal column as text, each value written one way: no zeros after its last digit, and no ``-0``."""
+    """A decimal column as text, each value written one way: plain digits, no zeros after its last digit, and no ``-0``."""
     pl = _polars()
     text = series.cast(pl.String)
     if getattr(series.dtype, "scale", 0):
@@ -236,7 +257,7 @@ def _decimal_text(series):
     return text.replace("-0", "0")
 
 
-def _feed(digest, frame, kinds: dict, units: dict) -> None:
+def _feed(digest, frame, kinds: dict, units: dict, where: dict) -> None:
     """Feed a sorted, normal frame to a digest.
 
     First :data:`FORM`, then the number of rows and of columns, each as 8
@@ -258,7 +279,10 @@ def _feed(digest, frame, kinds: dict, units: dict) -> None:
       rounded down, then one byte: 0 if none has anything finer, else 1 and
       the nanoseconds left over (0 to 999) of each, 8 bytes each.
 
-    Every number is little-endian.
+    Every number is little-endian, on a machine of either kind.
+
+    :param where: The name each column goes by in *frame*, by its own name
+        (:func:`_normal`).
     """
     import numpy as np
     import pyarrow as pa
@@ -266,8 +290,8 @@ def _feed(digest, frame, kinds: dict, units: dict) -> None:
     pl = _polars()
     digest.update(FORM)
     digest.update(struct.pack("<QQ", frame.height, frame.width))
-    for name in _names(frame.columns):
-        series = frame.get_column(name)
+    for name in _names(where):
+        series = frame.get_column(where[name])
         kind = kinds[name]
         raw = name.encode("utf-8")
         digest.update(struct.pack("<Q", len(raw)) + raw + struct.pack("<B", len(kind)) + kind.encode("ascii"))
@@ -300,8 +324,9 @@ def _feed(digest, frame, kinds: dict, units: dict) -> None:
         elif kind in ("timestamp", "duration"):
             whole = series.fill_null(0).to_numpy().astype("<i8", copy=False)
             if units.get(name) == "ns":
-                micro = np.floor_divide(whole, 1000)
-                left = whole - micro * 1000
+                # What arithmetic gives is in the machine's own byte order: said again
+                micro = np.floor_divide(whole, 1000).astype("<i8", copy=False)
+                left = (whole - micro * 1000).astype("<i8", copy=False)
                 digest.update(np.ascontiguousarray(micro))
                 if left.any():
                     digest.update(b"\x01")
@@ -319,19 +344,28 @@ def hash_frame(frame, date_col: Optional[str] = None) -> str:
     """The rows hash of a polars DataFrame held in memory: all of its rows, as one piece.
 
     :param date_col: The column the rows are sorted on first: the table's
-        date column, which is part of the form. With none, or one the frame
-        does not have, the rows are sorted on the columns in the order of
-        their names.
-    :raises NotHashed: If a column is of a kind the form does not take.
+        date column. With none, or one the frame does not have, the rows
+        are sorted on the columns in the order of their names. It is part
+        of the form: sorted on another column first, rows that are alike
+        in that one may be fed in another order.
+    :raises NotHashed: If a column is of a kind the form does not take, or
+        holds a value its kind's one type cannot.
+    :raises TypeError: If *frame* is not a polars DataFrame.
     """
-    normal, kinds, units = _normal(frame)
-    del frame  # what is held from here is the frame in its one form, and then that sorted
+    if not isinstance(frame, _polars().DataFrame):
+        raise TypeError(f"hash_frame takes a polars DataFrame, and was given a {type(frame).__name__}")
+    normal, kinds, units, where = _normal(frame)
+    del frame  # from here it is the frame in its one form, and then that sorted, that are held
     digest = hashlib.sha256()
-    _feed(digest, _sorted(normal, date_col), kinds, units)
+    _feed(digest, _sorted(normal, where, date_col), kinds, units, where)
     return "sha256:" + digest.hexdigest()
 
 
 # --- Timestamps, as a record writes them ---------------------------------------
+
+#: A timestamp as a record writes it, and nothing else: a date, and a time
+#: to the second, with six digits of a second's fraction or nine.
+_STAMP = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{6})(\d{3})?)?)?", re.ASCII)
 
 
 def stamp_text(micro: int, left: int = 0) -> str:
@@ -339,9 +373,15 @@ def stamp_text(micro: int, left: int = 0) -> str:
 
     ``2026-10-30``, ``2026-10-30T16:00:00``, ``2026-10-30T16:00:00.250000``,
     and with nanoseconds, ``2026-10-30T16:00:00.250000001``.
+
+    :raises NotHashed: For a timestamp outside the years 1 to 9999, which
+        has no such text.
     """
     days, within = divmod(micro, _DAY)
-    day = (_EPOCH + timedelta(days=days)).date().isoformat()
+    try:
+        day = (_EPOCH + timedelta(days=days)).date().isoformat()
+    except OverflowError:
+        raise NotHashed("it has a date outside the years 1 to 9999, which a record of rows cannot write") from None
     if not within and not left:
         return day
     seconds, fraction = divmod(within, 1_000_000)
@@ -354,22 +394,21 @@ def stamp_text(micro: int, left: int = 0) -> str:
 def stamp_of(text: str) -> tuple[int, int]:
     """A timestamp a record wrote (:func:`stamp_text`) as its microseconds from 1970 and the nanoseconds left over.
 
-    :raises ValueError: If it is not one.
+    :raises ValueError: If it is not one, written as a record writes it.
     """
-    day, _, clock = text.partition("T")
-    parsed = date.fromisoformat(day)
-    micro = (parsed - _EPOCH.date()).days * _DAY
-    left = 0
-    if clock:
-        whole, _, fraction = clock.partition(".")
-        hours, minutes, seconds = (int(part) for part in whole.split(":"))
-        micro += (hours * 3600 + minutes * 60 + seconds) * 1_000_000
-        if fraction:
-            if len(fraction) not in (6, 9) or not fraction.isdigit():
-                raise ValueError(f"{text!r} is not a timestamp a record writes")
-            micro += int(fraction[:6])
-            left = int(fraction[6:] or 0)
-    return micro, left
+    matched = _STAMP.fullmatch(text) if isinstance(text, str) else None
+    if matched is None:
+        raise ValueError(f"{text!r} is not a timestamp a record writes")
+    year, month, day, hours, minutes, seconds, fraction, finer = matched.groups()
+    try:
+        micro = (date(int(year), int(month), int(day)) - _EPOCH.date()).days * _DAY
+    except ValueError:
+        raise ValueError(f"{text!r} is not a timestamp a record writes") from None
+    if hours is not None:
+        if int(hours) > 23 or int(minutes) > 59 or int(seconds) > 59:
+            raise ValueError(f"{text!r} is not a timestamp a record writes")
+        micro += (int(hours) * 3600 + int(minutes) * 60 + int(seconds)) * 1_000_000 + int(fraction or 0)
+    return micro, int(finer or 0)
 
 
 # --- Reading a table a little at a time ----------------------------------------
@@ -491,6 +530,7 @@ class Table:
         """
         from chartbook import formats
 
+        pl = _polars()
         read = formats.reading(self.path, self.format, self.read_options)
         target = self.arrow_schema(columns)
         if read.format != "parquet":
@@ -520,7 +560,8 @@ class Table:
                     )
                 added = self._added[str(file)]
                 if added is not None:
-                    added = added.select([name for name in added.columns if name in target.names])
+                    # By their place: a name is a pattern to polars when it begins ^ and ends $
+                    added = added.select([pl.nth(i) for i, name in enumerate(added.columns) if name in target.names])
             yield from _parquet_batches(file, target, added if added is None or added.width else None, sample)
 
 
@@ -548,7 +589,7 @@ def _added_by_the_reader(one, file, wanted: list):
 
     doubtful = [name for name in names if name in wanted and name in own and name in {key for key, _ in formats._keys_of(Path(str(file)).parent)}]
     if doubtful and opened.metadata.num_rows:
-        first = one.select(doubtful).head(1).collect()
+        first = one.select([pl.nth(names.index(name)) for name in doubtful]).head(1).collect()
         theirs = pl.from_arrow(next(opened.iter_batches(batch_size=1, columns=doubtful)))
         for name in doubtful:
             try:
@@ -559,7 +600,7 @@ def _added_by_the_reader(one, file, wanted: list):
                 extra.append(name)
     if not extra:
         return None
-    return one.select(extra).head(1).collect()
+    return one.select([pl.nth(names.index(name)) for name in extra]).head(1).collect()
 
 
 def _parquet_batches(file, target, added, sample: bool = False) -> Iterator:
@@ -571,7 +612,10 @@ def _parquet_batches(file, target, added, sample: bool = False) -> Iterator:
     constant = {}
     if added is not None:
         plain = added.select(
-            [pl.col(name).cast(pl.String) if _kind_of(name, kind) == "text" else pl.col(name) for name, kind in added.schema.items()]
+            [
+                pl.nth(i).cast(pl.String) if _kind_of(name, kind) == "text" else pl.nth(i)
+                for i, (name, kind) in enumerate(added.schema.items())
+            ]
         ).to_arrow(compat_level=pl.CompatLevel.oldest())
         constant = {name: plain.column(name)[0] for name in plain.column_names}
     try:
