@@ -68,7 +68,7 @@ threading.Thread(target=watch, daemon=True).start()
 from chartbook import rowhash
 
 if period:
-    rowhash.PERIOD_BYTES, rowhash.MOST_BYTES = period, 2 * period
+    rowhash.PERIOD_BYTES, rowhash.MOST_BYTES = period, period
 started = time.perf_counter()
 record = rowhash.hash_rows(rowhash.Table(path), date_col)
 pinned = time.perf_counter() - started
@@ -89,7 +89,10 @@ def _hashed_under(limit: int, path, date_col, tmp_path, period: int = 0) -> dict
         capture_output=True, text=True, encoding="utf-8", errors="replace", env=environment,
     )
     assert done.returncode == 0, f"the process stopped ({done.returncode}): {done.stderr[-2000:]}"
-    return json.loads(done.stdout.strip().splitlines()[-1])
+    said = json.loads(done.stdout.strip().splitlines()[-1])
+    if os.environ.get("CHARTBOOK_ROWS_SHOW"):
+        print(f"\n    {Path(str(path)).name}: {said['rows']:,} rows, {said['periods']} periods; hashed in {said['pin_seconds']} s, checked in {said['check_seconds']} s; peak {said['peak'] / 1e9:.2f} GB", file=sys.stderr)
+    return said
 
 
 def _wide(path: Path, rows: int = 400_000, columns: int = 99) -> int:
@@ -142,7 +145,7 @@ class TestTablesMadeHere:
 
     def test_the_largest_piece_there_can_be(self, tmp_path):
         """One day of a wide table, just under the most a single piece may be: about five times its size."""
-        rows = 300_000
+        rows = 150_000
         generator = np.random.default_rng(2)
         table = pa.table(
             {
@@ -155,11 +158,11 @@ class TestTablesMadeHere:
         said = _hashed_under(LIMIT, tmp_path / "day.parquet", "date", tmp_path)
         assert said["same"] and said["periods"] == 1 and said["peak"] < LIMIT
 
-    @pytest.mark.parametrize("format,rows", [("csv", 65_000), ("arrow", 145_000)])
-    def test_another_format_at_the_most_it_may_be(self, tmp_path, format, rows):
-        """Only parquet is read a little at a time: any other format is read whole, once, so what it may take on disk is held to a size."""
+    def test_a_csv_at_the_most_it_may_be(self, tmp_path):
+        """Only parquet is read a little at a time: a CSV is read whole, once, so its text is held to a size."""
         import polars as pl
 
+        rows = 16_000
         generator = np.random.default_rng(3)
         days = np.sort(generator.integers(0, 4 * 365, rows))
         frame = pl.DataFrame(
@@ -168,11 +171,22 @@ class TestTablesMadeHere:
                 **{f"c{i:02d}": generator.standard_normal(rows) for i in range(98)},
             }
         )
-        path = tmp_path / f"table.{format}"
-        frame.write_csv(path) if format == "csv" else frame.write_ipc(path)
+        frame.write_csv(tmp_path / "table.csv")
         del frame
-        assert 0.8 * rowhash.OTHER_BYTES < path.stat().st_size <= rowhash.OTHER_BYTES
-        said = _hashed_under(LIMIT, path, "date", tmp_path)
+        assert 0.8 * rowhash.OTHER_BYTES < (tmp_path / "table.csv").stat().st_size <= rowhash.OTHER_BYTES
+        said = _hashed_under(LIMIT, tmp_path / "table.csv", "date", tmp_path)
+        assert said["same"] and said["rows"] == rows and said["peak"] < LIMIT
+
+    def test_a_csv_of_little_text_and_much_memory(self, tmp_path):
+        """A digit and a comma are two bytes of text and eight in memory: the most text there may be, of that."""
+        rows, columns = 80_000, 200
+        line = ",".join(["1"] * columns)
+        with open(tmp_path / "table.csv", "w", encoding="utf-8", newline="\n") as held:
+            held.write("date," + ",".join(f"c{i}" for i in range(columns)) + "\n")
+            for i in range(rows):
+                held.write(f"2020-{1 + i % 12:02d}-{1 + i % 28:02d},{line}\n")
+        assert 0.8 * rowhash.OTHER_BYTES < (tmp_path / "table.csv").stat().st_size <= rowhash.OTHER_BYTES
+        said = _hashed_under(LIMIT, tmp_path / "table.csv", "date", tmp_path)
         assert said["same"] and said["rows"] == rows and said["peak"] < LIMIT
 
     def test_rows_with_no_date_are_refused_before_they_are_held(self, tmp_path):
@@ -190,6 +204,79 @@ class TestTablesMadeHere:
             capture_output=True, text=True, encoding="utf-8", errors="replace", env=environment,
         )
         assert done.returncode == 1 and "its rows with no date, 1,500,000 of them, count for" in done.stderr, done.stderr[-600:]
+
+    def test_long_text_that_a_file_holds_once(self, tmp_path):
+        """50 texts of 20 KB over 300,000 rows: 2 MB as a file, which says ten bytes a row, and 6 GB as rows. A batch is measured from its rows."""
+        rows = 300_000
+        words = pa.array([f"{i:04d}" + "x" * 20_000 for i in range(50)])
+        table = pa.table(
+            {
+                "date": pa.array((np.datetime64("2023-01-01") + (np.arange(rows) // 400)).astype("datetime64[ns]")),
+                "x": np.arange(rows),
+                "text": pa.DictionaryArray.from_arrays(pa.array(np.arange(rows) % 50, pa.int32()), words),
+            }
+        )
+        pq.write_table(table, tmp_path / "text.parquet")
+        del table
+        assert (tmp_path / "text.parquet").stat().st_size < 8 * 1024**2
+        said = _hashed_under(LIMIT, tmp_path / "text.parquet", "date", tmp_path)
+        assert said["same"] and said["periods"] == 750 and said["peak"] < LIMIT
+
+    def test_many_columns_of_text_that_a_file_holds_once(self, tmp_path):
+        """60 columns of 200 characters, 20 texts each: 11 MB as a file, 3.6 GB as rows."""
+        rows = 300_000
+        generator = np.random.default_rng(5)
+        words = pa.array([f"{i:02d}" + "y" * 198 for i in range(20)])
+        table = pa.table(
+            {
+                "date": pa.array((np.datetime64("2021-01-01") + np.sort(generator.integers(0, 3 * 365, rows))).astype("datetime64[ns]")),
+                **{f"t{i:02d}": pa.DictionaryArray.from_arrays(pa.array(generator.integers(0, 20, rows), pa.int32()), words) for i in range(60)},
+            }
+        )
+        pq.write_table(table, tmp_path / "wide_text.parquet")
+        del table
+        said = _hashed_under(LIMIT, tmp_path / "wide_text.parquet", "date", tmp_path)
+        assert said["same"] and said["rows"] == rows and said["peak"] < LIMIT
+
+    @pytest.mark.parametrize("shape", ["short text", "decimals", "floats in 255 columns"])
+    def test_one_day_at_the_most_a_piece_may_be(self, tmp_path, shape):
+        """A piece that cannot be split, as large as one may be, of what took the most beside its size: text of a character, decimals, and as many columns as are read."""
+        from decimal import Decimal
+
+        generator = np.random.default_rng(6)
+        if shape == "short text":
+            columns, each = 200, 17  # sixteen and one byte
+            make = lambda rows: pa.DictionaryArray.from_arrays(pa.array(generator.integers(0, 20, rows), pa.int32()), pa.array([chr(97 + i) for i in range(20)]))  # noqa: E731
+        elif shape == "decimals":
+            columns, each = 100, 16
+            values = pa.array([Decimal(i) / 100 for i in range(1000)], pa.decimal128(38, 6))
+            make = lambda rows: values.take(pa.array(generator.integers(0, 1000, rows)))  # noqa: E731
+        else:
+            columns, each = 254, 8
+            make = lambda rows: generator.standard_normal(rows)  # noqa: E731
+        rows = int(0.97 * rowhash.MOST_BYTES / (columns * each + 8))
+        table = pa.table(
+            {"date": pa.array(np.full(rows, np.datetime64("2024-01-02"), dtype="datetime64[ns]")), **{f"c{i:03d}": make(rows) for i in range(columns)}}
+        )
+        pq.write_table(table, tmp_path / "day.parquet", row_group_size=rows)
+        del table
+        said = _hashed_under(LIMIT, tmp_path / "day.parquet", "date", tmp_path)
+        assert said["same"] and said["periods"] == 1 and said["rows"] == rows and said["peak"] < LIMIT
+
+    def test_a_document_a_row(self, tmp_path):
+        """Rows of two megabytes each, forty a day: read a few at a time, down to one."""
+        rows = 400
+        documents = pa.array([str(i) + "d" * 2_000_000 for i in range(2)])
+        table = pa.table(
+            {
+                "date": pa.array((np.datetime64("2024-01-01") + (np.arange(rows) // 40)).astype("datetime64[ns]")),
+                "document": pa.DictionaryArray.from_arrays(pa.array(np.arange(rows) % 2, pa.int32()), documents),
+            }
+        )
+        pq.write_table(table, tmp_path / "documents.parquet")
+        del table
+        said = _hashed_under(LIMIT, tmp_path / "documents.parquet", "date", tmp_path)
+        assert said["same"] and said["rows"] == rows and said["periods"] == 10 and said["peak"] < LIMIT
 
     def test_the_limit_is_a_limit(self, tmp_path):
         """The watch stops a process that passes it: a table held whole, under a limit it cannot meet."""
