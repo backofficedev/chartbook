@@ -128,7 +128,7 @@ def _normal(frame):
         said = _kind_of(name, kind)
         if said == "int":
             if kind == pl.UInt64:
-                most = frame.to_series(place).max()
+                most = frame.to_series(place).alias("held").max()
                 if most is not None and most > 2**63 - 1:
                     said = "uint64"  # past what 64 signed bits hold: its own kind
                 else:
@@ -191,7 +191,7 @@ def _in_microseconds(frame, place: int, name: str, whole, each: int):
 
     :raises NotHashed: If a value is past what microseconds hold.
     """
-    held = frame.to_series(place).to_physical()
+    held = frame.to_series(place).alias("held").to_physical()  # a name is a pattern to polars when it begins ^ and ends $
     least, most = held.min(), held.max()
     reach = (2**63 - 1) // each
     if least is not None and (least < -reach or most > reach):
