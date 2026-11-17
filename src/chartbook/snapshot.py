@@ -2333,12 +2333,17 @@ def _inputs_key(inputs: object) -> list:
 
     An entry's ``pinned_from``, the ID its pins are kept under, says where
     they are and not what they are, so it is left out: a lockfile that
-    gained it says the same pins as before.
+    gained it says the same pins as before. So is ``stood_in``, the build
+    of the maker's own that was read in the place of a pinned snapshot:
+    the same bytes from the same pins are the same snapshot, whichever
+    build of the upstream is the newest today, and the one that stays
+    recorded is the one that stood in when those bytes were first
+    declared ready.
     """
     listed = inputs if isinstance(inputs, list) else []
     return sorted(
         json.dumps(
-            {k: v for k, v in entry.items() if k != "pinned_from"} if isinstance(entry, dict) else entry,
+            {k: v for k, v in entry.items() if k not in ("pinned_from", "stood_in")} if isinstance(entry, dict) else entry,
             sort_keys=True,
             default=str,
         )
