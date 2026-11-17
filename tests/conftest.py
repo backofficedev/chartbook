@@ -30,7 +30,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
-def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
+def _keep_out_of_the_real_store(tmp_path_factory):
     """Point the store and the git cache at scratch directories, for every test.
 
     Both are per user and live under ``~/.chartbook``. A test that pins,
@@ -38,8 +38,16 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     the two environment variables is what a user would do to move them, so
     code that asks for "this user's store" gets a scratch one. Tests of
     where the default is clear the variables themselves.
+
+    What is set here is set by this fixture's own patches, and not by the
+    ``monkeypatch`` a test asks for. A test that calls ``monkeypatch.undo()``
+    half-way undoes what it set itself, and is kept out to its end. While
+    the two were one, ``undo()`` took all of this away as well, and the rest
+    of such a test ran with this machine's own cache and settings (found on
+    2026-11-17: a folder made in ``~/.chartbook/cache`` at every run).
     """
     scratch = tmp_path_factory.mktemp("chartbook_home")
+    monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setenv("CHARTBOOK_STORE", str(scratch / "store"))
     monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(scratch / "git"))
     monkeypatch.setenv("CHARTBOOK_CACHE", str(scratch / "cache"))
@@ -90,7 +98,10 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
 
     monkeypatch.setattr(config, "get_global_config_dir", config_dir)
     monkeypatch.setattr(backends, "get_global_config_dir", config_dir)
-    yield
+    try:
+        yield
+    finally:
+        monkeypatch.undo()
     # The scratch store and caches go with their test. Found on CI on
     # 2026-10-21: the suite's temporary files, every test's stores and sites
     # kept until the end, filled the runner's disk at 99% of the run
