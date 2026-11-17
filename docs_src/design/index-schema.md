@@ -269,14 +269,19 @@ a **period** at a time, and its record says:
   Absent with no `date_col`, or no dated row.
 - `rows` — the rows hash of each period, by the period: the first and the last timestamp seen in
   it, both included, joined by `/`. `"none"` is the rows with no date. With no `date_col` there
-  is one entry, `"all"`. The periods are whoever made the record's to choose (whole years; a
-  year over 128 MB in memory as its months; such a month as its days), and whoever checks a pin
-  reads them from the record and hashes their own rows in those same periods, leaving out the
-  rows after `as_of`. So the rule that chooses them can change, and only the form of the hash
-  has to stay.
+  is one entry, `"all"`. The periods are whoever made the record's to choose, and whoever
+  checks a pin reads them from the record and hashes their own rows in those same periods,
+  leaving out the rows after `as_of`. So the rule that chooses them can change, and only the
+  form of the hash has to stay. ChartBook's rule is whole calendar years; a year whose rows
+  count for more than 128 MB as its months; such a month as its days; where a row counts for
+  eight bytes a column and the bytes of each value of text or binary. That is counted from the
+  rows alone, so the same rows give the same periods, whatever file they came in.
 - `row_count` — how many rows it has.
-- `not_hashed` — in place of `rows`, why its rows have no hash: a column of lists or structs, a
-  day over 256 MB in memory, more than 256 columns. Its pin is its bytes alone.
+- `not_hashed` — in place of `rows`, `as_of` and `row_count`, why its rows have no hash: a column
+  of lists or structs; a day, or its rows with no date, or the whole of a table with no
+  `date_col`, counting for more than 256 MB; more than 256 columns; a file over 128 MB that is
+  not parquet; a date no record can write. `date_col` stands beside it where the rows would be
+  dated by one. Its pin is its bytes alone.
 
 A timestamp is written in UTC: a date alone at midnight (`2026-10-30`), else with its time
 (`2026-10-30T16:00:00`), with a fraction of six digits where it has microseconds and nine where

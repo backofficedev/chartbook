@@ -11,6 +11,8 @@ tested is that this gives what reading the whole table does, for every
 shape of table ChartBook's reader takes.
 """
 
+import os
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -19,7 +21,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from chartbook import rowhash
-from chartbook.rowhash import ALL, NO_DATE, NotHashed, Table, choose, hash_frame, hash_in, hash_rows, periods_of, stamp_text
+from chartbook.rowhash import ALL, NO_DATE, NotHashed, Table, hash_frame, hash_in, hash_rows, periods_of, stamp_text
 
 
 def _table(days: int = 800, per_day: int = 3, start: date = date(2022, 11, 1)) -> pl.DataFrame:
@@ -54,50 +56,151 @@ def _whole(table: Table, date_col: str) -> dict:
     return found
 
 
+#: What a row of :func:`_table` counts for: four columns at eight bytes, and the two bytes of its ``unique_id``.
+A_ROW = 4 * 8 + 2
+
+
 class TestChoosingThePeriods:
-    """Whole years; a year too large as its months; such a month as its days. Sizes are bytes in memory."""
+    """Whole years; a year too large as its months; such a month as its days. What rows count for is counted from the rows."""
 
-    def _days(self, start: date, days: int, rows: int) -> dict:
-        first = (start - date(1970, 1, 1)).days
-        return {first + i: rows for i in range(days)}
+    def _record(self, tmp_path, frame, period=None, most=None, monkeypatch=None, name="t.parquet"):
+        frame.write_parquet(tmp_path / name)
+        if period is not None:
+            monkeypatch.setattr(rowhash, "PERIOD_BYTES", period)
+            monkeypatch.setattr(rowhash, "MOST_BYTES", most if most is not None else 2 * period)
+        return hash_rows(Table(tmp_path / name), "ds")
 
-    def _said(self, periods) -> list:
-        return [
-            f"{date(1970, 1, 1) + timedelta(days=first)}/{date(1970, 1, 1) + timedelta(days=last)}"
-            for first, last in periods
-        ]
-
-    def test_whole_years(self):
-        days = self._days(date(2022, 11, 1), 800, 3)
-        assert self._said(choose(days, a_row=100)) == [
+    def test_whole_years(self, tmp_path):
+        assert list(self._record(tmp_path, _table()).rows) == [
             "2022-11-01/2022-12-31", "2023-01-01/2023-12-31", "2024-01-01/2024-12-31", "2025-01-01/2025-01-08",
         ]
 
-    def test_a_year_too_large_is_its_months(self):
-        days = self._days(date(2023, 1, 1), 365, 10)
-        periods = choose(days, a_row=100, period_bytes=100 * 10 * 40)  # forty days' worth
-        assert len(periods) == 12 and self._said(periods)[:2] == ["2023-01-01/2023-01-31", "2023-02-01/2023-02-28"]
+    def test_a_year_too_large_is_its_months(self, tmp_path, monkeypatch):
+        frame = _table(days=365, per_day=10, start=date(2023, 1, 1))
+        record = self._record(tmp_path, frame, 40 * 10 * A_ROW, 10**9, monkeypatch)  # forty days' worth
+        assert len(record.rows) == 12 and list(record.rows)[:2] == ["2023-01-01/2023-01-31", "2023-02-01/2023-02-28"]
 
-    def test_a_month_too_large_is_its_days(self):
-        days = {**self._days(date(2023, 1, 1), 59, 10), **self._days(date(2023, 3, 1), 31, 1000)}
-        periods = choose(days, a_row=100, period_bytes=100 * 10 * 40, most_bytes=10**9)
-        said = self._said(periods)
+    def test_a_month_too_large_is_its_days(self, tmp_path, monkeypatch):
+        frame = pl.concat([_table(days=59, per_day=10, start=date(2023, 1, 1)), _table(days=31, per_day=1000, start=date(2023, 3, 1))])
+        record = self._record(tmp_path, frame, 40 * 10 * A_ROW, 10**9, monkeypatch)
+        said = list(record.rows)
         assert said[:2] == ["2023-01-01/2023-01-31", "2023-02-01/2023-02-28"]
         assert said[2:] == [f"2023-03-{day:02d}/2023-03-{day:02d}" for day in range(1, 32)]
+        # Each the hash of its own rows, however it was come by
+        assert record.rows["2023-03-07/2023-03-07"] == hash_frame(frame.filter(pl.col("ds") == date(2023, 3, 7)), "ds")
+        assert record.rows["2023-02-01/2023-02-28"] == hash_frame(frame.filter(pl.col("ds").dt.month() == 2), "ds")
 
-    def test_only_the_days_that_have_rows(self):
+    def test_the_size_is_just_the_size(self, tmp_path, monkeypatch):
+        """A year of exactly the size is whole, and one row more is its months."""
+        frame = _table(days=365, per_day=2, start=date(2023, 1, 1))
+        exactly = 365 * 2 * A_ROW
+        assert len(self._record(tmp_path, frame, exactly, 10**9, monkeypatch).rows) == 1
+        assert len(self._record(tmp_path, frame, exactly - 1, 10**9, monkeypatch).rows) == 12
+
+    def test_only_the_days_that_have_rows(self, tmp_path):
         """A period is written by what was seen: no date that has not happened."""
-        days = {(date(2023, 6, 14) - date(1970, 1, 1)).days: 5, (date(2023, 12, 29) - date(1970, 1, 1)).days: 5}
-        assert self._said(choose(days, a_row=100)) == ["2023-06-14/2023-12-29"]
+        frame = pl.concat([_table(days=1, start=date(2023, 6, 14)), _table(days=1, start=date(2023, 12, 29))])
+        assert list(self._record(tmp_path, frame).rows) == ["2023-06-14/2023-12-29"]
 
-    def test_a_day_too_large_to_hold_is_refused(self):
-        days = self._days(date(2023, 3, 1), 2, 1000)
-        with pytest.raises(NotHashed, match="its rows of 2023-03-01 alone, 1,000 of them"):
-            choose(days, a_row=100, period_bytes=1000, most_bytes=2000)
+    def test_a_day_too_large_to_hold_is_refused(self, tmp_path, monkeypatch):
+        frame = _table(days=2, per_day=1000, start=date(2023, 3, 1))
+        with pytest.raises(NotHashed, match="its rows of 2023-03-01 alone, 1,000 of them, count for"):
+            self._record(tmp_path, frame, 1000, 2000, monkeypatch)
+
+    def test_a_day_within_the_most_is_one_period(self, tmp_path, monkeypatch):
+        """A day cannot be split, so it may be twice a period."""
+        frame = _table(days=2, per_day=100, start=date(2023, 3, 1))  # ids of two bytes and of three
+        record = self._record(tmp_path, frame, 60 * A_ROW, 100 * (A_ROW + 1), monkeypatch)
+        assert list(record.rows) == ["2023-03-01/2023-03-01", "2023-03-02/2023-03-02"]
 
     def test_the_size_of_a_period_is_fixed_here(self):
         """Set for a machine with 8 GB, and no setting: whoever checks must hold what whoever pinned chose."""
         assert rowhash.PERIOD_BYTES == 128 * 1024 * 1024 and rowhash.MOST_BYTES == 2 * rowhash.PERIOD_BYTES
+
+
+class TestWhatRowsCountFor:
+    """Eight bytes a column and the bytes of its text: from the rows alone, so the same rows give the same periods."""
+
+    def _batch(self, frame: pl.DataFrame):
+        return frame.to_arrow(compat_level=pl.CompatLevel.oldest()).to_batches()[0]
+
+    def test_eight_bytes_a_column_and_the_bytes_of_its_text(self):
+        frame = pl.DataFrame({"n": [1, 2, 3], "x": [0.5, None, 1.5], "t": ["ab", None, "héllo"], "b": [b"12", b"", None]})
+        assert rowhash.row_bytes(self._batch(frame)).tolist() == [32 + 2 + 2, 32, 32 + 6]
+
+    def test_whatever_type_a_file_held_them_in(self):
+        wide = pl.DataFrame({"d": [datetime(2024, 1, 2)], "n": [7], "f": [1.5], "c": ["us"], "k": [True]})
+        narrow = wide.with_columns(
+            pl.col("d").cast(pl.Date), pl.col("n").cast(pl.Int8), pl.col("f").cast(pl.Float32), pl.col("c").cast(pl.Categorical)
+        )
+        target = wide.with_columns(pl.col("d").cast(pl.Date)).to_arrow(compat_level=pl.CompatLevel.oldest()).schema
+        assert rowhash.row_bytes(self._batch(wide)).tolist() == [5 * 8 + 2]
+        # As a table's batches come: a category as its text
+        assert rowhash.row_bytes(self._batch(narrow.with_columns(pl.col("c").cast(pl.String)))).tolist() == [5 * 8 + 2]
+        assert target.names == wide.columns
+
+    def _same_rows(self, folder: Path) -> dict:
+        """One table three ways: as polars writes it; as pandas does, with wider types; and with its rows in another order, in small row groups."""
+        frame = _table(days=730, per_day=3, start=date(2023, 1, 1)).with_columns(
+            # Longer text in the second year, so a few rows say little of what a row takes
+            note=pl.when(pl.col("ds").dt.year() == 2024).then(pl.lit("x" * 40)).otherwise(pl.lit("y"))
+        )
+        frame.write_parquet(folder / "polars.parquet")
+        frame.to_pandas().to_parquet(folder / "pandas.parquet", index=False)
+        pq.write_table(frame.sample(fraction=1.0, shuffle=True, seed=11).to_arrow(), folder / "shuffled.parquet", row_group_size=53)
+        return {name: Table(folder / f"{name}.parquet") for name in ("polars", "pandas", "shuffled")}
+
+    def test_the_same_rows_give_the_same_periods_at_any_size(self, tmp_path, monkeypatch):
+        """Near a threshold too: the size is counted, and not reckoned from a few rows of a file."""
+        tables = self._same_rows(tmp_path)
+        assert tables["polars"].schema()["ds"] == pl.Date and tables["pandas"].schema()["ds"] != pl.Date
+        a_year = 365 * 3 * (5 * 8 + 2 + 1)  # 2023: five columns, a two-byte id, a one-byte note
+        for period in (10**9, a_year, a_year - 1, 40_000, 9_000, 600):
+            monkeypatch.setattr(rowhash, "PERIOD_BYTES", period)
+            monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
+            records = {name: hash_rows(table, "ds").fields() for name, table in tables.items()}
+            assert records["polars"] == records["pandas"] == records["shuffled"], period
+        # 2023 whole at exactly its size, and 2024, of longer text, by month
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", a_year)
+        said = list(hash_rows(tables["shuffled"], "ds").rows)
+        assert said[0] == "2023-01-01/2023-12-31" and said[1] == "2024-01-01/2024-01-31" and len(said) == 13
+
+    def test_a_refusal_is_the_same_whatever_the_order(self, tmp_path, monkeypatch):
+        tables = self._same_rows(tmp_path)
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 100)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 200)
+        said = set()
+        for table in tables.values():
+            with pytest.raises(NotHashed) as refused:
+                hash_rows(table, "ds")
+            said.add(str(refused.value))
+        assert len(said) == 1 and "its rows of 2024-01-01 alone, 3 of them, count for" in said.pop()
+
+    def test_put_by_month_from_the_first_is_the_same_record(self, tmp_path, monkeypatch):
+        """A large table's rows are put by month at once, to be written once: what is hashed is the same."""
+        tables = self._same_rows(tmp_path)
+        for period in (10**9, 40_000, 600):
+            monkeypatch.setattr(rowhash, "PERIOD_BYTES", period)
+            monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
+            monkeypatch.setattr(rowhash, "_BY_MONTH_FROM", 10**12)
+            by_year = hash_rows(tables["polars"], "ds").fields()
+            monkeypatch.setattr(rowhash, "_BY_MONTH_FROM", 0)
+            assert hash_rows(tables["shuffled"], "ds").fields() == by_year, period
+
+    def test_a_moved_pin_keeps_its_lines_when_the_new_rows_are_longer(self, tmp_path, monkeypatch):
+        """What the rows after a pin take says nothing of the periods before it."""
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 40_000)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
+        frame = _table(days=500, start=date(2023, 1, 1)).with_columns(note=pl.lit("y"))
+        frame.write_parquet(tmp_path / "pinned.parquet")
+        pinned = hash_rows(Table(tmp_path / "pinned.parquet"), "ds")
+        more = _table(days=300, start=date(2024, 5, 15)).with_columns(note=pl.lit("x" * 500))
+        pl.concat([frame, more]).write_parquet(tmp_path / "moved.parquet")
+        moved = hash_rows(Table(tmp_path / "moved.parquet"), "ds")
+        kept = [key for key in pinned.rows if moved.rows.get(key) == pinned.rows[key]]
+        # Every line of 2023; 2024 was one line, and is its months now that it has grown
+        assert kept == [key for key in pinned.rows if key.startswith("2023")] and len(kept) == 12
+        assert hash_in(Table(tmp_path / "moved.parquet"), "ds", pinned.rows, pinned.as_of).same
 
 
 class TestARecordOfRows:
@@ -145,7 +248,7 @@ class TestARecordOfRows:
         assert record.fields() == {"date_col": "ds", "rows": {}, "row_count": 0}
 
     def test_a_date_column_that_is_text(self, tmp_path):
-        """A CSV's: parsed as the index parses a dataframe's date range; what does not parse has no date."""
+        """A CSV's: a date where it is written as one, in ISO 8601; a row with no date where it is not."""
         (tmp_path / "t.csv").write_text("ds,y\n2024-01-02,1.5\n2024-01-03,2.5\nnot a date,3.5\n2025-06-30,4.5\n", encoding="utf-8", newline="\n")
         table = Table(tmp_path / "t.csv", read_options={"schema_overrides": {"ds": "String"}})
         assert table.schema()["ds"] == pl.String
@@ -165,6 +268,12 @@ class TestARecordOfRows:
             "Jan 2, 2024": None,
             "2024-13-45": None,
             "": None,
+            # Nothing a parser might take on one machine and not on the next
+            " 2024-01-02": None,
+            "2024-01-02 ": None,
+            "2024-1-2": None,
+            "2024-01-02T16:00:00.1234567": None,
+            "20240102": None,
         }
         read = rowhash._dates_in_text(pl.Series("ds", list(written)))
         assert read.dtype == pl.Datetime("us") and read.to_list() == list(written.values())
@@ -189,7 +298,10 @@ class TestARecordOfRows:
     def test_the_fields_of_a_table_that_is_not_hashed_or_not_read(self, tmp_path):
         pl.DataFrame({"ds": [date(2024, 1, 2)], "v": [[1.0, 2.0]]}).write_parquet(tmp_path / "lists.parquet")
         fields = rowhash.fields_of(Table(tmp_path / "lists.parquet"), "ds")
-        assert list(fields) == ["not_hashed"] and "column 'v' is List" in fields["not_hashed"]
+        # With the column its rows would be dated by: a snapshot of the same bytes under another is looked at again
+        assert list(fields) == ["date_col", "not_hashed"] and "column 'v' is List" in fields["not_hashed"]
+        assert list(rowhash.fields_of(Table(tmp_path / "lists.parquet"), None)) == ["not_hashed"]
+        assert list(rowhash.fields_of(Table(tmp_path / "lists.parquet"), "nowhere")) == ["not_hashed"]
         (tmp_path / "not.parquet").write_bytes(b"hello")
         assert rowhash.fields_of(Table(tmp_path / "not.parquet"), "ds") == {}
         assert rowhash.fields_of(Table(tmp_path / "nowhere.parquet"), "ds") == {}
@@ -200,11 +312,11 @@ class TestARecordOfRows:
         with pytest.raises(NotHashed, match="it has 4 columns, and a rows hash reads at most 3 at once"):
             hash_rows(Table(tmp_path / "t.parquet"), "ds")
 
-    def test_a_year_that_turns_out_too_large_is_hashed_by_day(self, tmp_path, monkeypatch):
-        """What a row takes is reckoned from a few rows; a period that turns out over the most is split again, before 1970 too."""
+    def test_days_before_1970(self, tmp_path, monkeypatch):
+        """A month split into its days, where a day's number from 1970 is below zero."""
         frame = _table(days=20, per_day=50, start=date(1961, 6, 14))
         frame.write_parquet(tmp_path / "t.parquet")
-        monkeypatch.setattr(rowhash, "choose", lambda days, a_row, **sizes: [(min(days), max(days))])  # one period, whatever it takes
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 5_000)
         monkeypatch.setattr(rowhash, "MOST_BYTES", 10_000)
         record = hash_rows(Table(tmp_path / "t.parquet"), "ds")
         assert len(record.rows) == 20 and list(record.rows)[0] == "1961-06-14/1961-06-14" and record.as_of == "1961-07-03"
@@ -220,16 +332,23 @@ class TestARecordOfRows:
     def test_a_table_with_no_date_column_too_large_to_hold(self, tmp_path, monkeypatch):
         _table(days=400).write_parquet(tmp_path / "t.parquet")
         monkeypatch.setattr(rowhash, "MOST_BYTES", 10_000)
-        with pytest.raises(NotHashed, match="it has no date column, and its rows take more than"):
+        with pytest.raises(NotHashed, match="it has no date column, and its rows count for more than"):
             hash_rows(Table(tmp_path / "t.parquet"), None)
 
     def test_nothing_is_left_in_the_scratch_folder(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
-        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 2_000)  # so that it is read through scratch files
-        _table().write_parquet(tmp_path / "t.parquet")
-        hash_rows(Table(tmp_path / "t.parquet"), "ds")
-        left = [path for path in (tmp_path / "cache").rglob("*") if path.is_file()]
-        assert left == []
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 2_000)  # months, and days of them
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
+        _table(per_day=30).write_parquet(tmp_path / "t.parquet")
+        record = hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        assert len(record.rows) == 800
+        assert list((tmp_path / "cache").rglob("*")) == [tmp_path / "cache" / "rows"]
+        # Nor when it stops half-way: a day too large, found after everything was put
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 1_000)
+        with pytest.raises(NotHashed):
+            hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
+        assert list((tmp_path / "cache").rglob("*")) == [tmp_path / "cache" / "rows"]
 
 
 def _layouts(folder: Path, frame: pl.DataFrame) -> dict:
@@ -267,13 +386,18 @@ class TestReadALittleAtATime:
     def test_each_layout_as_the_whole_table(self, layouts, name, monkeypatch):
         table = Table(**layouts[name])
         assert "year" in table.schema().names()
-        for size in (rowhash.PERIOD_BYTES, 20_000):  # held in memory, and through scratch files
-            monkeypatch.setattr(rowhash, "PERIOD_BYTES", size)
-            monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
-            record = hash_rows(Table(**layouts[name]), "ds")
-            if size == rowhash.PERIOD_BYTES and size > 20_000:
-                assert record.rows == _whole(table, "ds"), name
-            assert record.row_count == 2400
+        record = hash_rows(Table(**layouts[name]), "ds")
+        assert record.rows == _whole(table, "ds") and record.row_count == 2400, name
+        # And by month, each the hash of its own rows as the whole table has them
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 20_000)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
+        frame = table.scan().collect()
+        by_month = hash_rows(Table(**layouts[name]), "ds")
+        # 2022 and 2025 are whole, being within the size; 2023 and 2024 are their months
+        assert by_month.row_count == 2400 and len(by_month.rows) == 1 + 12 + 12 + 1
+        for key, first, last in periods_of(by_month.rows):
+            low, high = (datetime(1970, 1, 1) + timedelta(microseconds=stamp[0]) for stamp in (first, last))
+            assert by_month.rows[key] == hash_frame(frame.filter(pl.col("ds").is_between(low.date(), high.date())), "ds"), (name, key)
 
     def test_every_layout_gives_one_hash(self, layouts):
         records = {name: hash_rows(Table(**made), "ds").rows for name, made in layouts.items()}
@@ -437,3 +561,145 @@ class TestAgainstARecord:
         frame, record = pinned
         with pytest.raises(ValueError):
             hash_in(Table(tmp_path / "pinned.parquet"), "ds", {"2023/2024-13-01": "sha256:00"}, "2024-01-01")
+
+
+class TestWhatTheReviewFound:
+    """Each of these stopped a snapshot, or gave a record that was not the reader's rows."""
+
+    @pytest.mark.skipif(os.name == "nt", reason="the limit on open files is set as POSIX sets it")
+    def test_more_periods_than_a_process_may_have_files_open(self, tmp_path, monkeypatch):
+        """Thirty years of months: no scratch file is held open, so the limit (256 on a Mac) is no limit here."""
+        import resource
+
+        frame = _table(days=30 * 365, per_day=2, start=date(1990, 1, 1))
+        frame.sample(fraction=1.0, shuffle=True, seed=2).write_parquet(tmp_path / "t.parquet")
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 40 * 2 * A_ROW)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
+        monkeypatch.setattr(rowhash, "_BY_MONTH_FROM", 0)
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (64, hard))
+        try:
+            record = hash_rows(Table(tmp_path / "t.parquet"), "ds")
+            compared = hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
+        finally:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+        assert len(record.rows) == 360 and compared.same
+
+    @pytest.mark.parametrize(
+        "frame",
+        [
+            pl.DataFrame({"ds": [datetime(2024, 1, 2), None], "x": [1, 2]}).with_columns(
+                pl.when(pl.col("x") == 2).then(pl.lit(253402300800 * 10**6 + 1)).otherwise(pl.col("ds").cast(pl.Int64)).cast(pl.Datetime("us")).alias("ds")
+            ),
+            pl.DataFrame({"ds": [2**31 - 1, 19000], "x": [1, 2]}, schema={"ds": pl.Int32, "x": pl.Int64}).with_columns(pl.col("ds").cast(pl.Date)),
+            pl.DataFrame({"ds": [9223372036854776, 1], "x": [1, 2]}, schema={"ds": pl.Datetime("ms"), "x": pl.Int64}),
+            pl.DataFrame({"ds": [-62135596800 * 10**6 - 1, 1], "x": [1, 2]}, schema={"ds": pl.Datetime("us"), "x": pl.Int64}),
+        ],
+        ids=["the year 10000", "a date past microseconds", "milliseconds past microseconds", "before the year 1"],
+    )
+    def test_a_date_no_record_can_write_is_refused_and_plainly(self, tmp_path, frame):
+        """Seconds written as microseconds, say: no OverflowError, and no panic of polars, which is no Exception."""
+        frame.write_parquet(tmp_path / "t.parquet")
+        with pytest.raises(NotHashed, match="outside the years 1 to 9999|past what 64 bits of microseconds hold"):
+            hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        fields = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+        assert list(fields) == ["date_col", "not_hashed"]
+        # Beside a record it is not the record's rows, or cannot be told to be: never an error of another kind
+        _table(days=3).write_parquet(tmp_path / "pinned.parquet")
+        pinned = hash_rows(Table(tmp_path / "pinned.parquet"), "ds")
+        try:
+            assert hash_in(Table(tmp_path / "t.parquet"), "ds", pinned.rows, pinned.as_of).differ
+        except NotHashed:
+            pass
+
+    def test_a_pin_past_what_nanoseconds_hold_differs(self, tmp_path):
+        """A record with the year 9999 in it, beside a table of nanoseconds, which end in 2262."""
+        frame = pl.DataFrame({"ds": [date(2024, 1, 2), date(9999, 12, 31)], "x": [1, 2]})
+        frame.write_parquet(tmp_path / "pinned.parquet")
+        pinned = hash_rows(Table(tmp_path / "pinned.parquet"), "ds")
+        assert list(pinned.rows) == ["2024-01-02/2024-01-02", "9999-12-31/9999-12-31"]
+        frame.head(1).with_columns(pl.col("ds").cast(pl.Datetime("ns"))).write_parquet(tmp_path / "fine.parquet")
+        compared = hash_in(Table(tmp_path / "fine.parquet"), "ds", pinned.rows, pinned.as_of)
+        assert compared.differ == ["9999-12-31/9999-12-31"] and compared.outside == 0
+
+    def test_rows_with_no_date_are_held_to_the_most_too(self, tmp_path, monkeypatch):
+        """A CSV of US dates and a declared date column: every row has no date, and they are one piece."""
+        frame = _table(days=300).with_columns(pl.col("ds").dt.strftime("%m/%d/%Y"))
+        frame.write_parquet(tmp_path / "t.parquet")
+        record = hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        assert list(record.rows) == [NO_DATE] and hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of).same
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 10_000)
+        with pytest.raises(NotHashed, match="its rows with no date, 900 of them, count for"):
+            hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        # And beside a record: more than any piece of one counts for is not its rows
+        assert hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of).differ == [NO_DATE]
+
+    def test_one_file_under_a_folder_that_names_a_key(self, tmp_path):
+        """``seed=42/project/_data/prices.parquet``: the reader makes a column of the folder, and so do the rows hashed."""
+        folder = tmp_path / "seed=42" / "project" / "_data"
+        folder.mkdir(parents=True)
+        _table(days=5).write_parquet(folder / "prices.parquet")
+        table = Table(folder / "prices.parquet")
+        read = table.scan().collect()
+        record = hash_rows(table, "ds")
+        assert record.rows == {"2022-11-01/2022-11-05": hash_frame(read, "ds")}
+        assert rowhash.fields_of(Table(folder / "prices.parquet"), "ds")["rows"] == record.rows
+
+    def test_a_key_that_is_a_column_of_the_file_too(self, tmp_path):
+        """``year=2024/part.parquet`` with a ``year`` of its own that says otherwise in one row: the reader's rows are what is hashed."""
+        folder = tmp_path / "t" / "year=2024"
+        folder.mkdir(parents=True)
+        pl.DataFrame({"ds": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)], "year": [2024, 2024, 1999]}).write_parquet(folder / "part.parquet")
+        (tmp_path / "t" / "year=2025").mkdir()
+        pl.DataFrame({"ds": [date(2025, 1, 2)], "year": [2025]}).write_parquet(tmp_path / "t" / "year=2025" / "part.parquet")
+        table = Table(tmp_path / "t")
+        assert hash_rows(table, "ds").rows == _whole(table, "ds")
+
+    def test_another_format_too_large_to_read_whole(self, tmp_path, monkeypatch):
+        """Only parquet is read a little at a time."""
+        _table(days=40).write_csv(tmp_path / "t.csv")
+        monkeypatch.setattr(rowhash, "OTHER_BYTES", 1024)
+        with pytest.raises(NotHashed, match="it is csv, 0 MB on disk, and only parquet is read a little at a time"):
+            hash_rows(Table(tmp_path / "t.csv"), "ds")
+        assert list(rowhash.fields_of(Table(tmp_path / "t.csv"), "ds")) == ["date_col", "not_hashed"]
+
+    def test_a_type_that_goes_on_is_not_written_out(self, tmp_path):
+        wide = pl.DataFrame({"ds": [date(2024, 1, 2)], "v": [{f"field_{i}": i for i in range(150)}]})
+        wide.write_parquet(tmp_path / "t.parquet")
+        said = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")["not_hashed"]
+        assert said.startswith("column 'v' is Struct(") and len(said) < 200
+
+    def test_what_is_no_fault_of_the_tables_is_said_apart(self, tmp_path, monkeypatch):
+        """A full disk under the scratch files: nothing is recorded of the rows, and the next time may hash them."""
+        _table().write_parquet(tmp_path / "t.parquet")
+
+        def full(self):
+            raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(rowhash._Pieces, "flush", full)
+        with pytest.raises(rowhash.NotNow, match="OSError: .*No space left on device"):
+            rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+
+    @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a folder this user cannot write")
+    def test_a_cache_that_cannot_be_written_is_no_failure(self, tmp_path, monkeypatch):
+        """The scratch files go to the system's temporary folder."""
+        (tmp_path / "cache" / "rows").mkdir(parents=True)
+        os.chmod(tmp_path / "cache" / "rows", 0o555)
+        monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
+        _table().write_parquet(tmp_path / "t.parquet")
+        try:
+            assert len(hash_rows(Table(tmp_path / "t.parquet"), "ds").rows) == 4
+        finally:
+            os.chmod(tmp_path / "cache" / "rows", 0o755)
+
+    def test_scratch_a_killed_process_left_is_removed_a_day_later(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
+        for name, age in (("chartbook-rows-old", 2 * 86400), ("chartbook-rows-new", 60)):
+            left = tmp_path / "cache" / "rows" / name
+            left.mkdir(parents=True)
+            (left / "0.arrows").write_bytes(b"x")
+            past = time.time() - age
+            os.utime(left, (past, past))
+        _table(days=3).write_parquet(tmp_path / "t.parquet")
+        hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        assert sorted(path.name for path in (tmp_path / "cache" / "rows").iterdir()) == ["chartbook-rows-new"]

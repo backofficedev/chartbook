@@ -155,6 +155,42 @@ class TestTablesMadeHere:
         said = _hashed_under(LIMIT, tmp_path / "day.parquet", "date", tmp_path)
         assert said["same"] and said["periods"] == 1 and said["peak"] < LIMIT
 
+    @pytest.mark.parametrize("format,rows", [("csv", 65_000), ("arrow", 145_000)])
+    def test_another_format_at_the_most_it_may_be(self, tmp_path, format, rows):
+        """Only parquet is read a little at a time: any other format is read whole, once, so what it may take on disk is held to a size."""
+        import polars as pl
+
+        generator = np.random.default_rng(3)
+        days = np.sort(generator.integers(0, 4 * 365, rows))
+        frame = pl.DataFrame(
+            {
+                "date": (np.datetime64("2020-01-01") + days).astype("datetime64[us]"),
+                **{f"c{i:02d}": generator.standard_normal(rows) for i in range(98)},
+            }
+        )
+        path = tmp_path / f"table.{format}"
+        frame.write_csv(path) if format == "csv" else frame.write_ipc(path)
+        del frame
+        assert 0.8 * rowhash.OTHER_BYTES < path.stat().st_size <= rowhash.OTHER_BYTES
+        said = _hashed_under(LIMIT, path, "date", tmp_path)
+        assert said["same"] and said["rows"] == rows and said["peak"] < LIMIT
+
+    def test_rows_with_no_date_are_refused_before_they_are_held(self, tmp_path):
+        """A table several times the most a piece may be, every row of it with no date: said, and never read whole."""
+        rows = 1_500_000
+        generator = np.random.default_rng(4)
+        table = pa.table(
+            {"date": pa.nulls(rows, pa.timestamp("us")), **{f"c{i:02d}": generator.standard_normal(rows) for i in range(60)}}
+        )
+        assert table.nbytes > 2.5 * rowhash.MOST_BYTES
+        pq.write_table(table, tmp_path / "undated.parquet", row_group_size=rows)
+        environment = {**os.environ, "CHARTBOOK_CACHE": str(tmp_path / "cache")}
+        done = subprocess.run(
+            [sys.executable, "-c", CHILD, str(1024**3), str(tmp_path / "undated.parquet"), "date", "0"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", env=environment,
+        )
+        assert done.returncode == 1 and "its rows with no date, 1,500,000 of them, count for" in done.stderr, done.stderr[-600:]
+
     def test_the_limit_is_a_limit(self, tmp_path):
         """The watch stops a process that passes it: a table held whole, under a limit it cannot meet."""
         _wide(tmp_path / "table.parquet")

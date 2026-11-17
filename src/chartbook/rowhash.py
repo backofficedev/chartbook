@@ -33,24 +33,29 @@ glob. It does see every value of every column.
 
 **By period.** A table with a date column is hashed a period at a time: a
 calendar year, or a month or a day of one where a year's rows are too many
-to hold (:func:`choose`). Each period is written by the first and the
+to hold (:func:`hash_rows`). Each period is written by the first and the
 last timestamp seen in it, both included, so the record holds no date that
-has not happened. Whoever pins chooses the periods; whoever checks reads
-them from the record and hashes their own rows in those same periods,
-leaving out the rows after the record's last timestamp (:func:`hash_in`).
+has not happened. The periods are a function of the rows alone: what a
+year's rows count for is counted from the rows (:func:`row_bytes`), never
+from the file they came in, so the same rows give the same record. Whoever
+checks reads the periods from the record and hashes their own rows in
+those same periods, leaving out the rows after the record's last timestamp
+(:func:`hash_in`).
 
 **Memory.** A period's rows are what is held at once, never the table: the
 files are read a few thousand rows at a time, each row is put in a scratch
-file for its period, and each period is then sorted and hashed alone. The
-size of a period is fixed here (:data:`PERIOD_BYTES`), for a machine with
-8 GB, and is not taken from the machine that pins: the author may pin on
-64 GB, and a student then hashes those same periods on 8.
+file for its year, a year that is too large is put again by month and such
+a month by day, and each period is then sorted and hashed alone. The size
+of a period is fixed here (:data:`PERIOD_BYTES`), for a machine with 8 GB,
+and is not taken from the machine that pins: the author may pin on 64 GB,
+and a student then hashes those same periods on 8.
 """
 
 from __future__ import annotations
 
 import contextlib
 import hashlib
+import os
 import re
 import shutil
 import struct
@@ -64,18 +69,30 @@ from typing import Iterable, Iterator, Optional, Union
 #: form takes another name here and another prefix on the hash.
 FORM = b"chartbook/rows/v1\n"
 
-#: The most a period's rows take in memory, in bytes, as Arrow holds them:
-#: a year over this is split into months, and a month over it into days.
-#: Sorting and feeding a period takes a few times its size, so this is what
-#: sets the peak. It is fixed, and no setting: the machine that checks a
-#: pin has to hold the periods the machine that pinned chose.
+#: The most a period's rows count for, in bytes (:func:`row_bytes`): a year
+#: over this is split into months, and a month over it into days. Sorting
+#: and feeding a period takes a few times its size, so this is what sets
+#: the peak. It is fixed, and no setting: the machine that checks a pin has
+#: to hold the periods the machine that pinned chose.
 PERIOD_BYTES = 128 * 1024 * 1024
+
+#: What a column counts for in a row, in bytes, when a period is measured;
+#: a value of text or binary counts for its own bytes besides.
+COLUMN_BYTES = 8
 
 #: The most rows hashed as one piece that cannot be split: one day of a
 #: dated table, or the whole of a table with no date column. A table with
 #: more than this in one piece has no rows hash, and is pinned by its bytes
 #: alone.
 MOST_BYTES = 2 * PERIOD_BYTES
+
+#: The most a table in another format than parquet may take on disk to
+#: have a rows hash, and how many times its size a gzipped file counts
+#: for. Only parquet is read a little at a time: any other format is read
+#: whole, once, which took about five times the table in memory when it
+#: was measured (an Arrow file of 219 MB peaked at 1.4 GB).
+OTHER_BYTES = PERIOD_BYTES
+OTHER_ZIPPED = 8
 
 #: The most columns a table is read with. A file is read a few thousand
 #: rows at a time, and still a page or two of every column is held while it
@@ -90,6 +107,11 @@ BATCH_BYTES = 8 * 1024 * 1024
 #: hash of a table with no date column.
 NO_DATE = "none"
 ALL = "all"
+
+#: The column pandas writes a frame's index into when the index has no
+#: name. Where it holds row positions left from an earlier step, they shift
+#: when a pull has more rows, and no row is then the row it was.
+INDEX_COLUMN = "__index_level_0__"
 
 _DAY = 86_400_000_000  # microseconds
 _EPOCH = datetime(1970, 1, 1)
@@ -142,7 +164,13 @@ def _kind_of(name: str, kind) -> str:
         return "binary"
     if kind == pl.Null:
         return "null"
-    raise NotHashed(f"column {name!r} is {kind}, and a rows hash takes no such column yet")
+    raise NotHashed(f"column {name!r} is {_type_said(kind)}, and a rows hash takes no such column yet")
+
+
+def _type_said(kind) -> str:
+    """A polars type as a message names it: in full, or its beginning where it goes on (a struct of a hundred fields)."""
+    said = str(kind)
+    return said if len(said) <= 80 else f"{said[:60]}… ({len(said):,} characters)"
 
 
 def kinds_of(schema) -> dict:
@@ -518,75 +546,113 @@ class Table:
                 raise NotRead(_first_line(error)) from None
         return self._schema
 
-    def arrow_schema(self, columns: Optional[list] = None):
+    def arrow_schema(self):
         """Its columns as Arrow holds them here: the reader's types, a category as its text."""
         import pyarrow as pa
 
         pl = _polars()
-        schema = self.schema()
-        plain = {
-            name: pl.String if _kind_of(name, kind) == "text" else kind
-            for name, kind in schema.items() if columns is None or name in columns
-        }
+        plain = {name: pl.String if _kind_of(name, kind) == "text" else kind for name, kind in self.schema().items()}
         empty = pl.DataFrame(schema=plain).to_arrow(compat_level=pl.CompatLevel.oldest())
         return pa.schema(list(empty.schema))
 
-    def batches(self, columns: Optional[list] = None, scratch: Optional[Path] = None, sample: bool = False) -> Iterator:
+    def on_disk(self) -> int:
+        """How many bytes its files take on disk; 0 where that cannot be told."""
+        from chartbook import formats
+
+        try:
+            read = formats.reading(self.path, self.format, self.read_options)
+            return sum(os.path.getsize(file) for file in formats.files_of(self.path, read, self.files, self.listed, self.inside))
+        except Exception:  # noqa: BLE001 - nothing there, or a format ChartBook does not read: said where it is read
+            return 0
+
+    def batches(self, scratch: Optional[Path] = None) -> Iterator:
         """Its rows as Arrow record batches of a few thousand rows each, in no promised order, with the reader's columns.
 
         A parquet file is read by pyarrow a batch at a time, which holds
         one batch and not a row group. What the reader adds to a file's own
         columns, the ``key=value`` folders of its path, is asked of the
-        reader for each file and put on its batches. Any other format is
-        written out as parquet once, into *scratch*, by polars' streaming
-        engine, and read from there.
+        reader for each file and put on its batches; a file the store keeps
+        once for two partitions is read once for each, with each one's keys.
+        Any other format is read whole by polars and written out as parquet
+        once, into *scratch*, and read from there: so one over
+        :data:`OTHER_BYTES` on disk is refused.
 
-        :param columns: The columns wanted; all of them by default.
         :param scratch: A folder for the copy a format other than parquet
             is read through.
-        :param sample: Whether to give only a few batches, from places
-            spread through the files: enough to say what a row takes.
+        :raises NotHashed: For a table in another format than parquet that
+            is too large to read whole.
+        :raises NotRead: If a file cannot be read a batch at a time.
         """
         from chartbook import formats
 
         pl = _polars()
         read = formats.reading(self.path, self.format, self.read_options)
-        target = self.arrow_schema(columns)
+        target = self.arrow_schema()
         if read.format != "parquet":
             if scratch is None:
                 raise ValueError("a format other than parquet is read through a scratch folder")
             copy = Path(scratch) / "table.parquet"
             if not copy.exists():
+                self._small_enough(read)
                 try:
                     self.scan().sink_parquet(copy, row_group_size=50_000)
+                except OSError:
+                    raise  # the scratch folder, most likely: no fault of the table's
                 except Exception as error:  # noqa: BLE001 - whatever polars raises for a file it cannot read through
                     raise NotRead(f"it could not be read ({_first_line(error)})") from None
-            yield from _parquet_batches(copy, target, None, sample)
+            yield from _parquet_batches(copy, target, None)
             return
         sources, folder = formats._sources(Path(self.path), read, self.files, self.listed, self.inside)
+        apart = formats._kept_apart(sources, self.inside)
+        if apart:
+            # Where the store keeps a file does not say its keys: each is read for each
+            # path it has inside the table, with that path's keys, as the reader reads it
+            try:
+                first = formats._scan_files(pl.scan_parquet, [apart[0][0]], hive_partitioning=False).collect_schema()
+                keys = formats._keys_of_pairs(apart, first)
+            except Exception as error:  # noqa: BLE001 - whatever the reader raises for files it cannot read
+                raise NotRead(f"its files could not be read ({_first_line(error)})") from None
+            for place, (location, _) in enumerate(apart):
+                put = {key: pl.Series(key, [values[place]], dtype=kind) for key, (kind, values) in keys.items() if key in target.names}
+                yield from _parquet_batches(location, target, pl.DataFrame(list(put.values())) if put else None)
+            return
         found = formats.files_of(self.path, read, self.files, self.listed, self.inside)
         by_file = formats._by_location(self.inside)
         alone = len(found) == 1 and folder is None
-        if sample and len(found) > 4:
-            found = [found[i * (len(found) - 1) // 3] for i in range(4)]
         for file in found:
-            added = None
-            if not alone:
-                # Asked once for each file, of all its columns: a table is read more than once
-                if str(file) not in self._added:
-                    self._added[str(file)] = _added_by_the_reader(
-                        formats._scan(read, [str(file)], folder, by_file), file, self.schema().names()
-                    )
-                added = self._added[str(file)]
-                if added is not None:
-                    # By their place: a name is a pattern to polars when it begins ^ and ends $
-                    added = added.select([pl.nth(i) for i, name in enumerate(added.columns) if name in target.names])
-            yield from _parquet_batches(file, target, added if added is None or added.width else None, sample)
+            # Asked once for each file: a table is read more than once
+            if str(file) not in self._added:
+                try:
+                    one = formats._scan(read, sources if alone else [str(file)], folder, by_file)
+                    self._added[str(file)] = _added_by_the_reader(one, file, self.schema().names())
+                except NotHashed:
+                    raise
+                except Exception as error:  # noqa: BLE001 - whatever the reader raises for a file it cannot read
+                    raise NotRead(f"{Path(str(file)).name} could not be read ({_first_line(error)})") from None
+            added = self._added[str(file)]
+            if added is not None:
+                # By their place: a name is a pattern to polars when it begins ^ and ends $
+                added = added.select([pl.nth(i) for i, name in enumerate(added.columns) if name in target.names])
+            yield from _parquet_batches(file, target, added if added is None or added.width else None)
+
+    def _small_enough(self, read) -> None:
+        """Refuse a table in another format than parquet that is too large to be read whole."""
+        from chartbook import formats
+
+        files = formats.files_of(self.path, read, self.files, self.listed, self.inside)
+        zipped = sum(os.path.getsize(file) for file in files if str(file).lower().endswith(".gz"))
+        plain = sum(os.path.getsize(file) for file in files) - zipped
+        if plain + OTHER_ZIPPED * zipped > OTHER_BYTES:
+            raise NotHashed(
+                f"it is {read.format}, {(plain + zipped) / 2**20:,.0f} MB on disk, and only parquet is read a little "
+                f"at a time: a table in another format has a rows hash up to {OTHER_BYTES // 2**20} MB "
+                f"({OTHER_BYTES // OTHER_ZIPPED // 2**20} MB gzipped)"
+            )
 
 
 def _first_line(error: BaseException) -> str:
     said = str(error).strip()
-    return said.splitlines()[0] if said else type(error).__name__
+    return said.splitlines()[0][:300] if said else type(error).__name__
 
 
 def _added_by_the_reader(one, file, wanted: list):
@@ -594,35 +660,32 @@ def _added_by_the_reader(one, file, wanted: list):
 
     Asked of the reader, for this file among its fellows (*one* is its
     read of the file): the columns the file does not have, which are the
-    ``key=value`` folders of its path; and a column the file has that the
-    reader gives another first value of, a key put in its place.
+    ``key=value`` folders of its path; and a column the file has too that
+    a folder of its path names, where the reader gives one value of it for
+    the whole file, which is then the folder's and not the file's own.
     """
     import pyarrow.parquet as pq
+
+    from chartbook import formats
 
     pl = _polars()
     names = one.collect_schema().names()
     opened = pq.ParquetFile(str(file))
     own = set(opened.schema_arrow.names)
     extra = [name for name in names if name in wanted and name not in own]
-    from chartbook import formats
-
-    doubtful = [name for name in names if name in wanted and name in own and name in {key for key, _ in formats._keys_of(Path(str(file)).parent)}]
+    named = {key for key, _ in formats._keys_of(Path(str(file)).parent)}
+    doubtful = [name for name in names if name in wanted and name in own and name in named]
     if doubtful and opened.metadata.num_rows:
-        first = one.select([pl.nth(names.index(name)) for name in doubtful]).head(1).collect()
-        theirs = pl.from_arrow(next(opened.iter_batches(batch_size=1, columns=doubtful)))
-        for name in doubtful:
-            try:
-                same = first[name].cast(pl.String)[0] == theirs[name].cast(pl.String)[0]
-            except Exception:  # noqa: BLE001 - two types with no text to compare: the file's own column stands
-                same = True
-            if not same:
-                extra.append(name)
+        # One value in the whole file, as the reader reads it: the key's, put in place of
+        # the file's own column, or a column that says the same in every row, which is the same thing
+        counted = one.select([pl.nth(names.index(name)).n_unique().alias(f"n{i}") for i, name in enumerate(doubtful)]).collect()
+        extra.extend(name for i, name in enumerate(doubtful) if counted[f"n{i}"][0] == 1)
     if not extra:
         return None
     return one.select([pl.nth(names.index(name)) for name in extra]).head(1).collect()
 
 
-def _parquet_batches(file, target, added, sample: bool = False) -> Iterator:
+def _parquet_batches(file, target, added) -> Iterator:
     """One parquet file's rows as Arrow record batches of the *target* schema, a batch at a time; *added* is a frame of one row whose columns go on every row."""
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -669,15 +732,6 @@ def _parquet_batches(file, target, added, sample: bool = False) -> Iterator:
                 count = min(at_a_time, metadata.num_rows - start)
                 yield finished(pa.RecordBatch.from_arrays([pa.nulls(count)], names=["__none__"]))
             return
-        groups = list(range(metadata.num_row_groups))
-        if sample:
-            groups = sorted({groups[i * (len(groups) - 1) // 3] for i in range(4)}) if len(groups) > 4 else groups
-            for group in groups:
-                for batch in opened.iter_batches(batch_size=at_a_time, columns=own, row_groups=[group], use_threads=True):
-                    if batch.num_rows:
-                        yield finished(batch)
-                    break
-            return
         for batch in opened.iter_batches(batch_size=at_a_time, columns=own, use_threads=True):
             if batch.num_rows:
                 yield finished(batch)
@@ -695,9 +749,13 @@ def _stamps(column):
 
     A date or a datetime as it is; text read as a date where it is
     written as one (:func:`_dates_in_text`), and a row with no date where
-    it is not.
+    it is not. Days and milliseconds are put in microseconds here, by
+    ChartBook's own arithmetic after its own check of the range, as the
+    form puts them (:func:`_in_microseconds`).
 
     :param column: The column, as an Arrow array or a polars Series.
+    :raises NotHashed: If the column holds no dates, or one past what 64
+        bits of microseconds hold.
     """
     import numpy as np
 
@@ -708,28 +766,35 @@ def _stamps(column):
     if kind == pl.String:
         series = _dates_in_text(series)
         kind = series.dtype
-    if kind == pl.Date:
-        series = series.cast(pl.Datetime("us"))
-        kind = series.dtype
-    if not isinstance(kind, pl.Datetime):
-        raise NotHashed(f"its date column{f' {name!r}' if name else ''} is {kind}, which is no date")
-    if kind.time_zone:
-        series = series.dt.convert_time_zone("UTC").dt.replace_time_zone(None)
-    unit = kind.time_unit
-    if unit == "ms":
-        series, unit = series.cast(pl.Datetime("us")), "us"
+    if kind != pl.Date and not isinstance(kind, pl.Datetime):
+        raise NotHashed(f"its date column{f' {name!r}' if name else ''} is {_type_said(kind)}, which is no date")
     empty = series.is_null().to_numpy()
-    whole = series.cast(pl.Int64).fill_null(0).to_numpy().astype("int64", copy=False)
+    # The whole number a time is held as: days for a date, and for a time with a zone the instant
+    whole = series.to_physical().cast(pl.Int64).fill_null(0).to_numpy().astype("int64", copy=False)
+    unit = "d" if kind == pl.Date else kind.time_unit
+    each = {"d": _DAY, "ms": 1000}.get(unit)
+    if each is not None:
+        reach = (2**63 - 1) // each
+        if whole.size and (int(whole.min()) < -reach or int(whole.max()) > reach):
+            raise NotHashed(
+                f"its columns cannot be put in one form: column {name!r} has a time past what 64 bits of microseconds hold"
+            )
+        return whole * each, None, empty
     if unit == "ns":
         micro = np.floor_divide(whole, 1000)
         return micro, whole - micro * 1000, empty
     return whole, None, empty
 
 
-#: How a date is written in text, each tried in turn: ISO 8601, with a time
-#: or none, with an offset or none. Fixed, and not guessed from a column's
-#: first values, so that a value is read the same in every batch and on
-#: every machine.
+#: What text has to be for a date to be read in it: ISO 8601, a date alone
+#: or with a time to the minute, the second or a fraction of one down to
+#: the microsecond, with an offset or none. Anything else is no date: a
+#: space before it, a month of one digit, a finer fraction.
+_ISO_DATE = r"^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$"
+
+#: How such a date is written, each tried in turn. Fixed, and not guessed
+#: from a column's first values, so that a value is read the same in every
+#: batch and on every machine.
 _TEXT_DATES = (
     ("%Y-%m-%d", False),
     ("%Y-%m-%dT%H:%M:%S%.f", False),
@@ -742,15 +807,16 @@ _TEXT_DATES = (
 
 
 def _dates_in_text(series):
-    """A text column's dates, in microseconds and UTC: each value as the first of :data:`_TEXT_DATES` it is written in, and no date for one written in none."""
+    """A text column's dates, in microseconds and UTC: each value that is written as one (:data:`_ISO_DATE`), as the first of :data:`_TEXT_DATES` it is written in; no date for any other."""
     pl = _polars()
+    written = pl.select(pl.when(series.str.contains(_ISO_DATE)).then(series)).to_series().alias(series.name)
     tried = []
     for form, zoned in _TEXT_DATES:
         try:
             if zoned:
-                read = series.str.to_datetime(form, strict=False, time_unit="us", time_zone="UTC").dt.replace_time_zone(None)
+                read = written.str.to_datetime(form, strict=False, time_unit="us", time_zone="UTC").dt.replace_time_zone(None)
             else:
-                read = series.str.to_datetime(form, strict=False, time_unit="us", exact=True)
+                read = written.str.to_datetime(form, strict=False, time_unit="us", exact=True)
         except Exception:  # noqa: BLE001 - a form this polars does not take: the others are tried
             continue
         tried.append(read)
@@ -765,11 +831,10 @@ def _ordered(micro, left):
 
 
 def _bound(stamp: tuple, fine: bool, first: bool = False) -> int:
-    """A record's timestamp on the scale :func:`_ordered` gives a column: in microseconds, a first timestamp with nanoseconds left over is the next microsecond."""
+    """A record's timestamp on the scale :func:`_ordered` gives a column: in microseconds, a first timestamp with nanoseconds left over is the next microsecond; one past what the scale holds is its end."""
     micro, left = stamp
-    if fine:
-        return micro * 1000 + left
-    return micro + (1 if first and left else 0)
+    found = micro * 1000 + left if fine else micro + (1 if first and left else 0)
+    return max(-(2**63), min(2**63 - 1, found))
 
 
 def _span(low: int, high: int, fine: bool) -> tuple:
@@ -779,52 +844,62 @@ def _span(low: int, high: int, fine: bool) -> tuple:
     return ((low, 0), (high, 0))
 
 
-def choose(days: dict, a_row: float, period_bytes: int = None, most_bytes: int = None) -> list:
-    """The periods a table is hashed in, from how many rows each of its days has.
+_FIRST_DAY = (date(1, 1, 1) - _EPOCH.date()).days
+_LAST_DAY = (date(9999, 12, 31) - _EPOCH.date()).days
 
-    Whole calendar years. A year whose rows take more than
-    :data:`PERIOD_BYTES` in memory is split into its months, and such a
-    month into its days. Decided by the maintainer on 2026-11-15: years and
-    not months, since twelve times the lines buys nothing for most tables,
-    and no setting for it.
 
-    :param days: How many rows each day has, by the day's number from 1970.
-    :param a_row: About how many bytes a row takes in memory.
-    :returns: Each period as the first and the last day in it that has
-        rows, both included, in order.
-    :raises NotHashed: If one day's rows take more than :data:`MOST_BYTES`.
+def _months(days, empty=None):
+    """The calendar month of each day, counted from January of the year 0: a year's months are twelve in a row, and its number is the count over twelve.
+
+    :param days: Day numbers from 1970.
+    :param empty: The rows that have no date, whose day is no day.
+    :raises NotHashed: If a day is outside the years 1 to 9999.
     """
-    period_bytes = PERIOD_BYTES if period_bytes is None else period_bytes
-    most_bytes = MOST_BYTES if most_bytes is None else most_bytes
-    by_year: dict = {}
-    for day in sorted(days):
-        when = _EPOCH.date() + timedelta(days=int(day))
-        by_year.setdefault(when.year, {}).setdefault(when.month, []).append(int(day))
-    periods = []
-    for year in sorted(by_year):
-        months = by_year[year]
-        every = [day for month in sorted(months) for day in months[month]]
-        if sum(days[day] for day in every) * a_row <= period_bytes:
-            periods.append((every[0], every[-1]))
-            continue
-        for month in sorted(months):
-            within = months[month]
-            if sum(days[day] for day in within) * a_row <= period_bytes:
-                periods.append((within[0], within[-1]))
-                continue
-            for day in within:
-                if days[day] * a_row > most_bytes:
-                    raise _a_day_too_large(day, days[day], days[day] * a_row)
-                periods.append((day, day))
-    return periods
+    import numpy as np
+
+    dated = days if empty is None else days[~empty]
+    if dated.size and (int(dated.min()) < _FIRST_DAY or int(dated.max()) > _LAST_DAY):
+        raise NotHashed("it has a date outside the years 1 to 9999, which a record of rows cannot write")
+    if empty is not None:
+        days = np.where(empty, 0, days)
+    return days.astype("datetime64[D]").astype("datetime64[M]").astype("int64") + 1970 * 12
 
 
-def _a_day_too_large(day: int, rows: Optional[int], size: float) -> NotHashed:
-    when = _EPOCH.date() + timedelta(days=int(day))
-    count = f", {rows:,} of them," if rows is not None else ""
+def _text_columns(schema) -> list:
+    """The places of the columns of text and of binary in an Arrow schema: those whose values have a length of their own."""
+    import pyarrow as pa
+
+    return [
+        place for place, item in enumerate(schema)
+        if pa.types.is_string(item.type) or pa.types.is_large_string(item.type)
+        or pa.types.is_binary(item.type) or pa.types.is_large_binary(item.type)
+    ]
+
+
+def row_bytes(batch, text: Optional[list] = None):
+    """What each row of an Arrow record batch counts for, in bytes, when a period is measured: :data:`COLUMN_BYTES` for each column, and the bytes of each value of text or binary.
+
+    Counted from the rows alone, so that it is the same number whatever
+    wrote them: a whole number is eight bytes whether its file held it in
+    one or in eight, a date whether it was a date or a time at midnight, a
+    category by its text. It is near what the rows take in memory in the
+    one form they are hashed in, and never what a file's types happen to
+    take.
+    """
+    import numpy as np
+    import pyarrow.compute as pc
+
+    size = np.full(batch.num_rows, COLUMN_BYTES * batch.num_columns, dtype="int64")
+    for place in _text_columns(batch.schema) if text is None else text:
+        size += pc.binary_length(batch.column(place)).fill_null(0).to_numpy(zero_copy_only=False).astype("int64", copy=False)
+    return size
+
+
+def _a_day_too_large(first: tuple, rows: int, size: int) -> NotHashed:
+    when = stamp_text(first[0] - first[0] % _DAY)
     return NotHashed(
-        f"its rows of {when.isoformat()} alone{count} take about {size / 1e6:,.0f} MB in memory, and a rows "
-        f"hash holds a day at a time"
+        f"its rows of {when} alone, {rows:,} of them, count for {size / 2**20:,.0f} MB (eight bytes a column and "
+        f"the bytes of its text), and a rows hash holds at most a day of {MOST_BYTES // 2**20} MB at a time"
     )
 
 
@@ -862,24 +937,50 @@ class RowsRecord:
 
 
 #: The fields of a dataframe's record that say its rows: those of
-#: :meth:`RowsRecord.fields`, or ``not_hashed`` alone, why its rows have no
-#: hash (:class:`NotHashed`).
+#: :meth:`RowsRecord.fields`; or ``not_hashed``, why its rows have no hash
+#: (:class:`NotHashed`), with the ``date_col`` they would have been dated by.
 FIELDS = ("date_col", "as_of", "rows", "row_count", "not_hashed")
+
+
+class NotNow(Exception):
+    """Raised when a table's rows could not be hashed this time, for no fault of the table's: no room for scratch files, a folder that cannot be written.
+
+    Nothing is recorded of its rows then, and what made the record says
+    so: the next time may hash them.
+    """
+
+
+def dated_by(table: "Table", date_col: Optional[str]) -> Optional[str]:
+    """The column a table's rows are dated by: the one its entry declares, where the table has it and it holds dates, or text to read as dates; else None.
+
+    :raises NotRead: If the table cannot be read as one.
+    """
+    return date_col if _dated_by(table.schema(), date_col) else None
 
 
 def fields_of(table: "Table", date_col: Optional[str] = None) -> dict:
     """What a record says of a dataframe's rows (:data:`FIELDS`), hashing them now.
 
-    :returns: Its rows by period; or ``{"not_hashed": why}`` for a table
-        whose rows have no hash; or nothing at all for files that cannot be
-        read as a table, of which there is nothing to say.
+    :returns: Its rows by period; or ``not_hashed``, why its rows have no
+        hash, with the ``date_col`` they would be dated by; or nothing at
+        all for files that cannot be read as a table, of which there is
+        nothing to say.
+    :raises NotNow: If they could not be hashed this time, for no fault of
+        the table's.
     """
     try:
-        return hash_rows(table, date_col).fields()
+        dated = dated_by(table, date_col)
     except NotRead:
         return {}
+    try:
+        return hash_rows(table, date_col).fields()
     except NotHashed as error:
-        return {"not_hashed": str(error)}
+        # One the reader reads, so there is something to say: why no rebuild can meet a pin of it
+        return {**({"date_col": dated} if dated else {}), "not_hashed": str(error)}
+    except (KeyboardInterrupt, SystemExit, GeneratorExit):
+        raise
+    except BaseException as error:  # noqa: BLE001 - a full disk, a folder that cannot be written, a panic: none of them the table's
+        raise NotNow(f"{type(error).__name__}: {_first_line(error)}") from None
 
 
 @dataclass
@@ -894,12 +995,16 @@ class Compared:
             not have.
         newer: How many of its rows are after the record's last timestamp.
         rows: How many rows it has in all.
+        index_column: Whether the table has the column pandas makes of an
+            index with no name (:data:`INDEX_COLUMN`), which may be the
+            whole of a difference.
     """
 
     differ: list
     outside: int
     newer: int
     rows: int
+    index_column: bool = False
 
     @property
     def same(self) -> bool:
@@ -908,13 +1013,21 @@ class Compared:
 
 
 class _Pieces:
-    """Rows put by period into scratch files, a batch at a time, then read back a period at a time.
+    """Rows put by piece into scratch files, a batch at a time, then read back a piece at a time.
 
     What is put is written once a little of it has gathered
     (:attr:`HELD`), so that a table whose rows are in no order of date,
-    each batch a few rows of every period, is not written a few rows at a
-    time. Nothing here is polars': a batch is cut and written by Arrow
-    alone, so that what is held while a table is split is the batch.
+    each batch a few rows of every piece, is not written a few rows at a
+    time. A piece's file is opened to be added to and closed again each
+    time, so that no file is held open: a table of thirty years of months
+    has more pieces than a process may have files open. Nothing here is
+    polars': a batch is cut and written by Arrow alone, so that what is
+    held while a table is split is the batch.
+
+    Attributes:
+        sizes: What each piece's rows count for, in bytes (:func:`row_bytes`).
+        counts: How many rows each piece has.
+        spans: The least and the greatest timestamp in each piece.
     """
 
     #: The most that waits in memory to be written, in bytes
@@ -923,23 +1036,33 @@ class _Pieces:
     def __init__(self, folder: Path, schema):
         import pyarrow as pa
 
-        self.folder = folder
+        self.folder = Path(folder)
+        self.folder.mkdir(parents=True, exist_ok=True)
         self.schema = schema
-        self.writers: dict = {}
+        self.text = _text_columns(schema)
+        self.numbers: dict = {}
         self.waiting: dict = {}
         self.held = 0
         self.sizes: dict = {}
+        self.counts: dict = {}
         self.spans: dict = {}
         try:
             self.options = pa.ipc.IpcWriteOptions(compression="lz4")
         except Exception:  # noqa: BLE001 - a pyarrow built without it
             self.options = pa.ipc.IpcWriteOptions()
 
-    def add(self, key, batch, span=None) -> None:
-        """Put a batch's rows in a piece; *span* is the least and greatest timestamp among them."""
+    def __contains__(self, key) -> bool:
+        return key in self.sizes
+
+    def keys(self) -> list:
+        return sorted(self.sizes)
+
+    def add(self, key, batch, size: int, span=None) -> None:
+        """Put a batch's rows in a piece; *size* is what they count for, and *span* the least and greatest timestamp among them."""
         self.waiting.setdefault(key, []).append(batch)
         self.held += batch.nbytes
-        self.sizes[key] = self.sizes.get(key, 0) + batch.nbytes
+        self.sizes[key] = self.sizes.get(key, 0) + int(size)
+        self.counts[key] = self.counts.get(key, 0) + batch.num_rows
         if span is not None:
             was = self.spans.get(key)
             self.spans[key] = span if was is None else (min(was[0], span[0]), max(was[1], span[1]))
@@ -950,40 +1073,72 @@ class _Pieces:
         import pyarrow as pa
 
         for key, batches in self.waiting.items():
-            if key not in self.writers:
-                number = len(self.writers)
-                sink = pa.OSFile(str(self.folder / f"{number}.arrows"), "wb")
-                self.writers[key] = (sink, pa.ipc.new_stream(sink, self.schema, options=self.options), number)
             table = pa.Table.from_batches(batches, schema=self.schema)
-            self.writers[key][1].write_table(table.combine_chunks() if len(batches) > 1 else table)
+            # Each time a stream of its own, one after another in the piece's file
+            with open(self.path(key), "ab") as sink:
+                with pa.ipc.new_stream(sink, self.schema, options=self.options) as writer:
+                    writer.write_table(table.combine_chunks() if len(batches) > 1 else table)
         self.waiting, self.held = {}, 0
 
     def close(self) -> None:
-        try:
-            self.flush()
-        finally:
-            for sink, writer, _ in self.writers.values():
-                writer.close()
-                sink.close()
+        self.flush()
 
     def path(self, key) -> Path:
-        return self.folder / f"{self.writers[key][2]}.arrows"
+        return self.folder / f"{self.numbers.setdefault(key, len(self.numbers))}.arrows"
 
-    def read(self, key):
-        """A piece's rows, as a polars DataFrame."""
-        return _polars().read_ipc_stream(self.path(key))
+    def batches(self, key) -> Iterator:
+        """A piece's rows, as Arrow record batches, in the order they were written."""
+        import pyarrow as pa
+
+        path = self.path(key)
+        size = os.path.getsize(path)
+        with open(path, "rb") as source:
+            while source.tell() < size:
+                yield from pa.ipc.open_stream(source)
+
+    def read(self, keys):
+        """The rows of some pieces together, as a polars DataFrame."""
+        import pyarrow as pa
+
+        pl = _polars()
+        held = pa.Table.from_batches([batch for key in keys for batch in self.batches(key)], schema=self.schema)
+        frame = pl.from_arrow(held)
+        return frame if isinstance(frame, pl.DataFrame) else frame.to_frame()
+
+    def drop(self, key) -> None:
+        """Let a piece's file go, once its rows have been put elsewhere."""
+        with contextlib.suppress(OSError):
+            os.remove(self.path(key))
+
+    def remove(self) -> None:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+
+#: How long a scratch folder nobody removed is left, in seconds: one of a
+#: process that was killed, which removed nothing.
+_STALE = 24 * 3600
 
 
 def _scratch_folder() -> Path:
-    """A scratch folder on a disk, removed by whoever asked for it: in ChartBook's cache, and never in memory."""
+    """A scratch folder on a disk, removed by whoever asked for it: in ChartBook's cache where that can be written, else in the system's temporary folder; never in memory.
+
+    One left behind there by a process that was killed is removed here,
+    once it is a day old.
+    """
+    import time
+
     try:
         from chartbook.config import get_cache_path
 
         root = Path(get_cache_path()) / "rows"
         root.mkdir(parents=True, exist_ok=True)
+        for left in root.glob("chartbook-rows-*"):
+            with contextlib.suppress(OSError):
+                if time.time() - left.stat().st_mtime > _STALE:
+                    shutil.rmtree(left, ignore_errors=True)
+        return Path(tempfile.mkdtemp(prefix="chartbook-rows-", dir=root))
     except Exception:  # noqa: BLE001 - no cache to write to: the system's temporary folder
-        root = None
-    return Path(tempfile.mkdtemp(prefix="chartbook-rows-", dir=root))
+        return Path(tempfile.mkdtemp(prefix="chartbook-rows-"))
 
 
 def _put(pieces: _Pieces, batch, index, stamps, fine: bool) -> None:
@@ -993,14 +1148,16 @@ def _put(pieces: _Pieces, batch, index, stamps, fine: bool) -> None:
 
     if not len(index):
         return
+    sizes = row_bytes(batch, pieces.text)
     least, most = int(index.min()), int(index.max())
     if least == most:
         if least >= -1:
-            pieces.add(least, batch, _span(int(stamps.min()), int(stamps.max()), fine) if least >= 0 else None)
+            span = _span(int(stamps.min()), int(stamps.max()), fine) if least >= 0 else None
+            pieces.add(least, batch, int(sizes.sum()), span)
         return
     order = np.argsort(index, kind="stable")
     taken = batch.take(pa.array(order))
-    index, stamps = index[order], stamps[order]
+    index, stamps, sizes = index[order], stamps[order], sizes[order]
     numbers, starts = np.unique(index, return_index=True)
     ends = list(starts[1:]) + [len(index)]
     for number, start, end in zip(numbers.tolist(), starts.tolist(), ends):
@@ -1008,41 +1165,26 @@ def _put(pieces: _Pieces, batch, index, stamps, fine: bool) -> None:
             continue
         end = int(end)
         span = _span(int(stamps[start:end].min()), int(stamps[start:end].max()), fine) if number >= 0 else None
-        pieces.add(number, taken.slice(start, end - start), span)
-
-
-def _days_and_a_row(table: Table, date_col: str, scratch: Path) -> tuple[dict, float, int]:
-    """How many rows each day has, about how many bytes a row takes in memory, and how many rows there are."""
-    import numpy as np
-
-    days: dict = {}
-    rows = 0
-    for batch in table.batches(columns=[date_col], scratch=scratch):
-        micro, _, empty = _stamps(batch.column(date_col))
-        rows += batch.num_rows
-        found, counts = np.unique(np.floor_divide(micro[~empty], _DAY), return_counts=True)
-        for day, count in zip(found.tolist(), counts.tolist()):
-            days[day] = days.get(day, 0) + count
-    sampled_bytes = sampled_rows = 0
-    for batch in table.batches(scratch=scratch, sample=True):
-        sampled_bytes += batch.nbytes
-        sampled_rows += batch.num_rows
-    return days, sampled_bytes / max(1, sampled_rows), rows
+        pieces.add(number, taken.slice(start, end - start), int(sizes[start:end].sum()), span)
 
 
 def _whole(table: Table, scratch: Path, most: int):
-    """A table's rows held whole, as a polars DataFrame, and how many there are; None once they pass *most* bytes."""
+    """A table's rows held whole, as a polars DataFrame, and how many there are; None once they count for more than *most* bytes (:func:`row_bytes`)."""
     import pyarrow as pa
 
     pl = _polars()
     target = table.arrow_schema()
+    text = _text_columns(target)
     batches, size, rows = [], 0, 0
     for batch in table.batches(scratch=scratch):
-        size += batch.nbytes
+        size += int(row_bytes(batch, text).sum())
         rows += batch.num_rows
         if size > most:
-            return None, rows
-        batches.append(batch)
+            batches = None
+        elif batches is not None:
+            batches.append(batch)
+    if batches is None:
+        return None, rows
     frame = pl.from_arrow(pa.Table.from_batches(batches, schema=target))
     return (frame if isinstance(frame, pl.DataFrame) else frame.to_frame()), rows
 
@@ -1050,11 +1192,19 @@ def _whole(table: Table, scratch: Path, most: int):
 def hash_rows(table: Table, date_col: Optional[str] = None) -> RowsRecord:
     """Hash a table's rows as a snapshot records them: by period, where it has a date column.
 
+    **The periods** are whole calendar years. A year whose rows count for
+    more than :data:`PERIOD_BYTES` is split into its months, and such a
+    month into its days. What rows count for is counted from the rows
+    alone (:func:`row_bytes`), so the same rows give the same periods,
+    whatever file, order or types they came in. Decided by the maintainer
+    on 2026-11-15: years and not months, since twelve times the lines buys
+    nothing for most tables, and no setting for it.
+
     :param date_col: The column its entry declares as its dates, if it
         declares one and the table has it.
     :raises NotHashed: If the table has a column of a kind the form does
-        not take, one day's rows are too many to hold, or it has no date
-        column and is too large to hold whole.
+        not take, one day's rows or its rows with no date are too many to
+        hold, or it has no date column and is too large to hold whole.
     """
     schema = table.schema()
     _taken(schema)  # said before anything is read
@@ -1077,6 +1227,12 @@ def _dated_by(schema, date_col: Optional[str]) -> bool:
     return kind == pl.Date or isinstance(kind, pl.Datetime) or kind == pl.String
 
 
+#: A table whose files are over this on disk has its rows put by month from
+#: the first, and not by year: most of its years will be split, and are
+#: then written once and not twice. What is hashed is the same either way.
+_BY_MONTH_FROM = 1024 * 1024 * 1024
+
+
 def _hash_rows(table: Table, date_col: Optional[str], scratch: Path) -> RowsRecord:
     import numpy as np
 
@@ -1084,58 +1240,80 @@ def _hash_rows(table: Table, date_col: Optional[str], scratch: Path) -> RowsReco
         whole, count = _whole(table, scratch, MOST_BYTES)
         if whole is None:
             raise NotHashed(
-                f"it has no date column, and its rows take more than {MOST_BYTES // 2**20} MB in "
-                f"memory: a rows hash holds a table with no date column whole"
+                f"it has no date column, and its rows count for more than {MOST_BYTES // 2**20} MB (eight bytes a "
+                f"column and the bytes of its text): a rows hash holds a table with no date column whole"
             )
         return RowsRecord({ALL: hash_frame(whole)}, None, count)
-    days, a_row, count = _days_and_a_row(table, date_col, scratch)
-    periods = choose(days, a_row)
-    firsts = np.array([first for first, _ in periods], dtype="int64")
-    pieces = _Pieces(scratch, table.arrow_schema())
-    try:
-        for batch in table.batches(scratch=scratch):
-            micro, left, empty = _stamps(batch.column(date_col))
-            index = np.searchsorted(firsts, np.floor_divide(micro, _DAY), side="right") - 1
-            _put(pieces, batch, np.where(empty, -1, index), _ordered(micro, left), left is not None)
-    finally:
-        pieces.close()
+    by_month = table.on_disk() > _BY_MONTH_FROM
+    pieces = _Pieces(scratch / "pieces", table.arrow_schema())
+    count = 0
+    for batch in table.batches(scratch=scratch):
+        micro, left, empty = _stamps(batch.column(date_col))
+        months = _months(np.floor_divide(micro, _DAY), empty)
+        index = months if by_month else months - months % 12
+        _put(pieces, batch, np.where(empty, -1, index), _ordered(micro, left), left is not None)
+        count += batch.num_rows
+    pieces.close()
+    years: dict = {}
+    for key in pieces.keys():
+        if key >= 0:
+            years.setdefault(key // 12, []).append(key)
     rows: dict = {}
     as_of = None
-    for number in sorted(key for key in pieces.writers if key >= 0):
-        if pieces.sizes[number] > MOST_BYTES:
-            # More than was reckoned from a few of its rows: a day at a time, then
-            for (first, last), hashed in _by_day(pieces, number, date_col, scratch):
-                rows[f"{stamp_text(*first)}/{stamp_text(*last)}"] = hashed
-                as_of = stamp_text(*last)
-            continue
-        first, last = pieces.spans[number]
-        rows[f"{stamp_text(*first)}/{stamp_text(*last)}"] = hash_frame(pieces.read(number), date_col)
-        as_of = stamp_text(*last)
-    if -1 in pieces.writers:
-        rows[NO_DATE] = hash_frame(pieces.read(-1), date_col)
+    for year in sorted(years):
+        for (first, last), hashed in _of_a_year(pieces, years[year], by_month, date_col, scratch):
+            rows[f"{stamp_text(*first)}/{stamp_text(*last)}"] = hashed
+            as_of = stamp_text(*last)
+    if -1 in pieces:
+        if pieces.sizes[-1] > MOST_BYTES:
+            raise NotHashed(
+                f"its rows with no date, {pieces.counts[-1]:,} of them, count for {pieces.sizes[-1] / 2**20:,.0f} MB "
+                f"(eight bytes a column and the bytes of its text), and a rows hash holds at most "
+                f"{MOST_BYTES // 2**20} MB of them at a time"
+            )
+        rows[NO_DATE] = hash_frame(pieces.read([-1]), date_col)
     return RowsRecord(rows, as_of, count, date_col)
 
 
-def _by_day(pieces: _Pieces, number, date_col: str, scratch: Path) -> Iterator:
-    """A piece that turned out too large to hold, hashed a day at a time: each day's span and hash, in order."""
-    import numpy as np
-    import pyarrow as pa
-
-    folder = Path(tempfile.mkdtemp(prefix="days-", dir=scratch))
-    days = _Pieces(folder, pieces.schema)
-    first = pieces.spans[number][0][0] // _DAY  # its days counted from its first: none below zero
+def _of_a_year(pieces: _Pieces, keys: list, by_month: bool, date_col: str, scratch: Path) -> Iterator:
+    """The periods of one year's rows, each with its span and its hash, in order: the year whole where it is within the size, else its months, and the days of a month that is not."""
+    if sum(pieces.sizes[key] for key in keys) <= PERIOD_BYTES:
+        first = min(pieces.spans[key][0] for key in keys)
+        last = max(pieces.spans[key][1] for key in keys)
+        yield (first, last), hash_frame(pieces.read(keys), date_col)
+        return
+    months = pieces if by_month else _split(pieces, keys[0], "month", date_col, scratch)
     try:
-        with pa.OSFile(str(pieces.path(number)), "rb") as source:
-            for batch in pa.ipc.open_stream(source):
-                micro, left, _ = _stamps(batch.column(date_col))
-                _put(days, batch, np.floor_divide(micro, _DAY) - first, _ordered(micro, left), left is not None)
+        for month in keys if by_month else months.keys():
+            if months.sizes[month] <= PERIOD_BYTES:
+                yield months.spans[month], hash_frame(months.read([month]), date_col)
+                continue
+            days = _split(months, month, "day", date_col, scratch)
+            try:
+                for day in days.keys():
+                    if days.sizes[day] > MOST_BYTES:
+                        raise _a_day_too_large(days.spans[day][0], days.counts[day], days.sizes[day])
+                    yield days.spans[day], hash_frame(days.read([day]), date_col)
+            finally:
+                days.remove()
     finally:
-        days.close()
-    for day in sorted(days.writers):
-        if days.sizes[day] > MOST_BYTES:
-            raise _a_day_too_large(first + day, None, days.sizes[day])
-        yield days.spans[day], hash_frame(days.read(day), date_col)
-    shutil.rmtree(folder, ignore_errors=True)
+        if months is not pieces:
+            months.remove()
+
+
+def _split(pieces: _Pieces, key, by: str, date_col: str, scratch: Path) -> _Pieces:
+    """A piece's rows put again by month, or by day, a batch at a time; the piece itself is let go."""
+    import numpy as np
+
+    parts = _Pieces(Path(tempfile.mkdtemp(prefix=f"{by}s-", dir=scratch)), pieces.schema)
+    first = pieces.spans[key][0][0] // _DAY  # days counted from the piece's first: none below zero
+    for batch in pieces.batches(key):
+        micro, left, _ = _stamps(batch.column(date_col))
+        days = np.floor_divide(micro, _DAY)
+        _put(parts, batch, days - first if by == "day" else _months(days), _ordered(micro, left), left is not None)
+    parts.close()
+    pieces.drop(key)
+    return parts
 
 
 def periods_of(rows: dict) -> list:
@@ -1152,16 +1330,19 @@ def periods_of(rows: dict) -> list:
     return sorted(found, key=lambda period: period[1])
 
 
-def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str]) -> Compared:
+def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str], known=()) -> Compared:
     """Hash a table's rows in the periods a record names, and say where they are not the record's.
 
     The table's rows after *as_of*, the record's last timestamp, are left
     out and counted: a table that has gained rows since still holds the
     record's. A row up to *as_of* that falls in no period of the record is
-    one the record did not have.
+    one the record did not have. A record with no dated row has no last
+    timestamp, and every dated row of the table is then after it.
 
     :param rows: The record's hashes, by period (:attr:`RowsRecord.rows`).
     :param as_of: Its last timestamp, as text; None if it has none.
+    :param known: The periods already known to hold the record's rows, as
+        the record writes them: their rows are passed over, not hashed.
     :raises NotHashed: If the table's rows cannot be hashed.
     :raises ValueError: If the record names a period that is none.
     """
@@ -1170,58 +1351,67 @@ def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[s
     scratch = _scratch_folder()
     try:
         with _lean():
-            return _hash_in(table, date_col, rows, as_of, periods, scratch)
+            return _hash_in(table, date_col, rows, as_of, periods, scratch, set(known))
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def _hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str], periods: list, scratch: Path) -> Compared:
+def _hash_in(
+    table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str], periods: list, scratch: Path, known: set
+) -> Compared:
     import numpy as np
 
     pl = _polars()
     schema = table.schema()
+    index_column = INDEX_COLUMN in schema.names()
     if ALL in rows or not _dated_by(schema, date_col):
-        # No date column, here or in the record: all the rows, or nothing to compare by
-        whole, total = _whole(table, scratch, 2 * MOST_BYTES)
+        # No date column, here or in the record: all the rows, or nothing to compare by. More
+        # than a record's one piece ever counts for cannot be its rows
+        whole, total = _whole(table, scratch, MOST_BYTES)
         same = whole is not None and set(rows) == {ALL} and hash_frame(whole) == rows[ALL]
-        return Compared([] if same else sorted(rows), 0, 0, total)
+        return Compared([] if same else sorted(rows), 0, 0, total, index_column)
     fine = isinstance(schema[date_col], pl.Datetime) and schema[date_col].time_unit == "ns"
     firsts = np.array([_bound(first, fine, first=True) for _, first, _ in periods], dtype="int64")
     lasts = np.array([_bound(last, fine) for _, _, last in periods], dtype="int64")
     cap = _bound(stamp_of(as_of), fine) if as_of is not None else None
-    pieces = _Pieces(scratch, table.arrow_schema())
+    pieces = _Pieces(scratch / "pieces", table.arrow_schema())
     outside = newer = total = 0
     too_many: set = set()
-    try:
-        for batch in table.batches(scratch=scratch):
-            micro, left, empty = _stamps(batch.column(date_col))
-            stamps = _ordered(micro, left)
-            # With no last timestamp, the record has no dated row: every dated row is newer
-            after = ~empty & ((stamps > cap) if cap is not None else True)
-            index = np.searchsorted(firsts, stamps, side="right") - 1
-            inside = ~empty & ~after & (index >= 0)
-            if len(periods):
-                inside &= stamps <= lasts[np.clip(index, 0, None)]
-            index = np.where(inside, index, -2)
-            if NO_DATE in rows:
-                index = np.where(empty, -1, index)
-            total += batch.num_rows
-            newer += int(after.sum())
-            outside += int((index == -2).sum()) - int(after.sum())
-            # A period with far more rows than any that was pinned cannot be the pinned one
-            too_many |= {number for number, size in pieces.sizes.items() if size > 2 * MOST_BYTES}
-            if too_many:
-                index = np.where(np.isin(index, list(too_many)), -3, index)
-            _put(pieces, batch, index, stamps, fine)
-    finally:
-        pieces.close()
+    passed_over = [number for number, (key, _, _) in enumerate(periods) if key in known]
+    for batch in table.batches(scratch=scratch):
+        micro, left, empty = _stamps(batch.column(date_col))
+        stamps = _ordered(micro, left)
+        # With no last timestamp, the record has no dated row: every dated row is newer
+        after = ~empty & ((stamps > cap) if cap is not None else True)
+        index = np.searchsorted(firsts, stamps, side="right") - 1
+        inside = ~empty & ~after & (index >= 0)
+        if len(periods):
+            inside &= stamps <= lasts[np.clip(index, 0, None)]
+        index = np.where(inside, index, -2)
+        if NO_DATE in rows:
+            index = np.where(empty, -1 if NO_DATE not in known else -3, index)
+        total += batch.num_rows
+        newer += int(after.sum())
+        outside += int((index == -2).sum()) - int(after.sum())
+        if passed_over:
+            index = np.where(np.isin(index, passed_over), -3, index)  # known to be the same: not read again
+        # No period of a record counts for more than the most one piece may: rows that
+        # do are not its rows, and are not held to be hashed
+        too_many |= {number for number, size in pieces.sizes.items() if size > MOST_BYTES}
+        if too_many:
+            index = np.where(np.isin(index, list(too_many)), -3, index)
+        _put(pieces, batch, index, stamps, fine)
+    pieces.close()
+    too_many |= {number for number, size in pieces.sizes.items() if size > MOST_BYTES}
     differ = []
     for number, (key, _, _) in enumerate(periods):
-        if number in too_many or number not in pieces.writers:
+        if key in known:
+            continue
+        if number in too_many or number not in pieces:
             differ.append(key)
-        elif hash_frame(pieces.read(number), date_col) != rows[key]:
+        elif hash_frame(pieces.read([number]), date_col) != rows[key]:
             differ.append(key)
-    if NO_DATE in rows:
-        if -1 not in pieces.writers or hash_frame(pieces.read(-1), date_col) != rows[NO_DATE]:
+    if NO_DATE in rows and NO_DATE not in known:
+        if -1 in too_many or -1 not in pieces or hash_frame(pieces.read([-1]), date_col) != rows[NO_DATE]:
             differ.append(NO_DATE)
-    return Compared(differ, outside, newer, total)
+    return Compared(differ, outside, newer, total, index_column)

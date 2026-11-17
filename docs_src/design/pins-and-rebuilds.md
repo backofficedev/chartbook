@@ -273,14 +273,23 @@ built, and *proposed by Claude, 2026-11-16,* where the page had not said:
 - **A `date_col` that holds numbers** dates nothing: the dataframe is hashed as one with no
   `date_col`.
 - **A dataframe whose rows are not hashed** says why, in `not_hashed`, in place of `rows`: a
-  column of lists or structs, a single day (or a table with no `date_col`) over 256 MB in memory,
-  or more than 256 columns. A pin of it is met by the same file only, and `chartbook snapshot`
-  says so. A file that cannot be read as a table at all has none of these fields.
-- **The same bytes are hashed once.** A snapshot takes the rows of an earlier snapshot of the
-  same bytes, read the same way and dated by the same column. And a snapshot from before rows
-  were hashed does not stand in the way: the same commit and the same bytes make a new one, once,
-  to say its rows. So the class's upstreams get their rows by running `chartbook snapshot` again
-  at the commits they are at (step 8).
+  column of lists or structs, a single day (or a table with no `date_col`) over 256 MB, more than
+  256 columns, and the rest of "Not doing, and later". A pin of it is met by the same file only,
+  and `chartbook snapshot` says so. `date_col` stands beside it where the rows would be dated by
+  one. A file that cannot be read as a table at all has none of these fields.
+- **The same bytes are hashed once.** A snapshot takes what an earlier snapshot of the same
+  bytes said of their rows, or why it had none, where they were read the same way and dated by
+  the same column: the one that dates the rows, which is the entry's `date_col` where the table
+  has it and it holds dates. So an entry that names its dates since is hashed again, and one that
+  names a column of numbers is not hashed again at every snapshot. And a snapshot from before
+  rows were hashed does not stand in the way: the same commit and the same bytes make a new one,
+  once, to say its rows. So the class's upstreams get their rows by running `chartbook snapshot`
+  again at the commits they are at (step 8).
+- **A snapshot is never stopped by the rows.** It is of the bytes. Where the rows could not be
+  hashed for no fault of the table's (no room for the scratch files, say), the record says
+  nothing of them, the command says `rows not hashed this time`, and the next snapshot of the
+  same bytes hashes them. *(Proposed by Claude, 2026-11-17, after a review found four ways a
+  snapshot that used to be made was stopped.)*
 
 ## The rows hash
 
@@ -357,19 +366,32 @@ tables; and no setting for it in `chartbook.toml`.*
 machine with 8 GB.* It cannot be taken from the machine that pins: the author may pin on 64 GB,
 and a student then hashes those same periods on 8.
 
-*Built (step 4). Proposed by Claude, 2026-11-16: a period is at most 128 MB of rows in memory,* as
-Arrow holds them, reckoned from the rows of each day and what a few rows take. That is what kept
-the four tables below under 2 GB with room to spare (the prototype's 200 MB did not, with its
-reader). One day is never split: a day over 256 MB, twice a period, has no rows hash, and neither
-has a table with no `date_col` over 256 MB. A period that turns out larger than was reckoned is
-hashed a day at a time. Only the days that have rows are in a period's name, so a year that
-begins on June 14 is `1961-06-14/1961-12-29`.
+*Built (step 4). Proposed by Claude, 2026-11-16: a period is at most 128 MB of rows.* That is
+what kept the four tables below under 2 GB with room to spare (the prototype's 200 MB did not,
+with its reader). One day is never split: a day over 256 MB, twice a period, has no rows hash,
+and neither has a table with no `date_col` over 256 MB, nor one whose rows with no date are.
+Only the days that have rows are in a period's name, so a year that begins on June 14 is
+`1961-06-14/1961-12-29`.
+
+*What the size is a size of. Proposed by Claude, 2026-11-17, after a review:* **eight bytes for
+each column of a row, and the bytes of each value of text.** It is counted from the rows, every
+one of them, and never from the file they came in. So the same rows give the same periods,
+whatever wrote them: a whole number counts eight bytes whether its file held it in one or in
+eight, a date whether it was a date or a time at midnight, and a year is split, or refused, by
+what is in it and not by where a reader happened to look. (As first built, the size was reckoned
+from a few rows of the file as Arrow held them. The review showed the same table giving 2 lines
+written by polars and 24 written by pandas, another split one way sorted and another way
+shuffled, and a moved pin losing every line it had when the new rows were longer.) The number is
+near what the rows take in memory in the one form they are hashed in, which is what the limit is
+for. It is a rule for choosing periods, and no part of a hash: `chartbook/rows/v1` is as it was.
 
 When a pin moves, the periods before the last are as they were, with the same lines unless a value
 in them changed. The last one grows, or new ones follow it. On CRSP's daily file, pinned through
 2019-06-28 and then moved to the end of 2024, 20 of the 21 lines were unchanged, one changed (2019,
-which had gained rows) and 5 were added. So the diff of a moved pin shows which periods changed,
-and a revision of 1998 is a changed line that a reviewer sees.
+which had gained rows) and 5 were added (run again as built, 2026-11-17). So the diff of a moved
+pin shows which periods changed, and a revision of 1998 is a changed line that a reviewer sees.
+The one exception is a year that grows past the size: it is then its months, and its one line
+becomes twelve.
 
 ## The check, cheapest first
 
@@ -455,7 +477,16 @@ of twelve monthly folders is one line, where a line for each would be twelve tim
 for nothing); a partition is never cut unless it is over the size; and a folder split another
 way, or one file, gives the same lines. A test lays the same rows out six ways (one file, many
 row groups, a folder pandas partitioned, a folder polars partitioned, a glob, a plain folder)
-and holds them to one record, and to the record the whole table read at once gives.
+and holds them to one record, and to the record the whole table read at once gives; another
+holds a table as polars wrote it, as pandas did with wider types, and with its rows shuffled into
+small row groups, to one record at six sizes of period, two of them a byte to either side of a
+year's size.
+
+What is hashed is what ChartBook's reader gives, asked of the reader for each file: a
+`key=value` folder above a single file is a column, as the reader makes it one; a key that is
+also a column of the file has the folder's value; and a file the store keeps once for two
+partitions of the same bytes is read once for each, with each one's key. (Each of the three gave
+a record that was not the reader's rows, or none, as first built.)
 
 **Not built, and later:** opening only the files that hold a period's dates, and passing over a
 file whose bytes are the pinned ones. Today every file is read once when a folder is hashed.
@@ -479,19 +510,21 @@ has it too.
 
 ## What it costs
 
-*As built (step 4), measured 2026-11-16 by the test under a memory limit, on the machine the note
+*As built (step 4), measured 2026-11-17 by the test under a memory limit, on the machine the note
 at the top names:* each table hashed by period and then checked against its own record, in one
 process that stops itself the moment its memory passes 2 GB.
 
 | Table | Rows by columns | Periods | Hashed in | Checked in | Peak memory |
 |---|---|---|---|---|---|
 | The class's yield curve | 383 thousand by 4 | 66 | 0.4 s | 0.1 s | 0.22 GB |
-| CRSP daily | 27.8 million by 8 | 26 | 6.6 s | 5.2 s | 1.09 GB |
-| GKX characteristics | 2.6 million by 99 | 42 | 3.4 s | 2.9 s | 1.34 GB |
-| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 28.8 s | 27.3 s | 1.33 GB |
+| CRSP daily | 27.8 million by 8 | 26 | 5.8 s | 5.2 s | 1.03 GB |
+| GKX characteristics | 2.6 million by 99 | 42 | 3.2 s | 2.7 s | 1.45 GB |
+| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 25.3 s | 24.3 s | 1.25 GB |
 
 Hashing the bytes of the same files took under a second each. The time for the rows is paid once
-for each snapshot of new bytes, and in a check only when the files differ.
+for each snapshot of new bytes, and in a check only when the files differ, and then only for the
+periods the two records do not already show to be the same: CRSP's later file against its
+earlier pin was checked in 1.4 s, the last period being all that was read.
 
 **The target is met on these four tables: a peak under 2 GB,** so that a machine with 8 GB is
 safe. The test is `tests/test_rows_memory.py`. The four tables are licensed data on the
@@ -504,10 +537,23 @@ What the memory is, as measured:
 
 - **The period is what is held, never the table.** A file is read a few thousand rows at a time
   by pyarrow, which holds a batch and not a row group. Each row is put in a scratch file for its
-  period, in ChartBook's cache folder, compressed, and each period is then read back, sorted and
-  hashed alone. On the text table that took the split from 3.1 GB to 0.6 GB.
+  year, in ChartBook's cache folder, compressed; a year over the size is put again by month, and
+  such a month by day (a table over a gigabyte on disk is put by month from the first, to be
+  written once); and each period is then read back, sorted and hashed alone. On the text table
+  that took the split from 3.1 GB to 0.6 GB. No scratch file is held open, so a table of thirty
+  years of months is not stopped by the 256 files a process may have open on a Mac; a scratch
+  folder a killed process left is removed a day later; and where the cache cannot be written
+  the system's temporary folder is used.
 - **Sorting a period takes about five times its size.** A single day of 238 MB, near the most
   there can be, peaked at 1.3 GB.
+- **Rows with no date are one piece too,** and held to the same 256 MB: a file of text dates
+  that are not ISO dates has every row there, and 26 million of them took 4.6 GB before they
+  were.
+- **Only parquet is read a little at a time.** A CSV, JSON lines or Arrow file is read whole,
+  once, which took about five times the table: an Arrow file of 219 MB peaked at 1.4 GB, and a
+  CSV of 242 MB at 1.1 GB. So one over 128 MB on disk (16 MB gzipped) has no rows hash.
+  *(Proposed by Claude.)* A compressed Arrow file holds more than its size says, and was not
+  measured.
 - **A page or two of every column is held while a file is read,** about 2.7 MB a column: 99
   columns are 0.4 GB before a row is hashed, 400 columns peaked at 1.5 GB, and 1000 at 2.9 GB.
   So a table of more than 256 columns has no rows hash. *(Proposed by Claude.)* Reading such a
@@ -537,8 +583,12 @@ What was learned about reading, from the prototype:
 - **Tick data,** where one day's rows do not fit the size of a period. A day over 256 MB in
   memory has no rows hash, and the dataframe is pinned by its bytes alone.
 - **A large table with no `date_col`.** It has one hash, which takes one sort of the whole table
-  in memory, so one over 256 MB has no rows hash.
+  in memory, so one over 256 MB has no rows hash. The same for the rows of a dated table that
+  have no date.
 - **A table of more than 256 columns,** for the memory a file's columns take while it is read.
+- **A table over 128 MB on disk that is not parquet** (16 MB gzipped): it is read whole.
+- **A date outside the years 1 to 9999,** or past what 64 bits of microseconds hold: a record
+  has no way to write it, so the table has no rows hash, and says so.
 - **A column of lists or of structs.** A dataframe with one has no rows hash.
 - **A dependency pinned from its repository** (`git`). Its dataframes are pinned by their bytes,
   which are the commit's for everyone; a pin's own snapshot records no rows.
@@ -547,8 +597,8 @@ What was learned about reading, from the prototype:
 ## Still open
 
 - ~~The rule for folders of files, above.~~ Built as proposed in "Folders of files".
-- ~~The size of a period, and the reader, that keep the peak under 2 GB.~~ 128 MB, and pyarrow a
-  batch at a time: "What it costs".
+- ~~The size of a period, and the reader, that keep the peak under 2 GB.~~ 128 MB, counted from
+  the rows, and pyarrow a batch at a time: "Choosing the periods" and "What it costs".
 - ~~The parts of the rows hash marked not settled.~~ Built as proposed in "The rows hash".
 - The exact words each command prints.
 - A run of the memory test on a machine with 8 GB.
