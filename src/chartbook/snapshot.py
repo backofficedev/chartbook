@@ -336,6 +336,14 @@ class SnapshotReport:
             (:class:`chartbook.rowhash.NotNow`): the record says nothing
             of their rows, and the next snapshot of the same bytes hashes
             them.
+        rows_said: For a snapshot that was made: each dataframe whose file
+            is not the one the snapshot before it had, with what its rows
+            are beside that one's, new rows or earlier rows changed
+            (:func:`chartbook.standins.since`).
+        rows_beside: The snapshot before it, which those are told beside.
+        index_columns: The dataframes whose file has the column pandas
+            makes of an index with no name
+            (:data:`chartbook.rowhash.INDEX_COLUMN`).
     """
 
     snapshot: Snapshot
@@ -348,6 +356,9 @@ class SnapshotReport:
     stores: list[str] = field(default_factory=list)
     not_hashed: list[tuple[str, str]] = field(default_factory=list)
     not_hashed_now: list[tuple[str, str]] = field(default_factory=list)
+    rows_said: list[tuple[str, str]] = field(default_factory=list)
+    rows_beside: Optional[Snapshot] = None
+    index_columns: list[str] = field(default_factory=list)
 
 
 def asset_record(
@@ -2474,6 +2485,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     earlier: list = []  # this pipeline's snapshots, read once if a dataframe asks
 
     not_now: list[tuple[str, str]] = []  # the dataframes whose rows could not be hashed this time, each with why
+    index_columns: list[str] = []  # the dataframes whose file has the column pandas makes of an index with no name
 
     def rows(name: str, record: dict, path: Path, entry, reading: Optional[dict]) -> dict:
         """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one.
@@ -2490,6 +2502,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
                 earlier.append(history(directory, store))
             except SnapshotError:
                 earlier.append([])
+        table = rowhash.Table(path, (reading or {}).get("format"), (reading or {}).get("read_options"))
+        if record.get("content_hash") and rowhash.has_index_column(table):
+            index_columns.append(record.get("id") or name)
         try:
             return _rows_of(name, record, path, entry, reading, earlier[0])
         except rowhash.NotNow as error:
@@ -2617,7 +2632,8 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(
-                same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same), not_hashed_now=not_now
+                same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same), not_hashed_now=not_now,
+                index_columns=index_columns,
             )
         if same.built_by_run:
             # Made again for what the one before lacks: the bytes are still
@@ -2651,6 +2667,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     path = pending.write(snapshot.to_document())
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
     snapshot = dataclasses.replace(snapshot, path=path)
+    beside, rows_said = _rows_since(directory, snapshot, store)
     return SnapshotReport(
         snapshot,
         True,
@@ -2661,7 +2678,42 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         documents_skipped=documents_skipped,
         not_hashed=_not_hashed(snapshot),
         not_hashed_now=not_now,
+        rows_said=rows_said,
+        rows_beside=beside,
+        index_columns=index_columns,
     )
+
+
+def _rows_since(directory: Path, taken: Snapshot, store: Store) -> tuple:
+    """The snapshot of this pipeline before one just made, and what each dataframe's rows are beside it: ``(snapshot, [(asset ID, what)])``.
+
+    Only a dataframe whose file is another than the one before is told
+    of: ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
+    ``earlier rows changed: …`` (:func:`chartbook.standins.since`). Telling
+    it reads what the two records do not already show to be the same,
+    which for a table that gained rows is its last period. Nothing here
+    stops a snapshot: what cannot be told is left unsaid.
+    """
+    from chartbook import standins
+
+    try:
+        earlier = [one for one in history(directory, store) if one.made_at < taken.made_at]
+    except (SnapshotError, OSError):
+        return None, []
+    if not earlier:
+        return None, []
+    before = earlier[-1]
+    told = []
+    for name, record in sorted(taken.assets.items()):
+        if (record.get("ref") or {}).get("kind") != "dataframe" or name not in before.assets:
+            continue
+        try:
+            what = standins.since(before.assets[name], record, taken, store)
+        except Exception:  # noqa: BLE001 - a snapshot is made whatever becomes of what is said of it
+            what = None
+        if what:
+            told.append((record["id"], what))
+    return (before, told) if told else (None, [])
 
 
 def _not_hashed(taken: Snapshot) -> list:

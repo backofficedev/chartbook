@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `chartbook update` and `chartbook snapshot` say what a dataframe's rows did
+
+A pin that moves says, for each dataframe, what its rows are beside the pin it had; a snapshot says the same beside the snapshot before it:
+
+```text
+$ chartbook update
+ftsfr/fed_yield_curve: 1 moved. Its 1 chart is not pinned: each build draws it anew
+  ftsfr/fed_yield_curve:treasury_yields
+    sha256:b47d6f2bd9db… -> sha256:48b68a0be6a0…
+    24 new rows, through 2026-11-11; earlier rows unchanged
+
+$ chartbook snapshot
+ftsfr/fed_yield_curve at 8cb1e03: 2 asset(s) in the store
+  Beside the snapshot before it, made 2026-11-17 07:41 UTC:
+    ftsfr/fed_yield_curve:treasury_yields: earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12
+```
+
+So a refactor that changed no number says `earlier rows unchanged`, though a new day of data arrived between the two builds, and a revision by the source names the period it is in. Both only report: there the change is what was asked for. A table with no `date_col` says `its rows changed (2 rows before, 3 now)`, and nothing is said where the earlier record has no rows to compare. Only the periods the two records do not already show to be the same are read.
+
+`chartbook snapshot` and `chartbook check` now tell the author of a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names. `to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name. In `check` it is a warning, and fails nothing.
+
 ### Added — a read through a pin gives the pinned rows, and `data.as_of` says where they end
 
 Where a build of your own stands in for a pinned dataframe (below), it holds the pinned rows and whatever the source has published since. A read through the pin now gives the pinned rows, on every machine: `data.load` and `data.sql` leave out the rows after the pin's last date, so two people with one lockfile load one table, and only `chartbook update` brings later rows.

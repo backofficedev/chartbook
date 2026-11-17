@@ -678,6 +678,9 @@ class PinReport:
         kept_earlier: How many such records stay in this one, pins as they
             were, the store having their bytes and no snapshot that names
             them (:func:`still_pinned`).
+        rows_said: For each dataframe whose pin moved, what its rows are
+            beside the pin it had, by asset ID: new rows, or earlier rows
+            changed (:func:`chartbook.standins.since`).
     """
 
     lockfile: Path
@@ -691,6 +694,7 @@ class PinReport:
     left_out: dict = field(default_factory=dict)
     stood_in: dict = field(default_factory=dict)
     kept_earlier: int = 0
+    rows_said: dict = field(default_factory=dict)
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -2825,6 +2829,13 @@ def _sync_from_snapshots(
             report.events.append(PinEvent("kept", key, asset_id, old=old, new=new))
         else:
             report.events.append(PinEvent("moved", key, asset_id, old=old, new=new))
+            if (record.get("ref") or {}).get("kind") == "dataframe":
+                # Its rows beside the pin it had: new rows, or earlier rows changed
+                from chartbook import standins
+
+                told = standins.since(before, record, newest, store)
+                if told:
+                    report.rows_said[asset_id] = told
         records[asset_id] = record
 
     # What the lockfile has that this snapshot does not; one its owner no

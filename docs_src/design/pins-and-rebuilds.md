@@ -70,7 +70,7 @@ remain, and compares. They match: the student's table holds the pinned data, and
 
 Scenarios 1 to 3 are as built (step 5): each block is from a run on 2026-11-17 of a small made-up
 upstream, 800 rows pinned through 2026-10-30, with the author and the student each in a scratch
-store of their own. Scenarios 4 and 5 are proposed, not what any version prints.
+store of their own. Scenarios 4 and 5 are as built too (step 7), from the same run.
 
 **1. A team shares a store.** Nothing changes. The pinned files are in the store, and are read.
 
@@ -131,11 +131,32 @@ ftsfr/fed_yield_curve: your build of c1e5899 does not match the pin
 
 **4. The maintainer moves the pins.** `chartbook update` says, for each dataframe, "8 new rows,
 earlier rows unchanged" or "earlier rows changed". The lockfile's diff shows the last period's line
-changed and nothing before it, and git keeps what the pin was.
+changed and nothing before it, and git keeps what the pin was. *As built (step 7):*
+
+```text
+$ chartbook update
+ftsfr/fed_yield_curve: 1 moved. Its 1 chart is not pinned: each build draws it anew
+  ftsfr/fed_yield_curve:treasury_yields
+    sha256:b47d6f2bd9db… -> sha256:48b68a0be6a0…
+    24 new rows, through 2026-11-11; earlier rows unchanged
+  From its snapshot at 8cb1e03, made 2026-11-17 07:41 UTC.
+Wrote chartbook.lock.
+```
+
+And after the source had revised one value of 2025-12-14, the third line was `earlier rows
+changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12`.
 
 **5. An agent refactors an upstream.** `chartbook snapshot` compares with the snapshot before and
 says "earlier rows unchanged, 1 new row". The refactor changed no number, though a new day of data
-arrived between the two builds.
+arrived between the two builds. *As built (step 7):*
+
+```text
+$ chartbook snapshot
+ftsfr/fed_yield_curve at 8cb1e03: 2 asset(s) in the store
+  Beside the snapshot before it, made 2026-11-17 07:41 UTC:
+    ftsfr/fed_yield_curve:treasury_yields: 24 new rows, through 2026-11-11; earlier rows unchanged
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+```
 
 ## What the lockfile holds, by kind
 
@@ -500,6 +521,27 @@ only report, because there the change is what was asked for; they compare with t
 with the snapshot before. `chartbook lineage` says which pins a build of yours stands in for.
 *(Proposed; decided as proposed 2026-11-16, and built in step 5.)*
 
+*What `update` and `snapshot` say, as built (step 7). Proposed by Claude, 2026-11-17, where the
+page had only the two phrases:*
+
+- **One line for each dataframe whose file changed:** `24 new rows, through 2026-11-11; earlier
+  rows unchanged`; `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows,
+  through 2026-11-12`; or `the same rows, in other bytes`, where another writer wrote what was
+  there. Under the two hashes in `chartbook update`, and under `Beside the snapshot before it,
+  made …` in `chartbook snapshot`.
+- **Beside what.** `update`: the pin the lockfile had. `snapshot`: the newest earlier snapshot of
+  that pipeline in the store, at whatever commit. A first snapshot says nothing, and "the same as
+  the last one" is what `chartbook snapshot` has always said of the same bytes: `No new snapshot:
+  the same bytes and the same pins as the one made …`.
+- **A table with no `date_col`** has nothing to tell a new row from a changed one by: `its rows
+  changed (2 rows before, 3 now); it has no date column to tell new rows by`.
+- **Nothing is said** where the earlier record has no rows to compare (a pin from before rows
+  were hashed, a table whose rows are not hashed), and nothing stops either command.
+- **What it costs.** The earlier record's periods are compared as a check compares them: what
+  the two records show to be the same is not read, so a table that gained rows has its last
+  period read, once. The owner's `snapshot` and a reader's `update` on the same machine share
+  what was found.
+
 ## Reads
 
 **A read through a pin gives the pinned rows, on every machine. Only `chartbook update` brings
@@ -584,6 +626,19 @@ dates.
    difference.
 4. The pipelines the class reads, and the project template, write `index=False`, and the report is
    pinned again once.
+
+*Built: 1 (step 3), 3 (step 5) and 2 (step 7). 4 is step 8, which waits for the maintainer.* What
+the author is told, by `chartbook snapshot` under the snapshot's line, and by `chartbook check` as
+a warning that fails nothing:
+
+```text
+  acme/rates:treasury: its file has the column pandas makes of an index with no name
+  (__index_level_0__). Where that holds row positions, they shift when a pull has more rows, and
+  no rebuild then has the rows a pin of it names. to_parquet(index=False) drops it; reset_index()
+  keeps it as a column with a name.
+```
+
+A frame indexed by date under a name (`set_index("ds")`) has no such column, and is told nothing.
 
 ## Folders of files
 
@@ -747,5 +802,6 @@ match. The page is to be corrected.
 6. Reads: `data.load` and `data.sql` without the rows after `as_of`; `data.as_of`; what
    `data.path` says. **Built.**
 7. What `update` and `snapshot` say; the warning for a pandas index in `check` and `snapshot`.
+   **Built.**
 8. The class's upstreams and the template write `index=False`; the report is pinned again.
 9. The guide, the reference, the changelog, the skill.

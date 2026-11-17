@@ -113,6 +113,13 @@ ALL = "all"
 #: when a pull has more rows, and no row is then the row it was.
 INDEX_COLUMN = "__index_level_0__"
 
+#: What a dataframe's owner is told of a file that has that column.
+INDEX_COLUMN_SAID = (
+    f"its file has the column pandas makes of an index with no name ({INDEX_COLUMN}). Where that holds row "
+    f"positions, they shift when a pull has more rows, and no rebuild then has the rows a pin of it names. "
+    f"to_parquet(index=False) drops it; reset_index() keeps it as a column with a name"
+)
+
 _DAY = 86_400_000_000  # microseconds
 _EPOCH = datetime(1970, 1, 1)
 
@@ -948,6 +955,14 @@ class NotNow(Exception):
     Nothing is recorded of its rows then, and what made the record says
     so: the next time may hash them.
     """
+
+
+def has_index_column(table: "Table") -> bool:
+    """Whether a table has the column pandas makes of an index with no name (:data:`INDEX_COLUMN`); False for what cannot be read as a table."""
+    try:
+        return INDEX_COLUMN in table.schema().names()
+    except NotRead:
+        return False
 
 
 def dated_by(table: "Table", date_col: Optional[str]) -> Optional[str]:

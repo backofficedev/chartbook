@@ -367,6 +367,44 @@ def check_glob_names(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def check_index_columns(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Warn of a dataframe whose file has the column pandas makes of an index with no name.
+
+    pandas writes a frame's index into a parquet file, and one with no name
+    becomes the column ``__index_level_0__``. Where it holds row positions
+    left from an earlier step, they shift when a pull has more rows, and
+    the rows a pin of the dataframe names are then in no rebuild
+    (``docs_src/design/pins-and-rebuilds.md``, "The pandas index column").
+    It cannot be left out by its name: a frame indexed by date writes its
+    dates there. So this is a warning and no problem, with the two ways
+    out. A file that is not built, or cannot be read, is passed over:
+    other checks say that.
+    """
+    from chartbook import formats, rowhash
+
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for name, entry in (pipeline_manifest.get("dataframes") or {}).items():
+            path = entry.get("path") if isinstance(entry, dict) else None
+            if not isinstance(path, str) or not path.strip():
+                continue
+            try:
+                reading = formats.declared(entry)
+                table = rowhash.Table(
+                    os.path.normpath(os.path.join(pipeline_dir, path)), reading.get("format"), reading.get("read_options")
+                )
+                found = rowhash.has_index_column(table)
+            except Exception:  # noqa: BLE001 - whatever a file that is no table raises: said elsewhere
+                continue
+            if found:
+                warnings.warn(
+                    f"{pipeline_dir / 'chartbook.toml'}: [dataframes.{name}] path: {rowhash.INDEX_COLUMN_SAID}.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+    return []
+
+
 #: A run of digits, or a date with ``-`` or ``_`` between its parts
 #: (``2026``, ``2026-10``, ``20261027``, ``2026_10``): what tells one file
 #: of a set from the others
@@ -1489,6 +1527,7 @@ def run_checks(
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_glob_names(manifest, base_dir),
+        *check_index_columns(manifest, base_dir),
         *check_siblings(manifest, base_dir),
         *check_dependencies(manifest, base_dir),
         *check_dependency_cycles(manifest, base_dir),

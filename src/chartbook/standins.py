@@ -194,8 +194,11 @@ def compare(taken, records: Mapping, store) -> Found:
     return found
 
 
-def said(compared: "rowhash.Compared", record: Mapping) -> str:
-    """Where a table's rows are not a pin's, in one line: ``the rows of 2024-01-02 to 2024-12-31 differ``."""
+def said(compared: "rowhash.Compared", record: Mapping, than: str = "the pin") -> str:
+    """Where a table's rows are not a pin's, in one line: ``the rows of 2024-01-02 to 2024-12-31 differ``.
+
+    :param than: What the table is beside: the pin, or an earlier record of it.
+    """
     periods = [key.replace("/", " to ") for key in compared.differ if key not in (rowhash.NO_DATE, rowhash.ALL)]
     parts = []
     if rowhash.ALL in compared.differ:
@@ -210,8 +213,45 @@ def said(compared: "rowhash.Compared", record: Mapping) -> str:
     if compared.outside:
         one = compared.outside == 1
         through = f" up to {record['as_of']}" if record.get("as_of") else ""
-        parts.append(f"it has {compared.outside:,} row{'' if one else 's'}{through} that the pin did not have")
+        parts.append(f"it has {compared.outside:,} row{'' if one else 's'}{through} that {than} did not have")
     return "; ".join(parts) or "its rows differ"
+
+
+def since(before: Mapping, after: Mapping, taken, store) -> Optional[str]:
+    """What a dataframe's rows are beside an earlier record of them, in a few words; None where they are the same file, or there is nothing to tell them by.
+
+    ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
+    ``earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 24
+    new rows, through 2026-11-11``. For a pin that moves (``chartbook
+    update``), beside the pin it had; and for a snapshot (``chartbook
+    snapshot``), beside the snapshot before it. The earlier record's
+    periods are what is compared, up to its last date, as a check
+    compares them (:func:`rows_compared`): what the two records already
+    show to be the same is not read.
+
+    :param before: The earlier record of the dataframe: a lockfile's, or a snapshot's.
+    :param after: Its record now, in the snapshot *taken*, whose file the store has.
+    """
+    if not before.get("content_hash") or before.get("content_hash") == after.get("content_hash"):
+        return None
+    if not isinstance(before.get("rows"), dict) or not isinstance(after.get("rows"), dict):
+        return None  # one of them says nothing of its rows: pinned before rows were hashed, or not hashed
+    try:
+        compared = rows_compared(before, after, taken, store)
+    except (rowhash.NotHashed, OSError, ValueError, KeyError, TypeError):
+        return None
+    if rowhash.ALL in before["rows"] or rowhash.ALL in after["rows"]:
+        # No date column to tell a new row from a changed one
+        if compared.same:
+            return "the same rows, in other bytes"
+        was, now = before.get("row_count"), after.get("row_count")
+        counted = f" ({was:,} rows before, {now:,} now)" if isinstance(was, int) and isinstance(now, int) else ""
+        return f"its rows changed{counted}; it has no date column to tell new rows by"
+    one = compared.newer == 1
+    new = f"{compared.newer:,} new row{'' if one else 's'}" + (f", through {after['as_of']}" if after.get("as_of") else "")
+    if compared.same:
+        return f"{new}; earlier rows unchanged" if compared.newer else "the same rows, in other bytes"
+    return f"earlier rows changed: {said(compared, before, 'the earlier one')}" + (f"; {new}" if compared.newer else "")
 
 
 def rows_compared(pinned: Mapping, theirs: Mapping, taken, store) -> "rowhash.Compared":
