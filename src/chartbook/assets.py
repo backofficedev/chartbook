@@ -99,9 +99,45 @@ def _path(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -> P
     location = resolve(asset, start_dirs=start_dirs)
     # Several files read from the store have no one path (require_single_path)
     path = require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
+    _say_newer_rows(asset, location)
     if asset.is_local and not getattr(location, "content_hash", None):
         _make_room(path, start_dirs)  # this pipeline's own, where its build writes: the folder is there for the first write
     return path
+
+
+#: The dataframes whose file a read has said holds rows the pin does not, in this process.
+_said_newer: set = set()
+
+
+def _say_newer_rows(asset: AssetRef, location) -> None:
+    """Say, once a process for each dataframe, that the file handed over holds rows after the pin's last date.
+
+    Where the store does not have a pinned dataframe's file and a build of
+    yours stands in for it, ``data.load()`` and ``data.sql()`` leave out
+    the rows after the pin's last date. A path is the file as it is, newer
+    rows and all: whoever reads it themselves is told, and told where the
+    pinned rows end (``docs_src/design/pins-and-rebuilds.md``, "Reads").
+    """
+    import sys
+
+    newer = getattr(location, "newer", 0)
+    if not getattr(location, "stands_in", False) or not getattr(location, "date_col", None) or not newer:
+        return
+    said = (str(asset), location.as_of, str(location.path))
+    if said in _said_newer:
+        return
+    _said_newer.add(said)
+    if location.as_of:
+        through = f"after {location.as_of}, the last date chartbook.lock pins"
+        yours = f"keeps the rows up to data.as_of({str(asset)!r})"
+    else:
+        # A pin of rows with no date alone: it has no last date, and data.as_of() gives None
+        through = "that the pin does not: it pins no dated row"
+        yours = f"keeps the rows with no {location.date_col}"
+    sys.stderr.write(
+        f"{asset}: this file is your own build's, and has {newer:,} row{'' if newer == 1 else 's'} {through}. "
+        f"data.load() and data.sql() leave them out; a reader of your own {yours}.\n"
+    )
 
 
 def _make_room(path: Path, start_dirs: list) -> None:
@@ -231,6 +267,7 @@ def _located(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -
             f"The {asset.kind} {asset.name!r} is {location.kind}-backed, so it has no files. "
             f"Use data.load() to read it, data.sql() to query it, or data.ref() for its name in SQL."
         )
+    _say_newer_rows(asset, location)
     return asset, location
 
 

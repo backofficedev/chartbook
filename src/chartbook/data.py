@@ -553,10 +553,18 @@ def load(
     from chartbook import formats
 
     where = f"Dataframe {dataframe!r}"
+    cut = _cut(location)
     if format == "pandas":
-        return formats.to_pandas(location, where)
+        frame = formats.to_pandas(location, where)
+        if cut is None:
+            return frame
+        kept = _cut_pandas(frame, *cut)
+        if kept is None:
+            # The date column is nowhere pandas put it: the rows as polars tells them, never the whole frame
+            kept = _pinned(formats.scan_location(location, where), cut).collect().to_pandas()
+        return kept
     if format == "polars_eager":
-        return formats.scan_location(location, where).collect()
+        return _pinned(formats.scan_location(location, where), cut).collect()
     if format == "polars-lazyframe":
         import warnings
 
@@ -566,7 +574,71 @@ def load(
             DeprecationWarning,
             stacklevel=2,
         )
-    return formats.scan_location(location, where)
+    return _pinned(formats.scan_location(location, where), cut)
+
+
+def _cut(location) -> Optional[tuple]:
+    """Where a read of a pinned dataframe stops: the column its rows are dated by and the pin's last date, when what is read is a build of yours that stands in for the pin; else None.
+
+    A build that stands in holds the pinned rows and whatever has come
+    since (``docs_src/design/pins-and-rebuilds.md``, "Reads"). A read
+    through a pin gives the pinned rows, on every machine, so the rows
+    after the pin's last date are left out; only ``chartbook update``
+    brings later rows. The pinned file itself is read as it is.
+    """
+    if not getattr(location, "stands_in", False) or not getattr(location, "date_col", None):
+        return None
+    return location.date_col, location.as_of
+
+
+def _pinned(frame, cut: Optional[tuple]):
+    """A scan of a build that stands in, without the rows after the pin's last date."""
+    if cut is None:
+        return frame
+    from chartbook import rowhash
+
+    return rowhash.pinned_rows(frame, *cut)
+
+
+def _cut_pandas(frame, date_col: str, as_of: Optional[str]):
+    """A pandas frame of a build that stands in, without the rows after the pin's last date.
+
+    The rows are told as a rows hash tells them, by polars, from the date
+    column wherever pandas put it: a column, or the index, or one level of
+    it, by its name or, for a level with no name, by its place (the file's
+    ``__index_level_1__`` is the index's second level). The frame keeps
+    its own types and its index.
+
+    :returns: The frame's pinned rows; None where the column is nowhere
+        pandas put it, so that the caller cuts the table another way and
+        never hands over the whole of it.
+    """
+    import polars as pl
+
+    from chartbook import rowhash
+
+    names = list(frame.index.names or [])
+    unnamed = re.fullmatch(r"__index_level_(\d+)__", date_col)
+    if date_col in frame.columns:
+        dates = frame[date_col]
+    elif names.count(date_col) == 1:
+        dates = frame.index.get_level_values(names.index(date_col)).to_series()
+    elif unnamed and int(unnamed.group(1)) < len(names) and date_col not in names:
+        # What pandas makes of an index, or a level of one, with no name: told by its place
+        dates = frame.index.get_level_values(int(unnamed.group(1))).to_series()
+    else:
+        return None  # nowhere, or under a name two levels share
+    if getattr(dates, "ndim", 1) != 1:
+        return None  # two columns of one name
+    held = pl.from_pandas(dates.reset_index(drop=True)).alias("when")
+    if held.dtype == pl.Categorical or held.dtype == pl.Enum or isinstance(held.dtype, (pl.Categorical, pl.Enum)):
+        held = held.cast(pl.String)  # a folder's key, which pandas reads as a category
+    dated = pl.DataFrame({"when": held})
+    try:
+        kept = dated.select(rowhash.up_to(dated.schema, "when", as_of)).to_series()
+    except rowhash.NotHashed:
+        return None  # what pandas has there holds no dates: a range's positions, say
+    return frame[kept.to_numpy()]
 
 
 def _invalid_format(format) -> str:
@@ -583,6 +655,86 @@ def _invalid_format(format) -> str:
             f'is said in its entry in [dataframes]: format = "{format}".'
         )
     return said
+
+
+def as_of(
+    ref: Union[str, AssetRef],
+    project_dir: Optional[Union[str, Path]] = None,
+):
+    """The last date of another pipeline's dataframe as ``chartbook.lock`` pins it.
+
+    >>> from chartbook import data
+    >>> data.as_of("fed_yield_curve:treasury_yields")  # doctest: +SKIP
+    datetime.date(2026, 10, 30)
+
+    A pin of a dataframe records the last timestamp in its date column
+    when it was pinned: the data's own last date, never the clock's.
+    :func:`load` and :func:`sql` give the pinned rows, so they need
+    nothing of this. It is for a reader of your own, given :func:`path`:
+    where the store does not have the pinned file and a build of yours
+    stands in for it, that file holds the pinned rows and whatever has come
+    since, and this is where the pinned rows end:
+
+    >>> frame = pd.read_parquet(data.path("fed_yield_curve:treasury_yields"))  # doctest: +SKIP
+    >>> frame = frame[frame["ds"] <= data.as_of("fed_yield_curve:treasury_yields")]  # doctest: +SKIP
+
+    The same on every machine that has the lockfile, whichever file is
+    read. That comparison is yours, and :func:`load` is exact where it is
+    not: it drops a row with no date, which the pin holds (keep them with
+    ``frame["ds"].isna() | ...``); a column of text has to be read as dates
+    before it compares with one; and in a column of nanoseconds, rows
+    within the microsecond after the pin's last one come in too.
+
+    :param ref: ``"pipeline:name"``, a dataframe of a pipeline declared in
+        ``[dependencies]``.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :returns: A ``datetime.date`` where the column holds dates, and a
+        ``datetime.datetime`` where it holds times: in the column's own
+        time zone where it has one, and in UTC with no zone where it has
+        none, so that it compares with the column as it is. A timestamp
+        finer than a microsecond is given as the next microsecond, so that
+        no pinned row is after it. ``None`` for a dataframe with no ``date_col``, with no
+        dated row, pinned before pins recorded their rows, or whose rows
+        are not hashed; and for a dataframe of the pipeline you are in,
+        which has no pin.
+    :raises AssetNotPinnedError: As for :func:`path`, and the rest of its errors.
+    """
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    asset = _assets.parse(ref, kind="dataframe")
+    location = resolve(asset, start_dirs=start_dirs)
+    text = getattr(location, "as_of", None)
+    if not text or not getattr(location, "date_col", None):
+        return None
+    return _moment(text, location)
+
+
+def _moment(text: str, location):
+    """A pin's last timestamp, as a record writes it, as the date or the time a reader compares its date column with."""
+    from datetime import datetime, timedelta, timezone
+
+    import polars as pl
+
+    from chartbook import rowhash
+
+    micro, left = rowhash.stamp_of(text)
+    try:
+        kind = rowhash.Table.at(location).schema()[location.date_col]
+    except Exception:  # noqa: BLE001 - a file that cannot be read now: told by how the record wrote it
+        kind = None
+    of_dates = kind == pl.Date or (not isinstance(kind, pl.Datetime) and "T" not in text)
+    moment = datetime(1970, 1, 1) + timedelta(microseconds=micro + (1 if left else 0))
+    if of_dates:
+        return moment.date()
+    if isinstance(kind, pl.Datetime) and kind.time_zone:
+        # In the column's own zone: polars compares a time only with one of the same zone
+        aware = moment.replace(tzinfo=timezone.utc)
+        try:
+            from zoneinfo import ZoneInfo
+
+            return aware.astimezone(ZoneInfo(kind.time_zone))
+        except Exception:  # noqa: BLE001 - a zone this machine has no rules for: the same instant, in UTC
+            return aware
+    return moment
 
 
 # A {reference} in SQL: anything between braces that is not itself a brace.
@@ -630,7 +782,18 @@ def ref(
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     asset = _assets.parse(reference, kind="dataframe")
     location = resolve(asset, start_dirs=start_dirs)
-    return backend_for(location).ref(location)
+    cut = _cut(location) if location.kind == "file" else None
+    if cut is None:
+        return backend_for(location).ref(location)
+    # A build of yours that stands in for the pin: its rows up to the pin's last date
+    kept = _sql_up_to(location, *cut)
+    if kept is None:
+        raise ValueError(
+            f"{str(asset)!r} is read from a build of yours that stands in for its pin, without the rows after "
+            f"the pin's last date, and there is no text for that in SQL for this file. data.sql() hands DuckDB "
+            f"those rows; or load them with data.load()."
+        )
+    return f"(select * from {backend_for(location).ref(location)} where {kept})"
 
 
 def sql(
@@ -717,7 +880,21 @@ def sql(
     arrow = {}
     for text, location in locations.items():
         handed = formats.handed(location) if location.kind == "file" else None
-        if handed is not None:
+        cut = _cut(location) if location.kind == "file" else None
+        kept = _sql_up_to(location, *cut) if cut is not None and handed is None else None
+        if cut is not None and kept is None:
+            # A build of yours that stands in for the pin, and no text in SQL for its
+            # rows up to the pin's last date: DuckDB is handed what data.load() gives
+            if not _takes_arrow(engine):
+                raise ValueError(
+                    f"The query names {text.strip()}, which DuckDB is handed rather than given a "
+                    f"reader of, and runs in the source {engine.source!r}, a {engine.name} engine, "
+                    f"which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars."
+                )
+            name = f"{formats.handed_name(location)}_to_{re.sub(r'[^0-9]', '', cut[1] or 'none') or 'none'}"
+            arrow[name] = _pinned(formats.scan_location(location), cut)
+            replacement = quote_identifier(name)
+        elif handed is not None:
             # An Arrow IPC file, or a JSON lines file with overrides: DuckDB is
             # handed it, under a name of its own, the same each call, so a
             # :memory: source keeps one view of it and not one a call
@@ -732,11 +909,75 @@ def sql(
             replacement = quote_identifier(name)
         elif location.kind == "file":
             replacement = backend_for(location).ref(location)
+            if kept is not None:
+                replacement = f"(select * from {replacement} where {kept})"
         else:
             replacement = engine.ref(location)
         query = query.replace("{" + text + "}", replacement)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
     return engine.sql(query, arrow=arrow) if arrow else engine.sql(query)
+
+
+def _sql_up_to(location, date_col: str, as_of: Optional[str]) -> Optional[str]:
+    """What keeps a table's rows up to a pin's last date in DuckDB's SQL, and its rows with no date; None where SQL has no sure way to say it.
+
+    For a parquet file whose date column is a column of the files
+    themselves, of dates or of times: there DuckDB reads the type the file
+    says, and a comparison with a date or a timestamp is exact. Left to
+    polars, which tells a row's date as a rows hash does
+    (:func:`chartbook.rowhash.up_to`), are: text that is read as dates
+    (its rows with no date are text, not null); a column a folder's name
+    makes; a column beside another whose name differs only by case, which
+    DuckDB cannot tell apart; times written as INT96, which DuckDB reads
+    to the microsecond and polars to the nanosecond; and any other format.
+    """
+    import polars as pl
+
+    from chartbook import formats, rowhash
+
+    try:
+        read = formats.reading_of(location)
+        if read.format != "parquet":
+            return None
+        files = formats.files_of(location.path, read, location.files, location.listed, getattr(location, "inside", None))
+        import pyarrow.parquet as pq
+
+        if not files:
+            return None
+        for file in files[:8]:
+            written = pq.read_metadata(str(file)).schema
+            names = list(written.names)
+            if date_col not in names or sum(name.lower() == date_col.lower() for name in names) != 1:
+                return None
+            if written.column(names.index(date_col)).physical_type == "INT96":
+                return None
+        kind = rowhash.Table.at(location).schema()[date_col]
+    except Exception:  # noqa: BLE001 - whatever cannot be told of the files: left to polars
+        return None
+    if kind != pl.Date and not isinstance(kind, pl.Datetime):
+        return None
+    # The column itself, whatever is in its name: a dot there is no table's name
+    column = '"' + date_col.replace('"', '""') + '"'
+    if as_of is None:
+        return f"{column} is null"
+    micro, left = rowhash.stamp_of(as_of)
+    day, within = divmod(micro, 86_400_000_000)
+    from datetime import date, timedelta
+
+    said = (date(1970, 1, 1) + timedelta(days=day)).isoformat()
+    seconds, fraction = divmod(within, 1_000_000)
+    clock = f"{seconds // 3600:02d}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}.{fraction:06d}"
+    if kind == pl.Date:
+        last = f"DATE '{said}'"
+    elif kind.time_zone and kind.time_unit == "ns":
+        return None  # DuckDB holds a time with a zone to the microsecond
+    elif kind.time_zone:
+        last = f"TIMESTAMPTZ '{said} {clock}+00'"
+    elif kind.time_unit == "ns":
+        last = f"TIMESTAMP_NS '{said} {clock}{left:03d}'"
+    else:
+        last = f"TIMESTAMP '{said} {clock}'"
+    return f"({column} is null or {column} <= {last})"
 
 
 def _takes_arrow(engine) -> bool:

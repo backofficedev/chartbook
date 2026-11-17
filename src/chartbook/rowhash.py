@@ -2320,3 +2320,68 @@ def _too_many(which: str) -> NotHashed:
         f"{which} count for more than {MOST_BYTES // 2**20} MB ({_COUNTED}), which is more than a rows hash holds "
         f"at a time, and more than any period this ChartBook records: they are not compared"
     )
+
+
+# --- The rows a pin holds, of a table that has gained rows since -----------------
+
+
+def _text_dates(column):
+    """A text column's dates as a polars expression, in microseconds and UTC: what :func:`_dates_in_text` reads of a column, for a frame that is not read yet."""
+    pl = _polars()
+    written = pl.when(column.str.contains(_ISO_DATE)).then(column)
+    return pl.coalesce(
+        [
+            written.str.to_datetime(form, strict=False, time_unit="us", time_zone="UTC").dt.replace_time_zone(None)
+            if zoned else written.str.to_datetime(form, strict=False, time_unit="us", exact=True)
+            for form, zoned in _TEXT_DATES
+        ]
+    )
+
+
+def up_to(schema, date_col: str, as_of: Optional[str]):
+    """A polars expression for the rows of a table up to a record's last timestamp, and its rows with no date: the rows the record is of, in a table that has gained rows since.
+
+    A row is dated as a rows hash dates it (:func:`_stamps`), so this
+    keeps exactly the rows :func:`hash_in` compares and leaves out the
+    ones it counts as newer.
+
+    :param schema: The table's polars schema.
+    :param date_col: The column the record's rows are dated by.
+    :param as_of: The record's last timestamp, as it writes it; None for a
+        record with no dated row, which keeps the rows with no date alone.
+    :raises NotHashed: If the column holds no dates.
+    """
+    pl = _polars()
+    kind = schema[date_col]
+    column = pl.nth(schema.names().index(date_col))  # by its place: a name is a pattern to polars when it begins ^ and ends $
+    if kind != pl.Date and not isinstance(kind, pl.Datetime) and _kind_of(date_col, kind) == "text":
+        # Text is read as dates; and a category is its text, as the form has it
+        column, kind = _text_dates(column.cast(pl.String)), pl.Datetime("us")
+    if kind != pl.Date and not isinstance(kind, pl.Datetime):
+        raise NotHashed(f"its date column {date_col!r} is {_type_said(kind)}, which is no date")
+    if as_of is None:
+        return column.is_null()
+    micro, left = stamp_of(as_of)
+    # On the scale the column is held in: days, or a count of its unit from 1970, the instant for one with a zone
+    if kind == pl.Date:
+        last = micro // _DAY
+    elif kind.time_unit == "ms":
+        last = micro // 1000
+    elif kind.time_unit == "ns":
+        last = max(-(2**63), min(2**63 - 1, micro * 1000 + left))
+    else:
+        last = micro
+    return column.is_null() | (column.to_physical().cast(pl.Int64) <= last)
+
+
+def pinned_rows(frame, date_col: Optional[str], as_of: Optional[str]):
+    """A frame without the rows after a record's last timestamp: a polars LazyFrame or DataFrame of a table that stands in for a pin, as the pin holds it.
+
+    With no *date_col*, the record is of all the rows, and the frame is
+    given back as it is.
+    """
+    pl = _polars()
+    if date_col is None:
+        return frame
+    schema = frame.collect_schema() if isinstance(frame, pl.LazyFrame) else frame.schema
+    return frame.filter(up_to(schema, date_col, as_of))

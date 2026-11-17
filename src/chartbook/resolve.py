@@ -155,6 +155,9 @@ class FileLocation(Location):
             for the pinned bytes, which the store does not have
             (:mod:`chartbook.standins`): it holds the pinned rows up to
             *as_of*, and may hold newer rows after.
+        newer: And how many rows it holds after *as_of*, which the pin
+            does not: what ``data.load()`` leaves out, and a read of the
+            file itself does not.
     """
 
     kind: ClassVar[str] = "file"
@@ -169,6 +172,7 @@ class FileLocation(Location):
     as_of: Optional[str] = dataclasses.field(default=None, compare=False)
     date_col: Optional[str] = dataclasses.field(default=None, compare=False)
     stands_in: bool = dataclasses.field(default=False, compare=False)
+    newer: int = dataclasses.field(default=0, compare=False)
 
 
 def nothing_to_read(location: "Location") -> Optional[str]:
@@ -949,7 +953,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             _say_it_stands_in(manifest_dir, dependency.id, stood.snapshot)
             return dataclasses.replace(
                 _held(store, met.record, stood.snapshot.pipeline),
-                as_of=record.get("as_of"), date_col=record.get("date_col"), stands_in=True,
+                as_of=record.get("as_of"), date_col=record.get("date_col"), stands_in=True, newer=met.newer,
             )
         if stood is not None:
             raise AssetNotPinnedError(
@@ -972,7 +976,11 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
 
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)
-    return _held(store, record, listed.get("pinned_from"))
+    held = _held(store, record, listed.get("pinned_from"))
+    if isinstance(held, FileLocation) and isinstance(record.get("rows"), dict) and record.get("date_col"):
+        # The pin's own last date, whichever file is read: what data.as_of() gives
+        held = dataclasses.replace(held, as_of=record.get("as_of"), date_col=record["date_col"])
+    return held
 
 
 #: The dependencies a read has said are read from a build of yours, in this process.
