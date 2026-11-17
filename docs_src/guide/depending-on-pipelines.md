@@ -237,7 +237,7 @@ Three things on the other pipeline's side make this work:
 `chartbook update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
 2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of … differ`. A few tables
 have no rows hash, and `chartbook snapshot` says which and why: a column of lists, a single day
-over 256 MB, more than 256 columns. {doc}`../design/pins-and-rebuilds` has the whole design.
+over 256 MB, more than 256 columns. {design}`pins-and-rebuilds` has the whole design.
 
 ## In CI, and on a shared store
 
