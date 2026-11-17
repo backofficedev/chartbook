@@ -2124,8 +2124,9 @@ def up_to(schema, date_col: str, as_of: Optional[str]):
     pl = _polars()
     kind = schema[date_col]
     column = pl.nth(schema.names().index(date_col))  # by its place: a name is a pattern to polars when it begins ^ and ends $
-    if kind == pl.String:
-        column, kind = _text_dates(column), pl.Datetime("us")
+    if kind != pl.Date and not isinstance(kind, pl.Datetime) and _kind_of(date_col, kind) == "text":
+        # Text is read as dates; and a category is its text, as the form has it
+        column, kind = _text_dates(column.cast(pl.String)), pl.Datetime("us")
     if kind != pl.Date and not isinstance(kind, pl.Datetime):
         raise NotHashed(f"its date column {date_col!r} is {_type_said(kind)}, which is no date")
     if as_of is None:
