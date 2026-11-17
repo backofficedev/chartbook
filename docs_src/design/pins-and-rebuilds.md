@@ -532,8 +532,8 @@ remembered against the pin and that snapshot's file, so a read does not hash the
   other pipeline.
 - **Where there is no build of yours,** the check says it once for the dependency, with how to
   build it at the pinned commit (scenario 2 above), and `chartbook pin` and a read name the same
-  way on. For a dependency named by its ID it says which folder of the repository: "in a clone of
-  <repository>, in the folder of ftsfr/fed_yield_curve".
+  way on. For a dependency named by its ID whose repository is not named as the pipeline is, it
+  says which folder of the repository: "in a clone of <repository>, in the folder of acme/rates".
 
 ## What each command does
 
