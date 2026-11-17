@@ -51,6 +51,17 @@ scale = 1 if sys.platform == "darwin" else 1024  # bytes on macOS, kilobytes els
 
 
 def peak():
+    # On Linux the system's count of a process's peak begins at what its parent held when it
+    # started it: a test that made a large table would be counted against every table after it.
+    # The kernel keeps the count of this program alone as VmHWM
+    if sys.platform.startswith("linux"):
+        try:
+            with open("/proc/self/status", encoding="ascii") as said:
+                for line in said:
+                    if line.startswith("VmHWM:"):
+                        return int(line.split()[1]) * 1024
+        except (OSError, ValueError, IndexError):
+            pass
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale
 
 
@@ -95,11 +106,30 @@ def _hashed_under(limit: int, path, date_col, tmp_path, period: int = 0) -> dict
     )
     assert done.returncode == 0, f"the process stopped ({done.returncode}): {done.stderr[-2000:]}"
     said = json.loads(done.stdout.strip().splitlines()[-1])
+    _SEEN.append((os.environ.get("PYTEST_CURRENT_TEST", "").split("::")[-1].split(" (")[0], said))
     if os.environ.get("CHARTBOOK_ROWS_SHOW") and "refused" in said:
         print(f"\n    {Path(str(path)).name}: no rows hash, found in {said['pin_seconds']} s; peak {said['peak'] / 1e9:.2f} GB ({said['refused'][:150]})", file=sys.stderr)
     elif os.environ.get("CHARTBOOK_ROWS_SHOW"):
         print(f"\n    {Path(str(path)).name}: {said['rows']:,} rows, {said['periods']} periods; hashed in {said['pin_seconds']} s, checked in {said['check_seconds']} s; peak {said['peak'] / 1e9:.2f} GB", file=sys.stderr)
     return said
+
+
+#: What each table took, in the order they were hashed: printed once the tests are done, past
+#: pytest's capture, so that a run on another system than the maintainer's leaves its figures.
+_SEEN: list = []
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _peaks_said(request):
+    yield
+    capture = request.config.pluginmanager.getplugin("capturemanager")
+    if not _SEEN or capture is None:
+        return
+    with capture.global_and_fixture_disabled():
+        print()
+        for test, said in _SEEN:
+            what = "refused" if "refused" in said else f"{said['rows']:,} rows in {said['pin_seconds']} + {said['check_seconds']} s"
+            print(f"rows memory: {said['peak'] / 1024**3:.2f} GiB  {test}: {what}")
 
 
 def _wide(path: Path, rows: int = 400_000, columns: int = 99) -> int:
