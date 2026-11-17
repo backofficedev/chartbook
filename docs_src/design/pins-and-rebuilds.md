@@ -147,20 +147,27 @@ What was left open here, and how it is built. *Proposed by Claude, 2026-11-16:*
   pin made before pins named snapshots; a store whose record of the snapshot is gone), the
   record is all that is left to read the chart by: it stays in the lockfile, a pin as it was,
   the check counts it, and `store gc` keeps its bytes. `chartbook update` lets it go, since the
-  snapshot it moves to names what it holds. (As first built, the record was dropped whatever the
-  store had; a review found that the first `chartbook run` after upgrading could then make a
-  chart unreadable, and `store gc` remove the only copy.)
+  snapshot it moves to names what it holds. Such a record has no `lock = true`, and is a pin
+  only where the store has its bytes: on another machine, with the same lockfile and a build of
+  its own, the chart is read from that build and the check passes over the record. (As first
+  built, the record was dropped whatever the store had; a review found that the first
+  `chartbook run` after upgrading could then make a chart unreadable, and `store gc` remove the
+  only copy.)
 - **A dependency none of whose assets is in the lockfile** (one that makes only charts) is pinned
   by its entry, which names its snapshot by commit and time. `pin` does not move it, `store gc`
   keeps that snapshot, and the check passes when the store has a snapshot to read from, and says
   why not when it has none.
-- **Which snapshots are "your own build".** Those of the pipeline the pin came from, by its own
-  ID, and never another pipeline's of the same commit; at the commit the lockfile names; made by
-  its owner's `chartbook snapshot`; not dated after now. An asset is read from the newest of them
-  that holds it. The one the lockfile names is the pin itself, and is read first whatever its
-  date. The check, `chartbook check` and a read all ask the same question of the same snapshots,
-  and `store gc` keeps every one of them for as long as a lockfile names a snapshot of that
-  commit that the store does not have.
+- **Where a chart is read from.** From the snapshot the lockfile names, and from no other,
+  where the store has it: a snapshot is taken whole, whatever its date, and one that did not
+  build the chart says so (a later build of that commit is another snapshot, which `chartbook
+  update` moves to). Where the store does not have it, from "your own build": the snapshots of
+  the pipeline the pin came from, by its own ID, and never another pipeline's of the same
+  commit; at the commit the lockfile names; made by its owner's `chartbook snapshot`; not dated
+  after now; the newest of them that holds the chart. The check, `chartbook check`, a read and
+  what a lockfile keeps when it is written again all ask this one question, and `store gc` keeps
+  every such build for as long as a lockfile names a snapshot of that commit that the store
+  does not have. A lockfile from before 0.3.0 does not say which pipeline its pins came from:
+  for a dependency named by its folder it is the pipeline that folder holds.
 - **A dependency pinned from its repository** (`git`) **is pinned whole, as it was before:**
   every asset of it is in the lockfile, charts and notebooks too, and `lock = true` changes
   nothing for it. Its bytes are its commit's, the same for everyone, so a pin of them is not
