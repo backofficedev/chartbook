@@ -718,7 +718,8 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     folder = store if isinstance(store, FolderStore) else None
     advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])
     records = [r for r in locked.assets_of(key).values() if r.get("content_hash")] if pinned else []
-    if not records or lock._declared_elsewhere(pinned, lock._dependency_entry(key, entry)):
+    # Pinned, too, by the snapshot its entry names, with none of its assets in the lockfile
+    if not (records or lock.names_a_snapshot(pinned)) or lock._declared_elsewhere(pinned, lock._dependency_entry(key, entry)):
         return (
             f"directory not found: {directory}. Nothing of it is pinned from there, so nothing of it "
             f"can be read on this machine. {advice}",

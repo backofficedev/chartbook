@@ -587,12 +587,21 @@ class TestWorkingOutAPin:
         assert default_store().has(pinned["content_hash"])
 
     def test_a_pin_with_no_bytes_is_worked_out_again(self, chain):
-        """As `pin` takes the newest snapshot again for an entry that names a snapshot and holds no hash."""
+        """As `pin` takes the newest snapshot again for an entry that names no snapshot and holds no hash.
+
+        One that names its snapshot is pinned by that, bytes or none: it is
+        all a lockfile has of a dependency whose assets are all drawn anew
+        by every build (tests/test_lock_by_kind.py).
+        """
         fred, rates, forecast = chain
         path = forecast / "chartbook.lock"
         document = json.loads(path.read_text(encoding="utf-8"))
         for record in document["records"]:
             record.pop("content_hash", None)
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        assert lock.would_pin(forecast) is None
+        for entry in document["records"][0]["dependencies"]:
+            entry.pop("snapshot", None)
         path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         assert [entry["id"] for entry in lock.would_pin(forecast).dependencies] == ["rates"]
 

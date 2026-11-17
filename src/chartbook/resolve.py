@@ -820,8 +820,14 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     asset_id = str(pinned)
     locked = _read_lock(manifest_dir)
     of_dependency = locked.assets_of(dependency.id) if locked else {}
-    if of_dependency and dependency.kind == "store":
-        listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
+    from chartbook import lock as locks
+
+    entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), None) if locked else None
+    # Pinned with nothing of it in the lockfile: one whose assets are all
+    # drawn anew by every build, by the snapshot or the commit its entry names
+    by_its_entry = not of_dependency and (locks.names_a_snapshot(entry) or locks._at_a_commit(entry))
+    if (of_dependency or by_its_entry) and dependency.kind == "store":
+        listed = entry or {}
         pinned_as = (listed.get("location") or {}).get("pipeline")
         if pinned_as and pinned_as != dependency.pipeline:
             # The entry names another pipeline now; its pin is still the old one's
@@ -832,7 +838,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
                     f"`chartbook update {dependency.id}` follows it."
                 )
             )
-    if not of_dependency:
+    if not of_dependency and not by_its_entry:
         raise AssetNotPinnedError(
             asset_id,
             "no_lockfile",
@@ -845,6 +851,10 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     record = of_dependency.get(asset_id)
     if record is None and pinned.rev is not None:
         return _resolve_pinned_version(pinned, dependency, of_dependency, locked, manifest_dir)
+    if record is None and pinned.kind not in locks.LOCKED_KINDS:
+        # A chart, a notebook, a note or a plain file is in the lockfile only
+        # when its owner says `lock = true`: read from the snapshot it names
+        return _read_unlocked(pinned, dependency, entry or {}, locked, manifest_dir)
     if record is None:
         in_source = pinned.kind == "dataframe" and _declared_in_source(dependency, pinned.name)
         if in_source:
@@ -921,6 +931,120 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)
     listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
     return _held(store, record, listed.get("pinned_from"))
+
+
+def _snapshots_at(store, pipeline: Optional[str], commit: str) -> list:
+    """The snapshots at one commit that a store has, of one pipeline when it is known, newest first: its owner's, and one a pin made from a clone."""
+    from chartbook import snapshot
+
+    found = [taken for taken in _snapshots_in(store) if taken.commit == commit]
+    try:
+        pinned = store.pinned_snapshot_files()
+    except Exception:  # noqa: BLE001 - a store of another make that keeps none
+        pinned = []
+    found += [taken for taken in _read_snapshots(pinned) if taken.commit == commit]
+    if pipeline:
+        found = [taken for taken in found if taken.pipeline == pipeline]
+    return sorted(found, key=lambda taken: (taken.made_at, snapshot._count(taken.path)), reverse=True)
+
+
+def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, locked, manifest_dir: Path) -> Location:
+    """An asset that is not in the lockfile, read from the snapshot the lockfile names.
+
+    A chart, a notebook, a note, or a plain file its owner does not mark
+    ``lock = true``, is drawn anew by every build, so no hash of it is
+    pinned (:func:`chartbook.lock.in_lockfile`;
+    ``docs_src/design/pins-and-rebuilds.md``). It is read:
+
+    1. from the snapshot the dependency's entry names, by its commit and
+       its time, when a store has that snapshot: a team that shares a store
+       reads the same chart;
+    2. else from the newest snapshot of that pipeline at that commit that
+       the store has and that holds it: your own build of it (or, for a
+       dependency pinned from its repository, what the pin took from the
+       clone), with nothing checked.
+
+    :param entry: The dependency's entry in the lockfile.
+    :raises AssetNotPinnedError: If the lockfile names no commit of the
+        dependency, or the store has no snapshot at it that holds the asset.
+    """
+    from chartbook.multi_store import with_dependencies
+
+    asset_id = str(pinned)
+    lock_path = manifest_dir / "chartbook.lock"
+    location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
+    commit = location.get("commit")
+    not_pinned = (
+        f"{asset_id!r} is not in {lock_path}: a {pinned.kind} is drawn anew by every build, so it is read "
+        f"from a snapshot of {dependency.id!r} at the commit the lockfile names, and not pinned"
+    )
+    if not isinstance(commit, str) or not commit:
+        raise AssetNotPinnedError(
+            asset_id, "not_in_lockfile",
+            f"{not_pinned}. The lockfile names no commit of it: `chartbook update {dependency.id}` in "
+            f"{manifest_dir} pins a snapshot.",
+        )
+    pipeline = entry.get("pinned_from") or location.get("pipeline")
+    pipeline = pipeline if isinstance(pipeline, str) else None
+    store = with_dependencies(manifest_dir)
+    at_commit = _snapshots_at(store, pipeline, commit)
+    made_at = entry.get("snapshot")
+    # The one the lockfile names first, then the newest
+    at_commit.sort(key=lambda taken: not taken.same_moment(commit, made_at))
+    name = pinned.local_name
+    why = ""
+    for taken in at_commit:
+        record = taken.assets.get(name)
+        if record is None:
+            why = why or f"its snapshot made {taken.made_at} has no {name}"
+        elif not record.get("content_hash"):
+            why = why or f"its snapshot made {taken.made_at} did not build {name}"
+        elif not store.has(record["content_hash"]):
+            why = why or f"the store does not have the bytes of {name} from its snapshot made {taken.made_at}"
+        else:
+            _note_the_read(lock_path, locked, store)
+            return _held(store, record, taken.pipeline)
+    if at_commit and all(taken.assets.get(name) is None for taken in at_commit):
+        # No snapshot at that commit declares it: a name that is not one of its assets
+        same_kind = sorted(
+            {
+                local.split("/", 1)[1]
+                for taken in at_commit for local in taken.assets
+                if local.startswith(f"{pinned.kind}/")
+            }
+        )
+        close = difflib.get_close_matches(pinned.name, same_kind, n=1)
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_lockfile",
+            f"The pipeline {dependency.id!r} had no {pinned.kind} named {pinned.name!r} when it was pinned."
+            f"{f' Did you mean {close[0]!r}?' if close else ''} Its {KIND_TABLES[pinned.kind]} in its "
+            f"snapshot at {commit[:7]} are: {', '.join(same_kind) or '(none)'}. If it has declared one "
+            f"since, `chartbook update` pins it.",
+        )
+    of_it = pipeline or dependency.id
+    if location.get("kind") == "git":
+        remedy = f"`chartbook pin` in {manifest_dir} puts it back from its repository, if that commit has it"
+    elif location.get("kind") == "path":
+        remedy = (
+            f"Where a store is shared, wait for its sync. Otherwise make one: in its folder "
+            f"({location.get('path')}), at {commit[:7]}, `chartbook snapshot`"
+        )
+    else:
+        where = location.get("repository") or "its repository"
+        remedy = (
+            f"Where a store is shared, wait for its sync. Otherwise build that commit yourself: in a clone "
+            f"of {where} at {commit[:7]}, `chartbook run --snapshot`"
+        )
+    if not at_commit:
+        raise AssetNotPinnedError(
+            asset_id, "not_in_store",
+            f"{not_pinned}. The store at {store} has no snapshot of {of_it} at {commit[:7]}. {remedy}.",
+        )
+    raise AssetNotPinnedError(
+        asset_id, "not_in_store",
+        f"{not_pinned}. No snapshot of {of_it} at {commit[:7]} in the store at {store} holds it: {why}. {remedy}.",
+    )
 
 
 #: The lockfiles whose note a read has seen to in this process, each as it was then.
@@ -1633,8 +1757,17 @@ def _snapshots_in(store) -> list:
     """Every snapshot in a store that can be read, oldest first, each record parsed once while it is unchanged."""
     from chartbook import snapshot
 
+    found = _read_snapshots(store.all_snapshot_files())
+    found.sort(key=lambda taken: (taken.made_at, snapshot._count(taken.path)))
+    return found
+
+
+def _read_snapshots(files) -> list:
+    """The snapshot records among some files that can be read, each parsed once while it is unchanged."""
+    from chartbook import snapshot
+
     found = []
-    for file in store.all_snapshot_files():
+    for file in files:
         try:
             stat = os.stat(file)
         except OSError:
@@ -1648,7 +1781,6 @@ def _snapshots_in(store) -> list:
                 continue
             _snapshot_cache[str(file)] = cached
         found.append(cached[1])
-    found.sort(key=lambda taken: (taken.made_at, snapshot._count(taken.path)))
     return found
 
 
@@ -1961,7 +2093,7 @@ def _pinned_now(report, key: str) -> None:
     """Say what a pin on first read pinned, on stderr, as ``uv`` says what it locked."""
     import sys
 
-    if key in report.snapshots and any(e.dependency == key and e.status == "pinned" for e in report.events):
+    if key in report.snapshots and any(e.dependency == key and e.status in ("pinned", "unlocked") for e in report.events):
         taken = report.snapshots[key]
         sys.stderr.write(
             f"{key}: pinned to its newest snapshot, {taken.commit[:7]}, made "

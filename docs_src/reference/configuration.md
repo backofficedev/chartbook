@@ -230,6 +230,17 @@ Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually
 
 `keep = true` says every version of the chart is kept in the store; it is the one value the key takes, and it is left out otherwise. The same key goes on any dataframe, notebook, note, model or files asset: {doc}`../guide/keeping-costly-outputs`.
 
+(lock-true)=
+`lock = true` says a pipeline that depends on this one pins the chart in its `chartbook.lock`. It is the one value the key takes, and it is left out otherwise. A dataframe and a model are in a lockfile whatever the key says, since they are what code reads. A chart, a notebook, a note or a files asset is in it only with the key: each is drawn from the data, and drawn anew by every build, so a pin of its bytes can be met only by someone who shares a store with whoever pinned it. Without the key it is read from the snapshot the lockfile names, and not pinned ({ref}`chartbook pin <chartbook-pin>`). Use it for a file that is an input and not an output, a spreadsheet of parameters kept by hand, say:
+
+```toml
+[files.parameters]
+path = "./_data/parameters.xlsx"
+lock = true
+```
+
+There is no setting for a whole kind.
+
 ## `[dataframes]` — Dataframe Definitions
 
 A dataframe is in one place: a file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the file — a single file, a folder of parts, or a glob pattern for hive-partitioned data — stored as parquet, CSV, JSON lines or Arrow IPC ({ref}`formats`):
@@ -603,6 +614,7 @@ keep = true
 | `path` | yes | A file, a folder (every file under it), or a glob (`*`, `?`, `[...]`, `**` for any depth) |
 | `docs_path` or `docs` | no | Its write-up: what is in the files, and how to read them. Recommended by the default policy |
 | `keep` | no | `true` keeps every version of it in the store, as for a dataframe ({doc}`../guide/keeping-costly-outputs`): an archive that cost an API budget to build, or embeddings that cost GPU hours |
+| `lock` | no | `true` has a pipeline that depends on this one pin it in its `chartbook.lock`; without it a files asset is read from the snapshot the lockfile names, and not pinned ({ref}`lock = true <lock-true>`). For a file that code reads as an input |
 | `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | no | As for a dataframe. You may add fields of your own, but for `files`, `file_count` and `extensions`, which the index uses for what it says of the files, and leaves out of the record with a warning |
 
 The key (`earnings_releases`) is its address, `file/earnings_releases`, and another pipeline's is `pipeline:file/earnings_releases`. A file's own name may be anything; a folder's or glob's files are those its hash is made of, so `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*` files are never among them.

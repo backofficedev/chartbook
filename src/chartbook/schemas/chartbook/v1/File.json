@@ -152,6 +152,11 @@
       "const": true,
       "description": "The manifest marks this asset `keep = true`: every version of its bytes is kept in the store (`store gc` keeps, for each, the newest snapshot holding it), and `chartbook restore` puts it back on disk. Present only when it does."
     },
+    "lock": {
+      "type": "boolean",
+      "const": true,
+      "description": "The manifest marks this asset `lock = true`: a pipeline that depends on this one pins it in its `chartbook.lock`. A dataframe or a model is pinned there whatever this says; a chart, a notebook, a note or a file only with it, since every build draws one anew. Present only when it does."
+    },
     "tags": {
       "type": "array",
       "items": {

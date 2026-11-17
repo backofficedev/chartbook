@@ -226,12 +226,14 @@ class _Walker:
         if location.get("kind") == "git":
             node.kind = "git"
             return node
-        if not hashed:
+        if not hashed and not lock.names_a_snapshot(entry):
             node.kind = "nothing"
             return node
         if not (node.commit and node.made_at):
             node.kind = "no_snapshot"
             return node
+        # With nothing of it in the lockfile (its assets are all drawn anew
+        # by every build), the snapshot its entry names is what was read
         plain = [record for record in hashed.values() if not (record.get("ref") or {}).get("rev")]
         labels = {record["content_hash"] for record in hashed.values() if (record.get("ref") or {}).get("rev")}
         at = self._at(node.commit, node.made_at)
@@ -252,6 +254,15 @@ class _Walker:
             node.kind = "git"
             return node
         expected = entry.get("pinned_hash")
+        if not expected and lock.names_a_snapshot(entry):
+            # Nothing of it was in the lockfile (its assets are all drawn anew
+            # by every build): the snapshot the entry names is what was read
+            at = self._at(node.commit, node.made_at)
+            if not at:
+                node.kind = "missing"
+                node.gaps.append(self._missing(node.commit, node.made_at))
+                return node
+            return self._up(node, at[0], depth)
         if not expected:
             node.kind = "nothing"
             return node
@@ -350,21 +361,29 @@ class _Walker:
         """
         import itertools
 
-        records = {}
+        every = {}
         for name in sorted(taken.assets):
             record = snapshot.renamed(taken.assets[name], key)
-            records[record["id"]] = record
+            every[record["id"]] = record
         labelled = self._label_records(taken, key)
         choices = [[(label_id, record) for record in options] for label_id, options in sorted(labelled.items())]
-        made = None
-        for picked in itertools.islice(itertools.product(*choices), 64):
-            trial = {**records, **dict(picked)}
-            made = lock.pinned_hash(trial.values())
-            if expected is None or made == expected:
-                return made, frozenset(record["content_hash"] for _, record in picked)
-        if not choices:
-            return lock.pinned_hash(records.values()), frozenset()
-        return made, frozenset()
+        # As a lockfile holds it now, the assets code reads
+        # (lock.in_lockfile); then as a lockfile of version 1 held it, every
+        # asset, which is what a snapshot made from one recorded
+        held = {asset_id: record for asset_id, record in every.items() if lock.in_lockfile(record)}
+        first = None
+        for records in (held, every) if expected is not None and len(held) != len(every) else (held,):
+            made = None
+            for picked in itertools.islice(itertools.product(*choices), 64):
+                trial = {**records, **dict(picked)}
+                made = lock.pinned_hash(trial.values())
+                if expected is None or made == expected:
+                    return made, frozenset(record["content_hash"] for _, record in picked)
+            if not choices:
+                made = lock.pinned_hash(records.values())
+            if first is None:
+                first = made
+        return first, frozenset()
 
     def _label_records(self, taken, key: str) -> dict:
         """The records a pin may have made of the snapshot's labels, by ID, each with the readings possible.

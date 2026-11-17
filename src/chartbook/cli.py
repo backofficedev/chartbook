@@ -2450,8 +2450,10 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
 
 def _echo_pin_report(report):
     """Print what a pin or an update did, one line per dependency and exception."""
+    from chartbook import lock
     from chartbook.check import display_path
     from chartbook.links import read as read_links
+    from chartbook.refs import KIND_TABLES
     linked = read_links(report.lockfile.parent, active=False)
     if linked:
         click.echo(f"{len(linked)} link(s) in place, not used here.")
@@ -2483,9 +2485,27 @@ def _echo_pin_report(report):
         summary = ", ".join(
             f"{counts[status]} {words[status]}" for status in words if status in counts
         )
+        # What a lockfile does not hold, by kind: 2 charts and 1 notebook
+        unlocked = {}
+        for event in assets:
+            if event.status == "unlocked":
+                kind = KIND_TABLES.get(event.detail, "others")
+                unlocked[kind] = unlocked.get(kind, 0) + 1
+        if unlocked:
+            one = sum(unlocked.values()) == 1
+            not_pinned = (
+                f"{lock.left_out_said(unlocked)} {'is' if one else 'are'} not pinned: "
+                f"each build draws {'it' if one else 'them'} anew"
+            )
+            summary = f"{summary}. Its {not_pinned}" if summary else f"its {not_pinned}"
         for event in whole:
             if event.status == "fetched":
                 click.echo(f"{dependency}: fetched {event.detail}")
+            elif event.status == "at_snapshot":
+                summary = (
+                    f"pinned to its snapshot at {event.detail}; none of its assets is in the lockfile"
+                    + (f"; {summary}" if summary else "")
+                )
             elif event.status == "removed":
                 summary = "no longer a dependency; its pins are let go"
             elif event.status in ("unreachable", "unfetched", "no_snapshot"):
@@ -2544,6 +2564,18 @@ def _echo_pin_report(report):
     if not report.events:
         click.echo("No dependencies to pin.")
     shown = display_path(report.lockfile, relative_to=Path.cwd())
+    if report.earlier:
+        # Said once: the next pin finds it in this form
+        gone = lock.left_out_said(report.left_out)
+        click.echo(
+            f"{shown} was in an earlier form, which pinned every asset. It is written again"
+            + (
+                f" without its {gone}: each build draws {'it' if sum(report.left_out.values()) == 1 else 'them'} "
+                f"anew, so {'it is' if sum(report.left_out.values()) == 1 else 'they are'} read from the "
+                f"snapshot the lockfile names, and not pinned."
+                if gone else "."
+            )
+        )
     if report.written:
         click.echo(f"Wrote {shown}.")
     elif report.lockfile.exists():
@@ -2624,6 +2656,21 @@ def _echo_frozen_report(step, report):
             err=True,
         )
     written = "Nothing written but the store's note that this machine reads these pins." if report.noted else "Nothing written."
+    if report.earlier:
+        from chartbook import lock
+
+        # Checked as this version would have written it; `pin --check` writes nothing
+        gone = lock.left_out_said(report.left_out)
+        one = sum(report.left_out.values()) == 1
+        click.echo(
+            f"{who}{report.lockfile.name} is in an earlier form, which pinned every asset"
+            + (
+                f": its {gone} {'is' if one else 'are'} not checked, since no rebuild gives "
+                f"{'its' if one else 'their'} bytes again"
+                if gone else ""
+            )
+            + ". `chartbook pin` writes it again in the new form."
+        )
     if not report.problems:
         click.echo(
             f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
@@ -2659,8 +2706,14 @@ def pin(project_dir, check_only, frozen):
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
     owner declared ready, at a commit (`chartbook snapshot`). The content
-    hash of each of its assets is written to chartbook.lock. Commit that
-    file: a change to what the project depends on then shows in a diff.
+    hash of each of its dataframes and models is written to chartbook.lock.
+    Commit that file: a change to what the project depends on then shows in
+    a diff.
+
+    A chart, a notebook, a note or a plain file is not pinned unless its
+    owner's chartbook.toml says lock = true on it: every build draws one
+    anew, so no rebuild gives its bytes again. It is read from the snapshot
+    the lockfile names.
 
     None of the other pipeline's data in its folder is read. It can be
     half-way through a change, and what you pin is still the build that

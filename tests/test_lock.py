@@ -113,7 +113,12 @@ def store(work):
 
 @pytest.fixture
 def rates(work):
-    """An upstream pipeline: a file, a partitioned dataset, a chart, an unbuilt model."""
+    """An upstream pipeline: a file, a partitioned dataset, a chart, an unbuilt model.
+
+    Its owner marks the chart ``lock = true``, so a pipeline that depends
+    on it pins all four: what a pin does with a chart that is not marked is
+    in ``tests/test_lock_by_kind.py``.
+    """
     directory = work / "rates"
     _write_manifest(
         directory,
@@ -128,6 +133,7 @@ def rates(work):
                     "path": "./_output/curve.html",
                     "dataframe": "treasury",
                     "docs": "d",
+                    "lock": True,
                 }
             },
             "models": {"ar1": {"path": "./_models/ar1"}},
@@ -342,7 +348,7 @@ class TestPin:
         listing = f"{HELLO.split(':')[1]}  acme/rates:treasury\n"
         overall = "sha256:" + hashlib.sha256(listing.encode()).hexdigest()
         assert json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8")) == {
-            "schema": "chartbook/lock/v1",
+            "schema": "chartbook/lock/v2",
             "root": "downstream",
             "records": [
                 {
@@ -792,7 +798,7 @@ class TestReadingAndWriting:
         (work / LOCK_FILE).write_text(
             '{"schema": "chartbook/lock/v9", "root": "x", "records": []}', encoding="utf-8", newline="\n"
         )
-        with pytest.raises(LockError, match="reads 'chartbook/lock/v1'"):
+        with pytest.raises(LockError, match="reads 'chartbook/lock/v2'"):
             lock.read_lock(work)
 
     def test_write_lock_leaves_an_identical_file_alone(self, work):

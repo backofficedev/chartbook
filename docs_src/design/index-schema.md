@@ -610,9 +610,18 @@ by the maintainer, the details below are proposed.)* What the lockfile holds is 
 paragraph above. There are no `Build` records yet. And the part that freezes anything is
 missing from it: one record for each asset of each dependency, with its `content_hash`.
 
+*(Changed 2026-11-16, `chartbook/lock/v2`, as built; decided by the maintainer on 2026-11-15,
+{doc}`pins-and-rebuilds`.)* A lockfile holds a record only for an asset that code reads: a
+dataframe and a model always, and a chart, a notebook, a note or a file only when its owner's
+manifest says `lock = true`, which its record then carries as `"lock": true`. Any other asset is
+read from the snapshot its dependency's entry names (`location.commit` and `snapshot`), and that
+entry is the whole pin of a dependency none of whose assets is in the lockfile. A lockfile of
+version 1, which held a record for every asset, is read as version 2 would have written it, and
+written again as version 2 by the next command that writes the lockfile.
+
 ```json
 {
-  "schema": "chartbook/lock/v1",
+  "schema": "chartbook/lock/v2",
   "root": "ftsfr/rate_forecast",
   "records": [
     { "kind": "Pipeline", "version": "chartbook/v1", "id": "ftsfr/rate_forecast",
@@ -639,10 +648,13 @@ missing from it: one record for each asset of each dependency, with its `content
 - **The `Pipeline` record** is this pipeline's, cut down to `id` and `dependencies`. That is
   below what the index's schema requires of a `Pipeline` (`name`, `location`, `assets`), on
   purpose: those would change the lockfile whenever the manifest changed. The lockfile's own
-  envelope schema, `schemas/chartbook/lock/v1.json`, says what is there.
+  envelope schema, `schemas/chartbook/lock/v2.json`, says what is there.
 - **IDs use the dependency's key** in `[dependencies]`, which is this pipeline's name for it.
 - **`pinned_hash`** is the SHA-256 of a listing with one line per pinned asset of that
-  dependency, `<hex of its content hash>`, two spaces, `<its ID>`, newline, sorted by ID.
+  dependency, `<hex of its content hash>`, two spaces, `<its ID>`, newline, sorted by ID. It is
+  over what the lockfile holds: in version 1 that was every asset, so a snapshot made from a
+  version 1 lockfile recorded the hash over all of them among its `inputs`, and `chartbook
+  lineage` takes either.
 - **`pinned_from`** is the pipeline the pins came from, by its own ID and not by the key: the
   pipeline of the snapshot they were taken from, or the one a `git` dependency's clone holds
   (its `[project] id`, else the ID its repository's address gives). It says where the store
