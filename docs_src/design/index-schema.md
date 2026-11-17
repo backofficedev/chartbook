@@ -241,6 +241,38 @@ same timestamps in microseconds give, and one with something finer does not: eve
 seen. `tests/test_rowhash.py` writes this form a second time, in plain Python, and holds the
 module to it; and holds one table's hash to a value written down there.
 
+**A dataframe's rows in a record.** *(As built 2026-11-16, in a snapshot's record and a
+lockfile's; {doc}`pins-and-rebuilds`, "A dataframe's record".)* A dataframe is hashed by its rows
+a **period** at a time, and its record says:
+
+```json
+"content_hash": "sha256:4c04…", "size_bytes": 5123456,
+"date_col": "ds",
+"as_of": "2026-10-30",
+"rows": { "1961-06-14/1961-12-29": "sha256:7d02…", "2026-01-02/2026-10-30": "sha256:a31a…" },
+"row_count": 382802
+```
+
+- `date_col` — the column its rows are dated by: the one its entry declares, when the table has
+  it and it holds dates, or text written as dates.
+- `as_of` — the last timestamp in that column: the data's own last date, never the clock's.
+  Absent with no `date_col`, or no dated row.
+- `rows` — the rows hash of each period, by the period: the first and the last timestamp seen in
+  it, both included, joined by `/`. `"none"` is the rows with no date. With no `date_col` there
+  is one entry, `"all"`. The periods are whoever made the record's to choose (whole years; a
+  year over 128 MB in memory as its months; such a month as its days), and whoever checks a pin
+  reads them from the record and hashes their own rows in those same periods, leaving out the
+  rows after `as_of`. So the rule that chooses them can change, and only the form of the hash
+  has to stay.
+- `row_count` — how many rows it has.
+- `not_hashed` — in place of `rows`, why its rows have no hash: a column of lists or structs, a
+  day over 256 MB in memory, more than 256 columns. Its pin is its bytes alone.
+
+A timestamp is written in UTC: a date alone at midnight (`2026-10-30`), else with its time
+(`2026-10-30T16:00:00`), with a fraction of six digits where it has microseconds and nine where
+it has nanoseconds. A date, a datetime in any unit and zone, and text written as ISO 8601 are
+all dates; a row whose date is empty, or is text written any other way, has no date.
+
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
 ```json

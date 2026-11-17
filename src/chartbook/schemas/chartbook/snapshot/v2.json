@@ -279,6 +279,31 @@
             "type": "string",
             "pattern": "^[a-z0-9]+:[0-9a-f]+$"
           },
+          "date_col": {
+            "type": "string",
+            "description": "On a dataframe: the column its rows are dated by, as its entry declares it, when its rows are hashed by period."
+          },
+          "as_of": {
+            "type": "string",
+            "description": "The last timestamp in the dataframe's date column when its rows were hashed: the data's own last date, never the time on the clock. In UTC, a date alone at midnight (`2026-10-30`), else with its time (`2026-10-30T16:00:00`, with a fraction of six or nine digits where it has one). Absent for a dataframe with no date column, or with no dated row."
+          },
+          "rows": {
+            "type": "object",
+            "description": "The rows hash of each period of the dataframe (`chartbook.rowhash`; the form is in the index specification, \"The rows hash\"), by the period: the first and the last timestamp seen in it, both included, written as `as_of` is and joined by `/` (`1961-06-14/1961-12-29`). `none` is the period of the rows with no date. A dataframe with no date column has one entry, `all`. Whoever checks a pin hashes their own rows in these same periods, leaving out the rows after `as_of`.",
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+            }
+          },
+          "not_hashed": {
+            "type": "string",
+            "description": "Why the dataframe's rows have no hash, where they have none: a column of a kind the form does not take, a piece too large to hold, more columns than are read at once. A pin of it is then met by the same file only. Absent when `rows` is there."
+          },
+          "row_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "On a dataframe whose rows are hashed: how many rows it has."
+          },
           "size_bytes": {
             "type": "integer",
             "minimum": 0

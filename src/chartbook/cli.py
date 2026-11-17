@@ -3319,6 +3319,8 @@ def _echo_snapshot(report, upstream=False):
         click.echo(f"  not built: {asset} ({declared_path})")
     for model, version in report.new_versions:
         click.echo(f"  {model}: new version {version}")
+    for asset, why in getattr(report, "not_hashed", ()):
+        click.echo(f"  rows not hashed: {asset} ({why}). A pin of it is met by the same file, and by no rebuild.")
     if report.index_skipped:
         click.echo(
             f"  index not recorded: {report.index_skipped}. The bytes and the documents are in the "

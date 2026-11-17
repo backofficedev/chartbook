@@ -7,7 +7,8 @@ upstream: what the lockfile holds for each kind of asset, how a dataframe is pin
 well as its bytes, and what each command and each read then does.
 
 Status: **being built, step by step, in "The order of work" at the end; no release is named.**
-Built so far: the lockfile by kind (step 2), and the rows hash (step 3). Each part says whether the maintainer decided it, and
+Built so far: the lockfile by kind (step 2), the rows hash (step 3), and periods in a
+snapshot's record and in the lockfile (step 4). Nothing checks a pin by its rows yet (step 5). Each part says whether the maintainer decided it, and
 when, or whether it is a proposal. The items marked *(Proposed.)* were decided as proposed on
 2026-11-16. A choice made while building, on what the page had left open, is marked *Proposed by
 Claude*, with its date, until the maintainer says otherwise. The numbers come from a prototype run
@@ -241,6 +242,33 @@ each period of data, not for each time a snapshot was made, and what a pin was b
 This would be `chartbook/lock/v2`. A snapshot's record gains the same fields, since a pin copies
 them from the snapshot it is made from. *(Proposed.)*
 
+*Built (step 4).* `chartbook snapshot` records the fields for every dataframe it holds, a table or
+query written out from a DuckDB file among them, and `chartbook pin` and `update` copy them. As
+built, and *proposed by Claude, 2026-11-16,* where the page had not said:
+
+- **How a timestamp is written:** in UTC; a date alone at midnight (`2026-10-30`), else with its
+  time (`2026-10-30T16:00:00`, and with a fraction of six or nine digits where it has one).
+- **The two periods with no dates in their name:** `"none"` is the rows whose date is empty, and
+  a dataframe with no `date_col` has the one line `"all"`.
+- **`row_count`** is recorded beside `rows`, so that `update` and `snapshot` can say "8 new rows"
+  from two records without reading a table (step 7).
+- **Text that is a date.** A date column that is text (a CSV's) dates its rows where a value is
+  written as ISO 8601, with a time or none, with an offset or none, and a value written any
+  other way is a row with no date. The page said "as the index already parses it"; the index
+  lets polars guess the form from a column's first values, and a guess can differ from one batch
+  of rows to the next. The column's own text is what is hashed, whatever it says.
+- **A `date_col` that holds numbers** dates nothing: the dataframe is hashed as one with no
+  `date_col`.
+- **A dataframe whose rows are not hashed** says why, in `not_hashed`, in place of `rows`: a
+  column of lists or structs, a single day (or a table with no `date_col`) over 256 MB in memory,
+  or more than 256 columns. A pin of it is met by the same file only, and `chartbook snapshot`
+  says so. A file that cannot be read as a table at all has none of these fields.
+- **The same bytes are hashed once.** A snapshot takes the rows of an earlier snapshot of the
+  same bytes, read the same way and dated by the same column. And a snapshot from before rows
+  were hashed does not stand in the way: the same commit and the same bytes make a new one, once,
+  to say its rows. So the class's upstreams get their rows by running `chartbook snapshot` again
+  at the commits they are at (step 8).
+
 ## The rows hash
 
 A hash of a table's rows, and not of its file. *Proposed, from the prototype; decided as proposed
@@ -305,6 +333,14 @@ tables; and no setting for it in `chartbook.toml`.*
 "Too many" is a size in memory, and it is fixed in ChartBook. *Decided 2026-11-16: it is set for a
 machine with 8 GB.* It cannot be taken from the machine that pins: the author may pin on 64 GB,
 and a student then hashes those same periods on 8.
+
+*Built (step 4). Proposed by Claude, 2026-11-16: a period is at most 128 MB of rows in memory,* as
+Arrow holds them, reckoned from the rows of each day and what a few rows take. That is what kept
+the four tables below under 2 GB with room to spare (the prototype's 200 MB did not, with its
+reader). One day is never split: a day over 256 MB, twice a period, has no rows hash, and neither
+has a table with no `date_col` over 256 MB. A period that turns out larger than was reckoned is
+hashed a day at a time. Only the days that have rows are in a period's name, so a year that
+begins on June 14 is `1961-06-14/1961-12-29`.
 
 When a pin moves, the periods before the last are as they were, with the same lines unless a value
 in them changed. The last one grows, or new ones follow it. On CRSP's daily file, pinned through
@@ -383,8 +419,27 @@ dates.
 
 ## Folders of files
 
-A dataframe can be a folder of files, partitioned Hive-style, often by date. *Proposed, awaiting
-the maintainer:* its rows are hashed by period, as any dataframe's are, and never file by file.
+A dataframe can be a folder of files, partitioned Hive-style, often by date. *Proposed; decided as
+proposed 2026-11-16:* its rows are hashed by period, as any dataframe's are, and never file by
+file, with periods following date partitions.
+
+*The rule, as built (step 4). Proposed by Claude, 2026-11-16:* there is one rule for periods,
+whatever the layout: whole years, and months or days of one by size. A folder's files are read
+one after another, a batch at a time, and each row goes to the period of its date, with the
+columns ChartBook's reader makes of `key=value` folders put on. So a folder partitioned by year,
+by month or by day has periods that are whole partitions, or whole partitions together (a year
+of twelve monthly folders is one line, where a line for each would be twelve times the lockfile
+for nothing); a partition is never cut unless it is over the size; and a folder split another
+way, or one file, gives the same lines. A test lays the same rows out six ways (one file, many
+row groups, a folder pandas partitioned, a folder polars partitioned, a glob, a plain folder)
+and holds them to one record, and to the record the whole table read at once gives.
+
+**Not built, and later:** opening only the files that hold a period's dates, and passing over a
+file whose bytes are the pinned ones. Today every file is read once when a folder is hashed.
+Both are ways to do less work, and change no hash. What "A build split another way still
+matches" needs is that the split adds no column: a folder's `key=value` names are columns, so
+rows split by `year=` have a `year` column that the same rows in one file do not, unless the file
+has it too.
 
 - **Files are not stable.** pandas names each file of a partitioned write with a new random id:
   the same rows written twice gave `year=2022/e67d58e5…-0.parquet` and
@@ -401,25 +456,44 @@ the maintainer:* its rows are hashed by period, as any dataframe's are, and neve
 
 ## What it costs
 
-Hashing bytes, and hashing rows a period at a time, with at most 200 MB of rows in a period, on
-eight threads:
+*As built (step 4), measured 2026-11-16 by the test under a memory limit, on the machine the note
+at the top names:* each table hashed by period and then checked against its own record, in one
+process that stops itself the moment its memory passes 2 GB.
 
-| Table | Rows by columns | Byte hash | Periods | Rows check | Peak memory |
+| Table | Rows by columns | Periods | Hashed in | Checked in | Peak memory |
 |---|---|---|---|---|---|
-| The class's yield curve | 383 thousand by 4 | under 0.01 s | 66 | 0.8 s | 0.2 GB |
-| CRSP daily | 27.8 million by 8 | 0.2 s | 26 | 5.4 s | 0.8 GB |
-| GKX characteristics | 2.6 million by 99 | 0.35 s | 42 | 2.7 s | 2.1 GB |
-| RavenPack, 19 text columns | 28.1 million by 27 | 0.9 s | 223 | 24.6 s | 3.8 GB |
+| The class's yield curve | 383 thousand by 4 | 66 | 0.4 s | 0.1 s | 0.22 GB |
+| CRSP daily | 27.8 million by 8 | 26 | 6.6 s | 5.2 s | 1.09 GB |
+| GKX characteristics | 2.6 million by 99 | 42 | 3.4 s | 2.9 s | 1.34 GB |
+| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 28.8 s | 27.3 s | 1.33 GB |
 
-The time is paid once for each snapshot, and in a check only when the files differ.
+Hashing the bytes of the same files took under a second each. The time for the rows is paid once
+for each snapshot of new bytes, and in a check only when the files differ.
 
-**Memory is the limit, and the target is not met.** The target is a peak under 2 GB for any table,
-so that a machine with 8 GB is safe. The two wide tables are over it, the prototype is not tuned,
-and none of this has been run on a machine with 8 GB. On the text table most of the memory (3.1 of
-3.8 GB) goes while the file is split into periods, not while a period is hashed. Before anyone is
-told it works on 8 GB, "under 2 GB on these four tables" is a test, run under a memory limit.
+**The target is met on these four tables: a peak under 2 GB,** so that a machine with 8 GB is
+safe. The test is `tests/test_rows_memory.py`. The four tables are licensed data on the
+maintainer's disk, so they run when `CHARTBOOK_ROWS_TABLES` names them; two tables made by the
+test, in the shapes that took the most (99 columns of floats, and text, each written as one row
+group), run everywhere but Windows. **It has not been run on a machine with 8 GB,** and the peak
+is the process's own count on macOS, which other systems count a little otherwise.
 
-What was learned about reading:
+What the memory is, as measured:
+
+- **The period is what is held, never the table.** A file is read a few thousand rows at a time
+  by pyarrow, which holds a batch and not a row group. Each row is put in a scratch file for its
+  period, in ChartBook's cache folder, compressed, and each period is then read back, sorted and
+  hashed alone. On the text table that took the split from 3.1 GB to 0.6 GB.
+- **Sorting a period takes about five times its size.** A single day of 238 MB, near the most
+  there can be, peaked at 1.3 GB.
+- **A page or two of every column is held while a file is read,** about 2.7 MB a column: 99
+  columns are 0.4 GB before a row is hashed, 400 columns peaked at 1.5 GB, and 1000 at 2.9 GB.
+  So a table of more than 256 columns has no rows hash. *(Proposed by Claude.)* Reading such a
+  table some columns at a time would lift that, and is not built.
+- **Arrow's own allocator keeps what it frees,** and the process's memory then stands at the
+  most it ever held. While a table is hashed, Arrow takes its memory from the system instead,
+  which was 0.4 GB less on the text table.
+
+What was learned about reading, from the prototype:
 
 - Hashing a whole table at once took 18 to 24 GB on the text table.
 - polars' streaming engine does not bound memory here: 8.6 GB reading in batches, and 12 GB
@@ -437,17 +511,24 @@ What was learned about reading:
   if one came later; only how periods are chosen.
 - **A setting for a whole kind of asset.** `lock = true` on an asset is the only key.
 - **A copy of a file cut at the pin's date** for `data.path`. `data.as_of` is given instead.
-- **Tick data,** where one day's rows do not fit the size of a period.
+- **Tick data,** where one day's rows do not fit the size of a period. A day over 256 MB in
+  memory has no rows hash, and the dataframe is pinned by its bytes alone.
 - **A large table with no `date_col`.** It has one hash, which takes one sort of the whole table
-  in memory.
+  in memory, so one over 256 MB has no rows hash.
+- **A table of more than 256 columns,** for the memory a file's columns take while it is read.
+- **A column of lists or of structs.** A dataframe with one has no rows hash.
+- **A dependency pinned from its repository** (`git`). Its dataframes are pinned by their bytes,
+  which are the commit's for everyone; a pin's own snapshot records no rows.
 - **A table in a warehouse.** A snapshot does not pin one today; nothing here changes that.
 
 ## Still open
 
-- The rule for folders of files, above.
-- The size of a period, and the reader, that keep the peak under 2 GB.
-- The parts of the rows hash marked not settled.
+- ~~The rule for folders of files, above.~~ Built as proposed in "Folders of files".
+- ~~The size of a period, and the reader, that keep the peak under 2 GB.~~ 128 MB, and pyarrow a
+  batch at a time: "What it costs".
+- ~~The parts of the rows hash marked not settled.~~ Built as proposed in "The rows hash".
 - The exact words each command prints.
+- A run of the memory test on a machine with 8 GB.
 
 Outside this repository: step E of the course's pins walkthrough prints a matching hash for a
 rebuild cut at the pinned date. That output is not from a real run (it shows the hash of the
@@ -463,7 +544,7 @@ match. The page is to be corrected.
 3. The rows hash: its form written into the index specification, and tested across writers.
    **Built.**
 4. Periods: choosing them within the size, in a snapshot's record and in the lockfile; the test
-   under a memory limit.
+   under a memory limit. **Built.**
 5. The check: a snapshot of yours that stands in, in `pin`, `pin --check` and `run`, with the
    messages.
 6. Reads: `data.load` and `data.sql` without the rows after `as_of`; `data.as_of`; what
