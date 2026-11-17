@@ -284,7 +284,7 @@ Error: acme/forecast cannot have a snapshot: its lockfile does not match its dep
 Run `chartbook pin`, then snapshot again.
 ```
 
-It is the check `chartbook pin --check` already makes (`pin --frozen` before 0.5.3), run first. B's snapshot then holds B's
+It is the check `chartbook pin --check` already makes (`pin --frozen` through 0.5.2), run first. B's snapshot then holds B's
 outputs and its lockfile; A's bytes are in the store already, named by that lockfile.
 
 **Recommended: 6b.** *Decided by the maintainer 2026-10-16: 6b, a snapshot only with full

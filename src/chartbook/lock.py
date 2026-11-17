@@ -1617,8 +1617,9 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
     """Say whether a pipeline can be built from its lockfile alone.
 
     This is ``pin --check``, and the gate ``run --frozen`` passes before it
-    builds: what CI runs, and what anyone with a store they may only read runs. It opens no repository, fetches nothing, pins
-    nothing and does not write the lockfile. It reads the manifest's
+    builds: what CI runs, and what anyone with a store they may only read
+    runs. It opens no repository, fetches nothing, pins nothing and does
+    not write the lockfile. It reads the manifest's
     ``[dependencies]``, the lockfile and the store, and reports a problem
     for
 
