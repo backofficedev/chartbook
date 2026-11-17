@@ -2528,6 +2528,8 @@ def _echo_pin_report(report):
         for event in assets:
             if event.status == "moved":
                 click.echo(f"  {event.asset}\n    {_short_hash(event.old)} -> {_short_hash(event.new)}")
+                if event.asset in getattr(report, "rows_said", {}):
+                    click.echo(f"    {report.rows_said[event.asset]}")
             elif event.status == "not_built":
                 click.echo(f"  not built: {event.asset} ({event.detail})")
             elif event.status == "stale":
@@ -3398,6 +3400,18 @@ def _echo_snapshot(report, upstream=False):
             f"  rows not hashed this time: {asset} ({why}). Its bytes are in the snapshot; "
             f"`chartbook snapshot` again hashes its rows."
         )
+    if getattr(report, "rows_said", None):
+        # Each dataframe whose file changed, beside the snapshot before this one
+        # Named by its commit too: the one before may be of another branch, and its rows are then another's
+        click.echo(
+            f"  Beside the snapshot before it, of {report.rows_beside.commit[:7]}, made {_when(report.rows_beside.made_at)}:"
+        )
+        for asset, told in report.rows_said:
+            click.echo(f"    {asset}: {told}")
+    for asset in getattr(report, "index_columns", ()):
+        from chartbook import rowhash
+
+        click.echo(f"  {asset}: {rowhash.index_column_said(getattr(report, 'index_column_names', {}).get(asset) or ())}.")
     if report.index_skipped:
         click.echo(
             f"  index not recorded: {report.index_skipped}. The bytes and the documents are in the "

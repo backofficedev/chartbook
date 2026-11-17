@@ -248,15 +248,19 @@ def compare(taken, records: Mapping, store) -> Found:
     return found
 
 
-def said(compared: "rowhash.Compared", record: Mapping) -> str:
-    """Where a table's rows are not a pin's, in one line: ``the rows of 2024-01-02 to 2024-12-31 differ``."""
+def said(compared: "rowhash.Compared", record: Mapping, than: str = "the pin", yours: str = "your build's table") -> str:
+    """Where a table's rows are not a pin's, in one line: ``the rows of 2024-01-02 to 2024-12-31 differ``.
+
+    :param than: What the table is beside: the pin, or an earlier record of it.
+    :param yours: What the table is called: your build's, or ``it``.
+    """
     if compared.undated:
-        return f"your build's table has no column {record.get('date_col')!r} that holds dates, which the pin's rows are dated by"
+        return f"{yours} has no column {record.get('date_col')!r} that holds dates, which {than}'s rows are dated by"
     periods = [key.replace("/", " to ") for key in compared.differ if key not in (rowhash.NO_DATE, rowhash.ALL)]
     parts = []
     if rowhash.ALL in compared.differ:
         # One hash of all its rows: with no date column, a row more is a difference like any other
-        parts.append("its rows differ (the pin has no date column, so a row more is a difference like any other)")
+        parts.append(f"its rows differ ({than} has no date column, so a row more is a difference like any other)")
     if periods:
         shown = periods[:3]
         more = len(periods) - len(shown)
@@ -267,14 +271,111 @@ def said(compared: "rowhash.Compared", record: Mapping) -> str:
     if compared.outside:
         one = compared.outside == 1
         through = f" up to {record['as_of']}" if record.get("as_of") else ""
-        parts.append(f"it has {compared.outside:,} row{'' if one else 's'}{through} that the pin did not have")
+        parts.append(f"it has {compared.outside:,} row{'' if one else 's'}{through} that {than} did not have")
     if compared.no_date:
         one = compared.no_date == 1
-        parts.append(f"it has {compared.no_date:,} row{'' if one else 's'} with no date, and the pin had none")
+        parts.append(f"it has {compared.no_date:,} row{'' if one else 's'} with no date, and {than} had none")
     return "; ".join(parts) or "its rows differ"
 
 
-def rows_compared(pinned: Mapping, theirs: Mapping, taken, store) -> "rowhash.Compared":
+class _NotRead(Exception):
+    """Raised when telling a table's rows beside a record would read the table, and the caller asked that nothing be read."""
+
+
+def reads_here(store) -> bool:
+    """Whether a store's files are on this machine's disks, so that reading a table of it fetches nothing: a folder store, or several of them."""
+    from chartbook.store import FolderStore
+
+    # What a pin wraps a store in, to hold its writes back, reads as the store itself
+    while not isinstance(store, FolderStore) and getattr(store, "_store", None) is not None:
+        store = store._store
+    entries = getattr(store, "entries", None)
+    if entries is not None:
+        return all(isinstance(getattr(entry, "store", None), FolderStore) for entry in entries)
+    return isinstance(store, FolderStore)
+
+
+def since(before: Mapping, after: Mapping, taken, store, read: bool = True) -> Optional[str]:
+    """What a dataframe's rows are beside an earlier record of them, in a few words; None where they are the same file, or there is nothing to tell them by.
+
+    ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
+    ``earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 24
+    new rows, through 2026-11-11``. For a pin that moves (``chartbook
+    update``), beside the pin it had; and for a snapshot (``chartbook
+    snapshot``), beside the snapshot before it. The earlier record's
+    periods are what is compared, up to its last date, as a check
+    compares them (:func:`rows_compared`): what the two records already
+    show to be the same is not read, and two records of a table with no
+    date column say it all between them.
+
+    Nothing here is worth stopping a command for: what cannot be told,
+    for whatever reason, is left unsaid.
+
+    :param before: The earlier record of the dataframe: a lockfile's, or a snapshot's.
+    :param after: Its record now, in the snapshot *taken*, whose file the store has.
+    :param read: Whether the table may be read where the two records do
+        not say it all. False for a store whose files are not on this
+        machine (:func:`reads_here`): a line of output is not worth
+        fetching a table for.
+    """
+    try:
+        return _since(before, after, taken, store, read)
+    except (KeyboardInterrupt, SystemExit, GeneratorExit):
+        raise
+    except BaseException:  # noqa: BLE001 - a store that cannot be reached, a record no pin wrote, a panic of polars: nothing is said
+        return None
+
+
+def _since(before: Mapping, after: Mapping, taken, store, read: bool) -> Optional[str]:
+    if not before.get("content_hash") or before.get("content_hash") == after.get("content_hash"):
+        return None
+    was, now = before.get("rows"), after.get("rows")
+    if not isinstance(was, dict) or not isinstance(now, dict):
+        return None  # one of them says nothing of its rows: pinned before rows were hashed, or not hashed
+    rows_then, rows_now = before.get("row_count"), after.get("row_count")
+    counted = (
+        f" ({rows_then:,} rows before, {rows_now:,} now)"
+        if type(rows_then) is int and type(rows_now) is int else ""
+    )
+    if not was:
+        # It had no rows: nothing to compare, and nothing to call earlier
+        return f"it had no rows, and has {rows_now:,} now" if type(rows_now) is int and rows_now else None
+    if rowhash.ALL in was and rowhash.ALL in now:
+        # Neither is dated: one hash each, of all the rows, and the two records say it
+        if was == now:
+            return "the same rows, in other bytes"
+        return f"its rows changed{counted}; it has no date column to tell new rows by"
+    if rowhash.ALL in was:
+        # It is dated now and was not then: all its rows are compared, and none can be told to be new
+        compared = rows_compared(before, after, taken, store, read)
+        if compared.same:
+            return f"the same rows, in other bytes; now dated by {after.get('date_col')!r}"
+        return f"its rows changed{counted}; the earlier record had no date column to tell new rows by"
+    # The earlier record is dated: its periods are compared, up to its last date
+    compared = rows_compared(before, after, taken, store, read)
+    if compared.undated:
+        return (
+            f"its rows are no longer dated by {before.get('date_col')!r}, so new rows cannot be told from "
+            f"changed ones{counted}"
+        )
+    # The last date said is the later record's, by the same column: else there is none to say
+    same_column = after.get("date_col") == before.get("date_col")
+    one = compared.newer == 1
+    new = f"{compared.newer:,} new row{'' if one else 's'}" + (
+        f", through {after['as_of']}" if same_column and after.get("as_of") else ""
+    )
+    if compared.same:
+        return f"{new}; earlier rows unchanged" if compared.newer else "the same rows, in other bytes"
+    told = f"earlier rows changed: {said(compared, before, 'the earlier one', 'it')}" + (f"; {new}" if compared.newer else "")
+    if compared.index_column:
+        told += (
+            f". It has the column pandas makes of an index with no name ({rowhash.INDEX_COLUMN}), which may be "
+            f"the whole difference"
+        )
+    return told
+
+
+def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = True) -> "rowhash.Compared":
     """A snapshot's file beside a pin's record of rows: the same rows up to the pin's last date, or where not.
 
     Cheapest first. What was found before, for this pin's rows and these
@@ -283,7 +384,10 @@ def rows_compared(pinned: Mapping, theirs: Mapping, taken, store) -> "rowhash.Co
     same rows, and is not read. Only then are the table's rows read, and
     hashed in the periods still to be told (:func:`chartbook.rowhash.hash_in`).
 
+    :param read: Whether the table may be read. With False, what is
+        remembered and what the two records say is all that is used.
     :raises chartbook.rowhash.NotHashed: If the table's rows cannot be hashed.
+    :raises _NotRead: If the table would have to be read, and may not be.
     """
     from chartbook.resolve import _held
 
@@ -304,6 +408,8 @@ def rows_compared(pinned: Mapping, theirs: Mapping, taken, store) -> "rowhash.Co
         # Every period of the pin is in your record as it is, and nothing else up to its last date
         newer = max(0, int(theirs.get("row_count") or 0) - int(pinned.get("row_count") or 0))
         compared = rowhash.Compared([], 0, newer, int(theirs.get("row_count") or 0))
+    elif not read:
+        raise _NotRead()
     else:
         table = rowhash.Table.at(_held(store, dict(theirs), taken.pipeline))
         compared = rowhash.hash_in(table, date_col, rows, as_of, known=known)
