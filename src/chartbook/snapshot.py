@@ -1518,6 +1518,32 @@ def _made_at(taken: Snapshot) -> datetime:
 FUTURE_SLACK_SECONDS = 600
 
 
+def builds_at(found: list, pipeline: Optional[str], commit: str, named: Optional[str] = None, now: Optional[datetime] = None) -> list:
+    """The snapshots that hold a dependency as it was pinned at one commit, for what its lockfile does not: the one its entry names first, then the others of that pipeline at that commit, newest first.
+
+    One definition, for a read of an asset the lockfile does not hold, for
+    the checks that say whether such a read will work, and for ``store
+    gc``, which keeps them.
+
+    :param found: The store's snapshots that owners made
+        (:func:`readable_snapshots`): one a pin made from a clone is no
+        build of the pipeline's owner.
+    :param pipeline: The pipeline the pins came from, by its own ID. With
+        none, nothing is taken: another pipeline's snapshot of the same
+        commit (a repository of several) is not this one's.
+    :param named: When the snapshot the entry names was made. That one is
+        the pin itself, and is taken whatever its date; any other dated
+        after now is not, so that a record written to win is never the
+        newest.
+    """
+    if not isinstance(pipeline, str) or not pipeline or not isinstance(commit, str) or not commit:
+        return []
+    at = [taken for taken in found if taken.commit == commit and taken.pipeline == pipeline]
+    exact = [taken for taken in at if isinstance(named, str) and taken.same_moment(commit, named)]
+    others = [taken for taken in at if not any(taken is one for one in exact) and not made_in_the_future(taken, now)]
+    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path)), reverse=True)
+
+
 def made_in_the_future(taken: Snapshot, now: Optional[datetime] = None) -> bool:
     """Whether a snapshot says it was made later than now: a clock far ahead, or a record written to win.
 
@@ -1704,15 +1730,12 @@ def plan_removals(
     noted = noted or {}
     # A lockfile may name a snapshot this store does not have: its author's,
     # where each person builds the other pipeline themselves. What is read
-    # of it is then read from a snapshot here of that commit, the newest of
-    # each pipeline: that one stands in, and is kept as the named one would be
+    # of it is then read from the snapshots here of that commit: the newest
+    # that holds what is asked for, which need not be the newest of them
+    # (builds_at). They stand in, each of them, and are kept as the named one would be
     here = {(taken.commit, taken.made_at) for taken in every}
     absent = {commit for commit, made_at in set(pinned) | set(noted) if (commit, made_at) not in here}
-    standing: dict = {}
-    for taken in every:
-        if taken.commit in absent and not made_in_the_future(taken, now):
-            standing[(taken.pipeline, taken.subdirectory, taken.commit)] = taken
-    by_standing = {id(taken) for taken in standing.values()}
+    by_standing = {id(taken) for taken in every if taken.commit in absent and not made_in_the_future(taken, now)}
     by_label = _holding_labelled(every, labelled or {})
     # An asset marked `keep = true` keeps every version of its bytes: for
     # each, the newest snapshot of the pipeline holding it, as a label keeps

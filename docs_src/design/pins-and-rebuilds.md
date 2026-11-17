@@ -138,31 +138,42 @@ What was left open here, and how it is built. *Proposed by Claude, 2026-11-16:*
   passes on it and says so, and the first command that writes the lockfile (`pin`, `update`,
   `run`, a first read that pins) writes it again in the new form and says so, once. The pin does
   not move. This is what lets a student's check pass on the class report's lockfile as it is,
-  before the report is pinned again (step 8). While the file is still in the old form, what it
-  names of a chart is not let go: a read falls back on those bytes where the store has no
-  snapshot to read the chart from, and `store gc` keeps them. One case does move: a dependency
-  that makes only charts, in a lockfile so old that its entry names no snapshot, has nothing
-  left that pins it, and the next `pin` pins it as a first pin would, and says so.
+  before the report is pinned again (step 8).
+- **Writing it again never takes away a read.** An old record of a chart is let go wherever a
+  snapshot in the store holds the chart to read it from (the one the lockfile names, or a build
+  of yours of that commit), and wherever the store does not have the record's bytes, there being
+  nothing to keep. That is every team with a shared store and every student, so the file comes
+  out the same on each of their machines. Where the store has the bytes and no such snapshot (a
+  pin made before pins named snapshots; a store whose record of the snapshot is gone), the
+  record is all that is left to read the chart by: it stays in the lockfile, a pin as it was,
+  the check counts it, and `store gc` keeps its bytes. `chartbook update` lets it go, since the
+  snapshot it moves to names what it holds. (As first built, the record was dropped whatever the
+  store had; a review found that the first `chartbook run` after upgrading could then make a
+  chart unreadable, and `store gc` remove the only copy.)
 - **A dependency none of whose assets is in the lockfile** (one that makes only charts) is pinned
   by its entry, which names its snapshot by commit and time. `pin` does not move it, `store gc`
-  keeps that snapshot, and the check passes when the store has a snapshot of that commit to read
-  from, and says why not when it has none.
-- **Which snapshot is "your own build".** Of the pipeline the pin came from, by its own ID, and
-  never another pipeline's of the same commit; made by its owner's `chartbook snapshot`; not
-  dated after now; the newest such. `store gc` keeps it for as long as a lockfile names a
-  snapshot of its commit that the store does not have.
-- **A dependency pinned from its repository** (`git`) has no snapshot. What the lockfile does not
-  hold of it is read from ChartBook's own copy of the repository at the pinned commit, where
-  `chartbook pin` fetched it and `chartbook run` built it, and nothing of it goes in the store.
-  On a machine that has not fetched that commit the read stops and says `chartbook pin` fetches
-  it. (As first built, a pin copied such an asset into the store each time; a review found that
-  it then failed in a store one may only read, and that `store gc` could clear the copy.)
+  keeps that snapshot, and the check passes when the store has a snapshot to read from, and says
+  why not when it has none.
+- **Which snapshots are "your own build".** Those of the pipeline the pin came from, by its own
+  ID, and never another pipeline's of the same commit; at the commit the lockfile names; made by
+  its owner's `chartbook snapshot`; not dated after now. An asset is read from the newest of them
+  that holds it. The one the lockfile names is the pin itself, and is read first whatever its
+  date. The check, `chartbook check` and a read all ask the same question of the same snapshots,
+  and `store gc` keeps every one of them for as long as a lockfile names a snapshot of that
+  commit that the store does not have.
+- **A dependency pinned from its repository** (`git`) **is pinned whole, as it was before:**
+  every asset of it is in the lockfile, charts and notebooks too, and `lock = true` changes
+  nothing for it. Its bytes are its commit's, the same for everyone, so a pin of them is not
+  what failed for the class; it has no snapshot to read a chart from; and CI reads it from the
+  store with no copy of the repository. (Twice built otherwise and twice taken back after a
+  review: copied into the store by each pin, which failed in a store one may only read; then
+  read from ChartBook's own clone, which a machine that never fetched does not have.)
 - **What `pin` and `update` say of what is not in the lockfile:** how many, by kind; one that is
   not built, as for any asset; one its owner no longer declares, on an update.
 
-What you see, as built. Each block is from a run on 2026-11-16 against a copy of the class
-report and of its six upstreams' snapshots, in a scratch store; long lines are wrapped here. A
-first pin:
+What you see, as built. Each block is from a run against a copy of the class report's lockfile
+and of its six upstreams' snapshots, in a scratch store (the first on 2026-11-16, the rest again
+on 2026-11-17); long lines are wrapped here. A first pin:
 
 ```text
 $ chartbook pin
@@ -187,28 +198,29 @@ ftsfr/corp_bond_returns: 2 already pinned
 ftsfr/fed_yield_curve: 1 already pinned
 (four more)
 chartbook.lock was in an earlier form, which pinned every asset. It is written again without its
-10 charts and 7 notebooks: each build draws them anew, so they are read from the snapshot the
-lockfile names, and not pinned.
+10 charts and 7 notebooks: they are not pinned, and are read from the snapshot the lockfile
+names, or from your own build of that commit where the store does not have that snapshot.
 Wrote chartbook.lock.
 ```
 
-The lockfile then holds 17 records, all dataframes, and no pin has moved. A read of a chart when
-the store has no snapshot of that commit:
+The lockfile then holds 17 records, all dataframes; no pin has moved; a second `chartbook pin`
+says `chartbook.lock is unchanged`; and a chart is read from the snapshot the lockfile names. A
+read of a chart when the store has no snapshot of that commit:
 
 ```text
 $ chartbook path ftsfr/fed_yield_curve:chart/yield_curve_replication
 Error: 'ftsfr/fed_yield_curve:chart/yield_curve_replication' is not in chartbook.lock: a chart is
-drawn anew by every build, so it is read from a snapshot of 'ftsfr/fed_yield_curve' at the commit
-the lockfile names, and not pinned. The store at ~/.chartbook/store has no snapshot of
-ftsfr/fed_yield_curve at 5bb7217. Where a store is shared, wait for its sync. Otherwise build that
-commit yourself: in a clone of https://github.com/ftsfr/fed_yield_curve at 5bb7217, `chartbook run
---snapshot`.
+drawn anew by every build. It is read from a snapshot of ftsfr/fed_yield_curve at 5bb7217, the
+commit the lockfile names, and the store at ~/store has none. Where a store is shared, wait for
+its sync. Otherwise build that commit yourself: in a clone of
+https://github.com/ftsfr/fed_yield_curve, at 5bb7217, `chartbook run --snapshot`.
 ```
 
 What this step does not end: a student's dataframe that came out in other bytes. In the same run,
 a store holding the 05:38 build of `ftsfr/fed_yield_curve` at 5bb7217 and not the 05:46 one the
-lockfile names failed the check on `ftsfr_treas_yield_curve_zero_coupon`, its one dataframe. That is
-what the rows hash and the check below are for (steps 3 to 5).
+lockfile names read that pipeline's chart from the 05:38 build, and failed the check on
+`ftsfr_treas_yield_curve_zero_coupon`, its one dataframe. That is what the rows hash and the check
+below are for (steps 3 to 5).
 
 ## A dataframe's record
 

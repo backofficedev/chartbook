@@ -2496,7 +2496,7 @@ def _echo_pin_report(report):
             # A chart and a notebook for what they are; a note or a plain file for want of its owner's mark
             why = (
                 f"each build draws {'it' if one else 'them'} anew" if set(unlocked) <= {"charts", "notebooks"}
-                else f"{'it is' if one else 'they are'} read from {'its repository' if dependency in report.git else 'its snapshot'}"
+                else f"{'it is' if one else 'they are'} read from its snapshot"
             )
             not_pinned = f"{lock.left_out_said(unlocked)} {'is' if one else 'are'} not pinned: {why}"
             summary = f"{summary}. Its {not_pinned}" if summary else f"its {not_pinned}"
@@ -2568,7 +2568,7 @@ def _echo_pin_report(report):
     shown = display_path(report.lockfile, relative_to=Path.cwd())
     if report.earlier:
         # Said once: the next pin finds it in this form
-        click.echo(lock.written_again_said(shown, report.left_out))
+        click.echo(lock.written_again_said(shown, report.left_out, report.kept_earlier))
     if report.written:
         click.echo(f"Wrote {shown}.")
     elif report.lockfile.exists():
@@ -2659,9 +2659,15 @@ def _echo_frozen_report(step, report):
             f"since no rebuild gives {'its' if one else 'their'} bytes again" if set(report.left_out) <= {"charts", "notebooks"}
             else f"since {'it is' if one else 'they are'} no longer pinned"
         )
+        kept = getattr(report, "kept_earlier", 0)
         click.echo(
             f"{who}{report.lockfile.name} is in an earlier form, which pinned every asset"
             + (f": its {gone} {'is' if one else 'are'} not checked, {why}" if gone else "")
+            + (
+                f"; {kept} record{'' if kept == 1 else 's'} of that kind {'is' if kept == 1 else 'are'} checked "
+                f"all the same, the store having {'its' if kept == 1 else 'their'} bytes and no snapshot that names them"
+                if kept else ""
+            )
             + ". `chartbook pin` writes it again in the new form."
         )
     if not report.problems:
