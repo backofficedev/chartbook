@@ -144,22 +144,21 @@ def _normal(frame):
                 .otherwise(column)
             )
         elif said == "timestamp":
+            # The whole number a time is held as: days for a date, and for a time with a
+            # zone the instant, which is the time in UTC
+            column = column.to_physical().cast(pl.Int64)
             if kind == pl.Date:
-                column = column.cast(pl.Datetime("us"))
-                unit = "us"
+                column, unit = _in_microseconds(frame, place, name, column, 86_400_000_000), "us"
             else:
-                if kind.time_zone:
-                    column = column.dt.convert_time_zone("UTC").dt.replace_time_zone(None)
                 unit = kind.time_unit
                 if unit == "ms":
-                    column, unit = column.cast(pl.Datetime("us")), "us"
-            column = column.cast(pl.Int64)
+                    column, unit = _in_microseconds(frame, place, name, column, 1000), "us"
             units[name] = unit
         elif said == "duration":
             unit = kind.time_unit
+            column = column.to_physical().cast(pl.Int64)
             if unit == "ms":
-                column, unit = column.cast(pl.Duration("us")), "us"
-            column = column.cast(pl.Int64)
+                column, unit = _in_microseconds(frame, place, name, column, 1000), "us"
             units[name] = unit
         elif said == "time":
             column = column.cast(pl.Int64)
@@ -180,6 +179,26 @@ def _normal(frame):
         if frame.get_column(held).null_count() == frame.height:
             kinds[name] = "null"
     return frame, kinds, units, where
+
+
+def _in_microseconds(frame, place: int, name: str, whole, each: int):
+    """A column of days or of milliseconds, as whole numbers, in microseconds.
+
+    Worked out here and not by a cast, and one past what 64 bits of
+    microseconds hold is refused here: what a cast does with such a value
+    is not one thing from one polars to the next (one stops, one panics,
+    one wraps it round without a word), and a hash has to be.
+
+    :raises NotHashed: If a value is past what microseconds hold.
+    """
+    held = frame.to_series(place).to_physical()
+    least, most = held.min(), held.max()
+    reach = (2**63 - 1) // each
+    if least is not None and (least < -reach or most > reach):
+        raise NotHashed(
+            f"its columns cannot be put in one form: column {name!r} has a time past what 64 bits of microseconds hold"
+        )
+    return whole * each
 
 
 def _names(names: Iterable[str]) -> list:
