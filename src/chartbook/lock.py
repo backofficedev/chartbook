@@ -1858,8 +1858,15 @@ def build_it_said(entry: Optional[dict]) -> str:
     commit = location.get("commit")
     if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not commit:
         return ""
-    # Named by its ID, it may be one folder of a repository of several
-    of = f", in the folder of {location['pipeline']}" if isinstance(location.get("pipeline"), str) and location["pipeline"] else ""
+    # Named by its ID, it may be one folder of a repository of several: said, unless the
+    # repository is named as the pipeline is, and so is its own
+    of = ""
+    pipeline, repository = location.get("pipeline"), location.get("repository")
+    if isinstance(pipeline, str) and pipeline:
+        named = str(repository or "").rstrip("/").rsplit("/", 1)[-1]
+        named = named[:-4] if named.endswith(".git") else named
+        if named != pipeline.rsplit("/", 1)[-1]:
+            of = f", in the folder of {pipeline}"
     if location.get("kind") == "path" and location.get("path"):
         where = f"in {location['path']}"
     elif location.get("repository"):
