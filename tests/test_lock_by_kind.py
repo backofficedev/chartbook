@@ -13,6 +13,8 @@ gives a chart's or a notebook's bytes again.
 """
 
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -205,8 +207,44 @@ class TestWhatAPinHolds:
         assert result.exit_code == 0, result.output
         assert (
             "acme/rates: 3 pinned. Its 1 chart, 1 notebook, 1 note and 1 file are not pinned: "
-            "each build draws them anew" in result.output
+            "they are read from its snapshot" in result.output
         )
+
+    def test_charts_and_notebooks_are_said_for_what_they_are(self, rates, report, store):
+        table = json.loads(json.dumps(UPSTREAM))
+        del table["notes"], table["files"]["raw"]
+        _write_manifest(rates, table)
+        snapshot_dependencies(report, store)
+        result = CliRunner().invoke(main, ["pin", "--project-dir", str(report)])
+        assert "acme/rates: 3 pinned. Its 1 chart and 1 notebook are not pinned: each build draws them anew" in result.output
+
+    def test_one_that_is_not_built_is_said_so(self, rates, report, store):
+        """As any asset is: that it is not in the lockfile does not make it built."""
+        (rates / "_output" / "curve.html").unlink()
+        found = pin_from_snapshots(report, store)
+        statuses = {event.asset.split(":", 1)[1]: event.status for event in found.events if event.asset}
+        assert statuses["chart/curve"] == "not_built" and statuses["notebook/analysis"] == "unlocked"
+        result = CliRunner().invoke(main, ["update", "--project-dir", str(report)])
+        assert "  not built: acme/rates:chart/curve (./_output/curve.html)" in result.output
+
+    def test_update_says_what_its_owner_no_longer_declares(self, rates, pinned, store):
+        table = json.loads(json.dumps(UPSTREAM))
+        del table["notebooks"]
+        _write_manifest(rates, table)
+        found = update_from_snapshots(pinned, store=store)
+        dropped = [event.asset for event in found.events if event.status == "dropped"]
+        assert dropped == ["acme/rates:notebook/analysis"]
+
+    def test_a_snapshot_is_taken_whole_or_not_at_all(self, rates, report, store):
+        """The store has lost a chart's bytes: nothing of that snapshot is pinned, in the lockfile or out of it."""
+        (taken,) = [made.snapshot for made in snapshot_dependencies(report, store)]
+        held = store.files(taken.assets["chart/curve"]["content_hash"]).one.location
+        held.chmod(0o644)
+        held.unlink()
+        found = lock.pin(report, store)
+        locked = lock.read_lock(report)
+        assert [event.status for event in found.problems] == ["lost"]
+        assert locked.assets == {} and not lock.names_a_snapshot(locked.dependencies[0])
 
     def test_one_that_stops_being_locked_leaves_the_lockfile_on_update(self, rates, pinned, store):
         table = json.loads(json.dumps(UPSTREAM))
@@ -274,9 +312,16 @@ class TestReadingWhatIsNotInIt:
         said = str(raised.value)
         (entry,) = lock.read_lock(pinned).dependencies
         assert raised.value.reason == "not_in_store"
-        assert "a chart is drawn anew by every build" in said and "not pinned" in said
-        assert f"has no snapshot of acme/rates at {entry['location']['commit'][:7]}" in said
-        assert "`chartbook snapshot`" in said
+        assert "'acme/rates:chart/curve' is not in " in said and "chartbook.lock: a chart is drawn anew by every build. " in said
+        assert f"It is read from a snapshot of acme/rates at {entry['location']['commit'][:7]}, the commit the lockfile names, and the store at " in said
+        assert f" has none. Where a store is shared, wait for its sync. Otherwise build that commit yourself: in its folder, ../rates, at {entry['location']['commit'][:7]}, `chartbook run --snapshot`." in said
+
+    def test_a_plain_file_is_said_for_what_it_is(self, pinned, work, monkeypatch):
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "empty"))
+        with pytest.raises(AssetNotPinnedError, match="a plain file is pinned only when its owner marks it lock = true"):
+            assets.path("acme/rates:file/raw", project_dir=pinned)
+        with pytest.raises(AssetNotPinnedError, match="a note is pinned only when its owner marks it lock = true"):
+            assets.path("acme/rates:note/method", project_dir=pinned)
 
     def test_a_snapshot_of_another_commit_is_not_read(self, pinned, rates, work, monkeypatch):
         own = FolderStore(work / "student")
@@ -286,8 +331,47 @@ class TestReadingWhatIsNotInIt:
         )
         commit_pipeline(rates)
         snapshot.make(rates, store=own)
-        with pytest.raises(AssetNotPinnedError, match="has no snapshot of acme/rates at"):
+        with pytest.raises(AssetNotPinnedError, match="the commit the lockfile names, and the store at .* has none"):
             assets.path("acme/rates:chart/curve", project_dir=pinned)
+
+    def test_a_snapshot_dated_after_now_is_not_read(self, pinned, rates, work, monkeypatch):
+        """As `pin` never takes one: it would stand for that commit for as long as its date says."""
+        own = FolderStore(work / "student")
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "student"))
+        _write(rates / "_output" / "curve.html", b"today's")
+        snapshot.make(rates, store=own)
+        _write(rates / "_output" / "curve.html", b"dated 2099")
+        snapshot.make(rates, store=own, made_at="2099-01-01T00:00:00.000000Z")
+        assert assets.path("acme/rates:chart/curve", project_dir=pinned).read_bytes() == b"today's"
+
+    def test_never_another_pipelines_snapshot_of_that_commit(self, work, store):
+        """Two pipelines in one repository are at one commit, and each has a chart of one name."""
+        for name in ("rates", "other"):
+            _write_manifest(
+                work / "repo" / name,
+                {"project": {"id": f"acme/{name}"}, "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}}},
+            )
+            _write(work / "repo" / name / "_output" / "curve.html", name.encode())
+        (work / "repo" / ".gitignore").write_text("_output/\n", encoding="utf-8", newline="\n")
+        _git(work / "repo", "init", "--quiet", "-b", "main")
+        _git(work / "repo", "add", "-A")
+        _git(work / "repo", "commit", "--quiet", "-m", "Two pipelines")
+        reader = work / "repo" / "reader"
+        _write_manifest(reader, {"project": {"id": "acme/reader"}, "dependencies": {"rates": {"path": "../rates"}}})
+        snapshot.make(work / "repo" / "rates", store=store)
+        assert not lock.pin(reader, store).problems
+        # A lockfile from before entries said which pipeline their pins came from, on a machine with its own builds
+        path = reader / lock.LOCK_FILE
+        document = _document(reader)
+        del document["records"][0]["dependencies"][0]["pinned_from"]
+        document["records"][0]["dependencies"][0]["snapshot"] = "2026-01-01T00:00:00.000000Z"
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        snapshot.make(work / "repo" / "other", store=store)  # the newer of that commit, and another pipeline's
+        assert assets.path("rates:chart/curve", project_dir=reader).read_bytes() == b"rates"
+        # With no folder of it here to say which pipeline it is, the read stops and says so
+        shutil.rmtree(work / "repo" / "rates")
+        with pytest.raises(AssetNotPinnedError, match="does not say which pipeline that is: `chartbook update rates`"):
+            assets.path("rates:chart/curve", project_dir=reader)
 
     def test_a_name_that_is_no_asset_of_it(self, pinned):
         with pytest.raises(AssetNotPinnedError) as raised:
@@ -434,7 +518,7 @@ class TestALockfileOfVersion1:
         assert result.exit_code == 0, result.output
         assert (
             "chartbook.lock is in an earlier form, which pinned every asset: its 1 chart, 1 notebook, 1 note "
-            "and 2 files are not checked, since no rebuild gives their bytes again. `chartbook pin` writes it "
+            "and 2 files are not checked, since they are no longer pinned. `chartbook pin` writes it "
             "again in the new form." in result.output
         )
         assert "2 pin(s) of 1 dependency, all in the store. Nothing written." in result.output
@@ -445,8 +529,8 @@ class TestALockfileOfVersion1:
         assert result.exit_code == 0, result.output
         assert (
             "chartbook.lock was in an earlier form, which pinned every asset. It is written again without its "
-            "1 chart, 1 notebook, 1 note and 2 files: each build draws them anew, so they are read from the "
-            "snapshot the lockfile names, and not pinned." in result.output
+            "1 chart, 1 notebook, 1 note and 2 files: they are read from the snapshot the lockfile names, and "
+            "not pinned." in result.output
         )
         assert "Wrote " in result.output
         document = _document(pinned)
@@ -531,9 +615,14 @@ class TestAGitDependency:
         assert set(locked.assets) == IN
         assert locked.assets["acme/rates:file/parameters"]["lock"] is True
 
-    def test_what_it_does_not_hold_is_read_from_the_pins_snapshot(self, reader):
-        assert assets.path("acme/rates:chart/curve", project_dir=reader).read_bytes() == b"<html>curve</html>"
+    def test_what_it_does_not_hold_is_read_from_chartbooks_copy_of_the_commit(self, reader, repository, store):
+        chart = assets.path("acme/rates:chart/curve", project_dir=reader)
+        assert chart.read_bytes() == b"<html>curve</html>" and repository not in chart.parents  # the clean copy, never the folder
+        assert Path(os.environ[config.GIT_CACHE_ENV_VAR]) in chart.parents
         assert assets.path("acme/rates:file/raw", project_dir=reader).read_bytes() == b"raw"
+        # And nothing of it is in the store: only what the lockfile holds was put there
+        held = {content_hash for path in store.pinned_snapshot_files() for content_hash in snapshot.read(path).asset_hashes()}
+        assert held == lock.read_lock(reader).hashes()
 
     def test_pinning_again_changes_nothing(self, reader, store):
         before = (reader / lock.LOCK_FILE).read_bytes()
@@ -542,6 +631,278 @@ class TestAGitDependency:
         assert not found.written and (reader / lock.LOCK_FILE).read_bytes() == before
         assert sorted(str(path) for path in store.pinned_snapshot_files()) == records
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
+    def test_pin_writes_nothing_to_a_store_this_user_may_only_read(self, reader, store):
+        """A team's store: everything is pinned, and what the lockfile does not hold needs nothing of the store."""
+        folders = [store.root, *(path for path in store.root.rglob("*") if path.is_dir())]
+        for folder in folders:
+            folder.chmod(0o555)
+        try:
+            result = CliRunner().invoke(main, ["pin", "--project-dir", str(reader)])
+        finally:
+            for folder in folders:
+                folder.chmod(0o755)
+        assert result.exit_code == 0, result.output
+        assert "acme/rates: 3 already pinned. Its 1 chart, 1 notebook, 1 note and 1 file are not pinned: they are read from its repository" in result.output
+
+    def test_one_the_repository_does_not_commit_is_said_to_be_not_built(self, work, repository, store):
+        _git(repository, "rm", "--quiet", "_output/curve.html")
+        _git(repository, "commit", "--quiet", "-m", "The chart is built, not committed")
+        directory = work / "second"
+        _write_manifest(directory, {"project": {"id": "acme/second"}, "dependencies": {"acme/rates": {"git": str(repository)}}})
+        found = lock.pin(directory, store)
+        assert {event.asset: event.status for event in found.events if event.asset}["acme/rates:chart/curve"] == "not_built"
+        with pytest.raises(AssetNotPinnedError) as raised:
+            assets.path("acme/rates:chart/curve", project_dir=directory)
+        assert raised.value.reason == "not_built"
+        assert "declares it, and its repository at " in str(raised.value) and "`chartbook run` in " in str(raised.value)
+
+    def test_a_name_that_is_no_asset_of_it(self, reader):
+        with pytest.raises(AssetNotPinnedError, match="had no chart named 'curv' when it was pinned. Did you mean 'curve'"):
+            assets.path("acme/rates:chart/curv", project_dir=reader)
+
+    def test_with_no_copy_of_the_commit_on_this_machine(self, reader, work, monkeypatch):
+        """Another machine, with the same lockfile and store: a read never fetches, and says what does."""
+        monkeypatch.setenv(config.GIT_CACHE_ENV_VAR, str(work / "another-machine"))
+        with pytest.raises(AssetNotPinnedError) as raised:
+            assets.path("acme/rates:chart/curve", project_dir=reader)
+        assert raised.value.reason == "not_fetched" and "`chartbook pin` in " in str(raised.value)
+        assert assets.path("acme/rates:treasury", project_dir=reader).read_bytes() == b"rows"  # what is pinned is in the store
+
+    def test_one_that_reaches_outside_the_repository_is_a_problem_and_is_not_read(self, work, store):
+        outside = work / "secret.html"
+        outside.write_bytes(b"not the repository's")
+        directory = work / "reaching"
+        _write_manifest(
+            directory,
+            {
+                "project": {"id": "acme/reaching"},
+                "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
+                "charts": {"curve": {"path": "../secret.html", "docs": "d"}},
+            },
+        )
+        _write(directory / "_data" / "treasury.parquet", b"rows")
+        _git(directory, "init", "--quiet", "-b", "main")
+        _git(directory, "add", "-A")
+        _git(directory, "commit", "--quiet", "-m", "A chart outside")
+        reader = work / "reads-it"
+        _write_manifest(reader, {"project": {"id": "acme/reads"}, "dependencies": {"acme/reaching": {"git": str(directory)}}})
+        found = lock.pin(reader, store)
+        assert [(event.status, event.asset) for event in found.problems] == [("outside", "acme/reaching:chart/curve")]
+        with pytest.raises(AssetNotPinnedError) as raised:
+            assets.path("acme/reaching:chart/curve", project_dir=reader)
+        assert raised.value.reason in ("outside", "not_built")
+        for path in store.root.rglob("*"):
+            assert not path.is_file() or path.read_bytes() != b"not the repository's"
+
+    def test_one_of_charts_only_is_pinned_by_its_commit(self, work, store):
+        directory = work / "charts-only"
+        _write_manifest(directory, {"project": {"id": "acme/charts"}, "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}}})
+        _write(directory / "_output" / "curve.html", b"one")
+        _git(directory, "init", "--quiet", "-b", "main")
+        _git(directory, "add", "-A")
+        _git(directory, "commit", "--quiet", "-m", "A chart")
+        reader = work / "reads-charts"
+        _write_manifest(reader, {"project": {"id": "acme/reads"}, "dependencies": {"acme/charts": {"git": str(directory)}}})
+        assert not lock.pin(reader, store).problems
+        locked = lock.read_lock(reader)
+        assert locked.assets == {} and lock._at_a_commit(locked.dependencies[0]) and lock.holds_a_pin(locked.dependencies[0], {})
+        assert lock.verify(reader, store).problems == []
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"one"
+        _write(directory / "_output" / "curve.html", b"two")
+        _git(directory, "commit", "--quiet", "-am", "Another")
+        before = (reader / lock.LOCK_FILE).read_bytes()
+        assert not lock.pin(reader, store).written and (reader / lock.LOCK_FILE).read_bytes() == before
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"one"
+        lock.update(reader, store=store)
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"two"
+
     def test_the_check_passes(self, reader, store):
         checked = lock.verify(reader, store)
         assert checked.problems == [] and checked.pins == 3
+
+
+class TestAnOldLockfileInAStoreWithNoRecordOfItsSnapshot:
+    """A store migrated from ChartBook 0.2: a snapshot's record cleared, its bytes kept because a lockfile named them. Nothing fails for the lockfile's age."""
+
+    @pytest.fixture
+    def migrated(self, pinned, store):
+        from tests.fixtures import clear_keeping_its_bytes
+
+        _as_version_1(pinned, store)
+        (taken,) = snapshot.all_snapshots(store)
+        clear_keeping_its_bytes(store, taken)
+        assert snapshot.all_snapshots(store) == []
+        return pinned
+
+    def test_a_chart_is_still_read_by_what_the_old_lockfile_names(self, migrated):
+        assert assets.path("acme/rates:chart/curve", project_dir=migrated).read_bytes() == b"<html>curve</html>"
+        assert assets.path("acme/rates:file/raw", project_dir=migrated).read_bytes() == b"raw"
+
+    def test_gc_keeps_what_it_names_while_it_is_the_old_form(self, migrated, store):
+        assert lock.verify(migrated, store, note=True).problems == []
+        plan = lock.plan_gc(store, keep_days=0, recent_seconds=0)
+        assert plan.delete == [] and len(lock.read_lock(migrated).earlier) == 5
+
+    def test_what_it_names_is_no_pin(self, migrated, store):
+        locked = lock.read_lock(migrated)
+        assert set(locked.earlier) == {f"acme/rates:{name}" for name in OUT} | {"acme/rates:file/parameters"}
+        assert not set(locked.earlier) & set(locked.assets)
+        assert lock.verify(migrated, store).pins == 2
+
+
+class TestAFirstReadThroughAnOldLockfile:
+
+    def test_it_says_that_it_wrote_the_lockfile_again(self, pinned, rates, work, store, capsys):
+        """A newly declared dependency is pinned by its first read, which writes the lockfile: in the new form, and said."""
+        _as_version_1(pinned, store)
+        other = work / "other"
+        _write_manifest(other, {"project": {"id": "acme/other"}, "dataframes": {"gdp": {"path": "./_data/gdp.parquet", "docs": "d"}}})
+        _write(other / "_data" / "gdp.parquet", b"gdp")
+        commit_pipeline(other)
+        snapshot.make(other, store=store)
+        _write_manifest(
+            pinned,
+            {"project": {"id": "acme/report"}, "dependencies": {"acme/rates": {"path": "../rates"}, "acme/other": {"path": "../other"}}},
+        )
+        assert assets.path("acme/other:gdp", project_dir=pinned).read_bytes() == b"gdp"
+        said = capsys.readouterr().err
+        assert "acme/other: pinned to its newest snapshot" in said
+        assert (
+            "chartbook.lock was in an earlier form, which pinned every asset. It is written again without its "
+            "1 chart, 1 notebook, 1 note and 2 files: they are read from the snapshot the lockfile names, and not pinned." in said
+        )
+        assert _document(pinned)["schema"] == lock.SCHEMA
+
+
+class TestWhatKeepsASnapshotThatStandsIn:
+
+    def test_gc_keeps_your_build_of_a_commit_whose_pinned_snapshot_you_do_not_have(self, pinned, rates, work, monkeypatch):
+        """The lockfile names its author's snapshot. Yours of that commit is what is read, and is not the newest of its pipeline for long."""
+        own = FolderStore(work / "student")
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "student"))
+        _write(rates / "_output" / "curve.html", b"<html>the student's</html>")
+        standing = snapshot.make(rates, store=own, made_at="2026-01-05T00:00:00.000000Z").snapshot
+        assert assets.path("acme/rates:chart/curve", project_dir=pinned).read_bytes() == b"<html>the student's</html>"  # leaves the note
+        (rates / "chartbook.toml").write_text(
+            (rates / "chartbook.toml").read_text(encoding="utf-8") + "\n# a later commit\n", encoding="utf-8", newline="\n"
+        )
+        commit_pipeline(rates)
+        newest = snapshot.make(rates, store=own).snapshot
+        plan = lock.plan_gc(own, keep_days=0, recent_seconds=0)
+        kept = {taken.made_at: why for taken, why in plan.snapshots_kept}
+        assert set(kept) == {standing.made_at, newest.made_at}
+        assert kept[standing.made_at] == "a lockfile pins a snapshot of its commit that this store does not have, and it stands in"
+        lock.run_gc(plan, own)
+        assert assets.path("acme/rates:chart/curve", project_dir=pinned).read_bytes() == b"<html>the student's</html>"
+
+    def test_a_reader_of_charts_only_leaves_its_note(self, work, store):
+        """A machine that only reads: the note names the snapshot, though the lockfile names no bytes."""
+        charts = work / "charts"
+        _write_manifest(charts, {"project": {"id": "acme/charts"}, "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}}})
+        _write(charts / "_output" / "curve.html", b"one")
+        reader = work / "reader"
+        _write_manifest(reader, {"project": {"id": "acme/reader"}, "dependencies": {"acme/charts": {"path": "../charts"}}})
+        pin_from_snapshots(reader, store)
+        for note in store.roots():
+            store.remove_root(note.lockfile, machine=note.machine)
+        assert store.roots() == []
+        wrote, why = lock.note_this_machine(reader / lock.LOCK_FILE, lock.read_lock(reader), store)
+        assert wrote and not why
+        (note,) = store.roots()
+        assert not note.hashes and len(note.snapshots) == 1
+
+
+class TestTheCheckOfADependencyOfChartsOnly:
+
+    @pytest.fixture
+    def reader(self, work, store):
+        charts = work / "charts"
+        _write_manifest(charts, {"project": {"id": "acme/charts"}, "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}}})
+        _write(charts / "_output" / "curve.html", b"one")
+        reader = work / "reader"
+        _write_manifest(reader, {"project": {"id": "acme/reader"}, "dependencies": {"acme/charts": {"path": "../charts"}}})
+        pin_from_snapshots(reader, store)
+        return reader
+
+    def test_it_says_how_it_is_pinned(self, reader):
+        result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(reader)])
+        assert result.exit_code == 0, result.output
+        assert (
+            "0 pin(s) of 1 dependency, all in the store; 1 dependency is pinned by its snapshot alone, which the "
+            "store has a build of. Nothing written." in result.output
+        )
+
+    def test_a_store_with_no_snapshot_of_that_commit_cannot_build_it(self, reader, work, monkeypatch):
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "empty"))
+        (problem,) = lock.verify(reader, FolderStore(work / "empty")).problems
+        assert "with none of its assets in the lockfile" in problem.message and "has no snapshot of it at that commit" in problem.message
+        assert "`chartbook run --snapshot`" in problem.message
+
+    def test_chartbook_check_does_not_say_it_builds_without_its_folder(self, reader, work, monkeypatch):
+        from chartbook import check
+
+        entry = {"path": "../charts", "_resolved_path": str(work / "nowhere")}
+        said, builds = check._not_on_this_machine(reader, "acme/charts", entry, work / "nowhere")
+        assert builds and "so this pipeline builds here" in said
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "empty"))
+        (work / "empty").mkdir()
+        said, builds = check._not_on_this_machine(reader, "acme/charts", entry, work / "nowhere")
+        assert not builds and "the store does not have all that the lockfile pins of it" in said
+
+    def test_lineage_through_a_snapshot_that_was_pinned_to_it(self, reader, store, work):
+        """The reader's own snapshot records that it was pinned to a snapshot of charts only: the walk goes through it."""
+        _write_manifest(
+            reader,
+            {
+                "project": {"id": "acme/reader"}, "dependencies": {"acme/charts": {"path": "../charts"}},
+                "dataframes": {"table": {"path": "./_data/table.parquet", "docs": "d"}},
+            },
+        )
+        _write(reader / "_data" / "table.parquet", b"table")
+        commit_pipeline(reader)
+        _git(reader, "add", "-f", "chartbook.lock")
+        _git(reader, "commit", "--quiet", "-m", "Pin")
+        made = snapshot.make(reader, store=store).snapshot
+        assert made.inputs[0]["id"] == "acme/charts" and "pinned_hash" not in made.inputs[0]
+        above = work / "above"
+        _write_manifest(above, {"project": {"id": "acme/above"}, "dependencies": {"acme/reader": {"path": "../reader"}}})
+        lock.pin(above, store)
+        walked = lineage.walk(above, store)
+        (node,) = walked.root.children
+        (inner,) = node.children
+        assert (inner.kind, inner.pipeline) == ("snapshot", "acme/charts") and walked.gaps() == []
+
+
+class TestADependencyNamedByItsIdAndGotFromItsRepository:
+    """`"acme/charts" = {}`, with a default host and no snapshot in the store: cloned, and pinned by its commit."""
+
+    def test_pin_does_not_move_one_of_charts_only_when_the_store_gets_a_snapshot(self, work, store, monkeypatch):
+        monkeypatch.setattr(config, "get_global_config_dir", lambda: work / "user" / ".chartbook")
+        settings = config.get_global_settings_path()
+        assert not settings.is_relative_to(Path.home() / ".chartbook")
+        settings.parent.mkdir(parents=True)
+        settings.write_text(tomli_w.dumps({"resolve": {"default_host": str(work / "host")}}), encoding="utf-8", newline="\n")
+        repository = work / "host" / "acme" / "charts"
+        _write_manifest(repository, {"project": {"id": "acme/charts"}, "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}}})
+        _write(repository / "_output" / "curve.html", b"one")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A chart")
+        reader = work / "reader"
+        _write_manifest(reader, {"project": {"id": "acme/reader"}, "dependencies": {"acme/charts": {}}})
+        assert not lock.pin(reader, store).problems
+        (entry,) = lock.read_lock(reader).dependencies
+        assert entry["location"]["kind"] == "git" and lock.read_lock(reader).assets == {}
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"one"
+        # Its owner snapshots a newer commit into the store: `pin` stays where it is, and `update` looks again
+        _write(repository / "_output" / "curve.html", b"two")
+        _git(repository, "commit", "--quiet", "-am", "Another")
+        snapshot.make(repository, store=store)
+        before = (reader / lock.LOCK_FILE).read_bytes()
+        assert not lock.pin(reader, store).written and (reader / lock.LOCK_FILE).read_bytes() == before
+        assert lock.would_pin(reader, store) is None
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"one"
+        lock.update(reader, store=store)
+        assert lock.read_lock(reader).dependencies[0]["location"]["kind"] == "store"
+        assert assets.path("acme/charts:chart/curve", project_dir=reader).read_bytes() == b"two"
