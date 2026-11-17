@@ -611,13 +611,17 @@ paragraph above. There are no `Build` records yet. And the part that freezes any
 missing from it: one record for each asset of each dependency, with its `content_hash`.
 
 *(Changed 2026-11-16, `chartbook/lock/v2`, as built; decided by the maintainer on 2026-11-15,
-{doc}`pins-and-rebuilds`.)* A lockfile holds a record only for an asset that code reads: a
-dataframe and a model always, and a chart, a notebook, a note or a file only when its owner's
-manifest says `lock = true`, which its record then carries as `"lock": true`. Any other asset is
-read from the snapshot its dependency's entry names (`location.commit` and `snapshot`), and that
-entry is the whole pin of a dependency none of whose assets is in the lockfile. A lockfile of
-version 1, which held a record for every asset, is read as version 2 would have written it, and
-written again as version 2 by the next command that writes the lockfile.
+{doc}`pins-and-rebuilds`.)* Of a dependency pinned from a snapshot (`location.kind` `store` or
+`path`), a lockfile holds a record only for an asset that code reads: a dataframe and a model
+always, and a chart, a notebook, a note or a file only when its owner's manifest says
+`lock = true`, which its record then carries as `"lock": true`. Any other asset is read from the
+snapshot its dependency's entry names (`location.commit` and `snapshot`), and that entry is the
+whole pin of a dependency none of whose assets is in the lockfile. Of a dependency pinned from
+its repository (`location.kind` `git`) it holds a record for every asset, as version 1 did. A
+lockfile of version 1, which held a record for every asset of every dependency, is read as
+version 2 would have written it, and written again as version 2 by the next command that writes
+the lockfile; a version 1 record that version 2 would leave out stays in it, without `"lock"`,
+where the store has its bytes and no snapshot to read the asset from.
 
 ```json
 {
