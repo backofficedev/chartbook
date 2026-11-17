@@ -51,8 +51,48 @@ def _all_scratch(asked: dict, under: Path) -> None:
             assert value and Path(value).resolve().is_relative_to(under), (what, value)
 
 
+@pytest.fixture(scope="session")
+def asked_by_a_fixture_of_the_run():
+    return _asked_now()
+
+
+@pytest.fixture(scope="module")
+def asked_by_a_fixture_of_the_module():
+    return _asked_now()
+
+
+def test_a_fixture_of_the_run_is_kept_out(asked_by_a_fixture_of_the_run, tmp_path_factory):
+    """The first test here, so that its fixture is set up before anything of this module's is: it has the run's folders."""
+    _all_scratch(asked_by_a_fixture_of_the_run, tmp_path_factory.getbasetemp())
+
+
+#: Each test's own scratch folder here, in the order the tests ran in this process
+_SCRATCH_OF_EARLIER_TESTS: list = []
+
+
 def test_a_test_is_given_scratch_folders(tmp_path_factory):
     _all_scratch(_asked_now(), tmp_path_factory.getbasetemp())
+    # Something in its store, for the test after to find gone
+    store = Path(os.environ["CHARTBOOK_STORE"])
+    (store / "objects").mkdir(parents=True)
+    (store / "objects" / "one").write_bytes(b"of this test")
+    _SCRATCH_OF_EARLIER_TESTS.append(store.parent)
+
+
+def test_its_scratch_folders_go_with_it():
+    """Every test's stores and sites kept to the end of a run filled a runner's disk once."""
+    assert not any(folder.exists() for folder in _SCRATCH_OF_EARLIER_TESTS), _SCRATCH_OF_EARLIER_TESTS
+
+
+def test_the_places_named_are_not_the_default_ones(monkeypatch):
+    """A test of where the default is clears the variables: it is then given the user's folder, which is scratch too, and another one."""
+    named = {what: _asked_now()[what] for what in ("the store", "the cache", "the git cache")}
+    for name in ("CHARTBOOK_STORE", "CHARTBOOK_CACHE", "CHARTBOOK_GIT_CACHE"):
+        monkeypatch.delenv(name)
+    home = config.get_global_config_dir()
+    default = {"the store": config.get_store_path(), "the cache": config.get_cache_path(), "the git cache": config.get_git_cache_path()}
+    for what, path in default.items():
+        assert path.is_relative_to(home) and path != named[what] and not named[what].is_relative_to(home), (what, path, named[what])
 
 
 def test_one_that_undoes_its_patches_is_kept_out_all_the_same(monkeypatch, tmp_path, tmp_path_factory):
@@ -85,19 +125,40 @@ def test_rows_hashed_after_an_undo_have_their_scratch_files_in_the_scratch_cache
         shutil.rmtree(folder, ignore_errors=True)
 
 
-class TestAFixtureOfAClass:
+class TestAFixtureOfAWiderScope:
     """Set up before the test's own scratch folders are: it has the run's."""
 
     @pytest.fixture(scope="class")
-    def asked_while_set_up(self):
+    def asked_by_a_fixture_of_the_class(self):
         return _asked_now()
 
-    def test_it_is_kept_out_too(self, asked_while_set_up, tmp_path_factory):
-        _all_scratch(asked_while_set_up, tmp_path_factory.getbasetemp())
+    def test_one_of_a_class_is_kept_out_too(self, asked_by_a_fixture_of_the_class, tmp_path_factory):
+        _all_scratch(asked_by_a_fixture_of_the_class, tmp_path_factory.getbasetemp())
 
-    def test_and_the_test_has_folders_of_its_own(self, asked_while_set_up):
+    def test_and_one_of_a_module(self, asked_by_a_fixture_of_the_module, tmp_path_factory):
+        _all_scratch(asked_by_a_fixture_of_the_module, tmp_path_factory.getbasetemp())
+
+    def test_the_test_has_folders_of_its_own(self, asked_by_a_fixture_of_the_class):
         mine = _asked_now()
-        assert all(mine[name] != asked_while_set_up[name] for name in FOLDERS)
+        assert all(mine[name] != asked_by_a_fixture_of_the_class[name] for name in FOLDERS)
+
+    def test_what_a_test_set_is_gone_between_tests(self, monkeypatch, tmp_path):
+        """What the next class's fixture is given: see below."""
+        monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "of-one-test"))
+        monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache-of-one-test"))
+        monkeypatch.setenv("CI", "true")
+
+
+class TestBetweenTests:
+    """Between two tests the run's folders stand, never an earlier test's: its own are removed with it."""
+
+    @pytest.fixture(scope="class")
+    def asked_between_tests(self):
+        return _asked_now()
+
+    def test_they_are_the_runs(self, asked_between_tests, asked_by_a_fixture_of_the_run, tmp_path_factory):
+        assert asked_between_tests == asked_by_a_fixture_of_the_run
+        _all_scratch(asked_between_tests, tmp_path_factory.getbasetemp())
 
 
 class TestWhatKeepsThemOut:

@@ -165,18 +165,22 @@ def _text(path: Path, rows: int = 1_500_000) -> int:
 class TestTablesMadeHere:
     """Set by the period: a table several times a period's size, in one row group, is never held whole."""
 
-    @pytest.mark.parametrize("make,date_col", [(_wide, "date"), (_text, "timestamp_utc")], ids=["wide floats", "text"])
-    def test_a_table_in_one_row_group(self, tmp_path, make, date_col):
+    @pytest.mark.parametrize(
+        "make,date_col,most", [(_wide, "date", LIMIT), (_text, "timestamp_utc", 1024**3)], ids=["wide floats", "text"]
+    )
+    def test_a_table_in_one_row_group(self, tmp_path, make, date_col, most):
         size = make(tmp_path / "table.parquet")
         assert size > 300 * 1024**2
         # Periods of 16 MB, so that the table is twenty of them: what is held is a period and a batch
-        said = _hashed_under(LIMIT, tmp_path / "table.parquet", date_col, tmp_path, period=16 * 1024**2)
+        said = _hashed_under(most, tmp_path / "table.parquet", date_col, tmp_path, period=16 * 1024**2)
         assert said["same"] and said["periods"] == 48
-        # Held to the limit, as every table here is. It was held to 900 MB, a figure of the libraries
-        # and not of what is read at once: the floats take 0.74 GiB with pyarrow 26 and polars 2.1, and
-        # 0.85 to 0.98 GiB with pyarrow 25 and polars 2.0 (what Python 3.10 is given), on macOS. What is
-        # read at once is held to the limit by the tables written to take the most of it, below
-        assert said["peak"] < LIMIT, f"{said['peak'] / 1e6:.0f} MB"
+        # The text is held to a gigabyte, which tells a reader that takes the row group whole from
+        # this one, with the libraries of the day and the ones before (pyarrow 26 and polars 2.1,
+        # pyarrow 25 and polars 2.0, on macOS): 0.45 to 0.75 GiB as it is read, 1.2 to 1.4 whole.
+        # The floats are held to the limit of every table. They were held to 900 MB, a figure of
+        # the libraries and not of the reader: 0.74 to 0.89 GiB with the first, 0.85 to 1.01 with
+        # the second, and 0.94 and 1.18 with the row group whole, too near to tell the two apart
+        assert said["peak"] < most, f"{said['peak'] / 1e6:.0f} MB"
 
     @pytest.mark.parametrize("make,date_col", [(_wide, "date"), (_text, "timestamp_utc")], ids=["wide floats", "text"])
     def test_at_the_size_of_a_period_as_it_is(self, tmp_path, make, date_col):
