@@ -81,6 +81,11 @@ class Node:
         checked: How the snapshot's lineage was checked when it was made,
             as its record says: ``pins``, ``deep``, or empty for one made
             before snapshots checked their pins.
+        stands_in: Whether the snapshot is one of yours standing in for the
+            one the lockfile names, which the store does not have: of the
+            same pipeline at the same commit, and holding every pin of it,
+            by the same bytes or by the same rows
+            (:mod:`chartbook.standins`).
     """
 
     label: str
@@ -94,6 +99,7 @@ class Node:
     checked: str = ""
     tags: list = field(default_factory=list)
     hashes: set = field(default_factory=set, repr=False)
+    stands_in: bool = False
 
     def to_dict(self) -> dict:
         """The node and everything under it, as JSON can hold it."""
@@ -103,6 +109,8 @@ class Node:
                 shown[key] = getattr(self, key)
         if self.seen:
             shown["seen"] = True
+        if self.stands_in:
+            shown["stands_in"] = True
         if self.kind == "snapshot":
             shown["checked"] = self.checked or None
             shown["tags"] = list(self.tags)
@@ -241,6 +249,16 @@ class _Walker:
             taken for taken in at
             if all(taken.content().get(snapshot.local_name(record)) == record["content_hash"] for record in plain)
         ]
+        if not held and not at:
+            # The snapshot the lockfile names is not here. One of yours of
+            # that commit that holds every pin of it stands in: what was
+            # read was read from it
+            from chartbook import standins
+
+            stood = standins.find(entry, hashed, self.store, self.found)
+            if stood.stands_in and all(met.held for met in stood.met.values()):
+                node.stands_in = True
+                return self._up(node, stood.snapshot, depth=1, labels=labels)
         if not held:
             node.kind = "missing" if not at else "mismatch"
             return node

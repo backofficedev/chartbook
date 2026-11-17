@@ -1979,7 +1979,10 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     that each label pinned names a version some snapshot of the pipeline
     holds; so that a lockfile changed by hand, or brought from another
     store, is caught. (A ``git`` dependency is pinned from its clone, not a
-    snapshot, and its hashes are checked only to be in the store.)
+    snapshot, and its hashes are checked only to be in the store.) Where
+    the store does not have the snapshot a pin names, one of yours of that
+    commit that holds every pin of it stands in, by the same bytes or by
+    the same rows (:mod:`chartbook.standins`): what was read was read from it.
 
     Nothing that could not have been read is a gap: an asset the other
     pipeline had not built when it was pinned, and a dependency of which
@@ -2029,6 +2032,13 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         at_moment = [t for t in found if t.same_moment(commit, made_at)]
         held = [t for t in at_moment if all(t.content().get(local_name(r)) == r["content_hash"] for r in plain.values())]
         if not at_moment:
+            # A snapshot of yours of that commit that holds every pin of it,
+            # by the same bytes or by the same rows, stands in for the one named
+            from chartbook import standins
+
+            stood = standins.find(entry, locked.assets_of(key), store, found)
+            if stood.stands_in and all(met.held for met in stood.met.values()):
+                continue
             why = next((reason for path, reason in unreadable if is_at(path, commit)), None)
             said = f": a record at that commit cannot be read ({why})" if why else ""
             gaps.append(

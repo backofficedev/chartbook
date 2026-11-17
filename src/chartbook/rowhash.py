@@ -91,6 +91,11 @@ BATCH_BYTES = 8 * 1024 * 1024
 NO_DATE = "none"
 ALL = "all"
 
+#: The column pandas writes a frame's index into when the index has no
+#: name. Where it holds row positions left from an earlier step, they shift
+#: when a pull has more rows, and no row is then the row it was.
+INDEX_COLUMN = "__index_level_0__"
+
 _DAY = 86_400_000_000  # microseconds
 _EPOCH = datetime(1970, 1, 1)
 
@@ -875,12 +880,16 @@ class Compared:
             not have.
         newer: How many of its rows are after the record's last timestamp.
         rows: How many rows it has in all.
+        index_column: Whether the table has the column pandas makes of an
+            index with no name (:data:`INDEX_COLUMN`), which may be the
+            whole of a difference.
     """
 
     differ: list
     outside: int
     newer: int
     rows: int
+    index_column: bool = False
 
     @property
     def same(self) -> bool:
@@ -1133,7 +1142,7 @@ def periods_of(rows: dict) -> list:
     return sorted(found, key=lambda period: period[1])
 
 
-def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str]) -> Compared:
+def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str], known=()) -> Compared:
     """Hash a table's rows in the periods a record names, and say where they are not the record's.
 
     The table's rows after *as_of*, the record's last timestamp, are left
@@ -1143,6 +1152,8 @@ def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[s
 
     :param rows: The record's hashes, by period (:attr:`RowsRecord.rows`).
     :param as_of: Its last timestamp, as text; None if it has none.
+    :param known: The periods already known to hold the record's rows, as
+        the record writes them: their rows are passed over, not hashed.
     :raises NotHashed: If the table's rows cannot be hashed.
     :raises ValueError: If the record names a period that is none.
     """
@@ -1151,21 +1162,24 @@ def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[s
     scratch = _scratch_folder()
     try:
         with _lean():
-            return _hash_in(table, date_col, rows, as_of, periods, scratch)
+            return _hash_in(table, date_col, rows, as_of, periods, scratch, set(known))
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def _hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str], periods: list, scratch: Path) -> Compared:
+def _hash_in(
+    table: Table, date_col: Optional[str], rows: dict, as_of: Optional[str], periods: list, scratch: Path, known: set
+) -> Compared:
     import numpy as np
 
     pl = _polars()
     schema = table.schema()
+    index_column = INDEX_COLUMN in schema.names()
     if ALL in rows or not _dated_by(schema, date_col):
         # No date column, here or in the record: all the rows, or nothing to compare by
         whole, total = _whole(table, scratch, 2 * MOST_BYTES)
         same = whole is not None and set(rows) == {ALL} and hash_frame(whole) == rows[ALL]
-        return Compared([] if same else sorted(rows), 0, 0, total)
+        return Compared([] if same else sorted(rows), 0, 0, total, index_column)
     fine = isinstance(schema[date_col], pl.Datetime) and schema[date_col].time_unit == "ns"
     firsts = np.array([_bound(first, fine, first=True) for _, first, _ in periods], dtype="int64")
     lasts = np.array([_bound(last, fine) for _, _, last in periods], dtype="int64")
@@ -1173,6 +1187,7 @@ def _hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[
     pieces = _Pieces(scratch, table.arrow_schema())
     outside = newer = total = 0
     too_many: set = set()
+    passed_over = [number for number, (key, _, _) in enumerate(periods) if key in known]
     try:
         for batch in table.batches(scratch=scratch):
             micro, left, empty = _stamps(batch.column(date_col))
@@ -1185,10 +1200,12 @@ def _hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[
                 inside &= stamps <= lasts[np.clip(index, 0, None)]
             index = np.where(inside, index, -2)
             if NO_DATE in rows:
-                index = np.where(empty, -1, index)
+                index = np.where(empty, -1 if NO_DATE not in known else -3, index)
             total += batch.num_rows
             newer += int(after.sum())
             outside += int((index == -2).sum()) - int(after.sum())
+            if passed_over:
+                index = np.where(np.isin(index, passed_over), -3, index)  # known to be the same: not read again
             # A period with far more rows than any that was pinned cannot be the pinned one
             too_many |= {number for number, size in pieces.sizes.items() if size > 2 * MOST_BYTES}
             if too_many:
@@ -1198,11 +1215,13 @@ def _hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[
         pieces.close()
     differ = []
     for number, (key, _, _) in enumerate(periods):
+        if key in known:
+            continue
         if number in too_many or number not in pieces.writers:
             differ.append(key)
         elif hash_frame(pieces.read(number), date_col) != rows[key]:
             differ.append(key)
-    if NO_DATE in rows:
+    if NO_DATE in rows and NO_DATE not in known:
         if -1 not in pieces.writers or hash_frame(pieces.read(-1), date_col) != rows[NO_DATE]:
             differ.append(NO_DATE)
-    return Compared(differ, outside, newer, total)
+    return Compared(differ, outside, newer, total, index_column)

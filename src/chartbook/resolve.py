@@ -147,6 +147,14 @@ class FileLocation(Location):
             ending says it (:mod:`chartbook.formats`). For another
             pipeline's file, its record's, as its owner gave it.
         read_options: The ``read_options`` its entry gives, likewise.
+        as_of: For another pipeline's dataframe read through a pin: the
+            pin's last timestamp, as its record writes it; None where the
+            pin has none (no date column, or no rows hashed).
+        date_col: And the column that timestamp is of.
+        stands_in: Whether what is read is a snapshot of yours standing in
+            for the pinned bytes, which the store does not have
+            (:mod:`chartbook.standins`): it holds the pinned rows up to
+            *as_of*, and may hold newer rows after.
     """
 
     kind: ClassVar[str] = "file"
@@ -158,6 +166,9 @@ class FileLocation(Location):
     content_hash: Optional[str] = dataclasses.field(default=None, compare=False)
     format: Optional[str] = dataclasses.field(default=None, compare=False)
     read_options: Mapping = dataclasses.field(default_factory=dict, compare=False)
+    as_of: Optional[str] = dataclasses.field(default=None, compare=False)
+    date_col: Optional[str] = dataclasses.field(default=None, compare=False)
+    stands_in: bool = dataclasses.field(default=False, compare=False)
 
 
 def nothing_to_read(location: "Location") -> Optional[str]:
@@ -917,7 +928,28 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(manifest_dir)
+    listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
     if not store.has(content_hash):
+        # A snapshot of yours of the pinned commit may hold the same rows, and stand in
+        stood = locks.your_build(listed, of_dependency, store, lambda: _snapshots_in(store))
+        met = stood.met.get(asset_id) if stood is not None else None
+        if met is not None and met.record is not None:
+            _note_the_read(manifest_dir / "chartbook.lock", locked, store)
+            _say_it_stands_in(manifest_dir, dependency.id, stood.snapshot)
+            return dataclasses.replace(
+                _held(store, met.record, stood.snapshot.pipeline),
+                as_of=record.get("as_of"), date_col=record.get("date_col"), stands_in=True,
+            )
+        if stood is not None:
+            why = next((unmet.why for unmet in stood.unmet if unmet.asset == asset_id), "")
+            raise AssetNotPinnedError(
+                asset_id,
+                "differs",
+                f"{asset_id!r} is pinned at {content_hash}, and the store at {store} does not have it. "
+                f"Your build of {dependency.id!r} at {stood.snapshot.commit[:7]} does not match the pin"
+                f"{f': {why}' if why else ''}. To read your build instead: `chartbook update {dependency.id}` "
+                f"in {manifest_dir}.",
+            )
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
@@ -929,8 +961,25 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
 
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)
-    listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
     return _held(store, record, listed.get("pinned_from"))
+
+
+#: The dependencies a read has said are read from a build of yours, in this process.
+_said_stand_ins: set = set()
+
+
+def _say_it_stands_in(manifest_dir: Path, dependency: str, taken) -> None:
+    """Say, once a process for each dependency, that it is read from a snapshot of yours and not from the pinned bytes."""
+    import sys
+
+    said = (str(manifest_dir), dependency, taken.commit, taken.made_at)
+    if said in _said_stand_ins:
+        return
+    _said_stand_ins.add(said)
+    sys.stderr.write(
+        f"{dependency}: read from your own build of {taken.commit[:7]}. The store does not have the bytes "
+        f"chartbook.lock pins, and your build holds the same rows.\n"
+    )
 
 
 def _snapshots_at(store, pipeline: Optional[str], commit: str) -> list:
