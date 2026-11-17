@@ -329,8 +329,11 @@ class AssetNotPinnedError(LookupError):
             would close a cycle of dependencies, or lead into one, so it
             was not written), ``"working"`` (a batch
             run does not read a working folder), ``"in_source"`` (a table
-            the pinned snapshot did not write out), or ``"no_pipeline"`` (a
-            batch run outside any pipeline, where nothing records a read).
+            the pinned snapshot did not write out), ``"no_pipeline"`` (a
+            batch run outside any pipeline, where nothing records a read), or
+            ``"differs"`` (the store does not have the pinned bytes, and a
+            build of yours of the pinned commit does not hold the same
+            rows: :mod:`chartbook.standins`).
     """
 
     def __init__(self, asset: str, reason: str, message: str):

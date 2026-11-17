@@ -2481,6 +2481,8 @@ def _echo_pin_report(report):
             "dropped": "no longer declared",
             "lost": "lost",
             "unsynced": "not fully synced",
+            "stood_in": "met by your own build",
+            "differs": "not met by your own build",
         }
         summary = ", ".join(
             f"{counts[status]} {words[status]}" for status in words if status in counts
@@ -2537,10 +2539,39 @@ def _echo_pin_report(report):
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
-                pinned_at = f" ({_short_hash(event.old)})" if event.old else ""
-                click.echo(f"  lost: {event.asset}{pinned_at}: {event.detail}")
+                # What is wrong with one is most often wrong with all of them: said once
+                same = [e for e in assets if e.status == "lost" and e.detail == event.detail]
+                if same[0] is not event:
+                    continue
+                if len(same) == 1:
+                    pinned_at = f" ({_short_hash(event.old)})" if event.old else ""
+                    click.echo(f"  lost: {event.asset}{pinned_at}: {event.detail}")
+                else:
+                    names = ", ".join(e.asset.split(":", 1)[-1] for e in same)
+                    click.echo(f"  lost, each of {names}: {event.detail}")
             elif event.status == "unsynced":
                 click.echo(f"  not fully synced: {event.asset}: {event.detail}")
+            elif event.status == "differs":
+                click.echo(f"  differs: {event.asset}: {event.detail}")
+        stood = getattr(report, "stood_in", {}).get(dependency)
+        if stood is not None and not stood.stands_in:
+            from chartbook import standins
+
+            with_index = [unmet.asset.split(":", 1)[-1] for unmet in stood.unmet if unmet.index_column]
+            if with_index:
+                click.echo(f"  {lock.index_column_said(with_index)}")
+            yours = lock.read_yours_said(dependency, stood)
+            click.echo(
+                f"  Your build of {standins.build_said(stood.snapshot)}, does not match the pin."
+                + (f" {yours}" if yours else "")
+            )
+        elif stood is not None and counts.get("stood_in"):
+            # The store does not have the pinned bytes, and a snapshot of yours holds the same rows
+            from chartbook import standins
+
+            click.echo(f"  Read from your own build of {standins.build_said(stood.snapshot)}.")
+            for line in _met_by_rows(stood):
+                click.echo(f"  {line}")
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
             made_in = f", which says it was made in {taken.repository}" if getattr(taken, "repository", "") else ""
@@ -2635,6 +2666,21 @@ def _run_pin(project_dir, dependencies=None, on_refused=None):
         raise SystemExit(1)
 
 
+def _met_by_rows(stood) -> list:
+    """A line for each pin a snapshot of yours meets by its rows: how far the pinned rows go, and how many it has after."""
+    lines = []
+    for asset_id in sorted(stood.met):
+        met = stood.met[asset_id]
+        if met.by != "rows":
+            continue
+        through = f", through {met.as_of}" if met.as_of else ""
+        after = (
+            f"; {met.newer:,} newer row{'' if met.newer == 1 else 's'}" if met.newer else ", in other bytes"
+        )
+        lines.append(f"{asset_id.split(':', 1)[-1]}: the pinned rows{through}{after}")
+    return lines
+
+
 def _echo_frozen_report(step, report):
     """Print what `pin --check` or `run --frozen` found: one line when all is well, else each problem."""
     who = f"{step.id}: " if step is not None else ""
@@ -2671,7 +2717,19 @@ def _echo_frozen_report(step, report):
             )
             + ". `chartbook pin` writes it again in the new form."
         )
+    # A dependency read from a snapshot of yours, which holds the pinned rows in other bytes
+    for key, stood in sorted(getattr(report, "stood_in", {}).items()):
+        from chartbook import standins
+
+        click.echo(f"{who}{key}: read from your own build of {standins.build_said(stood.snapshot)}")
+        for line in _met_by_rows(stood):
+            click.echo(f"  {line}")
     if not report.problems:
+        by_build = getattr(report, "by_your_build", 0)
+        where = (
+            f": {report.pins - by_build} in the store, {by_build} met by your own build" if by_build
+            else ", all in the store"
+        )
         by_entry = getattr(report, "by_entry", 0)
         alone = (
             f"; {by_entry} dependenc{'y is' if by_entry == 1 else 'ies are'} pinned by "
@@ -2679,10 +2737,18 @@ def _echo_frozen_report(step, report):
         )
         click.echo(
             f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
-            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store{alone}. {written}"
+            f"{'y' if report.dependencies == 1 else 'ies'}{where}{alone}. {written}"
         )
         return
+    said = set()
     for problem in report.problems:
+        once = getattr(report, "not_in_store", {}).get(problem.dependency) if problem.kind == "not_in_store" else None
+        if once:
+            # Pins the store does not have: said once for their dependency, with each way on
+            if problem.dependency not in said:
+                said.add(problem.dependency)
+                click.echo(f"{who}{problem.dependency}: " + "\n".join(once), err=True)
+            continue
         where = problem.asset or problem.dependency
         click.echo(f"{who}{where + ': ' if where else ''}{problem.message}", err=True)
     click.echo(
@@ -3111,7 +3177,8 @@ def _lineage_line(node) -> str:
         seen = " (shown above)" if node.seen else ""
         checked = {"pins": "pins checked", "deep": "lineage checked"}.get(node.checked, "made before pins were checked")
         tagged = f", tagged {', '.join(node.tags)}" if node.tags else ""
-        return f"{node.label}: {node.pipeline} {node.commit[:7]}{tagged}, made {made}, {checked}{seen}"
+        stood = "; your build stands in for the pinned snapshot, which the store does not have" if getattr(node, "stands_in", False) else ""
+        return f"{node.label}: {node.pipeline} {node.commit[:7]}{tagged}, made {made}, {checked}{seen}{stood}"
     if node.kind == "git":
         at = f" at {node.commit[:7]}" if node.commit else ""
         return f"{node.label}: pinned from its git clone{at}; not walked further"

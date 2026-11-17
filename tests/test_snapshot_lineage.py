@@ -87,8 +87,12 @@ class TestASnapshotCarriesItsLineage:
             if record.get("content_hash")
         )
         assert default_store().delete(pinned)
-        with pytest.raises(snapshot.SnapshotError, match="the store at .* does not have it"):
+        with pytest.raises(snapshot.SnapshotError, match="rates: 1 of its 2 pins is not in the store at .*") as raised:
             snapshot.make(forecast)
+        # Said once, in one line, with each way on: the store has the snapshot it is of, so it is lost, or on its way
+        (gap,) = [line for line in str(raised.value).splitlines() if line.startswith("  rates: ")]
+        assert "which has the snapshot it is of: " in gap and "wait for the sync to finish" in gap
+        assert "`chartbook snapshot` in its folder at " in gap and "build it yourself" not in gap
 
     def test_full_lineage_is_a_snapshot_and_records_it(self, two):
         rates, forecast = two
@@ -193,9 +197,24 @@ class TestWhatTheReviewFound:
         for record in document["records"]:
             for dependency in record.get("dependencies") or []:
                 dependency["snapshot"] = "2001-01-01T00:00:00Z"
+                dependency["location"]["commit"] = "0" * 40
         path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="has no such snapshot"):
             snapshot.make(forecast)
+
+    def test_a_snapshot_named_by_another_time_that_one_of_its_commit_stands_in_for(self, two):
+        """A lockfile brought from another store names a snapshot this store does not have: one of that commit that holds every pin stands in."""
+        import json
+
+        rates, forecast = two
+        lock.pin(forecast)
+        path = forecast / lock.LOCK_FILE
+        document = json.loads(path.read_text(encoding="utf-8"))
+        for record in document["records"]:
+            for dependency in record.get("dependencies") or []:
+                dependency["snapshot"] = "2001-01-01T00:00:00Z"
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        assert snapshot.lineage_gaps(forecast) == []
 
 
 def _lockfile(forecast: Path) -> tuple[Path, dict]:

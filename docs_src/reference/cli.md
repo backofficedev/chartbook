@@ -825,6 +825,38 @@ $ chartbook pin --check
 
 Where `pin` records an asset that was not built and goes on, `--check` counts it a problem: the build that follows may need it.
 
+(a-build-of-your-own)=
+**A pin is met by the same file, or by a build of your own that holds the same rows.** A team that shares a store has the pinned files in it, and nothing more is looked at. Where no store is shared, each person builds the other pipeline themselves, at the commit the lockfile names, and `chartbook run --snapshot` there puts that build in their own store. Where the store does not have the snapshot the lockfile names, a snapshot of yours of the same pipeline at the same commit **stands in** for it when it meets every pin of that dependency: each by the same file or, for a dataframe, by the same rows up to the pin's last date (its `as_of`). Rows after that date are left out and counted. `pin --check`, `chartbook pin`, `chartbook run` and every read then use your build, whole, and say which, by its commit and when it was made:
+
+```console
+$ chartbook pin --check
+ftsfr/fed_yield_curve: read from your own build of 0db8051, made 2026-11-17 09:22 UTC
+  treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
+1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
+```
+
+The lockfile is not touched, so everyone who builds that commit is checked against the same pin. A value the source has since changed in the past is a real difference: the check exits `1`, a read raises `AssetNotPinnedError` (reason `differs`), and each names the periods that differ and the way on, `chartbook update`, which pins your build instead.
+
+```console
+$ chartbook pin --check
+ftsfr/fed_yield_curve: your build of 79986dd, made 2026-11-17 09:21 UTC, does not match the pin
+  treasury_yields: the rows of 2025-09-26 to 2025-12-31 differ
+  To read your build instead: chartbook update ftsfr/fed_yield_curve
+1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
+```
+
+A model is met by the same file only. So is a version pinned by its label, and a dataframe whose pin records no rows: one pinned before ChartBook hashed rows (pin it again from a snapshot made by this version), one whose rows are not hashed ({ref}`chartbook snapshot <chartbook-snapshot>` says which), or a table that had no rows when it was pinned. The comparison reads the table's rows once and is remembered in this machine's cache folder. With neither the pinned files nor a build of yours in the store, the check says so once for each dependency, with how to build it; where the store has some other snapshot of that pipeline, a last line offers `chartbook update` to move the pin to it:
+
+```console
+$ chartbook pin --check
+ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/store, and no build of yours at 0db8051 stands in: treasury_yields
+  To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
+  Where a store is shared: point CHARTBOOK_STORE at the one that has it; in a synced folder, wait for the sync to finish, here and on the machine that made the pin.
+1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
+```
+
+A store that has the snapshot the lockfile names has the pin itself, and no build stands in for it there: a pinned file such a store lacks is lost from it, or not synced yet, and the check says so and how to wait or put it back. That is the case of a team that shares a store, where another build of the same commit may be anyone's.
+
 Dependencies between pipelines must form a graph with no cycles. A pin whose new or moved entries would lead back to this pipeline, or into pipelines that depend on each other, is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. `chartbook update` and `chartbook add` do the same, and the first read of a dependency, which pins it, raises `AssetNotPinnedError` with reason `cycle`. A cycle reached only through pins made before is not the new pin's doing and does not stop it: `chartbook run` and `chartbook check` say it, and `chartbook pin --check` exits 1. An ID names one pipeline: a copy that kept another's ID and reads it depends on itself. Where the cycle closes on the ID in another folder, the message names both and says what to do either way: two checkouts of one repository are one pipeline, and one of the dependencies comes out; two pipelines that share the ID give one of them an ID of its own with `[project] id`.
 
 ## chartbook update

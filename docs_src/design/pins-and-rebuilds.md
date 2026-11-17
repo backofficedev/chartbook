@@ -7,8 +7,9 @@ upstream: what the lockfile holds for each kind of asset, how a dataframe is pin
 well as its bytes, and what each command and each read then does.
 
 Status: **being built, step by step, in "The order of work" at the end; no release is named.**
-Built so far: the lockfile by kind (step 2), the rows hash (step 3), and periods in a
-snapshot's record and in the lockfile (step 4). Nothing checks a pin by its rows yet (step 5). Each part says whether the maintainer decided it, and
+Built so far: the lockfile by kind (step 2), the rows hash (step 3), periods in a snapshot's
+record and in the lockfile (step 4), and the check, with a build of yours that stands in (step 5).
+A read still hands over a stand-in's newer rows (step 6). Each part says whether the maintainer decided it, and
 when, or whether it is a proposal. The items marked *(Proposed.)* were decided as proposed on
 2026-11-16. A choice made while building, on what the page had left open, is marked *Proposed by
 Claude*, with its date, until the maintainer says otherwise. The numbers come from a prototype run
@@ -66,27 +67,70 @@ remain, and compares. They match: the student's table holds the pinned data, and
 
 ## What you see
 
-The output below is proposed, not what any version prints.
+Scenarios 1 to 3 are as built (step 5): each block is from a run on 2026-11-17 of a small made-up
+upstream, 800 rows pinned through 2026-10-30, with the author and the student each in a scratch
+store of their own. Scenarios 4 and 5 are proposed, not what any version prints.
 
 **1. A team shares a store.** Nothing changes. The pinned files are in the store, and are read.
 
-**2. A student builds an upstream a week after the pin.** The lockfile is not touched, `uv run doit`
-builds, and a reviewer who builds it a week later still sees the same.
+**2. A student builds an upstream a week after the pin.** Before they have built it, the check
+says what is missing once for each dependency, and the way on that is theirs first:
 
 ```text
 $ chartbook pin --check
-ftsfr/fed_yield_curve: read from your own build of 5bb7217
-  ftsfr_treas_yield_curve_zero_coupon: the pinned rows, through 2026-10-30; 8 newer rows
-All pins are met.
+ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/student-store, and no build of yours
+    at 0db8051 stands in: treasury_yields
+  To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`:
+    a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the
+    pin's last date.
+  Where a store is shared: point CHARTBOOK_STORE at the one that has it; in a synced folder, wait
+    for the sync to finish, here and on the machine that made the pin.
+1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
 ```
 
-**3. The source has changed its past.** The check exits 1, and a build stops with the same message.
+(Where the store has some other snapshot of that pipeline, a last line offers it: `To move the pin
+to a snapshot the store has: chartbook update ftsfr/fed_yield_curve`. With none, as here, `update`
+has nothing to move to, and is not offered.)
+
+After `chartbook run --snapshot` in the upstream, twelve days of new data and all, the lockfile is
+not touched, `uv run doit` builds, and a reviewer who builds it a week later still sees the same.
+A build is named by its commit and when it was made, since several builds may share a commit.
 
 ```text
 $ chartbook pin --check
-ftsfr/ken_french_data_library: your build of 31f1e34 does not match the pin
-  ftsfr_french_portfolios_25_daily_size_and_bm: the rows of 2024-01-02 to 2024-12-31 differ
-  To read your build instead: chartbook update ftsfr/ken_french_data_library
+ftsfr/fed_yield_curve: read from your own build of 0db8051, made 2026-11-17 09:22 UTC
+  treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
+1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
+
+$ chartbook run
+finm/report: pinning what it depends on
+ftsfr/fed_yield_curve: 1 met by your own build
+  Read from your own build of 0db8051, made 2026-11-17 09:22 UTC.
+  treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
+chartbook.lock is unchanged.
+finm/report: build
+…
+
+$ chartbook lineage
+finm/report (this folder)
+└── ftsfr/fed_yield_curve: ftsfr/fed_yield_curve 0db8051, made 2026-11-17 09:22:12 UTC, pins checked;
+    your build stands in for the pinned snapshot, which the store does not have
+1 snapshot(s) upstream; no gaps.
+```
+
+A read says it once in a process, on stderr: `ftsfr/fed_yield_curve: read from your own build of
+0db8051, made 2026-11-17 09:22 UTC. The store does not have the bytes chartbook.lock pins, and your
+build holds the same rows.`
+
+**3. The source has changed its past.** The check exits 1, and `chartbook pin`, `chartbook run` and
+a read stop with the same words. (Here one value of 2025-12-14 was changed by 0.01.)
+
+```text
+$ chartbook pin --check
+ftsfr/fed_yield_curve: your build of 79986dd, made 2026-11-17 09:21 UTC, does not match the pin
+  treasury_yields: the rows of 2025-09-26 to 2025-12-31 differ
+  To read your build instead: chartbook update ftsfr/fed_yield_curve
+1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
 ```
 
 **4. The maintainer moves the pins.** `chartbook update` says, for each dataframe, "8 new rows,
@@ -123,7 +167,9 @@ An asset that is not in the lockfile is still read from the snapshot the lockfil
 commit and time, when a store has that snapshot. So a team that shares a store reads the same
 chart as before. Without it, the asset comes from your own build, with nothing checked: the newest
 snapshot of that pipeline at that commit that your store has. With no snapshot at that commit, the
-read stops and says which commit to build.
+read stops and says which commit to build. (Since step 5, where the dependency also has pins: from
+the build of yours that stands in for them, and from none where no build of yours meets them. See
+"The check, cheapest first".)
 
 Every lockfile is written again once. The class report's goes from 34 asset records to 17.
 
@@ -434,6 +480,70 @@ becomes twelve.
 A snapshot of yours that meets a pin in the second way **stands in** for it. The result is
 remembered against the pin and that snapshot's file, so a read does not hash the table again.
 
+*As built (step 5). Where the page had left it open, proposed by Claude, 2026-11-17:*
+
+- **Only where the store does not have the snapshot the lockfile names.** Where it has it, that
+  snapshot is the pin, and a file of it the store lacks is lost, or not synced yet: the check says
+  so, as it did before, and no other build is read in its place. In a shared store another build of
+  that commit is anyone's, and while a sync is running the right thing is to wait for the pinned
+  file. A pinned file the store has in part is on its way, in any store. (Found by review: a
+  half-synced file passed the check on another build, and the read then stopped.)
+- **Which snapshots are looked at.** Those of the pipeline the pin came from, by its own ID, at the
+  commit the pin names; made by its owner's `chartbook snapshot`; not dated after now. The same rule
+  as for a chart that is not in the lockfile, by one function. A dependency pinned from its
+  repository (`git`) has none: its bytes are its commit's, the same for everyone, and `chartbook
+  pin` puts them back.
+- **A build stands in for a dependency whole.** It has to meet every pin of that dependency: each
+  one by the same file or, for a dataframe, by the same rows. So everything read of one dependency
+  comes from one build of it (or from the store, for a file that came out in the same bytes): a
+  table is not read from a build that fails another pin, and a chart that is not in the lockfile is
+  read from the build that stands in, not from a newer one. Where the dependency has pins and no
+  build of yours meets them, nothing of it is read, a chart no more than a table: a chart drawn
+  from rows that are not the pinned ones is not the pinned chart. (A dependency with no pin at all,
+  one that makes only charts, has none to fail, and is read from your newest build.) The newest
+  build that meets them all is the one; where none does, the newest is the one reported.
+- **A model, and anything else locked, is met by the same file only.** So is a dataframe whose pin
+  records no rows: one made before rows were hashed, one whose rows are not hashed, or a table that
+  had no rows when it was pinned (it has no period, so nothing would tell its columns). The message
+  says which. The class's lockfile is of the first kind until the report is pinned again (step 8).
+- **A version pinned by its label** (`model/ar1@champion`) is met by the same file only, and was
+  made at an earlier commit, most likely, so no build of the pinned commit gives it. The message
+  says where it can come from (the store of whoever made it, or a build of that commit that gives
+  the same file), and does not offer `chartbook update`, which would not find it in your build.
+- **Cheapest first, inside the second step too.** The two records are compared before any row is
+  read: a period both name by the same timestamps, with the same hash, is the same rows. Where
+  that is every period of the pin, and your record has nothing else up to the pin's last date,
+  nothing is read at all. Otherwise only the periods still to be told are read and hashed, which
+  for a build with newer rows is the last one.
+- **Where the result is remembered:** in this process, and in this machine's cache folder
+  (`rows/met/`), under the pin's rows, its date column and last date, the hash of your file, and
+  this ChartBook's version. Any command writes it, `pin --check` among them, which writes nothing
+  in the project or the store. A file there is believed only if it is whole and repeats the question
+  it answers; anything else is compared again. Without a cache folder a table is hashed once a
+  process.
+- **Nothing in the lockfile says a build stood in.** `chartbook pin` leaves it byte for byte, and
+  says `1 met by your own build`. `store gc` keeps the build while the lockfile names a snapshot
+  of that commit the store does not have.
+- **A snapshot records it.** A snapshot of the pipeline that read the build is not refused, and
+  the dependency's entry among its `inputs` gains `stood_in`, when that build was made. So
+  `chartbook lineage` goes on up from that build, one level up as well (a pipeline that depends on
+  the report). It is the build that stood in when the snapshot was made: under `chartbook run
+  --snapshot`, the one the build read. A newer build of the upstream makes no new snapshot of the
+  reader, whose bytes and pins are the same: the one recorded stays. What a snapshot records is
+  taken at its word, as its pins are; it is not checked again. `chartbook pin --check`, `chartbook
+  lineage --check`, `chartbook snapshot` and `chartbook check` ask one question, by one function.
+- **What the lockfile says of a table's rows is checked where the pinned snapshot is.** The
+  author's store has it, and `chartbook lineage --check` and `chartbook snapshot` there compare the
+  lockfile's record of rows with that snapshot's own. A lockfile whose rows were changed by hand,
+  or merged from two, would otherwise pass for its author and fail for everyone who builds the
+  other pipeline.
+- **Where there is no build of yours,** the check says it once for the dependency, with how to
+  build it at the pinned commit (scenario 2 above), and `chartbook pin` and a read name the same
+  way on. `chartbook update` is offered, by the check and by `chartbook pin`, only where it would
+  find a snapshot to move to, looked for as `update` looks. Where a pinned file is in the store in
+  part, the line says that no build is read in its place while it is, and not that you have none. For a dependency named by its ID whose repository is not named as the pipeline is, it
+  says which folder of the repository: "in a clone of <repository>, in the folder of acme/rates".
+
 ## What each command does
 
 | Command | The same file | The same rows up to `as_of` | Earlier rows differ |
@@ -445,8 +555,8 @@ remembered against the pin and that snapshot's file, so a read does not hash the
 
 *Decided 2026-11-15.* The check and a read stop, each with a plain message. `update` and `snapshot`
 only report, because there the change is what was asked for; they compare with the pin before, and
-with the snapshot before. `chartbook lineage` would say which pins a build of yours stands in for.
-*(Proposed.)*
+with the snapshot before. `chartbook lineage` says which pins a build of yours stands in for.
+*(Proposed; decided as proposed 2026-11-16, and built in step 5.)*
 
 ## Reads
 
@@ -774,7 +884,8 @@ What was learned about reading, from the prototype:
 - ~~The size of a period, and the reader, that keep the peak under 2 GB.~~ 128 MB, counted from
   the rows, and pyarrow a batch at a time: "Choosing the periods" and "What it costs".
 - ~~The parts of the rows hash marked not settled.~~ Built as proposed in "The rows hash".
-- The exact words each command prints.
+- ~~The exact words each command prints.~~ For the check, `pin`, `run`, a read and `lineage`: as
+  built, in "What you see". For `update` and `snapshot`: step 7.
 - A run of the memory test on a machine with 8 GB.
 
 Outside this repository: step E of the course's pins walkthrough prints a matching hash for a
@@ -793,7 +904,7 @@ match. The page is to be corrected.
 4. Periods: choosing them within the size, in a snapshot's record and in the lockfile; the test
    under a memory limit. **Built.**
 5. The check: a snapshot of yours that stands in, in `pin`, `pin --check` and `run`, with the
-   messages.
+   messages. **Built.**
 6. Reads: `data.load` and `data.sql` without the rows after `as_of`; `data.as_of`; what
    `data.path` says.
 7. What `update` and `snapshot` say; the warning for a pandas index in `check` and `snapshot`.

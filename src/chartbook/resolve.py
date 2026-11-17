@@ -147,6 +147,14 @@ class FileLocation(Location):
             ending says it (:mod:`chartbook.formats`). For another
             pipeline's file, its record's, as its owner gave it.
         read_options: The ``read_options`` its entry gives, likewise.
+        as_of: For another pipeline's dataframe read through a pin: the
+            pin's last timestamp, as its record writes it; None where the
+            pin has none (no date column, or no rows hashed).
+        date_col: And the column that timestamp is of.
+        stands_in: Whether what is read is a snapshot of yours standing in
+            for the pinned bytes, which the store does not have
+            (:mod:`chartbook.standins`): it holds the pinned rows up to
+            *as_of*, and may hold newer rows after.
     """
 
     kind: ClassVar[str] = "file"
@@ -158,6 +166,9 @@ class FileLocation(Location):
     content_hash: Optional[str] = dataclasses.field(default=None, compare=False)
     format: Optional[str] = dataclasses.field(default=None, compare=False)
     read_options: Mapping = dataclasses.field(default_factory=dict, compare=False)
+    as_of: Optional[str] = dataclasses.field(default=None, compare=False)
+    date_col: Optional[str] = dataclasses.field(default=None, compare=False)
+    stands_in: bool = dataclasses.field(default=False, compare=False)
 
 
 def nothing_to_read(location: "Location") -> Optional[str]:
@@ -927,7 +938,28 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(manifest_dir)
+    listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
     if not store.has(content_hash):
+        # A snapshot of yours of the pinned commit may hold the same rows, and stand in:
+        # for the dependency whole, so one that meets this pin and not another is not read
+        stood = locks.your_build(listed, of_dependency, store, lambda: _snapshots_in(store), _folder_of(dependency))
+        met = stood.met.get(asset_id) if stood is not None and stood.stands_in else None
+        if met is not None and met.record is not None:
+            _note_the_read(manifest_dir / "chartbook.lock", locked, store)
+            _say_it_stands_in(manifest_dir, dependency.id, stood.snapshot)
+            return dataclasses.replace(
+                _held(store, met.record, stood.snapshot.pipeline),
+                as_of=record.get("as_of"), date_col=record.get("date_col"), stands_in=True,
+            )
+        if stood is not None:
+            raise AssetNotPinnedError(
+                asset_id,
+                "differs",
+                f"{asset_id!r} is pinned at {content_hash}, and the store at {store} does not have it. "
+                f"{_your_build_differs(asset_id, dependency.id, stood, manifest_dir)}",
+            )
+        # A build of yours stands in only where the store does not have the snapshot pinned
+        build = "" if locks.has_named(listed, _snapshots_in(store), _folder_of(dependency)) else locks.build_it_said(listed)
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
@@ -935,12 +967,63 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{store} does not have it. In a store shared through a synced folder, "
             f"the likeliest cause is a sync that has not finished: wait for it, and "
             f"read again. Otherwise run `chartbook pin` in {manifest_dir}: it puts it "
-            f"back if it can, and says what to do if it cannot.",
+            f"back if it can, and says what to do if it cannot."
+            + (f" Or build {dependency.id!r} yourself, {build}." if build else ""),
         )
 
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)
-    listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
     return _held(store, record, listed.get("pinned_from"))
+
+
+#: The dependencies a read has said are read from a build of yours, in this process.
+_said_stand_ins: set = set()
+
+
+def _say_it_stands_in(manifest_dir: Path, dependency: str, taken) -> None:
+    """Say, once a process for each dependency, that it is read from a snapshot of yours and not from the pinned bytes."""
+    import sys
+
+    from chartbook import standins
+
+    said = (str(manifest_dir), dependency, taken.commit, taken.made_at)
+    if said in _said_stand_ins:
+        return
+    _said_stand_ins.add(said)
+    sys.stderr.write(
+        f"{dependency}: read from your own build of {standins.build_said(taken)}. The store does not have the "
+        f"bytes chartbook.lock pins, and your build holds the same rows.\n"
+    )
+
+
+def _your_build_differs(asset_id: str, dependency: str, stood, manifest_dir: Path) -> str:
+    """What a read says of a build of yours that does not meet every pin of its dependency: which pins, where, and the way on.
+
+    A build stands in for a dependency whole, or not at all: so a read of
+    an asset it does hold says which other pin it fails.
+    """
+    from chartbook import lock as locks
+    from chartbook import standins
+
+    own = next((unmet for unmet in stood.unmet if unmet.asset == asset_id), None)
+    if own is not None:
+        why = f": {own.why}"
+    else:
+        why = "".join(f"; {unmet.asset.split(':', 1)[-1]}: {unmet.why}" for unmet in stood.unmet).replace("; ", ": ", 1)
+    with_index = [unmet.asset.split(":", 1)[-1] for unmet in stood.unmet if unmet.index_column]
+    index = f". {locks.index_column_said(with_index)}" if with_index else ""
+    yours = (
+        f" To read your build instead: `chartbook update {dependency}` in {manifest_dir}."
+        if locks.read_yours_said(dependency, stood) else ""
+    )
+    return (
+        f"Your build of {dependency!r} at {standins.build_said(stood.snapshot)}, does not match the pin"
+        f"{why}{index}.{yours}"
+    )
+
+
+def _folder_of(dependency: PipelineLocation) -> Optional[Path]:
+    """The folder of a dependency named by its path, which says whose snapshots its pins came from where its entry in the lockfile does not."""
+    return dependency.path if dependency.kind == "path" and dependency.path is not None else None
 
 
 def _why_not_pinned(asset: AssetRef, lock_path: Path) -> str:
@@ -1006,7 +1089,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
             f"{dependency.id!r}: `chartbook update {dependency.id}` in {manifest_dir} pins one.",
         )
     # The pipeline whose snapshots these are, by its own ID: never another's of the same commit
-    folder = dependency.path if dependency.kind == "path" and dependency.path is not None else None
+    folder = _folder_of(dependency)
     pipeline = locks.pinned_pipeline(entry, folder)
     if not isinstance(pipeline, str) or not pipeline:
         kept = as_it_was_pinned()
@@ -1020,8 +1103,24 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
         )
     # The one the lockfile names, whatever its date, and no other where the store has
     # it; else your own builds of that commit, newest first
-    at_commit = locks.read_from(entry, _snapshots_in(store), folder)
+    every = _snapshots_in(store)
+    at_commit = locks.read_from(entry, every, folder)
     named = bool(at_commit) and isinstance(made_at, str) and at_commit[0].same_moment(commit, made_at)
+    if not named and at_commit and locked is not None:
+        # Where a build of yours stands in for what the lockfile pins of the dependency, that
+        # build is the one read, whole: a chart from the build its table is read from, not a
+        # newer one. And where the dependency has pins that no build of yours meets, none is
+        # read: a chart drawn from rows that are not the pinned ones is not the pinned chart
+        stood = locks.your_build(entry, locked.assets_of(dependency.id), store, lambda: every, folder)
+        if stood is not None and stood.stands_in:
+            at_commit = [stood.snapshot] + [taken for taken in at_commit if taken is not stood.snapshot]
+        elif stood is not None:
+            raise AssetNotPinnedError(
+                asset_id, "differs",
+                f"{not_pinned}. It is read from a build of yours that stands in for the snapshot the lockfile "
+                f"names, which the store at {store} does not have. "
+                f"{_your_build_differs(asset_id, dependency.id, stood, manifest_dir)}",
+            )
     name = pinned.local_name
     not_built = lacking = ""
 
