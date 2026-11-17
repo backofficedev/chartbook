@@ -23,6 +23,9 @@ A hash is written ``"<algorithm>:<hex>"``, e.g. ``"sha256:7f3a9c..."``.
   The ``grep`` leaves out the few files that operating systems create by
   themselves (:func:`is_ignored`). Every other file counts, hidden or not.
 
+A table has a second hash, of its rows and not of its file's bytes, for
+when the same rows come in other bytes: :mod:`chartbook.rowhash`.
+
 Hashing reads every byte, and data files are large, so a
 :class:`HashCache` remembers each file's hash against its size and
 modification time. A file whose size and time are unchanged is not read

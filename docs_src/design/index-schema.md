@@ -174,6 +174,73 @@ exactly one implementation ({ref}`not-doing`):
   hidden ones included". No release carried the earlier rule, so the algorithm prefix is
   unchanged. `chartbook.hashing.is_ignored`.)*
 
+(the-rows-hash)=
+**The rows hash.** A table has a second hash: of its rows, and not of its file's bytes. The same
+rows give one rows hash whatever wrote them, in whatever order, in whatever widths; any value
+that differs gives another. It is what lets a pin be met by a rebuild ({doc}`pins-and-rebuilds`).
+*(Decided by the maintainer 2026-11-15 and 16 that there is one, that it does not see the order
+of rows or of columns, and that the form is ChartBook's own, since polars' `hash_rows` is not
+stable from one version of polars to the next. The form below is as built on 2026-11-16,
+`chartbook.rowhash`; the parts marked proposed are Claude's, on what the design had left open.
+Once a release carries it, it must not change without a new name in its first line and a new
+prefix on the hash.)*
+
+It is written as a content hash is, `"sha256:<hex>"`: the SHA-256 of the bytes below. The field
+it is in says that it is of rows.
+
+1. **Every column is put in the one type of its kind.** The kind is fed with the column, so two
+   columns of different kinds never give one hash.
+
+   | Kind | What is of it | In its one type |
+   |---|---|---|
+   | `int` | A whole number of any width, signed or not | 64 bits, signed |
+   | `uint64` | An unsigned 64-bit column with a number past 2^63 - 1 | 64 bits, unsigned *(proposed)* |
+   | `float` | A 32- or 64-bit float | 64 bits, IEEE 754; `-0.0` is `0.0`, and every NaN is the one NaN `0x7ff8000000000000` |
+   | `bool` | A boolean | A bit |
+   | `text` | Text, and a category or an enum | Its UTF-8 bytes |
+   | `binary` | Bytes | As they are *(proposed)* |
+   | `timestamp` | A date, and a date with a time, in any unit, with a time zone or none | Whole microseconds from 1970-01-01 in UTC, rounded down, and the nanoseconds left over, 0 to 999. A date is its midnight; a time with no zone is taken as UTC *(the nanoseconds, and a date as a timestamp, proposed)* |
+   | `duration` | A length of time, in any unit | As a timestamp: microseconds, and the nanoseconds left over *(proposed)* |
+   | `time` | A time of day | Nanoseconds from midnight, 64 bits *(proposed)* |
+   | `decimal` | A decimal of any precision and scale | Its value as text, written one way: no zero after its last digit, no point with nothing after it, `0` and not `-0` *(proposed)* |
+   | `null` | A column with no value in any row, whatever its type | Nothing *(proposed: a writer gives a column of nothing whatever type it likes)* |
+
+   A column of lists or of structs is of no kind, and a table with one has no rows hash yet
+   *(proposed)*. A whole number is not a float, and a decimal is neither: `1`, `1.0` and a decimal
+   `1` are three values.
+
+2. **The rows are sorted on every column:** the table's date column first, if it has one, and
+   the rest in the order of their names. Within a column, least first: an empty value after
+   every value, NaN after every number, false before true, text and bytes by their bytes, a
+   decimal by its value. Two rows alike in every column stay two rows. Since every column is
+   sorted on, the order the rows came in does not matter. *The date column is part of the
+   form:* a table hashed with another date column is hashed otherwise.
+
+3. **The bytes fed to SHA-256.** Every number is little-endian.
+
+   - The form's name and a newline: `chartbook/rows/v1\n`.
+   - The number of rows, then the number of columns, 8 bytes each.
+   - Then each column, in the order of the columns' names as UTF-8 bytes:
+     - the length of its name in bytes, as 8 bytes, and the name;
+     - the length of its kind, as 1 byte, and the kind as in the table above;
+     - one byte, `0` if no value is empty; else `1`, then a bit for each row, set where its
+       value is empty, the first row in the high bit of the first byte, the last byte filled
+       out with zeros;
+     - its values, in the order of the sorted rows, an empty one as zero or as no bytes:
+       - `int`, `uint64`, `time`: 8 bytes each;
+       - `float`: 8 bytes each;
+       - `bool`: a bit each, packed as the empty bits are;
+       - `text`, `binary`, `decimal`: the length of each value in bytes, 8 bytes each, and
+         then all their bytes, one after another;
+       - `timestamp`, `duration`: the whole microseconds of each, 8 bytes each; then one byte,
+         `0` if none has nanoseconds left over, else `1` and those nanoseconds, 8 bytes each;
+       - `null`: nothing.
+
+So a timestamp in nanoseconds with nothing finer than a microsecond in it gives the hash the
+same timestamps in microseconds give, and one with something finer does not: every value is
+seen. `tests/test_rowhash.py` writes this form a second time, in plain Python, and holds the
+module to it; and holds one table's hash to a value written down there.
+
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
 ```json
