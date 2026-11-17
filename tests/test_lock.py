@@ -486,10 +486,10 @@ class TestPin:
 
         report = pin_from_snapshots(downstream, store)
         (problem,) = report.problems
-        assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
+        # Its owner's new snapshot of that commit is another file, and no table whose rows could meet the pin
+        assert problem.status == "differs" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
-        assert "it is not in the store at " in problem.detail and "a sync that has not finished" in problem.detail
-        assert "Otherwise a snapshot puts it there: `chartbook update`" in problem.detail
+        assert "only the same file meets it" in problem.detail and "your build's file is another" in problem.detail
         # The pin is not quietly moved to what the newest snapshot has
         assert (downstream / LOCK_FILE).read_bytes() == before
 

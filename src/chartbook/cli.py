@@ -2495,10 +2495,12 @@ def _echo_pin_report(report):
                 unlocked[kind] = unlocked.get(kind, 0) + 1
         if unlocked:
             one = sum(unlocked.values()) == 1
-            not_pinned = (
-                f"{lock.left_out_said(unlocked)} {'is' if one else 'are'} not pinned: "
-                f"each build draws {'it' if one else 'them'} anew"
+            # A chart and a notebook for what they are; a note or a plain file for want of its owner's mark
+            why = (
+                f"each build draws {'it' if one else 'them'} anew" if set(unlocked) <= {"charts", "notebooks"}
+                else f"{'it is' if one else 'they are'} read from {'its repository' if dependency in report.git else 'its snapshot'}"
             )
+            not_pinned = f"{lock.left_out_said(unlocked)} {'is' if one else 'are'} not pinned: {why}"
             summary = f"{summary}. Its {not_pinned}" if summary else f"its {not_pinned}"
         for event in whole:
             if event.status == "fetched":
@@ -2581,16 +2583,7 @@ def _echo_pin_report(report):
     shown = display_path(report.lockfile, relative_to=Path.cwd())
     if report.earlier:
         # Said once: the next pin finds it in this form
-        gone = lock.left_out_said(report.left_out)
-        click.echo(
-            f"{shown} was in an earlier form, which pinned every asset. It is written again"
-            + (
-                f" without its {gone}: each build draws {'it' if sum(report.left_out.values()) == 1 else 'them'} "
-                f"anew, so {'it is' if sum(report.left_out.values()) == 1 else 'they are'} read from the "
-                f"snapshot the lockfile names, and not pinned."
-                if gone else "."
-            )
-        )
+        click.echo(lock.written_again_said(shown, report.left_out))
     if report.written:
         click.echo(f"Wrote {shown}.")
     elif report.lockfile.exists():
@@ -2692,13 +2685,13 @@ def _echo_frozen_report(step, report):
         # Checked as this version would have written it; `pin --check` writes nothing
         gone = lock.left_out_said(report.left_out)
         one = sum(report.left_out.values()) == 1
+        why = (
+            f"since no rebuild gives {'its' if one else 'their'} bytes again" if set(report.left_out) <= {"charts", "notebooks"}
+            else f"since {'it is' if one else 'they are'} no longer pinned"
+        )
         click.echo(
             f"{who}{report.lockfile.name} is in an earlier form, which pinned every asset"
-            + (
-                f": its {gone} {'is' if one else 'are'} not checked, since no rebuild gives "
-                f"{'its' if one else 'their'} bytes again"
-                if gone else ""
-            )
+            + (f": its {gone} {'is' if one else 'are'} not checked, {why}" if gone else "")
             + ". `chartbook pin` writes it again in the new form."
         )
     # A dependency read from a snapshot of yours, which holds the pinned rows in other bytes
@@ -2712,9 +2705,14 @@ def _echo_frozen_report(step, report):
             f": {report.pins - by_build} in the store, {by_build} met by your own build" if by_build
             else ", all in the store"
         )
+        by_entry = getattr(report, "by_entry", 0)
+        alone = (
+            f"; {by_entry} dependenc{'y is' if by_entry == 1 else 'ies are'} pinned by "
+            f"{'its' if by_entry == 1 else 'their'} snapshot alone, which the store has a build of" if by_entry else ""
+        )
         click.echo(
             f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
-            f"{'y' if report.dependencies == 1 else 'ies'}{where}. {written}"
+            f"{'y' if report.dependencies == 1 else 'ies'}{where}{alone}. {written}"
         )
         return
     for problem in report.problems:

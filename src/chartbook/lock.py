@@ -201,6 +201,11 @@ class Lock:
         left_out: For a file of an earlier version: how many records it
             held that this version does not (its charts, notebooks, notes
             and plain files), by the plural of their kind.
+        earlier: Those records, by asset ID. They are no pins. While the
+            file is still of the earlier version, though, what they name
+            is not let go: a read falls back on one where the store has no
+            snapshot to read the asset from, and ``store gc`` keeps its
+            bytes. A file of this version has none.
     """
 
     root: str
@@ -208,12 +213,13 @@ class Lock:
     assets: dict[str, dict] = field(default_factory=dict)
     read_as: str = field(default=SCHEMA, compare=False)
     left_out: dict = field(default_factory=dict, compare=False)
+    earlier: dict = field(default_factory=dict, compare=False)
 
     def hashes(self) -> set[str]:
-        """The content hash of every pinned asset: what the store must keep."""
+        """The content hash of every pinned asset, and of what a file of an earlier version still names: what the store must keep."""
         return {
             record["content_hash"]
-            for record in self.assets.values()
+            for record in (*self.assets.values(), *self.earlier.values())
             if record.get("content_hash")
         }
 
@@ -347,10 +353,12 @@ def read_lock(path: Union[str, Path]) -> Optional[Lock]:
                             "ChartBook wrote: restore it from git, or remove it and run `chartbook pin`"
                         )
             elif "id" in record:
-                if earlier and not in_lockfile(record):
-                    ref = record.get("ref")
-                    kind = KIND_TABLES.get(ref.get("kind") if isinstance(ref, dict) else None, "others")
-                    lock.left_out[kind] = lock.left_out.get(kind, 0) + 1
+                ref = record.get("ref")
+                kind = ref.get("kind") if isinstance(ref, dict) else None
+                if earlier and kind in KIND_TABLES and not in_lockfile(record):
+                    # A chart, a notebook, a note or a file: no pin in this version
+                    lock.left_out[KIND_TABLES[kind]] = lock.left_out.get(KIND_TABLES[kind], 0) + 1
+                    lock.earlier[record["id"]] = record
                     continue
                 lock.assets[record["id"]] = record
         if lock.left_out:
@@ -373,6 +381,37 @@ def _at_a_commit(entry: Optional[dict]) -> bool:
         isinstance(location, dict) and location.get("kind") == "git"
         and isinstance(location.get("commit"), str) and bool(location["commit"])
     )
+
+
+def holds_a_pin(entry: Optional[dict], records: dict) -> bool:
+    """Whether a lockfile pins something of a dependency, so that ``pin`` leaves it where it is.
+
+    Bytes of it: a record with a content hash. Or the snapshot its entry
+    names (:func:`names_a_snapshot`): a snapshot is taken whole, so that is
+    a pin whatever of it the lockfile holds, and all there is of one whose
+    assets are all outside it (one that makes only charts). Or, for one
+    got from its repository, the commit its entry names where the lockfile
+    has no record of it at all: such a one declares nothing a lockfile
+    holds. A repository's entry with records and no bytes is one whose
+    data is not built yet, and is looked at afresh, as it always was.
+    """
+    return (
+        any(isinstance(record, dict) and record.get("content_hash") for record in records.values())
+        or names_a_snapshot(entry)
+        or (_at_a_commit(entry) and not records)
+    )
+
+
+def written_again_said(shown: str, left_out: dict) -> str:
+    """What to say, once, when a lockfile of an earlier version is written again in this one."""
+    gone = left_out_said(left_out)
+    one = sum(left_out.values()) == 1
+    without = (
+        f" without its {gone}: {'it is' if one else 'they are'} read from the snapshot the lockfile names, "
+        f"and not pinned."
+        if gone else "."
+    )
+    return f"{shown} was in an earlier form, which pinned every asset. It is written again{without}"
 
 
 def left_out_said(left_out: dict) -> str:
@@ -1207,7 +1246,7 @@ def _sync_now(
 
                 host = get_default_host()
             was_location = (was or {}).get("location", {})
-            has_bytes = any(record.get("content_hash") for record in had.values()) or names_a_snapshot(was)
+            has_bytes = holds_a_pin(was, had)
             from_repository = (
                 has_bytes and was_location.get("kind") == "git" and was_location.get("pipeline") == entry["_store"]
             )
@@ -1248,7 +1287,7 @@ def _sync_now(
 
         if rev_failure is not None:
             # What `rev` means could not be asked, or what it means is not to be taken
-            pinned_now = any(record.get("content_hash") for record in had.values()) or names_a_snapshot(was)
+            pinned_now = holds_a_pin(was, had)
             was_location = (was or {}).get("location", {})
             recorded = was_location.get("pipeline") == entry.get("_store") and (
                 was_location.get("commit") or was_location.get("first_commit")
@@ -1561,6 +1600,9 @@ class FrozenReport:
             all have, and that a snapshot of yours of the pinned commit
             stands in for, each with how it meets every pin
             (:class:`chartbook.standins.Found`), by key.
+        by_entry: How many dependencies are pinned by their entry alone,
+            none of their assets being in the lockfile, with a snapshot of
+            the commit it names in the store.
     """
 
     lockfile: Path
@@ -1571,6 +1613,7 @@ class FrozenReport:
     unrooted: str = ""
     earlier: str = ""
     left_out: dict = field(default_factory=dict)
+    by_entry: int = 0
     stood_in: dict = field(default_factory=dict)
 
     @property
@@ -1776,6 +1819,26 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
             report.problems.append(
                 FrozenProblem(key, None, "has nothing pinned. Run `chartbook pin`, and see what it says.", "nothing_pinned")
             )
+        elif not assets and names_a_snapshot(entry):
+            # Its entry is the whole of its pin: what is read of it is read
+            # from a snapshot of that commit, so the store must have one
+            commit = entry["location"]["commit"]
+            pipeline = entry.get("pinned_from") or entry["location"].get("pipeline")
+            if any(
+                taken.commit == commit and (not isinstance(pipeline, str) or taken.pipeline == pipeline)
+                for taken in snapshots_in_store()
+            ):
+                report.by_entry += 1
+            else:
+                report.problems.append(
+                    FrozenProblem(
+                        key, None,
+                        f"is pinned to its snapshot at {commit[:7]}, with none of its assets in the lockfile, "
+                        f"and the store at {store} has no snapshot of it at that commit to read them from. "
+                        f"{NOT_SYNCED_YET}. Otherwise build that commit yourself (`chartbook run --snapshot` "
+                        f"there), or `chartbook update {key}` moves to a snapshot the store has.",
+                    )
+                )
         # Pinned bytes the store does not have: a snapshot of yours of that
         # commit may hold the same rows, and stand in for the one pinned
         stood = your_build(entry, assets, store, snapshots_in_store)
@@ -2563,9 +2626,13 @@ def _sync_from_snapshots(
         record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("trained_on", "keep")}
         asset_id = record["id"]
         if not in_lockfile(record):
-            # Drawn anew by every build: read from this snapshot, and not pinned
+            # Not in the lockfile: read from this snapshot, and not pinned.
+            # One that was not built is said so, as any asset is
             unlocked.add(asset_id)
-            report.events.append(PinEvent("unlocked", key, asset_id, detail=(record.get("ref") or {}).get("kind", "")))
+            if record.get("content_hash"):
+                report.events.append(PinEvent("unlocked", key, asset_id, detail=(record.get("ref") or {}).get("kind", "")))
+            else:
+                report.events.append(PinEvent("not_built", key, asset_id, detail=_where(record)))
             continue
         before = had.get(asset_id)
         old = (before or {}).get("content_hash")
@@ -2590,6 +2657,17 @@ def _sync_from_snapshots(
         old = had[asset_id].get("content_hash")
         if old:
             report.events.append(PinEvent("dropped", key, asset_id, old=old))
+    # And what the snapshot it was pinned to had, outside the lockfile, that
+    # this one does not: a chart its owner no longer declares
+    if locked_commit and locked_made and not newest.same_moment(locked_commit, locked_made):
+        try:
+            earlier = next((taken for taken in (found() if found is not None else []) if taken.same_moment(locked_commit, locked_made)), None)
+        except (OSError, StoreError, snapshot.SnapshotError):
+            earlier = None
+        for name in sorted(set(earlier.assets) - set(newest.assets)) if earlier is not None else ():
+            gone = snapshot.renamed(earlier.assets[name], key)
+            if not in_lockfile(gone) and gone.get("content_hash") and gone["id"] not in had:
+                report.events.append(PinEvent("dropped", key, gone["id"], old=gone["content_hash"]))
 
     # The labels the owner's manifest gave when the snapshot was made, each
     # pinned to the version it names
@@ -2688,8 +2766,8 @@ def _sync_dependency(
     for ref, declared_path, absolute in declared:
         qualified = ref.in_pipeline(key)
         if ref.kind not in LOCKED_KINDS and str(ref) not in marked:
-            # Drawn anew by every build: not pinned
-            _hold_unlocked(qualified, key, declared_path, absolute, store, report, within)
+            # Not in the lockfile: not pinned, and read from the clone
+            _unlocked_in_a_clone(qualified, key, declared_path, absolute, report, within)
             continue
         records[str(qualified)] = _pin_asset(
             qualified,
@@ -2735,9 +2813,7 @@ def _sync_dependency(
         old = had[asset_id].get("content_hash")
         if not old:
             continue  # it was never pinned; there is nothing to let go of
-        if not in_lockfile(had[asset_id]) or any(
-            event.status == "unlocked" and event.asset == asset_id for event in report.events
-        ):
+        if any(event.asset == asset_id for event in report.events):
             continue  # its owner no longer marks it `lock = true`: said already, as not pinned
         if had[asset_id].get("location", {}).get("kind") in ("table", "query"):
             # A table or query has no file in the checkout to take: its
@@ -2752,31 +2828,41 @@ def _sync_dependency(
     return records
 
 
-def _hold_unlocked(
-    ref: AssetRef, key: str, declared_path: str, absolute: Path, store: Store, report: PinReport, within: Optional[Path]
+def _unlocked_in_a_clone(
+    ref: AssetRef, key: str, declared_path: str, absolute: Path, report: PinReport, within: Optional[Path]
 ) -> None:
-    """See to an asset of a ``git`` dependency that is not in the lockfile (:func:`in_lockfile`): not pinned, and kept where a read finds it.
+    """Say what a pin makes of an asset of a ``git`` dependency that is not in the lockfile (:func:`in_lockfile`).
 
-    A read of such an asset goes through a snapshot of the pipeline at the
-    pinned commit (:func:`chartbook.resolve.resolve`), and a repository has
-    no snapshot until something makes one. So what the checkout has of it
-    is put in the store with what the pin puts there, in the pin's own
-    snapshot (:meth:`_PutLater.put_held`), and no record of it is in the
-    lockfile. One that is not built, or that reaches outside the
-    repository, is passed over: nothing is pinned of it to be wrong.
+    It is not pinned, and nothing of it goes in the store: it is read from
+    ChartBook's own copy of the repository at the pinned commit
+    (:func:`chartbook.resolve.resolve`). One that reaches outside the
+    repository, or is named like a pattern, is a problem still, since no
+    read would take it; and one the repository does not have is said to be
+    not built, as any asset is.
     """
-    report.events.append(PinEvent("unlocked", key, str(ref), detail=ref.kind))
-    if not isinstance(store, _PutLater) or not store.holds:
-        return
-    if within is not None and hashing.escapes(absolute, within) is not None:
-        return
-    if hashing.glob_named(declared_path, absolute) is not None:
-        return
-    found = hashing.find_files(absolute)
-    if found is None or not found.files:
-        return
-    stored = store.put(absolute, links=PIN_LINKS, base=within, key=key)
-    store.unlocked.setdefault(key, []).append(_asset_record(ref, key, declared_path, stored, found.single))
+    asset_id = str(ref)
+    reached = hashing.escapes(absolute, within) if within is not None else None
+    named = hashing.glob_named(declared_path, absolute)
+    if reached is not None:
+        report.events.append(
+            PinEvent(
+                "outside", key, asset_id,
+                detail=(
+                    f"its path {declared_path!r} reaches {reached}, which is outside the repository. "
+                    f"Only a repository's own files are read"
+                ),
+            )
+        )
+    elif named is not None:
+        report.events.append(
+            PinEvent("glob_name", key, asset_id, detail=f"its path {hashing.glob_named_said(declared_path, named)}")
+        )
+    else:
+        found = hashing.find_files(absolute)
+        if found is None or not found.files:
+            report.events.append(PinEvent("not_built", key, asset_id, detail=declared_path))
+        else:
+            report.events.append(PinEvent("unlocked", key, asset_id, detail=ref.kind))
 
 
 def _report_kept(record: dict, key: str, store: Store, report: PinReport) -> None:
@@ -3028,10 +3114,6 @@ class _PutLater:
         self._store = store
         self._hold = hold
         self.held: dict = {}
-        #: The records of what was held of each dependency that is not in
-        #: the lockfile (:func:`_hold_unlocked`), by its key: put with the
-        #: rest, and recorded in the pin's own snapshot alone
-        self.unlocked: dict = {}
         #: Puts of bytes the store had under another name only, by stand-in:
         #: the asset and its record, said restored once put if that makes it whole
         self.recheck: dict = {}
@@ -3046,11 +3128,6 @@ class _PutLater:
 
     def __repr__(self) -> str:
         return repr(self._store)
-
-    @property
-    def holds(self) -> bool:
-        """Whether what is put is held to be put later; False when a pin is only worked out."""
-        return self._hold
 
     def put(
         self, path: Union[str, Path], links: Iterable[str] = STORE_LINKS, base: Optional[Path] = None, key: str = ""
@@ -3071,7 +3148,6 @@ class _PutLater:
             return
         held, self.held = self.held, {}
         self.recheck = {}
-        self.unlocked = {}
         report.events[:] = [
             dataclasses.replace(
                 event, old=None if event.old in held else event.old, new=None if event.new in held else event.new
@@ -3090,7 +3166,6 @@ class _PutLater:
         for key, held in by_key.items():
             stored.update(self._put_from_clone(key, held, after))
         self.held = {}
-        self.unlocked = {}
         rechecked, self.recheck = self.recheck, {}
         restored = {
             asset_id for stand_in, (asset_id, record) in rechecked.items()
@@ -3186,9 +3261,7 @@ class _PutLater:
                         return put
                 return puts[0] if puts else None
 
-            # What the lockfile holds of it, and what was put of it that the
-            # lockfile does not hold, which a read finds in this snapshot
-            for record in [*after.assets.values(), *self.unlocked.get(key, ())]:
+            for record in after.assets.values():
                 put = stored.get(record.get("content_hash"))
                 if put is None and record.get("pipeline") == key:
                     put = put_of(record)
@@ -3290,7 +3363,7 @@ def _has_a_pin(listed: object, records: dict, declared: dict) -> bool:
         return (
             bool(location.get("commit"))
             and location.get("pipeline") == declared["_store"]
-            and any(isinstance(record, dict) and record.get("content_hash") for record in records.values())
+            and holds_a_pin(listed, records)
         )
     return any(
         isinstance(record, dict) and record.get("content_hash") and not (record.get("ref") or {}).get("rev")

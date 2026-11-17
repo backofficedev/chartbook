@@ -65,11 +65,19 @@ class Met:
 
 @dataclass
 class Unmet:
-    """A pinned asset a snapshot of yours does not meet, and why, in one line."""
+    """A pinned asset a snapshot of yours does not meet, and why, in one line.
+
+    Attributes:
+        index_column: Whether its table has the column pandas makes of an
+            index with no name, which may be the whole difference.
+        lost: Whether the snapshot names the very file the pin does, which
+            the store does not have: it says nothing the pin does not.
+    """
 
     asset: str
     why: str
     index_column: bool = False
+    lost: bool = False
 
 
 @dataclass
@@ -95,10 +103,13 @@ class Found:
 
 
 def candidates(entry: Mapping, snapshots: list) -> list:
-    """Your snapshots that may stand in for a dependency's pin: of the pipeline it was pinned from, at the commit it was pinned at, newest first.
+    """Your snapshots that may stand in for a dependency's pin: of the pipeline it was pinned from, by its own ID, at the commit it was pinned at, newest first, and none dated after now.
 
     A dependency pinned from its repository (``git``) has none: its bytes
     are that commit's, the same for everyone.
+
+    :param snapshots: The store's snapshots that owners made
+        (:func:`chartbook.snapshot.readable_snapshots`).
     """
     from chartbook import snapshot
 
@@ -107,9 +118,11 @@ def candidates(entry: Mapping, snapshots: list) -> list:
     if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not commit:
         return []
     pipeline = entry.get("pinned_from") or location.get("pipeline")
+    if not isinstance(pipeline, str) or not pipeline:
+        return []  # a lockfile so old that it does not say which pipeline: another's build of that commit is not yours
     found = [
         taken for taken in snapshots
-        if taken.commit == commit and (not isinstance(pipeline, str) or taken.pipeline == pipeline)
+        if taken.commit == commit and taken.pipeline == pipeline and not snapshot.made_in_the_future(taken)
     ]
     return sorted(found, key=lambda taken: (taken.made_at, snapshot._count(taken.path)), reverse=True)
 
@@ -127,6 +140,10 @@ def find(entry: Mapping, records: Mapping, store, snapshots: list) -> Found:
         found = compare(taken, records, store)
         if found.stands_in:
             return found
+        if all(unmet.lost for unmet in found.unmet):
+            # The pinned snapshot itself, or one of the same files: the store has lost
+            # them, and that is what is said, not that a build of yours differs
+            continue
         best = best or found
     return best or Found()
 
@@ -152,10 +169,11 @@ def compare(taken, records: Mapping, store) -> Found:
         elif theirs is None or not theirs.get("content_hash"):
             what = "has no such asset" if theirs is None else "did not build it"
             found.unmet.append(Unmet(asset_id, f"your build {what}"))
+        elif theirs["content_hash"] == pinned:
+            # The same file, which the store does not have, or not whole (seen above)
+            found.unmet.append(Unmet(asset_id, "it is the pinned file, which the store does not have", lost=True))
         elif not store.has(theirs["content_hash"]) or snapshot.not_whole(store, theirs):
             found.unmet.append(Unmet(asset_id, "the store does not have all of your build's file yet"))
-        elif theirs["content_hash"] == pinned:
-            found.met[asset_id] = Met(asset_id, "file", theirs)
         elif kind != "dataframe":
             found.unmet.append(Unmet(asset_id, f"a {kind} is met by the same file only, and your build's is another"))
         elif isinstance(record.get("not_hashed"), str):
@@ -164,7 +182,11 @@ def compare(taken, records: Mapping, store) -> Found:
             )
         elif not isinstance(record.get("rows"), dict):
             found.unmet.append(
-                Unmet(asset_id, "only the same file meets it, since the pin records no rows (it was made before rows were hashed), and your build's file is another")
+                Unmet(
+                    asset_id,
+                    "only the same file meets it, since the pin records no rows (it was made before rows were "
+                    "hashed, or its file is no table ChartBook reads), and your build's file is another",
+                )
             )
         else:
             try:

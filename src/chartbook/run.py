@@ -533,10 +533,7 @@ def plan(
             listed = {entry.get("id"): entry for entry in (locked.dependencies if locked else [])}
             own = derive_pipeline_id(raw.get("project") if isinstance(raw.get("project"), dict) else {}, directory)
             def as_pin_will(key: str, entry: dict) -> dict:
-                pinned = bool(locked) and (
-                    any(r.get("content_hash") for r in locked.assets_of(key).values())
-                    or lock.names_a_snapshot(listed.get(key))
-                )
+                pinned = bool(locked) and lock.holds_a_pin(listed.get(key), locked.assets_of(key))
                 if entry.get("_store") and entry.get("rev") and entry["_store"] not in asked_by_id():
                     # What `rev` means is asked of its repository, as pin asks it
                     if caches[0] is None:

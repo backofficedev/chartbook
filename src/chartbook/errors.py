@@ -314,6 +314,13 @@ class AssetNotPinnedError(LookupError):
     working directory. So there has to be a pin, and its bytes have to be
     in the store. The message says which is missing and what to run.
 
+    An asset a lockfile does not hold (a chart, a notebook; a note or a
+    file not marked ``lock = true``) is read from the snapshot the
+    lockfile's entry names, or from your own snapshot of that pipeline at
+    that commit, or, for a dependency that is a git repository, from
+    ChartBook's own copy of the repository at the pinned commit; and this
+    is raised when none of them has it.
+
     Attributes:
         asset: The asset's ID, as the lockfile would have it.
         reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,
@@ -323,8 +330,11 @@ class AssetNotPinnedError(LookupError):
             would close a cycle of dependencies, or lead into one, so it
             was not written), ``"working"`` (a batch
             run does not read a working folder), ``"in_source"`` (a table
-            the pinned snapshot did not write out), or ``"no_pipeline"`` (a
-            batch run outside any pipeline, where nothing records a read).
+            the pinned snapshot did not write out), ``"no_pipeline"`` (a
+            batch run outside any pipeline, where nothing records a read),
+            ``"not_fetched"`` (a git dependency's pinned commit is not in
+            ChartBook's copy of its repository on this machine), or
+            ``"outside"`` (the asset's file is outside its repository).
     """
 
     def __init__(self, asset: str, reason: str, message: str):

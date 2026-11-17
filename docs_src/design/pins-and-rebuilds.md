@@ -134,18 +134,31 @@ What was left open here, and how it is built. *Proposed by Claude, 2026-11-16:*
 - **`chartbook/lock/v2` begins with this step**, and the dataframe's fields below are added to it
   by step 4, so a lockfile is written again once and not twice.
 - **An old lockfile still works, and is not an error.** It is read as the new form would have
-  written it: its records of charts, notebooks, notes and files are passed over. `pin --check`
+  written it: its records of charts, notebooks, notes and files are no pins. `pin --check`
   passes on it and says so, and the first command that writes the lockfile (`pin`, `update`,
-  `run`) writes it again in the new form and says so, once. The pin does not move. This is what
-  lets a student's check pass on the class report's lockfile as it is, before the report is
-  pinned again (step 8).
+  `run`, a first read that pins) writes it again in the new form and says so, once. The pin does
+  not move. This is what lets a student's check pass on the class report's lockfile as it is,
+  before the report is pinned again (step 8). While the file is still in the old form, what it
+  names of a chart is not let go: a read falls back on those bytes where the store has no
+  snapshot to read the chart from, and `store gc` keeps them. One case does move: a dependency
+  that makes only charts, in a lockfile so old that its entry names no snapshot, has nothing
+  left that pins it, and the next `pin` pins it as a first pin would, and says so.
 - **A dependency none of whose assets is in the lockfile** (one that makes only charts) is pinned
-  by its entry, which names its snapshot by commit and time. `pin` does not move it, and `store
-  gc` keeps that snapshot.
-- **A dependency pinned from its repository** (`git`) has no snapshot of its owner's. What the
-  lockfile does not hold of it is kept with what the pin takes from the clone, and read from
-  there. `store gc` clears it when nothing else of that pin is pinned, and `chartbook pin` puts it
-  back.
+  by its entry, which names its snapshot by commit and time. `pin` does not move it, `store gc`
+  keeps that snapshot, and the check passes when the store has a snapshot of that commit to read
+  from, and says why not when it has none.
+- **Which snapshot is "your own build".** Of the pipeline the pin came from, by its own ID, and
+  never another pipeline's of the same commit; made by its owner's `chartbook snapshot`; not
+  dated after now; the newest such. `store gc` keeps it for as long as a lockfile names a
+  snapshot of its commit that the store does not have.
+- **A dependency pinned from its repository** (`git`) has no snapshot. What the lockfile does not
+  hold of it is read from ChartBook's own copy of the repository at the pinned commit, where
+  `chartbook pin` fetched it and `chartbook run` built it, and nothing of it goes in the store.
+  On a machine that has not fetched that commit the read stops and says `chartbook pin` fetches
+  it. (As first built, a pin copied such an asset into the store each time; a review found that
+  it then failed in a store one may only read, and that `store gc` could clear the copy.)
+- **What `pin` and `update` say of what is not in the lockfile:** how many, by kind; one that is
+  not built, as for any asset; one its owner no longer declares, on an update.
 
 What you see, as built. Each block is from a run on 2026-11-16 against a copy of the class
 report and of its six upstreams' snapshots, in a scratch store; long lines are wrapped here. A

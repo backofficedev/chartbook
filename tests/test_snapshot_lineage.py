@@ -193,9 +193,24 @@ class TestWhatTheReviewFound:
         for record in document["records"]:
             for dependency in record.get("dependencies") or []:
                 dependency["snapshot"] = "2001-01-01T00:00:00Z"
+                dependency["location"]["commit"] = "0" * 40
         path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="has no such snapshot"):
             snapshot.make(forecast)
+
+    def test_a_snapshot_named_by_another_time_that_one_of_its_commit_stands_in_for(self, two):
+        """A lockfile brought from another store names a snapshot this store does not have: one of that commit that holds every pin stands in."""
+        import json
+
+        rates, forecast = two
+        lock.pin(forecast)
+        path = forecast / lock.LOCK_FILE
+        document = json.loads(path.read_text(encoding="utf-8"))
+        for record in document["records"]:
+            for dependency in record.get("dependencies") or []:
+                dependency["snapshot"] = "2001-01-01T00:00:00Z"
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        assert snapshot.lineage_gaps(forecast) == []
 
 
 def _lockfile(forecast: Path) -> tuple[Path, dict]:
