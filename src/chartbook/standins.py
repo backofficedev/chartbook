@@ -143,7 +143,7 @@ def find(entry: Mapping, records: Mapping, store, snapshots: list) -> Found:
 
 def compare(taken, records: Mapping, store) -> Found:
     """One snapshot of yours against a dependency's pins: how it meets each, or why it does not."""
-    from chartbook import snapshot
+    from chartbook import lock, snapshot
 
     found = Found(snapshot=taken)
     for asset_id in sorted(records):
@@ -151,6 +151,8 @@ def compare(taken, records: Mapping, store) -> Found:
         pinned = record.get("content_hash")
         if not pinned:
             continue  # not built when it was pinned: nothing to meet, and the check says so itself
+        if not lock.in_lockfile(record) and not store.has(pinned):
+            continue  # kept of an earlier lockfile, for a store that had its bytes: no pin here (lock.still_pinned)
         labelled = bool((record.get("ref") or {}).get("rev"))
         theirs = None if labelled else taken.assets.get(snapshot.local_name(record))
         if store.has(pinned) and not snapshot.not_whole(store, record):
