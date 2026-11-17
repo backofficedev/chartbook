@@ -285,6 +285,9 @@ def reads_here(store) -> bool:
     """Whether a store's files are on this machine's disks, so that reading a table of it fetches nothing: a folder store, or several of them."""
     from chartbook.store import FolderStore
 
+    # What a pin wraps a store in, to hold its writes back, reads as the store itself
+    while not isinstance(store, FolderStore) and getattr(store, "_store", None) is not None:
+        store = store._store
     entries = getattr(store, "entries", None)
     if entries is not None:
         return all(isinstance(getattr(entry, "store", None), FolderStore) for entry in entries)

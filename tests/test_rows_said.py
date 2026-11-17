@@ -280,11 +280,15 @@ class TestNothingSaidStopsACommand:
         for remembered in (Path(store.root).parent / "cache").rglob("*.json"):
             remembered.unlink()  # nothing remembered of it, as on another machine
 
+        asked = []
+
         def fails(*arguments, **options):
+            asked.append(1)
             raise error
 
         monkeypatch.setattr(rowhash, "hash_in", fails)
         found = lock.update(report, store=store)
+        assert asked == [1]  # the table was to be hashed for the line, and that is what failed
         assert not found.problems and found.rows_said == {}
         assert lock.read_lock(report).assets["acme/rates:treasury"]["row_count"] == 96
 
@@ -297,25 +301,33 @@ class TestNothingSaidStopsACommand:
         for remembered in (Path(store.root).parent / "cache").rglob("*.json"):
             remembered.unlink()
 
+        asked = []
+
         def unreachable(*arguments, **options):
+            asked.append(1)
             raise StoreUnreachableError("The store cannot be reached to download _data/treasury.parquet")
 
         monkeypatch.setattr(resolve_module, "_held", unreachable)
         found = lock.update(report, store=store)
+        assert asked == [1]
         assert not found.problems and found.rows_said == {}
         assert lock.read_lock(report).assets["acme/rates:treasury"]["row_count"] == 96
 
     def test_no_table_is_fetched_from_a_store_that_is_not_on_this_machine(self, rates, report, store, monkeypatch):
         """What the two records say between them is still said: a table with no date column has one hash."""
         assert standins.reads_here(store) and not standins.reads_here(object())
+        assert standins.reads_here(lock._PutLater(store))  # what a pin wraps a store in reads as the store
         more = pl.concat([CODES, pl.DataFrame({"code": ["c"], "name": ["Gamma"]})])
         _again(rates, store, _yields(48), codes=more, pandas=True)
         standins._compared.clear()
         for remembered in (Path(store.root).parent / "cache").rglob("*.json"):
             remembered.unlink()
+        read = []
+        real = rowhash.hash_in
+        monkeypatch.setattr(rowhash, "hash_in", lambda *arguments, **options: read.append(1) or real(*arguments, **options))
         monkeypatch.setattr(standins, "reads_here", lambda store: False)
-        monkeypatch.setattr(rowhash, "hash_in", lambda *arguments, **options: pytest.fail("a table was read"))
         found = lock.update(report, store=store)
+        assert read == []
         assert found.rows_said == {"acme/rates:codes": "its rows changed (2 rows before, 3 now); it has no date column to tell new rows by"}
         assert not found.problems
 
