@@ -174,6 +174,83 @@ exactly one implementation ({ref}`not-doing`):
   hidden ones included". No release carried the earlier rule, so the algorithm prefix is
   unchanged. `chartbook.hashing.is_ignored`.)*
 
+(the-rows-hash)=
+**The rows hash.** A table has a second hash: of its rows, and not of its file's bytes. The same
+rows give one rows hash whatever wrote them, in whatever order, in whatever widths; any value
+that differs gives another. It is what lets a pin be met by a rebuild ({doc}`pins-and-rebuilds`).
+*(Decided by the maintainer 2026-11-15 and 16 that there is one, that it does not see the order
+of rows or of columns, and that the form is ChartBook's own, since polars' `hash_rows` is not
+stable from one version of polars to the next. The form below is as built on 2026-11-16,
+`chartbook.rowhash`; the parts marked proposed are Claude's, on what the design had left open.
+Once a release carries it, it must not change without a new name in its first line and a new
+prefix on the hash.)*
+
+It is written as a content hash is, `"sha256:<hex>"`: the SHA-256 of the bytes below. The field
+it is in says that it is of rows.
+
+1. **Every column is put in the one type of its kind.** The kind is fed with the column, so two
+   columns of different kinds never give one hash.
+
+   | Kind | What is of it | In its one type |
+   |---|---|---|
+   | `int` | A whole number of any width, signed or not, whose numbers all fit 64 signed bits | 64 bits, signed |
+   | `uint64` | An unsigned 64-bit column with a number past 2^63 - 1 | 64 bits, unsigned *(proposed)* |
+   | `float` | A float of any width | 64 bits, IEEE 754; `-0.0` is `0.0`, and every NaN is the one NaN `0x7ff8000000000000` |
+   | `bool` | A boolean | A bit |
+   | `text` | Text, and a category or an enum | Its UTF-8 bytes |
+   | `binary` | Bytes | As they are *(proposed)* |
+   | `timestamp` | A date, and a date with a time, in any unit, with a time zone or none | Whole microseconds from 1970-01-01 in UTC, rounded down, and the nanoseconds left over, 0 to 999. A date is its midnight; a time with no zone is taken as UTC *(the nanoseconds, and a date as a timestamp, proposed)* |
+   | `duration` | A length of time, in any unit | As a timestamp: microseconds, and the nanoseconds left over *(proposed)* |
+   | `time` | A time of day | Nanoseconds from midnight, 64 bits *(proposed)* |
+   | `decimal` | A decimal of any precision and scale | Its value as text, written one way: plain digits with no exponent, a `-` before a negative, at least one digit before a point (`0.25`); then, where it has a point, the zeros at its end taken off, and the point too if nothing is left after it (`1.50` is `1.5`, `100.00` is `100`, and `100` stays `100`); and `0`, never `-0` *(proposed)* |
+   | `null` | A column of any kind above with no value in any row; so every column of a table with no rows | Nothing *(proposed: a writer gives a column of nothing whatever type it likes)* |
+
+   A column of lists or of structs is of no kind, with values in it or none, and a table with
+   one has no rows hash yet *(proposed)*. Nor has one with a whole number past 64 bits in a
+   column wider than 64, or a date past what 64 bits of microseconds hold (the year 294247). A
+   whole number is not a float, and a decimal is neither: `1`, `1.0` and a decimal `1` are three
+   values. An empty value is not NaN: a float column where pandas wrote NaN as an empty value
+   holds another value than one that kept its NaN.
+
+   `uint64` and `null` are told from the rows that are hashed, not from the column's type: the
+   rows of a period, where a table is hashed a period at a time. A column that is `int` in one
+   period can be `null` in the next.
+
+2. **The rows are sorted on every column:** the table's date column first, if it has one, and
+   the rest in the order of their names. Within a column, least first: an empty value after
+   every value, NaN after every number, false before true, text and bytes by their bytes, a
+   decimal by its value. Two rows alike in every column stay two rows. Since every column is
+   sorted on, the order the rows came in does not matter. *The date column is part of the
+   form:* sorted on another column first, rows may be fed in another order, and give another
+   hash. Its name is not fed, and a date column the table does not have is as none.
+
+3. **The bytes fed to SHA-256.** Every number is little-endian.
+
+   - The form's name and a newline: `chartbook/rows/v1\n`.
+   - The number of rows, then the number of columns, 8 bytes each.
+   - Then each column, in the order of the columns' names as UTF-8 bytes:
+     - the length of its name in bytes, as 8 bytes, and the name;
+     - the length of its kind, as 1 byte, and the kind as in the table above;
+     - one byte, `0` if no value is empty; else `1`, then a bit for each row, set where its
+       value is empty, the first row in the high bit of the first byte, the last byte filled
+       out with zeros;
+     - its values, in the order of the sorted rows, an empty one as zero or as no bytes:
+       - `int`, `uint64`, `time`: 8 bytes each;
+       - `float`: 8 bytes each;
+       - `bool`: a bit each, packed as the empty bits are;
+       - `text`, `binary`, `decimal`: the length of each value in bytes, 8 bytes each, and
+         then all their bytes, one after another;
+       - `timestamp`, `duration`: the whole microseconds of each, 8 bytes each; then one byte,
+         `0` if none has nanoseconds left over, else `1` and those nanoseconds, 8 bytes each;
+       - `null`: nothing.
+
+So a timestamp in nanoseconds with nothing finer than a microsecond in it gives the hash the
+same timestamps in microseconds give, and one with something finer does not: every value is
+seen. `tests/test_rowhash.py` writes this form a second time, in plain Python, for every kind,
+and holds the module to it; and holds two tables' hashes, with every kind between them, to
+values written down there. They are the same on polars 1.33.1 with pyarrow 16.1.0, numpy 1.26.4
+and Python 3.10, the oldest of each ChartBook takes, and on polars 2.1.0 with Python 3.13.
+
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
 ```json

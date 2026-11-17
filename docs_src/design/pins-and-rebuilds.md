@@ -7,7 +7,7 @@ upstream: what the lockfile holds for each kind of asset, how a dataframe is pin
 well as its bytes, and what each command and each read then does.
 
 Status: **being built, step by step, in "The order of work" at the end; no release is named.**
-Built so far: the lockfile by kind (step 2). Each part says whether the maintainer decided it, and
+Built so far: the lockfile by kind (step 2), and the rows hash (step 3). Each part says whether the maintainer decided it, and
 when, or whether it is a proposal. The items marked *(Proposed.)* were decided as proposed on
 2026-11-16. A choice made while building, on what the page had left open, is marked *Proposed by
 Claude*, with its date, until the maintainer says otherwise. The numbers come from a prototype run
@@ -275,10 +275,13 @@ them from the snapshot it is made from. *(Proposed.)*
 
 ## The rows hash
 
-A hash of a table's rows, and not of its file. Proposed, from the prototype:
+A hash of a table's rows, and not of its file. *Proposed, from the prototype; decided as proposed
+2026-11-16. Built (step 3), `chartbook.rowhash`; the form is written out, byte by byte, in
+{doc}`index-schema`, "The rows hash".*
 
-- Every column is put in one type for its kind: whole numbers as 64-bit, decimals as 64-bit floats,
-  timestamps as microseconds in UTC, categories as text. `-0.0` is `0.0`, and there is one NaN.
+- Every column is put in one type for its kind: whole numbers as 64-bit, numbers with a fraction
+  as 64-bit floats, timestamps as microseconds in UTC, categories as text. `-0.0` is `0.0`, and
+  there is one NaN.
 - The rows are sorted on every column, the date first. The columns are taken in name order.
 - The values are fed to SHA-256 as plain little-endian numbers and UTF-8 text with its lengths,
   with a bit for each empty value.
@@ -294,11 +297,46 @@ Hive-partitioned folder and a glob of files, read by ChartBook's own reader, gav
 The form has to be ChartBook's own. polars has `hash_rows`, and its documentation says the result
 is not stable from one version of polars to the next; the author's machine and the checker's
 will not have the same version. Like the content hash, it is computed in one place
-(`chartbook.hashing`), and its rules become part of the index specification.
+(`chartbook.rowhash`, beside `chartbook.hashing`), and its rules are part of the index
+specification. As built, one table gives one hash on polars 1.33.1, the oldest ChartBook takes,
+and on 2.1.0; a test holds that hash to a value written down, and writes the form a second time
+in plain Python to hold the module to the specification.
 
-Not settled: a timestamp finer than a microsecond, a decimal type, and a list or a struct in a
-column, none of which the prototype hashes. A date column that is text (a CSV's) is parsed as the
-index already parses it for a dataframe's date range.
+What was not settled, and how it is built. *Proposed by Claude, 2026-11-16:*
+
+- **A timestamp finer than a microsecond** is its whole microseconds, and the nanoseconds left
+  over where a column has any. So nanosecond timestamps with nothing finer in them (what pandas
+  writes for a date) give the hash microsecond ones give, and no value goes unseen. The prototype
+  cut the nanoseconds off.
+- **A date** is the timestamp of its midnight, so a column polars writes as dates and pandas as
+  timestamps is one column. **A time in a zone** is its instant in UTC.
+- **A decimal type** is its value as text, written one way (`1.5` for `1.50`), and is not a
+  float: DuckDB gives decimals, and a float would lose their last digits.
+- **A list or a struct in a column:** no rows hash yet. A dataframe with one is pinned by its
+  bytes alone, as today (`chartbook snapshot` is to say so, from step 4). Hashing what is inside
+  one needs an order for values that have none in polars, and is left for later.
+- **A column with no value in it** has no kind, whatever type its writer gave it: pandas writes
+  such a column as "null" and polars as the type it was.
+- **A whole number past 64 signed bits** (an unsigned column that uses its last bit) is a kind of
+  its own, so that it is never taken for the negative number with the same bytes.
+- **The date column is part of the form,** as the page had it ("the date first"): sorted on
+  another column first, the rows may be fed in another order. The record says which it was
+  (`date_col`).
+- **An empty value is not NaN.** pandas writes a float's NaN as an empty value, and a whole
+  number column with an empty value in it as floats. Those files hold other values than a file
+  polars wrote of the same frame, and hash otherwise: "whatever wrote them" is of the same
+  values. It matters only where the code that writes a table changes from one library to the
+  other; two people running the same code write the same values. Whether NaN and empty should be
+  one in a float column is the maintainer's to say.
+- **A column named like a pattern.** polars reads a name that begins `^` and ends `$` as a
+  pattern, so the columns are taken by their place and never by their name. (A review found
+  such a column passed over, and two tables with one hash.)
+- **The hash is written `sha256:…`,** as the page had it. The form's name is the first thing
+  hashed (`chartbook/rows/v1`), and a change to the form takes a new name there and a new prefix,
+  as the rule for any hash has it ({doc}`overview`, "Working in the code").
+
+A date column that is text (a CSV's) is parsed as the index already parses it for a dataframe's
+date range.
 
 ## Choosing the periods
 
@@ -465,6 +503,7 @@ match. The page is to be corrected.
    it, through the snapshot the lockfile names. It ends the failure on charts and notebooks, and
    needs nothing below. **Built.**
 3. The rows hash: its form written into the index specification, and tested across writers.
+   **Built.**
 4. Periods: choosing them within the size, in a snapshot's record and in the lockfile; the test
    under a memory limit.
 5. The check: a snapshot of yours that stands in, in `pin`, `pin --check` and `run`, with the
