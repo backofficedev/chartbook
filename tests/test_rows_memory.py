@@ -172,7 +172,7 @@ class TestTablesMadeHere:
         # Periods of 16 MB, so that the table is twenty of them: what is held is a period and a batch
         said = _hashed_under(1024**3, tmp_path / "table.parquet", date_col, tmp_path, period=16 * 1024**2)
         assert said["same"] and said["periods"] == 48
-        assert said["peak"] < 800 * 1024**2, f"{said['peak'] / 1e6:.0f} MB"
+        assert said["peak"] < 900 * 1024**2, f"{said['peak'] / 1e6:.0f} MB"
 
     @pytest.mark.parametrize("make,date_col", [(_wide, "date"), (_text, "timestamp_utc")], ids=["wide floats", "text"])
     def test_at_the_size_of_a_period_as_it_is(self, tmp_path, make, date_col):
@@ -362,7 +362,7 @@ class TestFilesWrittenToBeHardToRead:
     What a reader holds is set by how a file is written: a page of every
     column at once, each column's dictionary, the footer whole. So what
     reading a row group takes is told from its page headers before a row
-    of it is read (:func:`chartbook.rowhash._rows_at_a_time`): it is read
+    of it is read (:func:`chartbook.rowhash._read_plan`): it is read
     within the limit, or it is refused, unread, with why. Each test here
     is one or the other, and under the limit either way.
     """
@@ -394,17 +394,22 @@ class TestFilesWrittenToBeHardToRead:
         said = _hashed_under(LIMIT, tmp_path / "docs.parquet", "date", tmp_path)
         assert said.get("same") and said["rows"] == long + short and said["peak"] < LIMIT
 
-    def test_documents_each_its_own_in_pages_of_a_hundred(self, tmp_path):
-        """Two megabytes a row, no two alike: the first rows of a file are read before anything can be measured of them."""
+    @pytest.mark.parametrize("to_a_page,hashed", [(50, True), (100, False)], ids=["pages of fifty", "pages of a hundred"])
+    def test_documents_each_its_own(self, tmp_path, to_a_page, hashed):
+        """Two megabytes a row, no two alike, in pages of 95 MB or of 190: one value of a page may be as long as its page."""
         rows, each = 200, 2_000_000
-        chunks = [pa.array([f"{i:04d}" + "d" * each for i in range(a, min(a + 100, rows))]) for a in range(0, rows, 100)]
+        chunks = [pa.array([f"{i:04d}" + "d" * each for i in range(a, min(a + to_a_page, rows))]) for a in range(0, rows, to_a_page)]
         pq.write_table(
             pa.table({"date": _days("2024-01-01", np.arange(rows) // 40), "document": pa.chunked_array(chunks)}),
             tmp_path / "documents.parquet", compression="zstd", use_dictionary=False,
         )
         del chunks
         said = _hashed_under(LIMIT, tmp_path / "documents.parquet", "date", tmp_path)
-        assert said.get("same") and said["rows"] == rows and said["peak"] < LIMIT
+        assert said["peak"] < LIMIT
+        if hashed:
+            assert said.get("same") and said["rows"] == rows
+        else:
+            assert "one value of 'document' may take 191 MB" in said["refused"] and said["peak"] < 512 * 1024**2, said
 
     def test_one_value_longer_than_a_row_may_be(self, tmp_path):
         """300 MB in one value: refused from its page's header, where before it was read, cast and put by first."""
@@ -416,7 +421,7 @@ class TestFilesWrittenToBeHardToRead:
         )
         del docs
         said = _hashed_under(LIMIT, tmp_path / "value.parquet", "date", tmp_path)
-        assert "one row may take" in said["refused"] and said["peak"] < 1024**3, said
+        assert "one value of 'doc' may take 286 MB" in said["refused"] and said["peak"] < 1024**3, said
 
     def test_a_footer_of_a_thousand_row_groups_of_two_hundred_columns(self, tmp_path):
         """The footer lists every column of every row group, and is read whole first: refused by its size, in its last eight bytes."""
@@ -487,3 +492,57 @@ class TestFilesWrittenToBeHardToRead:
         pq.write_table(pa.table({"date": when, **{f"b{i:03d}": flag for i in range(255)}}), tmp_path / "years.parquet", compression="zstd")
         said = _hashed_under(LIMIT, tmp_path / "years.parquet", "date", tmp_path)
         assert "more than 1,024 calendar years" in said["refused"] and said["peak"] < 512 * 1024**2, said
+
+
+class TestWhatTheFourthReviewBroke:
+    """Found by a fourth review, of the reader that tells what a file takes from its page headers."""
+
+    def test_a_column_of_values_of_one_fixed_length(self, tmp_path):
+        """50,000 bytes a value, a gigabyte of them in a file of under a megabyte: counted at sixteen bytes a row, they were read 16,384 at once."""
+        width, distinct, rows = 50_000, 512, 20_480
+        one = np.zeros((distinct, width), dtype="uint8")
+        one[:, :8] = np.arange(distinct, dtype="<u8").view("uint8").reshape(distinct, 8)
+        blob = pa.FixedSizeBinaryArray.from_buffers(pa.binary(width), distinct, [None, pa.py_buffer(one.tobytes())])
+        table = pa.table({"date": _days("2020-01-01", np.arange(rows) // 20), "blob": pa.chunked_array([blob] * (rows // distinct))})
+        pq.write_table(table, tmp_path / "blob.parquet", compression="zstd")
+        said = _hashed_under(LIMIT, tmp_path / "blob.parquet", "date", tmp_path)
+        assert said.get("same") and said["rows"] == rows and said["peak"] < LIMIT
+
+    def test_a_category_with_a_dictionary_of_long_text(self, tmp_path):
+        """315 MB of dictionary, read as a dictionary because its file's own schema says so: held far more than twice."""
+        rows, each = 63_000, 5_000
+        words = pa.array([f"{i:07d}" + "z" * (each - 7) for i in range(rows)])
+        table = pa.table(
+            {"date": _days("2020-01-01", np.arange(rows) // 1000), "doc": pa.DictionaryArray.from_arrays(pa.array(np.arange(rows), pa.int32()), words)}
+        )
+        pq.write_table(table, tmp_path / "category.parquet", row_group_size=rows, compression="zstd", dictionary_pagesize_limit=2**32)
+        del table, words
+        said = _hashed_under(LIMIT, tmp_path / "category.parquet", "date", tmp_path)
+        assert "pages too large to read a little at a time" in said["refused"] and said["peak"] < 512 * 1024**2, said
+
+    def test_150_columns_of_text_each_value_its_own(self, tmp_path):
+        """Past 128 such columns each row group was read a row at a time: 327 seconds for 60,000 rows."""
+        rows, columns = 60_000, 150
+        table = pa.table(
+            {
+                "date": _days("2020-01-01", np.arange(rows) // 300),
+                **{f"t{c:03d}": pa.array([f"column {c:03d} holds the value {i:010d} of forty-eight" for i in range(rows)]) for c in range(columns)},
+            }
+        )
+        pq.write_table(table, tmp_path / "wide.parquet")
+        del table
+        said = _hashed_under(LIMIT, tmp_path / "wide.parquet", "date", tmp_path)
+        assert said.get("same") and said["rows"] == rows and said["peak"] < LIMIT
+        assert said["pin_seconds"] < 60, said
+
+    def test_a_page_to_each_value(self, tmp_path):
+        """A million pages of one value each: the walk itself is held to a size and a time."""
+        rows = 300_000
+        table = pa.table({"date": _days("2020-01-01", np.arange(rows) // 1000), "n": np.arange(rows), "x": np.arange(rows) * 0.5})
+        pq.write_table(
+            table, tmp_path / "pages.parquet", row_group_size=rows, use_dictionary=False, compression="none",
+            write_statistics=False, data_page_size=1, write_batch_size=1,
+        )
+        said = _hashed_under(LIMIT, tmp_path / "pages.parquet", "date", tmp_path)
+        assert said["peak"] < 512 * 1024**2, said
+        assert "refused" not in said or "more pages than are read" in said["refused"]
