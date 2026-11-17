@@ -333,8 +333,11 @@ class AssetNotPinnedError(LookupError):
             the pinned snapshot did not write out), ``"no_pipeline"`` (a
             batch run outside any pipeline, where nothing records a read),
             ``"not_fetched"`` (a git dependency's pinned commit is not in
-            ChartBook's copy of its repository on this machine), or
-            ``"outside"`` (the asset's file is outside its repository).
+            ChartBook's copy of its repository on this machine),
+            ``"outside"`` (the asset's file is outside its repository), or
+            ``"differs"`` (the store does not have the pinned bytes, and a
+            build of yours of the pinned commit does not hold the same
+            rows: :mod:`chartbook.standins`).
     """
 
     def __init__(self, asset: str, reason: str, message: str):

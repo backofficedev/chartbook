@@ -263,12 +263,23 @@ class TestFrozen:
         _train(rates)
         pin_from_snapshots(downstream, store)
         store.delete(HELLO)
-        (problem,) = lock.verify(downstream, store).problems
-        # Pinned from a snapshot: one the store has, or that snapshot made again
+        checked = lock.verify(downstream, store)
+        (problem,) = checked.problems
+        # Pinned from a snapshot: one the store has, or a build of that commit made again
+        commit = lock.read_lock(downstream).dependencies[0]["location"]["commit"][:7]
+        assert problem.kind == "not_in_store"
         assert (
-            "`chartbook update acme/rates` moves to a snapshot the store has, or `chartbook snapshot` "
-            "in its folder at that commit makes it again" in problem.message
+            f"`chartbook update acme/rates` moves to a snapshot the store has; or build it yourself, in ../rates, "
+            f"`git checkout {commit}` and `chartbook run --snapshot`" in problem.message
         )
+        # And said once for the dependency, with each way on in a line
+        header, build, shared, move = checked.not_in_store["acme/rates"]
+        assert header.startswith("1 of its 4 pins is not in the store at ") and header.endswith(
+            f"and no build of yours at {commit} stands in: treasury"
+        )
+        assert build.startswith(f"  To build it yourself: in ../rates, `git checkout {commit}` and `chartbook run --snapshot`")
+        assert shared.startswith("  Where a store is shared: point CHARTBOOK_STORE at the one that has it")
+        assert move == "  To move the pin to a snapshot the store has: chartbook update acme/rates"
         # A pin that names no commit, as one in a lockfile changed by hand
         name_no_snapshot(downstream, "acme/rates")
         (problem,) = lock.verify(downstream, store).problems

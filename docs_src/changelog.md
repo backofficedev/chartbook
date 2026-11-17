@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a pin is met by a build of your own that holds the same rows
+
+Where no store is shared, each person builds the other pipeline themselves, at the commit `chartbook.lock` names. That build has the pinned rows in other bytes, and newer rows besides, and until now it met no pin. Now a snapshot of yours of the same pipeline at the same commit **stands in** for the one the lockfile names when it meets every pin of that dependency: each by the same file or, for a dataframe, by the same rows up to the pin's last date.
+
+```text
+$ chartbook pin --check
+ftsfr/fed_yield_curve: read from your own build of a27e383
+  treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
+1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
+```
+
+`chartbook pin`, `chartbook run`, `run --frozen` and every read (`data.load`, `data.path`, `assets.path`, …) do the same: the dependency is read from your build, the lockfile is not touched, and stderr says so once. A value changed in the past is not met, and each of them stops with the periods that differ:
+
+```text
+$ chartbook pin --check
+ftsfr/fed_yield_curve: your build of c1e5899 does not match the pin
+  treasury_yields: the rows of 2025-09-26 to 2025-12-31 differ
+  To read your build instead: chartbook update ftsfr/fed_yield_curve
+```
+
+- The check is cheapest first: the same file (nothing is read); then the two records of rows (nothing is read where they say it all); then only the periods still to be told, which for a build with newer rows is the last. What was found is remembered in this machine's cache folder, so a table is hashed once.
+- A model is met by the same file only, and so is a dataframe whose pin records no rows: **a lockfile pinned before this version has to be pinned again, from a snapshot made by this version, before a rebuild can meet it.**
+- When a table that is not met has the column pandas makes of an index with no name (`__index_level_0__`), the message says that it may be the whole difference, and the two ways out.
+- `chartbook lineage` says which build stands in, a snapshot of a pipeline that read one records it as its lineage, and `store gc` keeps it.
+- Where the store has neither the pinned bytes nor a build of yours, `pin --check` now says so once for each dependency, with each way on in a line, the first being how to build it yourself: `` in ../fed_yield_curve, `git checkout a27e383` and `chartbook run --snapshot` ``. `chartbook pin` and a read name the same way.
+- A read raises `AssetNotPinnedError` with the new reason `"differs"` when a build of yours is there and does not match.
+
+A read through `data.load` still hands over the newer rows of a build that stands in; leaving them out is the next step ({doc}`design/pins-and-rebuilds`, "Reads").
+
 ### Added — a snapshot records a dataframe's rows, by period, up to its last date
 
 `chartbook snapshot` now records, for each dataframe, the hash of its rows beside the hash of its bytes, and `chartbook pin` and `chartbook update` copy it into `chartbook.lock`:

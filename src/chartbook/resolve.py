@@ -950,6 +950,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
                 f"{f': {why}' if why else ''}. To read your build instead: `chartbook update {dependency.id}` "
                 f"in {manifest_dir}.",
             )
+        build = locks.build_it_said(listed)
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
@@ -957,7 +958,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{store} does not have it. In a store shared through a synced folder, "
             f"the likeliest cause is a sync that has not finished: wait for it, and "
             f"read again. Otherwise run `chartbook pin` in {manifest_dir}: it puts it "
-            f"back if it can, and says what to do if it cannot.",
+            f"back if it can, and says what to do if it cannot."
+            + (f" Or build {dependency.id!r} yourself, {build}." if build else ""),
         )
 
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)

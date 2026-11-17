@@ -264,6 +264,11 @@ class TestTheSourceChangedItsPast:
             f"chartbook update acme/rates" in result.output
         )
 
+    def test_lineage_says_it_in_one_gap(self, report, built, student):
+        (gap,) = snapshot.lineage_gaps(report, student)
+        assert gap.startswith(f"acme/rates: your build of {built.commit[:7]} does not match the pin; treasury: the rows of ")
+        assert gap.endswith("To read your build instead: chartbook update acme/rates") and "\n" not in gap
+
     def test_a_read_stops_with_the_period(self, report, built, student):
         with pytest.raises(AssetNotPinnedError) as raised:
             assets.path("acme/rates:treasury", project_dir=report)
@@ -370,6 +375,46 @@ class TestWithNoBuildOfYours:
     def test_it_says_the_bytes_are_not_there_as_before(self, report, student):
         checked = lock.verify(report, student)
         assert len(checked.problems) == 3 and all("does not have it" in problem.message for problem in checked.problems)
+        assert checked.stood_in == {}
+
+    def test_the_check_says_it_once_and_how_to_build_it(self, report, student, work):
+        """What a student sees first: one block for the dependency, and the way on that is theirs."""
+        commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
+        result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(report)])
+        assert result.exit_code == 1
+        assert result.output.splitlines() == [
+            f"acme/rates: 3 of its 3 pins are not in the store at {work / 'student'}, and no build of yours at "
+            f"{commit} stands in: codes, model/ar1, treasury",
+            f"  To build it yourself: in ../rates, `git checkout {commit}` and `chartbook run --snapshot`: a build "
+            f"of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.",
+            "  Where a store is shared: point CHARTBOOK_STORE at the one that has them; in a synced folder, wait "
+            "for the sync to finish, here and on the machine that made the pin.",
+            "  To move the pin to a snapshot the store has: chartbook update acme/rates",
+            "3 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.",
+        ]
+
+    def test_pin_says_them_together_and_how_to_build_it(self, report, student):
+        commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
+        result = CliRunner().invoke(main, ["pin", "--project-dir", str(report)])
+        assert result.exit_code == 1
+        (lost,) = [line for line in result.output.splitlines() if line.startswith("  lost")]
+        assert lost.startswith("  lost, each of codes, model/ar1, treasury: it is not in the store at ")
+        assert f"or build it yourself, in ../rates, `git checkout {commit}` and `chartbook run --snapshot`" in lost
+
+    def test_a_read_says_how_to_build_it(self, report, student):
+        commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
+        with pytest.raises(AssetNotPinnedError) as raised:
+            assets.path("acme/rates:treasury", project_dir=report)
+        assert raised.value.reason == "not_in_store"
+        assert f"Or build 'acme/rates' yourself, in ../rates, `git checkout {commit}` and `chartbook run --snapshot`" in str(raised.value)
+
+    def test_the_pinned_snapshot_with_its_file_lost_is_no_build_of_yours(self, report, work):
+        """The author's own store, a file gone from it: what is said is that it is not there, not that a build differs."""
+        author = FolderStore(work / "author")
+        author.delete(lock.read_lock(report).assets["acme/rates:treasury"]["content_hash"])
+        checked = lock.verify(report, author)
+        (problem,) = checked.problems
+        assert problem.kind == "not_in_store" and problem.asset == "acme/rates:treasury"
         assert checked.stood_in == {}
 
     def test_a_build_of_another_commit_is_not_looked_at(self, report, rates, student):

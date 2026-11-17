@@ -2539,8 +2539,16 @@ def _echo_pin_report(report):
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
-                pinned_at = f" ({_short_hash(event.old)})" if event.old else ""
-                click.echo(f"  lost: {event.asset}{pinned_at}: {event.detail}")
+                # What is wrong with one is most often wrong with all of them: said once
+                same = [e for e in assets if e.status == "lost" and e.detail == event.detail]
+                if same[0] is not event:
+                    continue
+                if len(same) == 1:
+                    pinned_at = f" ({_short_hash(event.old)})" if event.old else ""
+                    click.echo(f"  lost: {event.asset}{pinned_at}: {event.detail}")
+                else:
+                    names = ", ".join(e.asset.split(":", 1)[-1] for e in same)
+                    click.echo(f"  lost, each of {names}: {event.detail}")
             elif event.status == "unsynced":
                 click.echo(f"  not fully synced: {event.asset}: {event.detail}")
             elif event.status == "differs":
@@ -2715,7 +2723,15 @@ def _echo_frozen_report(step, report):
             f"{'y' if report.dependencies == 1 else 'ies'}{where}{alone}. {written}"
         )
         return
+    said = set()
     for problem in report.problems:
+        once = getattr(report, "not_in_store", {}).get(problem.dependency) if problem.kind == "not_in_store" else None
+        if once:
+            # Pins the store does not have: said once for their dependency, with each way on
+            if problem.dependency not in said:
+                said.add(problem.dependency)
+                click.echo(f"{who}{problem.dependency}: " + "\n".join(once), err=True)
+            continue
         where = problem.asset or problem.dependency
         click.echo(f"{who}{where + ': ' if where else ''}{problem.message}", err=True)
     click.echo(

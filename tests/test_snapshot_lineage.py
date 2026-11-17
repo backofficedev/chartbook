@@ -87,8 +87,11 @@ class TestASnapshotCarriesItsLineage:
             if record.get("content_hash")
         )
         assert default_store().delete(pinned)
-        with pytest.raises(snapshot.SnapshotError, match="the store at .* does not have it"):
+        with pytest.raises(snapshot.SnapshotError, match="rates: 1 of its 2 pins is not in the store at .*") as raised:
             snapshot.make(forecast)
+        # Said once, in one line, with each way on
+        (gap,) = [line for line in str(raised.value).splitlines() if line.startswith("  rates: ")]
+        assert "To build it yourself: in ../rates, `git checkout " in gap and "chartbook update rates." in gap
 
     def test_full_lineage_is_a_snapshot_and_records_it(self, two):
         rates, forecast = two

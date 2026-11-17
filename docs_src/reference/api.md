@@ -31,6 +31,7 @@ chartbook
 ../apidocs/chartbook/chartbook.writers.mkdocs
 ../apidocs/chartbook/chartbook.hashing
 ../apidocs/chartbook/chartbook.rowhash
+../apidocs/chartbook/chartbook.standins
 ../apidocs/chartbook/chartbook.store
 ../apidocs/chartbook/chartbook.stores
 ../apidocs/chartbook/chartbook.stores.s3

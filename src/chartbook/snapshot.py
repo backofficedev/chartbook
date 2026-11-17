@@ -2012,11 +2012,23 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     store = store if store is not None else default_store()
     checked = verify(directory, store)
     locked = read_lock(directory / LOCK_FILE)
-    gaps = [
-        f"{problem.asset or problem.dependency or LOCK_FILE}: {problem.message}"
-        for problem in checked.problems
-        if problem.kind not in ("not_built", "nothing_pinned")
-    ]
+    gaps, said = [], set()
+    for problem in checked.problems:
+        if problem.kind in ("not_built", "nothing_pinned"):
+            continue
+        once = checked.not_in_store.get(problem.dependency) if problem.kind == "not_in_store" else None
+        if once:
+            # Pins the store does not have, with no build of yours to stand in: one gap for the dependency
+            if problem.dependency not in said:
+                said.add(problem.dependency)
+                gaps.append(f"{problem.dependency}: " + ". ".join(line.strip().rstrip(".") for line in once) + ".")
+            continue
+        if problem.kind == "differs":
+            said.add(problem.dependency)  # a build of yours that does not match the pin: said here, whole
+        gaps.append(
+            f"{problem.asset or problem.dependency or LOCK_FILE}: "
+            + "; ".join(line.strip() for line in problem.message.splitlines())
+        )
     if locked is None:
         return gaps
     found = unreadable = None
@@ -2053,6 +2065,8 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
             if stood.stands_in and all(met.held for met in stood.met.values()):
                 continue
             why = next((reason for path, reason in unreadable if is_at(path, commit)), None)
+            if key in said and not why:
+                continue  # its pins are not in the store, which is why its snapshot is not: said above, with what to do
             said = f": a record at that commit cannot be read ({why})" if why else ""
             gaps.append(
                 f"{key}: the lockfile pins its snapshot at {commit[:7]}, made {made_at}, and the store at "
