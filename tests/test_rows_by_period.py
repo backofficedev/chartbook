@@ -1201,11 +1201,6 @@ class TestWhatTheFourthReviewFound:
         monkeypatch.setattr(rowhash, "FILE_PAGES_MOST", 500)
         assert "more pages than are read" in rowhash.fields_of(Table(tmp_path / "tiny.parquet"), "ds")["not_hashed"]
 
-    def test_a_small_row_group_needs_none_of_its_columns_of_one_width_walked(self, tmp_path, monkeypatch):
-        _table(days=300).select("ds", "y", "n").write_parquet(tmp_path / "numbers.parquet")
-        monkeypatch.setattr(rowhash, "_pages", lambda *arguments: pytest.fail("a page was looked at"))
-        assert "rows" in rowhash.fields_of(Table(tmp_path / "numbers.parquet"), "ds")
-
     def test_a_category_is_held_more_times_over_than_text(self, tmp_path, monkeypatch):
         """Read as a dictionary, as its file's own schema says: the dictionary is in every batch, and written out again."""
         import pyarrow as pa
@@ -1219,11 +1214,14 @@ class TestWhatTheFourthReviewFound:
             tmp_path / "category.parquet", dictionary_pagesize_limit=2**30,
         )
         dictionary = rows * 209
-        monkeypatch.setattr(rowhash, "HELD_MOST", 4 * dictionary)
+        # Text counts its dictionary twice, a category six times: five and a half of them is between the two
+        monkeypatch.setattr(rowhash, "HELD_MOST", int(5.5 * dictionary))
         text = rowhash.fields_of(Table(tmp_path / "text.parquet"), "ds")
         category = rowhash.fields_of(Table(tmp_path / "category.parquet"), "ds")
         assert "rows" in text and "has pages too large to read a little at a time" in category["not_hashed"]
-        monkeypatch.setattr(rowhash, "HELD_MOST", 640 * 1024 * 1024)
+        monkeypatch.setattr(rowhash, "HELD_MOST", int(1.5 * dictionary))
+        assert "has pages too large to read a little at a time" in rowhash.fields_of(Table(tmp_path / "text.parquet"), "ds")["not_hashed"]
+        monkeypatch.setattr(rowhash, "HELD_MOST", int(6.6 * dictionary))
         assert rowhash.fields_of(Table(tmp_path / "category.parquet"), "ds") == text  # the same rows, when it is read
 
     def _wide_text(self, path: Path, columns: int = 6, rows: int = 4_000, long: int = 0) -> pl.DataFrame:
@@ -1315,3 +1313,212 @@ class TestWhatTheFourthReviewFound:
                     snapshot._rows_of("t", record, tmp_path / "t.parquet", entry, None, [])
             finally:
                 os.chmod(tmp_path / "t.parquet", 0o644)
+
+
+class _Chunk:
+    """A column chunk as a row group's metadata describes one, for a plan made from pages given by hand."""
+
+    def __init__(self, name: str, kind: str = "BYTE_ARRAY", place: int = 0, dictionary: bool = False):
+        self.path_in_schema, self.physical_type = name, kind
+        self.data_page_offset, self.dictionary_page_offset = 1000 * (place + 1), (1000 * (place + 1) - 10 if dictionary else None)
+        self.has_dictionary_page, self.compression = dictionary, "UNCOMPRESSED"
+        self.num_values, self.total_compressed_size, self.total_uncompressed_size = 10**6, 10**6, 10**6
+
+
+class _Group:
+    def __init__(self, chunks: list, rows: int = 10**6):
+        self.chunks, self.num_rows, self.num_columns = chunks, rows, len(chunks)
+
+    def column(self, place: int):
+        return self.chunks[place]
+
+
+MB = 1024 * 1024
+
+
+class TestHowARowGroupIsRead:
+    """The plan for a row group, from pages given by hand: each rule of it by itself (found untested by the fifth review)."""
+
+    def _plan(self, monkeypatch, columns: dict, wanted: dict = None, **more):
+        """*columns*: for each name, its kind and its pages as (type, bytes unpacked, values, encoding)."""
+        chunks = [_Chunk(name, kind, place, any(page[0] == 2 for page in pages)) for place, (name, (kind, pages)) in enumerate(columns.items())]
+        by_start = {
+            (chunk.dictionary_page_offset or chunk.data_page_offset): [(*page, 0, page[1]) for page in pages]
+            for chunk, (kind, pages) in zip(chunks, columns.values())
+        }
+        monkeypatch.setattr(rowhash, "_pages", lambda held, start, length, values: iter(by_start[start]))
+        monkeypatch.setattr(rowhash, "_longest_value", lambda held, at, packed, spread, how: more.get("longest", spread))
+        wanted = wanted or {name: (None if kind == "BYTE_ARRAY" else 8) for name, (kind, _) in columns.items()}
+        return rowhash._read_plan(None, _Group(chunks), wanted, "t.parquet", None, more.get("as_dictionary", ()), more.get("lengths"))
+
+    def test_columns_of_one_width_are_read_a_batch_at_a_time(self, monkeypatch):
+        numbers = {f"n{i}": ("INT64", [(0, MB, 131_072, 0)] * 8) for i in range(10)}
+        assert self._plan(monkeypatch, numbers) == (rowhash.BATCH_ROWS, [[f"n{i}" for i in range(10)]])
+        # What a column is read as, where that is wider than it is written: a decimal of sixteen bytes in eight
+        wide = {name: 1024 for name in numbers}
+        assert self._plan(monkeypatch, numbers, wanted=wide)[0] == rowhash.BATCH_BYTES // (10 * 1024)
+
+    def test_a_value_of_one_fixed_length_counts_for_its_length(self, monkeypatch):
+        blob = {"blob": ("FIXED_LEN_BYTE_ARRAY", [(0, 40 * MB, 1024, 0)])}
+        assert self._plan(monkeypatch, blob, wanted={"blob": None}, lengths={"blob": 40_000})[0] == rowhash.BATCH_BYTES // 40_000
+        with pytest.raises(NotHashed, match="holds values of 2 MB each in 'blob'"):
+            self._plan(monkeypatch, blob, wanted={"blob": None}, lengths={"blob": 2 * MB})
+
+    def test_what_a_reader_holds_is_a_page_of_every_column(self, monkeypatch):
+        thirty = {f"c{i:02d}": ("DOUBLE", [(0, 25 * MB, 3_000_000, 0)]) for i in range(30)}
+        assert self._plan(monkeypatch, thirty)[0] == rowhash.BATCH_ROWS  # 750 MB of pages
+        thirty["c30"] = ("DOUBLE", [(0, 25 * MB, 3_000_000, 0)])
+        with pytest.raises(NotHashed, match=r"has pages too large to read a little at a time.*775 MB here \('c00' alone 25 MB\)"):
+            self._plan(monkeypatch, thirty)
+
+    def test_a_dictionary_is_held_more_than_once_and_the_largest_eight_are_counted(self, monkeypatch):
+        def of(kind: str, size: int) -> dict:
+            return {"x": (kind, [(2, size, 1000, 0), (0, MB, 10**6, 8)])}
+
+        # Numbers: eight times. Text: three times. A category: six times
+        assert self._plan(monkeypatch, of("INT64", 95 * MB))[0] > 1
+        with pytest.raises(NotHashed, match="pages too large"):
+            self._plan(monkeypatch, of("INT64", 97 * MB))
+        assert self._plan(monkeypatch, of("BYTE_ARRAY", 255 * MB), longest=100)[0] > 1
+        with pytest.raises(NotHashed, match="pages too large"):
+            self._plan(monkeypatch, of("BYTE_ARRAY", 257 * MB), longest=100)
+        assert self._plan(monkeypatch, of("BYTE_ARRAY", 125 * MB), longest=100, as_dictionary={"x"})[0] > 1
+        with pytest.raises(NotHashed, match="pages too large"):
+            self._plan(monkeypatch, of("BYTE_ARRAY", 130 * MB), longest=100, as_dictionary={"x"})
+        # 254 columns each with a megabyte of dictionary, as pyarrow writes floats: once each, and eight of them again
+        many = {f"c{i:03d}": ("DOUBLE", [(2, MB, 131_072, 0), (0, MB, 10**6, 0)]) for i in range(254)}
+        assert self._plan(monkeypatch, many)[0] > 1
+        many.update({f"d{i:03d}": ("DOUBLE", [(2, MB, 131_072, 0), (0, MB, 10**6, 0)]) for i in range(104)})
+        with pytest.raises(NotHashed, match="pages too large"):
+            self._plan(monkeypatch, many)  # 358 of them: 716 MB once, and seven times a megabyte for eight of them
+
+    def test_text_is_read_by_what_a_row_takes_in_its_fullest_page(self, monkeypatch):
+        """Pages of a hundred values, 30 MB each: a row is 300 KB if its page's values are alike."""
+        text = {"doc": ("BYTE_ARRAY", [(0, 30 * MB, 100, 0)] * 10)}
+        most, together = self._plan(monkeypatch, text)
+        assert most == rowhash.READ_MOST // (8 + 30 * MB // 100) and together == [["doc"]]
+
+    def test_text_held_by_a_dictionary_is_read_by_its_longest_value(self, monkeypatch):
+        held = {"word": ("BYTE_ARRAY", [(2, MB, 50, 0), (0, MB, 10**6, 8)])}
+        assert self._plan(monkeypatch, held, longest=20_000)[0] == rowhash.READ_MOST // (8 + 20_000)
+        assert self._plan(monkeypatch, held, longest=36)[0] == rowhash.BATCH_ROWS
+        with pytest.raises(NotHashed, match="one value of 'word' may take 200 MB"):
+            self._plan(monkeypatch, {"word": ("BYTE_ARRAY", [(2, 210 * MB, 50, 0), (0, MB, 10**6, 8)])}, longest=200 * MB)
+
+    def test_text_written_as_what_it_adds_to_the_value_before_may_be_as_long_as_its_page(self, monkeypatch):
+        """Four thousand values of a megabyte, each the same as the last, are a megabyte of page and four gigabytes of rows."""
+        prefix = {"id": ("BYTE_ARRAY", [(0, MB, 4096, 7)] * 4)}
+        assert self._plan(monkeypatch, prefix)[0] == rowhash.READ_MOST // (8 + MB)
+        plain = {"id": ("BYTE_ARRAY", [(0, MB, 4096, 0)] * 4)}
+        assert self._plan(monkeypatch, plain)[0] == rowhash.BATCH_ROWS
+
+    def test_columns_of_text_are_read_apart_past_what_their_pages_may_add(self, monkeypatch):
+        columns = {"n": ("INT64", [(0, MB, 131_072, 0)]), **{f"t{i:03d}": ("BYTE_ARRAY", [(0, MB, 20_000, 0)] * 50) for i in range(150)}}
+        most, together = self._plan(monkeypatch, columns)
+        # Two megabyte pages of each of 32 columns are 64 MB: the first with the numbers, then 32 at a time
+        assert most > 1000 and [len(names) for names in together] == [1, 32, 32, 32, 32, 22]
+        thirty = {name: pages for name, pages in list(columns.items())[:31]}
+        assert self._plan(monkeypatch, thirty)[1] == [list(thirty)]
+
+    def test_pages_that_cannot_be_read_are_not_taken_from_the_footer(self, monkeypatch):
+        """What the footer says a chunk takes is not what a reader holds: a footer may say a hundred bytes."""
+        monkeypatch.setattr(rowhash, "_pages", lambda *arguments: (_ for _ in ()).throw(ValueError("a page header with no sizes")))
+        with pytest.raises(NotHashed, match="whose pages could not be read to learn how it is laid out"):
+            rowhash._read_plan(None, _Group([_Chunk("n", "INT64")]), {"n": 8}, "t.parquet")
+
+
+class TestWhatAPageHeaderMayBe:
+    """Found by the fifth review: bounds of the header reader that no test reached."""
+
+    def test_more_values_than_a_header_has(self):
+        many = bytes([0x19, 0xF5]) + rowhash_varint(6000) + b"\x02" * 6000 + b"\x00"
+        with pytest.raises(ValueError, match="more values than one has"):
+            rowhash._header_fields(many, 0)
+        few = bytes([0x19, 0xF5]) + rowhash_varint(40) + b"\x02" * 40 + b"\x00"
+        assert rowhash._header_fields(few, 0) == ({}, len(few))
+
+    def test_a_page_that_runs_past_its_chunk(self, tmp_path):
+        _table(days=400).write_parquet(tmp_path / "t.parquet", use_pyarrow=True)
+        column = pq.ParquetFile(tmp_path / "t.parquet").metadata.row_group(0).column(2)
+        begins = column.dictionary_page_offset if column.has_dictionary_page else column.data_page_offset
+        with open(tmp_path / "t.parquet", "rb") as held:
+            assert list(rowhash._pages(held, begins, column.total_compressed_size, column.num_values))
+            with pytest.raises(ValueError, match="runs past its chunk"):
+                list(rowhash._pages(held, begins, 40, column.num_values))  # a chunk said to be shorter than its first page
+
+    def test_a_header_longer_than_one_may_be(self, tmp_path, monkeypatch):
+        """No more of a file is read for a header than a header may be: past that it is no header, and the file is not read."""
+        _table(days=400).write_parquet(tmp_path / "t.parquet", use_pyarrow=True)
+        assert "rows" in rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+        asked = []
+        monkeypatch.setattr(rowhash, "HEADER_MOST", 8)  # less than the few dozen bytes of a real one
+        column = pq.ParquetFile(tmp_path / "t.parquet").metadata.row_group(0).column(0)
+        with open(tmp_path / "t.parquet", "rb") as held:
+            read = held.read
+            held.read = lambda size: asked.append(size) or read(size)
+            with pytest.raises(ValueError, match="a page header runs past its chunk"):
+                list(rowhash._pages(held, column.dictionary_page_offset or column.data_page_offset, column.total_compressed_size, column.num_values))
+        assert asked == [8]
+        said = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")["not_hashed"]
+        assert "whose pages could not be read to learn how it is laid out (a page header runs past its chunk)" in said
+
+    def test_a_page_that_is_not_packed_takes_the_bytes_it_has_whatever_its_header_says(self, tmp_path):
+        """A reader of such a page reads the bytes that are there, and never looks at what the header says they unpack to."""
+        import pyarrow as pa
+
+        values = pa.array([f"{i:04d}" + "w" * 4000 for i in range(2000)])
+        pq.write_table(pa.table({"doc": values}), tmp_path / "lie.parquet", compression="none", use_dictionary=False, write_statistics=False)
+        column = pq.ParquetFile(tmp_path / "lie.parquet").metadata.row_group(0).column(0)
+        with open(tmp_path / "lie.parquet", "r+b") as held:
+            at, end, changed = column.data_page_offset, column.data_page_offset + column.total_compressed_size, 0
+            while at < end:
+                held.seek(at)
+                header = held.read(256)
+                found, used = rowhash._header_fields(header, 0)
+                # Field 2, what the page takes unpacked, written again as 16 in as many bytes as it had
+                assert header[0] == 0x15
+                start = 1
+                while header[start] & 0x80:
+                    start += 1
+                start += 2
+                stop = start
+                while header[stop] & 0x80:
+                    stop += 1
+                stop += 1
+                small = bytes(((16 << 1) >> (7 * i)) & 0x7F | (0x80 if i < stop - start - 1 else 0) for i in range(stop - start))
+                held.seek(at + start)
+                held.write(small)
+                at, changed = at + used + found[3], changed + 1
+        assert changed > 1 and pq.read_table(tmp_path / "lie.parquet").num_rows == 2000  # still a file pyarrow reads
+        with open(tmp_path / "lie.parquet", "rb") as held:
+            pages = list(rowhash._pages(held, column.data_page_offset, column.total_compressed_size, column.num_values))
+        assert all(spread == packed and spread > 100_000 for _, spread, _, _, _, packed in pages)
+
+    def test_a_small_dictionary_is_read_for_its_longest_value_too(self, tmp_path, monkeypatch):
+        """A hundred answers of 36 bytes are a dictionary of four kilobytes, which is not what a row of it takes."""
+        import pyarrow as pa
+
+        rows = 4_000
+        words = [f"answer {i:03d} " + "w" * 25 for i in range(100)]
+        table = pa.table(
+            {"ds": pa.array([date(2024, 1, 1) + timedelta(days=i // 100) for i in range(rows)]), **{f"q{c:03d}": pa.array([words[(i * 7 + c) % 100] for i in range(rows)]) for c in range(150)}}
+        )
+        pq.write_table(table, tmp_path / "answers.parquet")
+        plans = []
+        real = rowhash._read_plan
+        monkeypatch.setattr(rowhash, "_read_plan", lambda *arguments: (plans.append(real(*arguments)) or plans[-1]))
+        assert sum(batch.num_rows for batch in Table(tmp_path / "answers.parquet").batches()) == rows
+        assert plans[0][0] == min(rows, rowhash.READ_MOST // (8 + 150 * (8 + 36)))
+
+
+def rowhash_varint(number: int) -> bytes:
+    out = bytearray()
+    while number >= 0x80:
+        out.append(number & 0x7F | 0x80)
+        number >>= 7
+    return bytes(out + bytes([number]))
+
+
+def test_a_dictionary_too_small_to_read_counts_for_the_whole_of_itself():
+    """Sixty-four bytes or fewer: a value of it is no longer than all of it, and that is what a row is counted at."""
+    assert rowhash._longest_value(None, 0, 0, 40, "ZSTD") == 40
