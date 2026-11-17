@@ -258,7 +258,7 @@
     },
     "not_hashed": {
       "type": "string",
-      "description": "Why the dataframe's rows have no hash, where they have none: a column of a kind the form does not take, a piece too large to hold, more columns than are read at once. A pin of it is then met by the same file only. Absent when `rows` is there.",
+      "description": "Why the dataframe's rows have no hash, where they have none: a column of a kind the form does not take, a piece too large to hold, more columns than are read at once, a file written in pages too large to read a little at a time. A pin of it is then met by the same file only. Absent when `rows` is there.",
       "minLength": 1
     },
     "format": {

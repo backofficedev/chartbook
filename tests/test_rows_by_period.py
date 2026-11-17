@@ -911,3 +911,226 @@ class TestWhatTheSecondReviewFound:
             record = hash_rows(Table(tmp_path / "t.parquet"), "^ds$")
             assert list(record.rows) == ["2024-01-02/2024-01-03", "2025-06-30/2025-06-30"] and record.as_of == "2025-06-30", kind
             assert hash_in(Table(tmp_path / "t.parquet"), "^ds$", record.rows, record.as_of).same
+
+
+class TestWhatTheThirdReviewFound:
+    """A file's pages, its dictionaries and its footer say what reading it takes, before a row of it is read."""
+
+    def _file(self, tmp_path, name: str = "t.parquet", rows: int = 30_000, **how) -> Path:
+        import pyarrow as pa
+
+        table = pa.table(
+            {
+                "ds": pa.array([date(2024, 1, 1) + timedelta(days=i // 100) for i in range(rows)]),
+                "word": pa.array([f"word-{i % 977:04d}-{'x' * (i % 13)}" for i in range(rows)]),
+                "own": pa.array([f"own-{i:07d}" for i in range(rows)]),
+                "y": pa.array([i * 0.5 for i in range(rows)]),
+            }
+        )
+        pq.write_table(table, tmp_path / name, **how)
+        return tmp_path / name
+
+    @pytest.mark.parametrize(
+        "how",
+        [
+            {},
+            {"compression": "zstd", "data_page_size": 4096},
+            {"compression": "gzip", "use_dictionary": False, "data_page_version": "2.0"},
+            {"compression": "none", "data_page_version": "2.0", "data_page_size": 8192, "write_statistics": True},
+            {"compression": "snappy", "row_group_size": 7_000, "use_dictionary": ["word"]},
+        ],
+        ids=["as pyarrow writes", "small pages", "second page form", "second form with statistics", "several row groups"],
+    )
+    def test_the_pages_of_a_file_are_read_from_their_headers(self, tmp_path, how):
+        path = self._file(tmp_path, **how)
+        metadata = pq.ParquetFile(path).metadata
+        with open(path, "rb") as held:
+            for group in range(metadata.num_row_groups):
+                described = metadata.row_group(group)
+                for place in range(described.num_columns):
+                    column = described.column(place)
+                    begins = column.dictionary_page_offset if column.has_dictionary_page else column.data_page_offset
+                    pages = list(rowhash._pages(held, begins, column.total_compressed_size, column.num_values))
+                    of_values = [page for page in pages if page[0] in rowhash._DATA_PAGES]
+                    # Every value is in a page, and the pages are the whole of the chunk: no more, no fewer
+                    assert sum(page[2] for page in of_values) == column.num_values
+                    assert [page[0] for page in pages].count(rowhash._DICTIONARY_PAGE) == int(column.has_dictionary_page)
+                    assert pages[-1][4] + pages[-1][5] == begins + column.total_compressed_size
+                    # And what they take unpacked is what the footer says the chunk takes, less the headers
+                    spread = sum(page[1] for page in pages)
+                    assert 0.9 * column.total_uncompressed_size - 4096 <= spread <= column.total_uncompressed_size
+
+    def test_a_header_with_a_megabyte_of_statistics_is_passed_over(self, tmp_path):
+        """A page's statistics hold its least and greatest value: of long text, the header is as long."""
+        import pyarrow as pa
+
+        table = pa.table({"doc": pa.array([f"{i}" + "s" * 1_000_000 for i in range(6)])})
+        pq.write_table(table, tmp_path / "long.parquet", use_dictionary=False, write_statistics=True, compression="zstd")
+        column = pq.ParquetFile(tmp_path / "long.parquet").metadata.row_group(0).column(0)
+        with open(tmp_path / "long.parquet", "rb") as held:
+            pages = list(rowhash._pages(held, column.data_page_offset, column.total_compressed_size, column.num_values))
+        assert sum(page[2] for page in pages) == 6 and sum(page[1] for page in pages) >= 6_000_000
+
+    def test_what_is_no_run_of_pages_is_taken_for_the_worst(self, tmp_path):
+        path = self._file(tmp_path, rows=2_000)
+        with open(path, "rb") as held:
+            with pytest.raises(ValueError):
+                list(rowhash._pages(held, 5, 1000, 100))  # the middle of a page: no header there
+
+    @pytest.mark.parametrize("packed", ["none", "snappy", "zstd", "gzip", "lz4", "brotli"])
+    def test_the_longest_value_of_a_dictionary(self, tmp_path, packed):
+        import pyarrow as pa
+
+        if packed != "none" and not pa.Codec.is_available(packed):
+            pytest.skip(f"this pyarrow has no {packed}")
+        values = [f"v{i:05d}" for i in range(3_000)] + ["L" * 20_000]
+        table = pa.table({"word": pa.array([values[i % len(values)] for i in range(40_000)])})
+        pq.write_table(table, tmp_path / "d.parquet", compression=packed, use_dictionary=True)
+        column = pq.ParquetFile(tmp_path / "d.parquet").metadata.row_group(0).column(0)
+        assert column.has_dictionary_page
+        with open(tmp_path / "d.parquet", "rb") as held:
+            kind, spread, _, _, at, size = next(iter(rowhash._pages(held, column.dictionary_page_offset, column.total_compressed_size, column.num_values)))
+            assert kind == rowhash._DICTIONARY_PAGE
+            found = rowhash._longest_value(held, at, size, spread, column.compression)
+        # The value itself; or, where pyarrow gives this packing no name to unpack it by, the whole page, which is no less
+        assert found == 20_000 or (found == spread and column.compression not in ("UNCOMPRESSED", *rowhash._PACKED_AS))
+        assert found >= 20_000
+
+    def test_the_most_any_run_of_rows_may_take(self):
+        import numpy as np
+
+        starts, sizes = np.array([0, 10, 20, 30]), np.array([100.0, 100.0, 5000.0, 100.0])
+        # One row may lie in any page; eleven rows from the last row of a page reach into the next but one
+        assert rowhash._most_in(starts, sizes, 40, 1) == 5000
+        assert rowhash._most_in(starts, sizes, 40, 2) == 5100
+        assert rowhash._most_in(starts, sizes, 40, 11) == 5100
+        assert rowhash._most_in(starts, sizes, 40, 12) == 5200
+        assert rowhash._most_in(starts, sizes, 40, 40) == 5300
+        assert rowhash._most_in(np.array([], dtype="int64"), np.array([]), 0, 5) == 0
+
+    def test_text_held_by_a_dictionary_is_read_by_its_longest_value(self, tmp_path, monkeypatch):
+        """Fifty values of 20 KB over 60,000 rows: a megabyte in the file, 1.2 GB once read, and never more than a little at a time."""
+        import pyarrow as pa
+
+        values = [f"{i:02d}" + "w" * 20_000 for i in range(50)]
+        rows = 60_000
+        table = pa.table(
+            {"ds": pa.array([date(2024, 1, 1) + timedelta(days=i // 2000) for i in range(rows)]), "note": pa.array([values[i % 50] for i in range(rows)])}
+        )
+        pq.write_table(table, tmp_path / "notes.parquet", row_group_size=rows)
+        del table
+        asked = []
+        real = rowhash._rows_at_a_time
+        monkeypatch.setattr(rowhash, "_rows_at_a_time", lambda *arguments: asked.append(real(*arguments)) or asked[-1])
+        largest = count = 0
+        for batch in Table(tmp_path / "notes.parquet").batches():
+            largest, count = max(largest, batch.nbytes), count + batch.num_rows
+        assert count == rows
+        # At worst each row its longest value: so a run of rows is within what is read at once
+        assert asked and all(1 <= most * 20_000 <= rowhash.READ_MOST for most in asked)
+        assert largest <= 2 * rowhash.BATCH_BYTES + 64 * 1024
+
+    def test_a_batch_is_handed_on_a_little_at_a_time(self):
+        import pyarrow as pa
+
+        words = pa.array(["a" * 1000, "b" * 3_000_000, "c"]).dictionary_encode()
+        batch = pa.RecordBatch.from_arrays(
+            [pa.array(list(range(9000))), pa.DictionaryArray.from_arrays(pa.array([i % 3 for i in range(9000)], pa.int32()), words.dictionary)],
+            names=["n", "word"],
+        )
+        sizes = rowhash._row_sizes(batch)
+        assert sizes[0] == 8 + 1000 + 8 and sizes[1] == 8 + 3_000_000 + 8 and sizes[2] == 8 + 1 + 8
+        runs = list(rowhash._a_little_at_a_time(batch))
+        assert sum(run.num_rows for run in runs) == 9000 and len(runs) > 300
+        assert [value for run in runs for value in run.column("n").to_pylist()] == list(range(9000))
+        # About a batch each, and never less than a row: one row here is three megabytes
+        assert all(int(rowhash._row_sizes(run).sum()) <= rowhash.BATCH_BYTES + 3_000_016 for run in runs)
+        small = pa.RecordBatch.from_arrays([pa.array([1, 2, 3])], names=["n"])
+        assert [run.num_rows for run in rowhash._a_little_at_a_time(small)] == [3]
+
+    def test_the_same_rows_however_their_pages_are_written(self, tmp_path):
+        """What a file is refused for is how it is written; what is recorded of one that is read is its rows alone."""
+        ways = {
+            "default": {},
+            "small pages": {"data_page_size": 2048, "compression": "zstd"},
+            "no dictionary": {"use_dictionary": False, "data_page_version": "2.0"},
+            "row groups": {"row_group_size": 3_333, "compression": "gzip"},
+        }
+        records = {name: hash_rows(Table(self._file(tmp_path, f"{place}.parquet", **how)), "ds").fields() for place, (name, how) in enumerate(ways.items())}
+        assert len({str(sorted(record.items())) for record in records.values()}) == 1, records
+        # And each row is read once, whatever run of rows it came in
+        for place in range(len(ways)):
+            read = pl.from_arrow(list(Table(tmp_path / f"{place}.parquet").batches()))
+            whole = pl.read_parquet(tmp_path / f"{place}.parquet")
+            assert read.sort("own").equals(whole.sort("own").select(read.columns).cast(read.schema))
+
+    def test_a_footer_too_large_is_said_before_it_is_read(self, tmp_path, monkeypatch):
+        path = self._file(tmp_path, rows=5_000, row_group_size=50)
+        monkeypatch.setattr(rowhash, "FOOTER_MOST", 4096)
+        monkeypatch.setattr(pq, "ParquetFile", lambda *arguments, **options: pytest.fail("the footer was read"))
+        fields = rowhash.fields_of(Table(path), "ds")
+        assert list(fields) == ["not_hashed"] and "t.parquet has a footer of" in fields["not_hashed"]
+        with pytest.raises(NotHashed, match="has a footer of"):
+            hash_in(Table(path), "ds", {"2024-01-01/2024-01-02": "sha256:00"}, "2024-01-02")
+
+    def test_pages_too_large_to_hold_are_said_before_a_row_is_read(self, tmp_path, monkeypatch):
+        path = self._file(tmp_path)
+        monkeypatch.setattr(rowhash, "HELD_MOST", 64 * 1024)
+        fields = rowhash.fields_of(Table(path), "ds")
+        assert fields["date_col"] == "ds" and "t.parquet has pages too large to read a little at a time" in fields["not_hashed"]
+        assert fields["not_hashed"].endswith("Written with smaller pages, its rows can be hashed")
+        monkeypatch.setattr(rowhash, "HELD_MOST", 640 * 1024 * 1024)
+        monkeypatch.setattr(rowhash, "ROW_MOST", 16)  # less than its longest word
+        said = rowhash.fields_of(Table(path), "ds")["not_hashed"]
+        assert "one row may take" in said and said.endswith("Written with smaller pages, its rows can be hashed")
+
+    def test_dates_in_more_years_than_a_record_holds(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(rowhash, "MOST_YEARS", 3)
+        _table(days=1500).write_parquet(tmp_path / "t.parquet")  # five calendar years
+        fields = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+        assert "its dates fall in more than 3 calendar years" in fields["not_hashed"]
+        monkeypatch.setattr(rowhash, "MOST_YEARS", 5)
+        assert len(rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")["rows"]) == 5
+
+    def test_text_is_counted_by_what_it_is_and_not_by_its_name(self, tmp_path):
+        """The reader knows a packed file by how it begins: so must what counts its text."""
+        import gzip
+        import zlib
+
+        import pyarrow as pa
+
+        text = ("ds,x\n" + "".join(f"2024-01-{1 + i % 28:02d},{i}\n" for i in range(50_000))).encode("utf-8")
+        (tmp_path / "plain.csv").write_bytes(text)
+        (tmp_path / "named.csv.gz").write_bytes(gzip.compress(text))
+        (tmp_path / "inside.csv").write_bytes(gzip.compress(text))
+        (tmp_path / "zlib.csv").write_bytes(zlib.compress(text))
+        with pa.CompressedOutputStream(pa.OSFile(str(tmp_path / "zstd.csv"), "wb"), "zstd") as packed:
+            packed.write(text)
+        for name in ("plain.csv", "named.csv.gz", "inside.csv", "zlib.csv", "zstd.csv"):
+            assert rowhash._text_bytes(tmp_path / name, 10**9) == len(text), name
+            assert rowhash._text_bytes(tmp_path / name, 1000) > 1000  # counted no further than it need be
+        records = {name: rowhash.fields_of(Table(tmp_path / name, "csv"), "ds") for name in ("plain.csv", "inside.csv")}
+        assert records["plain.csv"] == records["inside.csv"] and "rows" in records["plain.csv"]
+
+    def test_dates_written_as_text_and_held_as_a_category(self, tmp_path):
+        """A category is its text, as the form has it: so its rows are dated as the text's are."""
+        import pyarrow as pa
+
+        texts = pa.array([str(date(2019, 6, 1) + timedelta(days=i // 100)) for i in range(5000)])
+        pq.write_table(pa.table({"date": texts, "x": list(range(5000))}), tmp_path / "text.parquet")
+        pq.write_table(pa.table({"date": texts.dictionary_encode(), "x": list(range(5000))}), tmp_path / "category.parquet")
+        text = rowhash.fields_of(Table(tmp_path / "text.parquet"), "date")
+        category = rowhash.fields_of(Table(tmp_path / "category.parquet"), "date")
+        assert text == category and text["date_col"] == "date" and text["as_of"] == "2019-07-20"
+        assert hash_in(Table(tmp_path / "category.parquet"), "date", text["rows"], text["as_of"]).same
+
+    @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a file this user cannot open")
+    def test_a_file_that_cannot_be_opened_now_is_this_machines_trouble(self, tmp_path):
+        path = self._file(tmp_path, rows=1000)
+        os.chmod(path, 0)
+        try:
+            with pytest.raises(rowhash.NotNow, match="PermissionError|Permission denied|os error 13"):
+                rowhash.fields_of(Table(path), "ds")
+        finally:
+            os.chmod(path, 0o644)
+        assert "rows" in rowhash.fields_of(Table(path), "ds")
