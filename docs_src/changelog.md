@@ -18,8 +18,9 @@ data.as_of("fed_yield_curve:treasury_yields")    # datetime.date(2026, 10, 30)
 
 - **`data.as_of(ref)` is new:** the last date of a dataframe as `chartbook.lock` pins it, the data's own and never the clock's. A `date` or a `datetime`, as the file's date column is, so that it compares with the column; `None` for a dataframe with no `date_col`, with no dated row, or pinned before pins recorded their rows.
 - **`data.path`, `data.files`, `assets.path` and `chartbook path`** hand over the file as it is, newer rows and all, and say so once on stderr: `…: this file is your own build's, and has 24 rows after 2026-10-30, the last date chartbook.lock pins. data.load() and data.sql() leave them out; a reader of your own keeps the rows up to data.as_of('…').` No copy of the file is cut and kept.
-- **`data.sql` and `data.ref`** read a parquet file through `(select * from read_parquet(…) where "ds" is null or "ds" <= DATE '2026-10-30')`; where SQL has no sure way to say it (a date column of text, a CSV), DuckDB is handed what `data.load` gives.
-- `format="pandas"` keeps its types and its index. Rows with no date are the pin's, and are kept. A dataframe with no `date_col` is read whole. A read of the pinned file itself, where the store has it, is as it was.
+- **`data.sql` and `data.ref`** read a parquet file through `(select * from read_parquet(…) where "ds" is null or "ds" <= DATE '2026-10-30')`; where SQL has no sure way to say it (a date column of text, one beside another whose name differs only by case, times written as INT96, a CSV), DuckDB is handed what `data.load` gives.
+- `format="pandas"` keeps its types and its index, and finds the date column wherever pandas put it: a column, the index, or a level of it, with a name or with none. Rows with no date are the pin's, and are kept. A dataframe with no `date_col` is read whole. A read of the pinned file itself, where the store has it, is as it was.
+- Every way of reading gives the same rows. A comparison of your own with `data.as_of` is not as exact as `data.load`: it drops a row with no date, and its docstring says what else to mind.
 
 ### Added — a pin is met by a build of your own that holds the same rows
 

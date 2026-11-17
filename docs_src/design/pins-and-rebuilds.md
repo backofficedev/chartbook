@@ -592,19 +592,28 @@ of your own keeps the rows up to data.as_of('ftsfr/fed_yield_curve:treasury_yiel
   (polars compares a time only with one of the same zone) and with no zone where it has none.
   The type is that of the file that is read, so `frame[frame["ds"] <= data.as_of(ref)]` works on
   the file `data.path` gives, whoever wrote it. A timestamp finer than a microsecond comes back
-  as the next microsecond, so that no pinned row is after it; `data.load` is exact. It is `None`
-  for a dataframe with no `date_col` or no dated row, one pinned before pins recorded rows, one
-  whose rows are not hashed, and a dataframe of your own pipeline.
+  as the next microsecond, so that no pinned row is after it. It is `None` for a dataframe with
+  no `date_col` or no dated row, one pinned before pins recorded rows, one whose rows are not
+  hashed, and a dataframe of your own pipeline.
+- **That comparison is the reader's own, and `data.load` is exact where it is not.** It drops a
+  row with no date, which the pin holds; a column of text has to be read as dates before it
+  compares with one; and in a column of nanoseconds, rows within the microsecond after the pin's
+  last one come in too. The docstring says so. (Found by review.)
 - **`data.sql` and `data.ref`** read a parquet file through `(select * from read_parquet(…)
   where "ds" is null or "ds" <= DATE '2026-10-30')`, so DuckDB still reads only the columns and
-  row groups a query needs. Where SQL has no sure way to say it (a date column of text, one a
-  folder's name makes, a CSV, a time with a zone to the nanosecond), DuckDB is handed the frame
-  `data.load` gives, and `data.ref` says there is no text for it.
+  row groups a query needs. Where SQL has no sure way to say it, DuckDB is handed the frame
+  `data.load` gives, and `data.ref` says there is no text for it: a date column of text (a row
+  whose text is no date has no date, and is not null), one a folder's name makes, one beside
+  another whose name differs only by case, times written as INT96, a time with a zone to the
+  nanosecond, a CSV.
 - **`format="pandas"`** keeps the frame as pandas reads it, types and index: the rows are told
-  from the date column wherever pandas put it, a column or the index.
+  from the date column wherever pandas put it, a column, the index, or a level of it, by its name
+  or, with no name, by its place (`__index_level_0__`). Where it is nowhere pandas put it, the
+  rows are cut by polars and handed over as pandas: never the whole frame.
 - **What `data.path`, `data.files`, `assets.path` and `chartbook path` say,** once a process for
   each dataframe, on stderr, and only when the build has rows after the pin's last date: the line
-  above. `data.load` says nothing of it.
+  above. `data.load` says nothing of it. For a pin with no dated row, which has no last date, it
+  ends "a reader of your own keeps the rows with no ds".
 - **A read of the pinned file itself is untouched,** and `data.as_of` answers there too, from
   the pin.
 - A read in a notebook and a read in a batch run do the same here. What was decided before
