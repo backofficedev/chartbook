@@ -417,7 +417,7 @@ class TestFilesWrittenToBeHardToRead:
         docs[500] = "y" * 300_000_000
         pq.write_table(
             pa.table({"date": _days("2024-01-01", np.arange(1000) // 10), "doc": pa.array(docs, pa.large_string())}),
-            tmp_path / "value.parquet", compression="zstd",
+            tmp_path / "value.parquet", compression="zstd", use_dictionary=False,
         )
         del docs
         said = _hashed_under(LIMIT, tmp_path / "value.parquet", "date", tmp_path)
@@ -434,9 +434,9 @@ class TestFilesWrittenToBeHardToRead:
         said = _hashed_under(LIMIT, tmp_path / "groups.parquet", "date", tmp_path)
         assert "has a footer of" in said["refused"] and said["peak"] < 512 * 1024**2, said
 
-    @pytest.mark.parametrize("rows,hashed", [(2_600_000, True), (3_200_000, False)], ids=["within what is held", "past it"])
+    @pytest.mark.parametrize("rows,hashed", [(3_200_000, True), (3_600_000, False)], ids=["within what is held", "past it"])
     def test_a_page_to_a_column_chunk(self, tmp_path, rows, hashed):
-        """Thirty columns, each chunk one page: a reader unpacks every one whole, 20 MB a column here, or 25."""
+        """Thirty columns, each chunk one page: a reader unpacks every one whole, 24 MB a column here, or 27."""
         base = np.tile(np.arange(1000, dtype="float64"), rows // 1000)
         table = pa.table({"date": _days("2020-01-01", np.arange(rows) // 40_000), **{f"c{i:02d}": base + i for i in range(30)}})
         pq.write_table(
@@ -451,9 +451,9 @@ class TestFilesWrittenToBeHardToRead:
         else:
             assert "pages too large to read a little at a time" in said["refused"] and said["peak"] < 512 * 1024**2, said
 
-    @pytest.mark.parametrize("rows,hashed", [(60_000, True), (90_000, False)], ids=["within what is held", "past it"])
+    @pytest.mark.parametrize("rows,hashed", [(50_000, True), (60_000, False)], ids=["within what is held", "past it"])
     def test_a_dictionary_of_long_text(self, tmp_path, rows, hashed):
-        """A dictionary page of 300 MB, or of 450: held as its page and as its values, whatever is read of the rows."""
+        """A dictionary page of 250 MB, or of 300: held as its page and as its values, whatever is read of the rows."""
         each = 5_000
         chunks = [pa.array([f"{i:07d}" + "z" * each for i in range(a, min(a + 30_000, rows))]) for a in range(0, rows, 30_000)]
         pq.write_table(
@@ -544,5 +544,66 @@ class TestWhatTheFourthReviewBroke:
             write_statistics=False, data_page_size=1, write_batch_size=1,
         )
         said = _hashed_under(LIMIT, tmp_path / "pages.parquet", "date", tmp_path)
-        assert said["peak"] < 512 * 1024**2, said
-        assert "refused" not in said or "more pages than are read" in said["refused"]
+        assert "more pages than are read to learn how it is laid out" in said["refused"] and said["peak"] < 512 * 1024**2, said
+
+
+class TestWhatTheFifthReviewBroke:
+    """Found by a fifth review: honest files of unusual writing, and what was just inside each limit."""
+
+    @pytest.mark.parametrize("width,rows,hashed", [(125_000_000, 5, False), (1_000_000, 500, True)], ids=["125 MB a value", "a megabyte a value"])
+    def test_values_of_one_fixed_length_of_megabytes(self, tmp_path, width, rows, hashed):
+        """Five values of 125 MB were read, cast and put by, 2.4 GB of them, before a day too large was said."""
+        raw = np.zeros(width * rows, dtype="uint8")
+        raw[::width] = np.arange(1, rows + 1) % 251
+        blob = pa.FixedSizeBinaryArray.from_buffers(pa.binary(width), rows, [None, pa.py_buffer(raw)])
+        pq.write_table(
+            pa.table({"date": _days("2020-01-01", np.arange(rows) // 5), "blob": blob}), tmp_path / "blob.parquet",
+            compression="zstd", use_dictionary=hashed is False,
+        )
+        del raw, blob
+        said = _hashed_under(LIMIT, tmp_path / "blob.parquet", "date", tmp_path)
+        assert said["peak"] < LIMIT
+        if hashed:
+            assert said.get("same") and said["rows"] == rows
+        else:
+            assert "holds values of 119 MB each in 'blob'" in said["refused"] and said["peak"] < 512 * 1024**2, said
+
+    @pytest.mark.parametrize("rows,hashed", [(11_500_000, True), (56_000_000, False)], ids=["92 MB of dictionary", "448 MB of dictionary"])
+    def test_a_dictionary_of_numbers(self, tmp_path, rows, hashed):
+        """A dictionary of numbers is held several times over while it is read, and not all given back: 448 MB of one took 2.1 GB."""
+        table = pa.table({"date": _days("2000-01-01", np.arange(rows) // 20_000), "x": np.arange(rows, dtype="float64") * 0.5})
+        pq.write_table(table, tmp_path / "numbers.parquet", row_group_size=rows, compression="zstd", dictionary_pagesize_limit=2**31 - 1)
+        del table
+        said = _hashed_under(LIMIT, tmp_path / "numbers.parquet", "date", tmp_path)
+        assert said["peak"] < LIMIT
+        if hashed:
+            assert said.get("same") and said["rows"] == rows
+        else:
+            assert "pages too large to read a little at a time" in said["refused"] and said["peak"] < 512 * 1024**2, said
+
+    def test_a_megabyte_of_page_that_is_gigabytes_of_rows(self, tmp_path):
+        """Text written as what it adds to the value before: 2,048 values of a megabyte, each the same as the last, in pages of a megabyte."""
+        each, rows = 1_000_000, 2_048
+        chunk = pa.array(["p" * each] * 64, pa.large_string())
+        table = pa.table({"date": _days("2020-01-01", np.arange(rows)), "doc": pa.chunked_array([chunk] * (rows // 64))})
+        pq.write_table(table, tmp_path / "prefix.parquet", use_dictionary=False, column_encoding={"date": "PLAIN", "doc": "DELTA_BYTE_ARRAY"})
+        del table, chunk
+        assert (tmp_path / "prefix.parquet").stat().st_size < 64 * 1024**2
+        said = _hashed_under(LIMIT, tmp_path / "prefix.parquet", "date", tmp_path)
+        assert said.get("same") and said["rows"] == rows and said["peak"] < LIMIT
+
+    def test_230_columns_of_text_as_pandas_writes_them(self, tmp_path):
+        """A megabyte of page and a megabyte of dictionary a column: refused at 214 columns when a dictionary of text was counted for the whole of twice."""
+        import pandas as pd
+
+        rows, columns = 60_000, 230
+        frame = pd.DataFrame(
+            {
+                "date": pd.Timestamp("2020-01-01") + pd.to_timedelta(np.arange(rows) // 300, unit="D"),
+                **{f"t{c:03d}": [f"column {c:03d} holds the value {i:010d} of forty-eight" for i in range(rows)] for c in range(columns)},
+            }
+        )
+        frame.to_parquet(tmp_path / "wide.parquet", index=False)
+        del frame
+        said = _hashed_under(LIMIT, tmp_path / "wide.parquet", "date", tmp_path)
+        assert said.get("same") and said["rows"] == rows and said["peak"] < LIMIT

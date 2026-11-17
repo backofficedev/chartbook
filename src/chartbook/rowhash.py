@@ -117,13 +117,20 @@ BATCH_ROWS = 16_384
 #: values are long. So a file is refused, unread, where a row group's
 #: largest pages and dictionaries together are more than :data:`HELD_MOST`
 #: (256 columns of a megabyte page and a megabyte dictionary are within
-#: it; a dictionary of text counts twice, held as its page and as its
-#: values, and a category's six times), and where one value may be more
-#: than :data:`ROW_MOST`, which a page or a dictionary as large as that
-#: may hold. These are of the file as it is written, not of its rows: the
-#: same rows written with fewer values a page have a rows hash.
-HELD_MOST = 640 * 1024 * 1024
+#: it); where one value of text may be more than :data:`ROW_MOST`, which
+#: a page as large as that may hold; and where a value of one fixed
+#: length is more than :data:`VALUE_MOST` (five of 125 MB took 2.4 GB).
+#: A dictionary is held more than once while it is read, as its page and
+#: as its values, and what it took is not all given back before the
+#: periods are hashed: so it counts three times for text, eight for
+#: anything else (184 MB of numbers added 0.33 GB to what hashing took,
+#: and 448 MB took 2.1 GB), six for a category. That is counted for the
+#: eight largest, which is as many as are read at one moment. These are
+#: of the file as it is written, not of its rows: the same rows written
+#: with fewer values a page have a rows hash.
+HELD_MOST = 768 * 1024 * 1024
 ROW_MOST = 128 * 1024 * 1024
+VALUE_MOST = 1024 * 1024
 
 #: The most a run of rows may take as it is read, at worst, before it is
 #: handed on :data:`BATCH_BYTES` at a time. At worst: each row of text
@@ -951,7 +958,7 @@ class _Short(Exception):
 
 
 #: The most values a page header is read to: a real one has a few dozen.
-_HEADER_VALUES = 100_000
+_HEADER_VALUES = 5_000
 
 
 def _number(data, at: int) -> tuple:
@@ -1119,7 +1126,9 @@ def _pages(held, start: int, length: int, values: int) -> Iterator:
         if kind in _DATA_PAGES:
             counted += count
         seen += 1
-        yield kind, spread, count, written, at + used, packed
+        # A page that is not packed is read as the bytes it has, whatever size its header says it unpacks
+        # to; one that is packed cannot unpack to more than its header says. So it takes the greater
+        yield kind, max(spread, packed), count, written, at + used, packed
         at += used + packed
 
 
@@ -1163,11 +1172,13 @@ def _longest_value(held, at: int, packed: int, spread: int, how: str) -> int:
     value takes, at worst. A megabyte of dictionary may be fifty values of
     twenty kilobytes, and then sixteen thousand rows are 300 MB.
     """
-    if spread <= 4096:
+    if spread <= 64:
         return spread  # short enough whatever is in it
     try:
         held.seek(at)
-        data = _unpacked(held.read(packed), spread, how)
+        data = held.read(packed)
+        # Unpacked to what its header says; a page that is not packed is its bytes as they are
+        data = data if how == "UNCOMPRESSED" else _unpacked(data, spread, how)
         longest, place, end = 0, 0, len(data)
         length = struct.Struct("<I").unpack_from
         while place + 4 <= end:
@@ -1245,10 +1256,8 @@ def _read_plan(held, group, wanted: dict, file, walked: Optional[list] = None, a
     rows = group.num_rows
     chunks = [group.column(place) for place in range(group.num_columns)]
     chunks = [column for column in chunks if column.path_in_schema in wanted]
-    # A row group smaller unpacked than may be held needs no page of its columns of one width
-    # looked at: at worst each chunk is one page, and that is within what is held
-    small = sum(column.total_uncompressed_size for column in chunks) <= HELD_MOST
     kept = 0
+    again: list = []  # what each column's dictionary is held over and above once
     largest = ("", 0)
     fixed, longest, dense = 0, 0, 0.0
     text = []  # for each column of text written out in its pages: its name, where each page begins, what each takes
@@ -1258,10 +1267,12 @@ def _read_plan(held, group, wanted: dict, file, walked: Optional[list] = None, a
         if not of_text:
             # Its width: what its kind says, or its declared length; and what it is read as, if that is more
             width = _WIDTHS.get(column.physical_type) or (lengths or {}).get(name) or 16
+            if width > VALUE_MOST:
+                raise NotHashed(
+                    f"{name_of} holds values of {width / 2**20:,.0f} MB each in {_name_said(name)}, a column of values "
+                    f"of one fixed length, and a rows hash reads such values of up to {VALUE_MOST // 2**20} MB"
+                )
             fixed += max(width, wanted[name] or 0)
-            if small:
-                kept += column.total_uncompressed_size
-                continue
         begins = column.data_page_offset
         if column.has_dictionary_page and column.dictionary_page_offset and 0 < column.dictionary_page_offset < begins:
             begins = column.dictionary_page_offset
@@ -1292,19 +1303,24 @@ def _read_plan(held, group, wanted: dict, file, walked: Optional[list] = None, a
                     else:
                         counts.append(max(1, count))
                         sizes.append(spread)
-        except (ValueError, OSError, RecursionError, MemoryError, OverflowError):
-            # Not told: taken for the worst a chunk can be, one page of all of it
-            top, dictionary, of_dictionary, by_dictionary, by_prefix = column.total_uncompressed_size, 0, [], False, 0
-            counts, sizes = array.array("q", [max(1, column.num_values)]), array.array("d", [column.total_uncompressed_size])
-            if not of_text:
-                counts, sizes = array.array("q"), array.array("d")
-        # A dictionary of text is held as its page and as the values read from it; one the file's own
-        # schema gives as a dictionary is held again by every batch, and once more as each is written out
-        times = 6 if name in as_dictionary else 2 if of_text else 1
-        kept += top + dictionary * times
+        except (ValueError, OSError, RecursionError, MemoryError, OverflowError) as error:
+            if isinstance(error, (OSError, MemoryError)) and _this_machines(error) is not None:
+                raise
+            # What the footer says of a chunk is not what a reader holds of it, and is not taken
+            # in the place of its pages: what reading it takes is not told, so it is not read
+            raise NotHashed(
+                f"{name_of} has a column, {_name_said(name)}, whose pages could not be read to learn how it is laid "
+                f"out ({_first_line(error)}): what reading it takes is not told, and a rows hash reads only what is"
+            ) from None
+        # A dictionary is held as its page and again as the values read from it, more times for
+        # numbers than for text; one the file's own schema gives as a dictionary is held again by
+        # every batch, and once more as each is written out. The eight largest, as they are read
+        times = 6 if name in as_dictionary else 3 if of_text else 8
+        again.append(dictionary * (times - 1))
+        kept += top + dictionary
         if top + dictionary * times > largest[1]:
             largest = (name, top + dictionary * times)
-        if kept > HELD_MOST:
+        if kept + sum(sorted(again)[-8:]) > HELD_MOST:
             break  # said below, before any dictionary is read to learn its longest value
         if not of_text:
             continue
@@ -1331,6 +1347,7 @@ def _read_plan(held, group, wanted: dict, file, walked: Optional[list] = None, a
                 f"{_name_said(name)} may take {max(most_a_value, float(max(sizes, default=0))) / 2**20:,.0f} MB, and a rows "
                 f"hash reads values of up to {ROW_MOST // 2**20} MB. Written with fewer values a page, its rows can be hashed"
             )
+    kept += sum(sorted(again)[-8:])
     if kept > HELD_MOST:
         raise NotHashed(
             f"{name_of} has pages too large to read a little at a time: a reader holds a row group's "
