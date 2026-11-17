@@ -553,7 +553,8 @@ class TestAgainstARecord:
         assert NO_DATE in dated.rows
         _table(days=5).write_parquet(tmp_path / "dated.parquet")
         only = hash_rows(Table(tmp_path / "dated.parquet"), "ds")
-        assert self._compare(tmp_path, frame, only).outside == 1
+        compared = self._compare(tmp_path, frame, only)
+        assert (compared.no_date, compared.outside, compared.same) == (1, 0, False)
 
     def test_a_table_with_no_date_column(self, tmp_path):
         frame = _table(days=5)

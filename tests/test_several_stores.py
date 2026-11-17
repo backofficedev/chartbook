@@ -493,7 +493,7 @@ def test_a_pin_no_store_of_the_catalog_has_still_stops_a_snapshot(tmp_path, monk
         if record.get("content_hash")
     )
     assert shared.delete(pinned)
-    with pytest.raises(snapshot.SnapshotError, match="is not in the store at .*, and no build of yours at .* stands in"):
+    with pytest.raises(snapshot.SnapshotError, match="is not in the store at .*, which has the snapshot it is of"):
         snapshot.make(consumer)
     assert not (tmp_path / "mine").exists() or not FolderStore(tmp_path / "mine").all_snapshot_files()
 

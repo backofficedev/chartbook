@@ -1190,6 +1190,12 @@ class Compared:
         index_column: Whether the table has the column pandas makes of an
             index with no name (:data:`INDEX_COLUMN`), which may be the
             whole of a difference.
+        undated: Whether the record's rows are dated by a column that the
+            table does not have, or has with no dates in it: nothing of it
+            could be put beside a period, and every period differs.
+        no_date: How many of the table's rows have no date, where the
+            record has no such rows: rows the pin did not have, counted
+            apart from *outside*, since no date says where they fall.
     """
 
     differ: list
@@ -1197,11 +1203,13 @@ class Compared:
     newer: int
     rows: int
     index_column: bool = False
+    undated: bool = False
+    no_date: int = 0
 
     @property
     def same(self) -> bool:
-        """Whether the table holds the record's rows: every period the same, and no row up to its last timestamp that the record did not have."""
-        return not self.differ and not self.outside
+        """Whether the table holds the record's rows: every period the same, and no row up to its last timestamp, or with no date, that the record did not have."""
+        return not self.differ and not self.outside and not self.no_date
 
 
 class _Pieces:
@@ -1537,15 +1545,19 @@ def hash_in(table: Table, date_col: Optional[str], rows: dict, as_of: Optional[s
     out and counted: a table that has gained rows since still holds the
     record's. A row up to *as_of* that falls in no period of the record is
     one the record did not have. A record with no dated row has no last
-    timestamp, and every dated row of the table is then after it.
+    timestamp, and every dated row of the table is then after it. A record
+    of no rows at all holds nothing to compare by, and is not compared.
 
     :param rows: The record's hashes, by period (:attr:`RowsRecord.rows`).
     :param as_of: Its last timestamp, as text; None if it has none.
     :param known: The periods already known to hold the record's rows, as
         the record writes them: their rows are passed over, not hashed.
-    :raises NotHashed: If the table's rows cannot be hashed.
+    :raises NotHashed: If the table's rows cannot be hashed, or the record
+        holds no rows.
     :raises ValueError: If the record names a period that is none.
     """
+    if not rows:
+        raise NotHashed("the record holds no rows, so there is nothing to tell a table's rows by")
     _taken(table.schema())
     periods = periods_of(rows)
     scratch = _scratch_folder()
@@ -1570,13 +1582,14 @@ def _hash_in(
         if whole is None:
             raise _too_many("its rows")
         same = set(rows) == {ALL} and hash_frame(whole) == rows[ALL]
-        return Compared([] if same else sorted(rows), 0, 0, total, index_column)
+        # Never the same for want of a period to differ in: a record of no rows says nothing of a table
+        return Compared([] if same else (sorted(rows) or [ALL]), 0, 0, total, index_column, undated=ALL not in rows)
     fine = isinstance(schema[date_col], pl.Datetime) and schema[date_col].time_unit == "ns"
     firsts = np.array([_bound(first, fine, first=True) for _, first, _ in periods], dtype="int64")
     lasts = np.array([_bound(last, fine) for _, _, last in periods], dtype="int64")
     cap = _bound(stamp_of(as_of), fine) if as_of is not None else None
     pieces = _Pieces(scratch / "pieces", table.arrow_schema())
-    outside = newer = total = 0
+    outside = newer = total = no_date = 0
     too_many: set = set()
     passed_over = [number for number, (key, _, _) in enumerate(periods) if key in known]
     for batch in table.batches(scratch=scratch):
@@ -1591,9 +1604,11 @@ def _hash_in(
         index = np.where(inside, index, -2)
         if NO_DATE in rows:
             index = np.where(empty, -1 if NO_DATE not in known else -3, index)
+        else:
+            no_date += int(empty.sum())  # rows with no date, of which the record has none
         total += batch.num_rows
         newer += int(after.sum())
-        outside += int((index == -2).sum()) - int(after.sum())
+        outside += int((index == -2).sum()) - int(after.sum()) - (0 if NO_DATE in rows else int(empty.sum()))
         if passed_over:
             index = np.where(np.isin(index, passed_over), -3, index)  # known to be the same: not read again
         # More than is held at a time: not held, and said when the table has been read
@@ -1618,7 +1633,7 @@ def _hash_in(
     if NO_DATE in rows and NO_DATE not in known:
         if -1 not in pieces or hash_frame(pieces.read([-1]), date_col) != rows[NO_DATE]:
             differ.append(NO_DATE)
-    return Compared(differ, outside, newer, total, index_column)
+    return Compared(differ, outside, newer, total, index_column, no_date=no_date)
 
 
 def _too_many(which: str) -> NotHashed:
