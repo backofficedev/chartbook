@@ -614,7 +614,8 @@ def _cut_pandas(frame, date_col: str, as_of: Optional[str]):
     held = pl.from_pandas(dates.reset_index(drop=True)).alias("when")
     if held.dtype == pl.Categorical or held.dtype == pl.Enum or isinstance(held.dtype, (pl.Categorical, pl.Enum)):
         held = held.cast(pl.String)  # a folder's key, which pandas reads as a category
-    kept = pl.DataFrame({"when": held}).select(rowhash.up_to({"when": held.dtype}, "when", as_of)).to_series()
+    dated = pl.DataFrame({"when": held})
+    kept = dated.select(rowhash.up_to(dated.schema, "when", as_of)).to_series()
     return frame[kept.to_numpy()]
 
 
@@ -662,10 +663,11 @@ def as_of(
         ``[dependencies]``.
     :param project_dir: Where to look for the pipeline, as for :func:`path`.
     :returns: A ``datetime.date`` where the column holds dates, and a
-        ``datetime.datetime`` where it holds times: in UTC, and aware of
-        it where the column has a time zone. A timestamp finer than a
-        microsecond is given as the next microsecond, so that no pinned row
-        is after it. ``None`` for a dataframe with no ``date_col``, with no
+        ``datetime.datetime`` where it holds times: in the column's own
+        time zone where it has one, and in UTC with no zone where it has
+        none, so that it compares with the column as it is. A timestamp
+        finer than a microsecond is given as the next microsecond, so that
+        no pinned row is after it. ``None`` for a dataframe with no ``date_col``, with no
         dated row, pinned before pins recorded their rows, or whose rows
         are not hashed; and for a dataframe of the pipeline you are in,
         which has no pin.
@@ -698,7 +700,14 @@ def _moment(text: str, location):
     if of_dates:
         return moment.date()
     if isinstance(kind, pl.Datetime) and kind.time_zone:
-        return moment.replace(tzinfo=timezone.utc)
+        # In the column's own zone: polars compares a time only with one of the same zone
+        aware = moment.replace(tzinfo=timezone.utc)
+        try:
+            from zoneinfo import ZoneInfo
+
+            return aware.astimezone(ZoneInfo(kind.time_zone))
+        except Exception:  # noqa: BLE001 - a zone this machine has no rules for: the same instant, in UTC
+            return aware
     return moment
 
 

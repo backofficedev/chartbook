@@ -9,7 +9,8 @@ well as its bytes, and what each command and each read then does.
 Status: **being built, step by step, in "The order of work" at the end; no release is named.**
 Built so far: the lockfile by kind (step 2), the rows hash (step 3), periods in a snapshot's
 record and in the lockfile (step 4), and the check, with a build of yours that stands in (step 5).
-A read still hands over a stand-in's newer rows (step 6). Each part says whether the maintainer decided it, and
+A read through a build that stands in gives the pinned rows, and `data.as_of` says where they
+end (step 6). Each part says whether the maintainer decided it, and
 when, or whether it is a proposal. The items marked *(Proposed.)* were decided as proposed on
 2026-11-16. A choice made while building, on what the page had left open, is marked *Proposed by
 Claude*, with its date, until the maintainer says otherwise. The numbers come from a prototype run
@@ -515,6 +516,47 @@ itself.
 - `data.as_of` is new: the pin's last timestamp, or `None` for a dataframe with none. A reader of
   your own, given a path, filters with it. *Decided 2026-11-15, over a copy of the file cut at the
   date and written once: no hidden file, no second copy on disk.*
+
+*Built (step 6). From a run on 2026-11-17 of the small made-up upstream of "What you see", on the
+student's machine, whose build has 24 rows after the pin's last date:*
+
+```text
+$ python reads.py
+data.load: 800 rows, through 2026-10-30 00:00:00
+data.sql:  (800, datetime.datetime(2026, 10, 30, 0, 0))
+data.as_of: datetime.datetime(2026, 10, 30, 0, 0)
+data.path: 824 rows in the file; 800 up to data.as_of
+ftsfr/fed_yield_curve:treasury_yields: this file is your own build's, and has 24 rows after
+2026-10-30, the last date chartbook.lock pins. data.load() and data.sql() leave them out; a reader
+of your own keeps the rows up to data.as_of('ftsfr/fed_yield_curve:treasury_yields').
+```
+
+*Where the page had left it open, proposed by Claude, 2026-11-17:*
+
+- **Which rows are left out** is told as the rows hash tells a row's date, so what a read gives
+  is exactly what the check compared: the rows up to `as_of`, and the rows with no date. For a
+  pin with no dated row, the rows with no date alone. A dataframe with no `date_col` is met by
+  all its rows, and is read whole.
+- **What `data.as_of` returns:** a `datetime.date` where the column holds dates, and a
+  `datetime.datetime` where it holds times, in the column's own time zone where it has one
+  (polars compares a time only with one of the same zone) and with no zone where it has none.
+  The type is that of the file that is read, so `frame[frame["ds"] <= data.as_of(ref)]` works on
+  the file `data.path` gives, whoever wrote it. A timestamp finer than a microsecond comes back
+  as the next microsecond, so that no pinned row is after it; `data.load` is exact. It is `None`
+  for a dataframe with no `date_col` or no dated row, one pinned before pins recorded rows, one
+  whose rows are not hashed, and a dataframe of your own pipeline.
+- **`data.sql` and `data.ref`** read a parquet file through `(select * from read_parquet(…)
+  where "ds" is null or "ds" <= DATE '2026-10-30')`, so DuckDB still reads only the columns and
+  row groups a query needs. Where SQL has no sure way to say it (a date column of text, one a
+  folder's name makes, a CSV, a time with a zone to the nanosecond), DuckDB is handed the frame
+  `data.load` gives, and `data.ref` says there is no text for it.
+- **`format="pandas"`** keeps the frame as pandas reads it, types and index: the rows are told
+  from the date column wherever pandas put it, a column or the index.
+- **What `data.path`, `data.files`, `assets.path` and `chartbook path` say,** once a process for
+  each dataframe, on stderr, and only when the build has rows after the pin's last date: the line
+  above. `data.load` says nothing of it.
+- **A read of the pinned file itself is untouched,** and `data.as_of` answers there too, from
+  the pin.
 - A read in a notebook and a read in a batch run do the same here. What was decided before
   ({doc}`reading-other-pipelines`, "How strict, where") is about a read with no pin, and stands.
 - The lockfile becomes the committed cutoff for what a pipeline reads from others. An upstream
@@ -703,7 +745,7 @@ match. The page is to be corrected.
 5. The check: a snapshot of yours that stands in, in `pin`, `pin --check` and `run`, with the
    messages. **Built.**
 6. Reads: `data.load` and `data.sql` without the rows after `as_of`; `data.as_of`; what
-   `data.path` says.
+   `data.path` says. **Built.**
 7. What `update` and `snapshot` say; the warning for a pandas index in `check` and `snapshot`.
 8. The class's upstreams and the template write `index=False`; the report is pinned again.
 9. The guide, the reference, the changelog, the skill.

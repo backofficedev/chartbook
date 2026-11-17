@@ -280,8 +280,13 @@ class TestAsOf:
         zoned = _yields(40).with_columns(pl.col("ds").cast(pl.Datetime("us")).dt.replace_time_zone("America/Chicago"))
         rates, report = _pin(work, monkeypatch, {"treasury": (zoned, "ds", _polars)})
         last = data.as_of("acme/rates:treasury", project_dir=report)
-        assert last == datetime(2026, 1, 9, 6, tzinfo=timezone.utc)
+        # The same instant, in the column's own zone: what polars and pandas both compare it with
+        assert last == datetime(2026, 1, 9, 6, tzinfo=timezone.utc) and str(last.tzinfo) == "America/Chicago"
         assert pl.read_parquet(data.path("acme/rates:treasury", project_dir=report)).filter(pl.col("ds") <= last).height == 80
+        import pandas as pd
+
+        frame = pd.read_parquet(data.path("acme/rates:treasury", project_dir=report))
+        assert len(frame[frame["ds"] <= last]) == 80
 
     def test_finer_than_a_microsecond_is_the_next_one(self, work, monkeypatch):
         ticks = pl.DataFrame({"t": [1_700_000_000_000_000_001, 1_700_000_000_000_000_501], "x": [0, 1]}).with_columns(pl.col("t").cast(pl.Datetime("ns")))
