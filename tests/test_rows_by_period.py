@@ -56,8 +56,8 @@ def _whole(table: Table, date_col: str) -> dict:
     return found
 
 
-#: What a row of :func:`_table` counts for: four columns at eight bytes, and the two bytes of its ``unique_id``.
-A_ROW = 4 * 8 + 2
+#: What a row of :func:`_table` counts for: three values at eight bytes, and its ``unique_id``, of text, at sixteen and its two bytes.
+A_ROW = 3 * 8 + 16 + 2
 
 
 class TestChoosingThePeriods:
@@ -115,18 +115,35 @@ class TestChoosingThePeriods:
 
     def test_the_size_of_a_period_is_fixed_here(self):
         """Set for a machine with 8 GB, and no setting: whoever checks must hold what whoever pinned chose."""
-        assert rowhash.PERIOD_BYTES == 128 * 1024 * 1024 and rowhash.MOST_BYTES == 2 * rowhash.PERIOD_BYTES
+        assert rowhash.PERIOD_BYTES == 128 * 1024 * 1024
+        # One size for every piece: a day, the rows with no date and a table with no dates are sorted whole, as a year is
+        assert rowhash.MOST_BYTES == rowhash.PERIOD_BYTES
 
 
 class TestWhatRowsCountFor:
-    """Eight bytes a column and the bytes of its text: from the rows alone, so the same rows give the same periods."""
+    """Eight bytes a value, and sixteen and its own bytes for one of text: from the rows alone, so the same rows give the same periods."""
 
     def _batch(self, frame: pl.DataFrame):
         return frame.to_arrow(compat_level=pl.CompatLevel.oldest()).to_batches()[0]
 
-    def test_eight_bytes_a_column_and_the_bytes_of_its_text(self):
+    def test_eight_bytes_a_value_and_sixteen_and_its_bytes_for_text(self):
         frame = pl.DataFrame({"n": [1, 2, 3], "x": [0.5, None, 1.5], "t": ["ab", None, "héllo"], "b": [b"12", b"", None]})
-        assert rowhash.row_bytes(self._batch(frame)).tolist() == [32 + 2 + 2, 32, 32 + 6]
+        # A number eight, text and binary sixteen and their bytes, and an empty value eight whatever its column
+        assert rowhash.row_bytes(self._batch(frame)).tolist() == [8 + 8 + 18 + 18, 8 + 8 + 8 + 16, 8 + 8 + 22 + 8]
+
+    def test_a_decimal_is_sixteen(self):
+        from decimal import Decimal
+
+        frame = pl.DataFrame({"d": [Decimal("1.50"), None]}, schema={"d": pl.Decimal(20, 2)})
+        assert rowhash.row_bytes(self._batch(frame)).tolist() == [16, 8]
+
+    def test_a_column_with_no_value_in_it_counts_the_same_whatever_type_its_writer_gave_it(self):
+        """pandas writes a column of nothing as a column of no type, and polars as text: the same rows, and the same size."""
+        sizes = set()
+        for kind in (pl.Null, pl.String, pl.Float64, pl.Decimal(10, 2), pl.Binary):
+            frame = pl.DataFrame({"n": [1, 2], "empty": [None, None]}, schema={"n": pl.Int64, "empty": kind})
+            sizes.add(tuple(rowhash.row_bytes(self._batch(frame)).tolist()))
+        assert sizes == {(16, 16)}
 
     def test_whatever_type_a_file_held_them_in(self):
         wide = pl.DataFrame({"d": [datetime(2024, 1, 2)], "n": [7], "f": [1.5], "c": ["us"], "k": [True]})
@@ -134,9 +151,9 @@ class TestWhatRowsCountFor:
             pl.col("d").cast(pl.Date), pl.col("n").cast(pl.Int8), pl.col("f").cast(pl.Float32), pl.col("c").cast(pl.Categorical)
         )
         target = wide.with_columns(pl.col("d").cast(pl.Date)).to_arrow(compat_level=pl.CompatLevel.oldest()).schema
-        assert rowhash.row_bytes(self._batch(wide)).tolist() == [5 * 8 + 2]
+        assert rowhash.row_bytes(self._batch(wide)).tolist() == [4 * 8 + 16 + 2]
         # As a table's batches come: a category as its text
-        assert rowhash.row_bytes(self._batch(narrow.with_columns(pl.col("c").cast(pl.String)))).tolist() == [5 * 8 + 2]
+        assert rowhash.row_bytes(self._batch(narrow.with_columns(pl.col("c").cast(pl.String)))).tolist() == [4 * 8 + 16 + 2]
         assert target.names == wide.columns
 
     def _same_rows(self, folder: Path) -> dict:
@@ -154,7 +171,7 @@ class TestWhatRowsCountFor:
         """Near a threshold too: the size is counted, and not reckoned from a few rows of a file."""
         tables = self._same_rows(tmp_path)
         assert tables["polars"].schema()["ds"] == pl.Date and tables["pandas"].schema()["ds"] != pl.Date
-        a_year = 365 * 3 * (5 * 8 + 2 + 1)  # 2023: five columns, a two-byte id, a one-byte note
+        a_year = 365 * 3 * (3 * 8 + 16 + 2 + 16 + 1)  # 2023: three numbers, a two-byte id, a one-byte note
         for period in (10**9, a_year, a_year - 1, 40_000, 9_000, 600):
             monkeypatch.setattr(rowhash, "PERIOD_BYTES", period)
             monkeypatch.setattr(rowhash, "MOST_BYTES", 10**9)
@@ -347,7 +364,8 @@ class TestARecordOfRows:
         monkeypatch.setattr(rowhash, "MOST_BYTES", 1_000)
         with pytest.raises(NotHashed):
             hash_rows(Table(tmp_path / "t.parquet"), "ds")
-        hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
+        with pytest.raises(NotHashed):
+            hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
         assert list((tmp_path / "cache").rglob("*")) == [tmp_path / "cache" / "rows"]
 
 
@@ -440,10 +458,17 @@ class TestReadALittleAtATime:
         frame.write_parquet(tmp_path / "one.parquet")
         assert hash_rows(Table(tmp_path / "one.parquet"), "ds").rows == record.rows
 
-    @pytest.mark.parametrize("format,name", [("csv", "t.csv"), ("jsonl", "t.jsonl"), ("ipc", "t.arrow")])
+    def test_an_arrow_file_has_no_rows_hash(self, tmp_path):
+        """What it takes in memory cannot be told from its file: 19 MB of one, compressed, was 4.2 GB."""
+        _table(days=40).write_ipc(tmp_path / "t.arrow")
+        with pytest.raises(NotHashed, match="it is an Arrow IPC file, and what one takes in memory cannot be told from its file"):
+            hash_rows(Table(tmp_path / "t.arrow"), "ds")
+        assert list(rowhash.fields_of(Table(tmp_path / "t.arrow"), "ds")) == ["date_col", "not_hashed"]
+
+    @pytest.mark.parametrize("format,name", [("csv", "t.csv"), ("jsonl", "t.jsonl")])
     def test_another_format_is_read_through_a_copy(self, tmp_path, format, name, monkeypatch):
         frame = _table(days=40)
-        {"csv": frame.write_csv, "jsonl": frame.write_ndjson, "ipc": frame.write_ipc}[format](tmp_path / name)
+        {"csv": frame.write_csv, "jsonl": frame.write_ndjson}[format](tmp_path / name)
         table = Table(tmp_path / name)
         assert hash_rows(table, "ds").rows == _whole(table, "ds")
         monkeypatch.setattr(rowhash, "PERIOD_BYTES", 500)  # a day each, through scratch files
@@ -631,8 +656,26 @@ class TestWhatTheReviewFound:
         monkeypatch.setattr(rowhash, "MOST_BYTES", 10_000)
         with pytest.raises(NotHashed, match="its rows with no date, 900 of them, count for"):
             hash_rows(Table(tmp_path / "t.parquet"), "ds")
-        # And beside a record: more than any piece of one counts for is not its rows
-        assert hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of).differ == [NO_DATE]
+        # And beside a record they are not held either. A record another version made may hold
+        # larger periods, so they are not said to differ: they are not compared
+        with pytest.raises(NotHashed, match="its rows with no date count for more than 0 MB .* they are not compared"):
+            hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
+
+    def test_a_period_larger_than_is_held_is_not_compared(self, tmp_path, monkeypatch):
+        """A record from a version that held more in a period: its rows are not told to differ without being read."""
+        _table(days=400).write_parquet(tmp_path / "t.parquet")
+        record = hash_rows(Table(tmp_path / "t.parquet"), "ds")
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 5_000)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 5_000)
+        with pytest.raises(NotHashed, match="its rows of 2022-11-01 to 2022-12-31 count for more than"):
+            hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
+        # Nor a table with no date column
+        whole = hash_rows(Table(tmp_path / "t.parquet"), None) if False else None
+        monkeypatch.undo()
+        whole = hash_rows(Table(tmp_path / "t.parquet"), None)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 5_000)
+        with pytest.raises(NotHashed, match="its rows count for more than"):
+            hash_in(Table(tmp_path / "t.parquet"), None, whole.rows, None)
 
     def test_one_file_under_a_folder_that_names_a_key(self, tmp_path):
         """``seed=42/project/_data/prices.parquet``: the reader makes a column of the folder, and so do the rows hashed."""
@@ -659,9 +702,23 @@ class TestWhatTheReviewFound:
         """Only parquet is read a little at a time."""
         _table(days=40).write_csv(tmp_path / "t.csv")
         monkeypatch.setattr(rowhash, "OTHER_BYTES", 1024)
-        with pytest.raises(NotHashed, match="it is csv, 0 MB on disk, and only parquet is read a little at a time"):
+        with pytest.raises(NotHashed, match="it is csv, more than 0 MB of text, and only parquet is read a little at a time"):
             hash_rows(Table(tmp_path / "t.csv"), "ds")
         assert list(rowhash.fields_of(Table(tmp_path / "t.csv"), "ds")) == ["date_col", "not_hashed"]
+
+    def test_a_zipped_file_counts_for_its_text(self, tmp_path, monkeypatch):
+        """Mostly zeros zip to nothing: what is held is the text, so the text is what is measured, and no further than the limit."""
+        import gzip
+
+        text = _table(days=40).write_csv()
+        with gzip.open(tmp_path / "t.csv.gz", "wb") as zipped:
+            zipped.write(text.encode("utf-8"))
+        assert (tmp_path / "t.csv.gz").stat().st_size < len(text) // 2
+        assert rowhash._text_bytes(tmp_path / "t.csv.gz", 10**9) == len(text.encode("utf-8"))
+        assert hash_rows(Table(tmp_path / "t.csv.gz"), "ds").row_count == 120
+        monkeypatch.setattr(rowhash, "OTHER_BYTES", len(text.encode("utf-8")) - 1)
+        with pytest.raises(NotHashed, match="it is csv, more than"):
+            hash_rows(Table(tmp_path / "t.csv.gz"), "ds")
 
     def test_a_type_that_goes_on_is_not_written_out(self, tmp_path):
         wide = pl.DataFrame({"ds": [date(2024, 1, 2)], "v": [{f"field_{i}": i for i in range(150)}]})
@@ -694,12 +751,163 @@ class TestWhatTheReviewFound:
 
     def test_scratch_a_killed_process_left_is_removed_a_day_later(self, tmp_path, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
-        for name, age in (("chartbook-rows-old", 2 * 86400), ("chartbook-rows-new", 60)):
+        # One a day old; one a minute old; and one begun a day ago that a run is still writing to
+        for name, age, written in (("chartbook-rows-old", 2 * 86400, 2 * 86400), ("chartbook-rows-new", 60, 60), ("chartbook-rows-live", 2 * 86400, 30)):
             left = tmp_path / "cache" / "rows" / name
-            left.mkdir(parents=True)
-            (left / "0.arrows").write_bytes(b"x")
-            past = time.time() - age
-            os.utime(left, (past, past))
+            (left / "pieces").mkdir(parents=True)
+            (left / "pieces" / "0.arrows").write_bytes(b"x")
+            for path, seconds in ((left / "pieces" / "0.arrows", written), (left / "pieces", age), (left, age)):
+                past = time.time() - seconds
+                os.utime(path, (past, past))
         _table(days=3).write_parquet(tmp_path / "t.parquet")
         hash_rows(Table(tmp_path / "t.parquet"), "ds")
-        assert sorted(path.name for path in (tmp_path / "cache" / "rows").iterdir()) == ["chartbook-rows-new"]
+        assert sorted(path.name for path in (tmp_path / "cache" / "rows").iterdir()) == ["chartbook-rows-live", "chartbook-rows-new"]
+
+
+class TestWhatTheSecondReviewFound:
+
+    def test_a_batch_is_measured_from_its_rows_and_not_from_the_file(self, tmp_path):
+        """Text a file holds once, in a dictionary, is a few bytes a row in the file and kilobytes in memory: a batch is still a few megabytes."""
+        words = [f"{i:04d}" + "x" * 5000 for i in range(50)]
+        rows = 60_000
+        frame = pl.DataFrame({"ds": [date(2024, 1, 1) + timedelta(days=i % 300) for i in range(rows)], "x": list(range(rows))}).with_columns(
+            text=pl.Series([words[i % 50] for i in range(rows)])
+        )
+        frame.write_parquet(tmp_path / "t.parquet")
+        assert (tmp_path / "t.parquet").stat().st_size < 3 * 1024 * 1024  # and it is 300 MB of rows
+        table = Table(tmp_path / "t.parquet")
+        largest = rows_seen = 0
+        for batch in table.batches():
+            largest = max(largest, batch.nbytes)
+            rows_seen += batch.num_rows
+        assert rows_seen == rows and largest <= 4 * rowhash.BATCH_BYTES, f"{largest / 2**20:.0f} MB"
+
+    def test_small_rows_are_read_many_at_a_time_and_every_row_once(self, tmp_path):
+        """A row group is begun again with more rows at a time once its rows are seen to be small: none is read twice, and none lost."""
+        frame = _table(days=20_000, per_day=3, start=date(1950, 1, 1)).with_columns(order=pl.int_range(pl.len()))
+        pq.write_table(frame.to_arrow(), tmp_path / "t.parquet", row_group_size=25_000)
+        seen, sizes = [], []
+        for batch in Table(tmp_path / "t.parquet").batches():
+            seen.extend(batch.column("order").to_pylist())
+            sizes.append(batch.num_rows)
+        assert seen == list(range(60_000))
+        assert max(sizes) > 4_000 and len(sizes) < 40
+
+    def test_rows_that_grow_within_a_row_group(self, tmp_path):
+        """Small rows first and large ones after, in one row group: the group is begun again with fewer rows, from where it was."""
+        rows = 30_000
+        text = ["a"] * 20_000 + ["b" * 20_000] * 10_000
+        frame = pl.DataFrame({"ds": [date(2024, 1, 1)] * rows, "order": list(range(rows)), "text": text})
+        pq.write_table(frame.to_arrow(), tmp_path / "t.parquet", row_group_size=rows, use_dictionary=False)
+        seen, largest = [], 0
+        for batch in Table(tmp_path / "t.parquet").batches():
+            seen.extend(batch.column("order").to_pylist())
+            largest = max(largest, batch.nbytes)
+        assert seen == list(range(rows)) and largest <= 4 * rowhash.BATCH_BYTES, f"{largest / 2**20:.0f} MB"
+
+    def test_a_folder_with_a_partition_of_no_rows(self, tmp_path):
+        """One file a day, written in a loop, and a holiday: the day with no rows stops nothing."""
+        frame = _table(days=3, start=date(2024, 1, 1))
+        for day, part in ((date(2024, 1, 1), frame.clear()), (date(2024, 1, 2), frame.filter(pl.col("ds") == date(2024, 1, 2))), (date(2024, 1, 3), frame.filter(pl.col("ds") == date(2024, 1, 3)))):
+            folder = tmp_path / "trades" / f"day={day.isoformat()}"
+            folder.mkdir(parents=True)
+            part.write_parquet(folder / "part.parquet")
+        table = Table(tmp_path / "trades")
+        record = hash_rows(table, "ds")
+        assert record.row_count == 6 and record.rows == _whole(table, "ds")
+        assert hash_in(Table(tmp_path / "trades"), "ds", record.rows, record.as_of).same
+        assert "rows" in rowhash.fields_of(Table(tmp_path / "trades"), "ds")
+
+    @pytest.mark.parametrize("values", [("007", "abc"), ("00123456", "0012AB78"), ("1e3", "x"), ("true", "maybe")], ids=["007", "cusip", "1e3", "true"])
+    def test_a_key_is_typed_by_all_its_folders(self, tmp_path, values):
+        """``code=007`` beside ``code=abc``: the table has the text ``007``, as the reader gives it, though the folder alone reads as a number."""
+        frame = _table(days=4, start=date(2024, 1, 1))
+        for value in values:
+            folder = tmp_path / "t" / f"code={value}"
+            folder.mkdir(parents=True)
+            frame.write_parquet(folder / "part.parquet")
+        table = Table(tmp_path / "t")
+        read = table.scan().collect()
+        assert sorted(set(read["code"].to_list())) == sorted(values)
+        record = hash_rows(table, "ds")
+        assert record.rows == _whole(table, "ds")
+        assert record.rows == {"2024-01-01/2024-01-04": hash_frame(read, "ds")}
+
+    def test_folders_that_name_different_keys_make_no_column(self, tmp_path):
+        """``a=1/b=x/`` beside ``a=2/``: the reader reads no key of them, so a file's own column ``a`` stands."""
+        for folder, values in (("a=1/b=x", [5, 6]), ("a=2", [7])):
+            (tmp_path / "t" / folder).mkdir(parents=True)
+            pl.DataFrame({"ds": [date(2024, 1, 2)] * len(values), "a": values}).write_parquet(tmp_path / "t" / folder / "part.parquet")
+        table = Table(tmp_path / "t")
+        read = table.scan().collect()
+        assert sorted(read["a"].to_list()) == [5, 6, 7]
+        assert hash_rows(table, "ds").rows == {"2024-01-02/2024-01-02": hash_frame(read, "ds")}
+
+    def test_a_column_with_no_name(self, tmp_path):
+        """R's row names, read and written again: the column has no name, and the hash does not see where it stands."""
+        frame = pl.DataFrame({"": [1, 2, 3], "ds": [date(2024, 1, 1), date(2024, 1, 2), date(2024, 1, 3)], "y": [0.5, 1.5, 2.5]})
+        frame.write_parquet(tmp_path / "a.parquet")
+        frame.select("ds", "y", "").write_parquet(tmp_path / "b.parquet")
+        a, b = hash_rows(Table(tmp_path / "a.parquet"), "ds"), hash_rows(Table(tmp_path / "b.parquet"), "ds")
+        assert a.rows == b.rows == {"2024-01-01/2024-01-03": hash_frame(frame, "ds")}
+        assert hash_in(Table(tmp_path / "b.parquet"), "ds", a.rows, a.as_of).same
+        named = frame.rename({"": "column_0"})
+        named.write_parquet(tmp_path / "named.parquet")
+        assert hash_rows(Table(tmp_path / "named.parquet"), "ds").rows != a.rows
+        # And a table with no date column, which is held whole
+        assert hash_rows(Table(tmp_path / "a.parquet"), None).rows == {ALL: hash_frame(frame)}
+
+    def test_what_the_machine_could_not_do_just_now_is_not_said_of_the_table(self, tmp_path, monkeypatch):
+        """A file that could not be read this time, no memory: nothing is recorded, so nothing is taken from it by a later snapshot."""
+        _table().write_parquet(tmp_path / "t.parquet")
+        for error in (OSError(5, "Input/output error"), MemoryError("malloc of size 1073741824 failed")):
+            def broken(self, *arguments, **options):
+                raise error
+
+            monkeypatch.setattr(pq.ParquetFile, "iter_batches", broken)
+            with pytest.raises(rowhash.NotNow):
+                rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+            monkeypatch.undo()
+
+    def test_what_is_the_same_at_every_try_is_why_it_has_no_hash(self, tmp_path, monkeypatch):
+        """Not "this time": the next snapshot would be told the same, and would try again for ever."""
+        _table().write_parquet(tmp_path / "t.parquet")
+        monkeypatch.setattr(rowhash, "hash_frame", lambda *arguments, **options: (_ for _ in ()).throw(RuntimeError("the same again")))
+        fields = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+        assert fields == {"date_col": "ds", "not_hashed": "its rows could not be hashed (RuntimeError: the same again)"}
+
+    def test_a_number_of_128_bits_is_refused_plainly(self, tmp_path):
+        if not hasattr(pl, "Int128"):
+            pytest.skip("this polars has no 128-bit whole numbers")
+        pl.DataFrame({"ds": [date(2024, 1, 2)], "n": [5]}, schema={"ds": pl.Date, "n": pl.Int128}).write_parquet(tmp_path / "t.parquet")
+        fields = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")
+        assert list(fields) == ["date_col", "not_hashed"] and fields["not_hashed"].startswith("its columns cannot be read a batch at a time")
+
+    def test_no_folder_of_this_machine_is_in_what_a_record_says(self, tmp_path, monkeypatch):
+        """Why a table has no hash is read on other machines, in a store a team shares."""
+        _table().write_parquet(tmp_path / "t.parquet")
+
+        def gone(self, *arguments, **options):
+            raise ValueError(f"Failed to open local file '{tmp_path / 't.parquet'}'. Detail: no such thing")
+
+        monkeypatch.setattr(pq.ParquetFile, "iter_batches", gone)
+        said = rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")["not_hashed"]
+        assert str(tmp_path) not in said and "t.parquet" in said
+
+    def test_a_long_name_is_not_written_out(self, tmp_path):
+        pl.DataFrame({"ds": [date(2024, 1, 2)], "n" * 5000: [[1.0]]}).write_parquet(tmp_path / "t.parquet")
+        assert len(rowhash.fields_of(Table(tmp_path / "t.parquet"), "ds")["not_hashed"]) < 300
+
+    def test_text_dates_to_the_minute_with_an_offset(self):
+        read = rowhash._dates_in_text(pl.Series("ds", ["2024-01-01T10:00Z", "2024-01-01 10:00+02:00", "2024-01-01T10:00"]))
+        assert read.to_list() == [datetime(2024, 1, 1, 10), datetime(2024, 1, 1, 8), datetime(2024, 1, 1, 10)]
+
+    def test_a_date_column_named_like_a_pattern(self, tmp_path):
+        """``^ds$`` is a pattern to polars: the dates are still its dates, as a date, a time and text."""
+        days = [date(2024, 1, 2), date(2024, 1, 3), date(2025, 6, 30)]
+        for kind in (pl.Date, pl.Datetime("ns"), pl.String):
+            frame = pl.DataFrame({"^ds$": days, "x": [1, 2, 3]}).with_columns(pl.nth(0).cast(kind))
+            frame.write_parquet(tmp_path / "t.parquet")
+            record = hash_rows(Table(tmp_path / "t.parquet"), "^ds$")
+            assert list(record.rows) == ["2024-01-02/2024-01-03", "2025-06-30/2025-06-30"] and record.as_of == "2025-06-30", kind
+            assert hash_in(Table(tmp_path / "t.parquet"), "^ds$", record.rows, record.as_of).same
