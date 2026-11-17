@@ -367,8 +367,8 @@ def check_glob_names(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
-def check_index_columns(manifest: dict, base_dir: Path) -> list[Problem]:
-    """Warn of a dataframe whose file has the column pandas makes of an index with no name.
+def check_index_columns(manifest: dict, base_dir: Path, skip_outputs: bool = False) -> list[Problem]:
+    """Warn of a dataframe whose parquet file has the column pandas makes of an index, or a level of one, with no name.
 
     pandas writes a frame's index into a parquet file, and one with no name
     becomes the column ``__index_level_0__``. Where it holds row positions
@@ -378,10 +378,13 @@ def check_index_columns(manifest: dict, base_dir: Path) -> list[Problem]:
     It cannot be left out by its name: a frame indexed by date writes its
     dates there. So this is a warning and no problem, with the two ways
     out. A file that is not built, or cannot be read, is passed over:
-    other checks say that.
+    other checks say that. So is every file when *skip_outputs* is set: a
+    check that is not to look at what a build writes opens none of it.
     """
     from chartbook import formats, rowhash
 
+    if skip_outputs:
+        return []
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for name, entry in (pipeline_manifest.get("dataframes") or {}).items():
@@ -393,12 +396,12 @@ def check_index_columns(manifest: dict, base_dir: Path) -> list[Problem]:
                 table = rowhash.Table(
                     os.path.normpath(os.path.join(pipeline_dir, path)), reading.get("format"), reading.get("read_options")
                 )
-                found = rowhash.has_index_column(table)
+                found = rowhash.index_columns_of(table)
             except Exception:  # noqa: BLE001 - whatever a file that is no table raises: said elsewhere
                 continue
             if found:
                 warnings.warn(
-                    f"{pipeline_dir / 'chartbook.toml'}: [dataframes.{name}] path: {rowhash.INDEX_COLUMN_SAID}.",
+                    f"{pipeline_dir / 'chartbook.toml'}: [dataframes.{name}] path: {rowhash.index_column_said(found)}.",
                     UserWarning,
                     stacklevel=2,
                 )
@@ -1536,7 +1539,7 @@ def run_checks(
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_glob_names(manifest, base_dir),
-        *check_index_columns(manifest, base_dir),
+        *check_index_columns(manifest, base_dir, skip_outputs=skip_outputs),
         *check_siblings(manifest, base_dir),
         *check_dependencies(manifest, base_dir),
         *check_dependency_cycles(manifest, base_dir),

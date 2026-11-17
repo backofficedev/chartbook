@@ -19,14 +19,14 @@ ftsfr/fed_yield_curve: 1 moved. Its 1 chart is not pinned: each build draws it a
     24 new rows, through 2026-11-11; earlier rows unchanged
 
 $ chartbook snapshot
-ftsfr/fed_yield_curve at 8cb1e03: 2 asset(s) in the store
-  Beside the snapshot before it, made 2026-11-17 07:41 UTC:
+ftsfr/fed_yield_curve at f321fcb: 2 asset(s) in the store
+  Beside the snapshot before it, of f321fcb, made 2026-11-17 09:41 UTC:
     ftsfr/fed_yield_curve:treasury_yields: earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12
 ```
 
-So a refactor that changed no number says `earlier rows unchanged`, though a new day of data arrived between the two builds, and a revision by the source names the period it is in. Both only report: there the change is what was asked for. A table with no `date_col` says `its rows changed (2 rows before, 3 now)`, and nothing is said where the earlier record has no rows to compare. Only the periods the two records do not already show to be the same are read.
+So a refactor that changed no number says `earlier rows unchanged`, though a new day of data arrived between the two builds, and a revision by the source names the period it is in. Both only report: there the change is what was asked for. A table with no `date_col` says `its rows changed (2 rows before, 3 now)`, and nothing is said where the earlier record has no rows to compare. Only the periods the two records do not already show to be the same are hashed. Nothing in telling it stops either command, and a store that is not a folder on this machine is not read for it: there the line is said only where the two records already tell it.
 
-`chartbook snapshot` and `chartbook check` now tell the author of a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names. `to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name. In `check` it is a warning, and fails nothing.
+`chartbook snapshot` and `chartbook check` now tell the author of a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names. `to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name. In `check` it is a warning, and fails nothing; `check --skip-outputs` opens no file for it. The column of a level with no name of an index of several (`__index_level_1__`) is told of too, and only a parquet file is looked at.
 
 ### Added — a read through a pin gives the pinned rows, and `data.as_of` says where they end
 

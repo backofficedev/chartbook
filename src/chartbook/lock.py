@@ -2986,7 +2986,8 @@ def _sync_from_snapshots(
                 # Its rows beside the pin it had: new rows, or earlier rows changed
                 from chartbook import standins
 
-                told = standins.since(before, record, newest, store)
+                # Said where it can be told without fetching a table; nothing of it stops an update
+                told = standins.since(before, record, newest, store, read=standins.reads_here(store))
                 if told:
                     report.rows_said[asset_id] = told
         records[asset_id] = record

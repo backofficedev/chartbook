@@ -3402,13 +3402,16 @@ def _echo_snapshot(report, upstream=False):
         )
     if getattr(report, "rows_said", None):
         # Each dataframe whose file changed, beside the snapshot before this one
-        click.echo(f"  Beside the snapshot before it, made {_when(report.rows_beside.made_at)}:")
+        # Named by its commit too: the one before may be of another branch, and its rows are then another's
+        click.echo(
+            f"  Beside the snapshot before it, of {report.rows_beside.commit[:7]}, made {_when(report.rows_beside.made_at)}:"
+        )
         for asset, told in report.rows_said:
             click.echo(f"    {asset}: {told}")
     for asset in getattr(report, "index_columns", ()):
         from chartbook import rowhash
 
-        click.echo(f"  {asset}: {rowhash.INDEX_COLUMN_SAID}.")
+        click.echo(f"  {asset}: {rowhash.index_column_said(getattr(report, 'index_column_names', {}).get(asset) or ())}.")
     if report.index_skipped:
         click.echo(
             f"  index not recorded: {report.index_skipped}. The bytes and the documents are in the "

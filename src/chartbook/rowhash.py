@@ -121,12 +121,22 @@ ALL = "all"
 #: when a pull has more rows, and no row is then the row it was.
 INDEX_COLUMN = "__index_level_0__"
 
+#: That column, and the one pandas makes of any level with no name of an
+#: index of several (``__index_level_1__``, …).
+_INDEX_LEVEL = re.compile(r"__index_level_\d+__", re.ASCII)
+
+
+def index_column_said(columns: Iterable[str] = (INDEX_COLUMN,)) -> str:
+    """What a dataframe's owner is told of a file that has such a column, naming the ones it has."""
+    return (
+        f"its file has the column pandas makes of an index with no name ({', '.join(columns) or INDEX_COLUMN}). "
+        f"Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows "
+        f"a pin of it names. to_parquet(index=False) drops it; reset_index() keeps it as a column with a name"
+    )
+
+
 #: What a dataframe's owner is told of a file that has that column.
-INDEX_COLUMN_SAID = (
-    f"its file has the column pandas makes of an index with no name ({INDEX_COLUMN}). Where that holds row "
-    f"positions, they shift when a pull has more rows, and no rebuild then has the rows a pin of it names. "
-    f"to_parquet(index=False) drops it; reset_index() keeps it as a column with a name"
-)
+INDEX_COLUMN_SAID = index_column_said()
 
 _DAY = 86_400_000_000  # microseconds
 _EPOCH = datetime(1970, 1, 1)
@@ -1142,12 +1152,29 @@ class NotNow(Exception):
     """
 
 
-def has_index_column(table: "Table") -> bool:
-    """Whether a table has the column pandas makes of an index with no name (:data:`INDEX_COLUMN`); False for what cannot be read as a table."""
+def index_columns(names: Iterable[str]) -> list:
+    """The columns among some that pandas makes of an index, or a level of one, with no name: ``__index_level_0__``, ``__index_level_1__``, …"""
+    return [name for name in names if isinstance(name, str) and _INDEX_LEVEL.fullmatch(name)]
+
+
+def index_columns_of(table: "Table") -> list:
+    """The columns of a parquet table that pandas makes of an index with no name (:func:`index_columns`); none for another format, where pandas writes none, and for what cannot be read as a table.
+
+    Told by the first file's columns, for a table of several files.
+    """
+    from chartbook import formats
+
     try:
-        return INDEX_COLUMN in table.schema().names()
-    except NotRead:
-        return False
+        if formats.reading(table.path, table.format, table.read_options).format != "parquet":
+            return []
+        return index_columns(table.schema().names())
+    except (NotRead, ValueError, OSError):
+        return []
+
+
+def has_index_column(table: "Table") -> bool:
+    """Whether a parquet table has a column pandas makes of an index with no name (:func:`index_columns_of`)."""
+    return bool(index_columns_of(table))
 
 
 def dated_by(table: "Table", date_col: Optional[str]) -> Optional[str]:
@@ -1590,7 +1617,7 @@ def _hash_in(
 
     pl = _polars()
     schema = table.schema()
-    index_column = INDEX_COLUMN in schema.names()
+    index_column = bool(index_columns(schema.names()))
     if ALL in rows or not _dated_by(schema, date_col):
         # No date column, here or in the record: all the rows, or nothing to compare by
         whole, total = _whole(table, scratch, MOST_BYTES)

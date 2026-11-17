@@ -343,7 +343,10 @@ class SnapshotReport:
         rows_beside: The snapshot before it, which those are told beside.
         index_columns: The dataframes whose file has the column pandas
             makes of an index with no name
-            (:data:`chartbook.rowhash.INDEX_COLUMN`).
+            (:data:`chartbook.rowhash.INDEX_COLUMN`), or of a level with
+            none of an index of several.
+        index_column_names: And which columns those are, by the
+            dataframe's ID.
     """
 
     snapshot: Snapshot
@@ -359,6 +362,7 @@ class SnapshotReport:
     rows_said: list[tuple[str, str]] = field(default_factory=list)
     rows_beside: Optional[Snapshot] = None
     index_columns: list[str] = field(default_factory=list)
+    index_column_names: dict = field(default_factory=dict)
 
 
 def asset_record(
@@ -2538,6 +2542,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
 
     not_now: list[tuple[str, str]] = []  # the dataframes whose rows could not be hashed this time, each with why
     index_columns: list[str] = []  # the dataframes whose file has the column pandas makes of an index with no name
+    index_names: dict = {}  # and which columns those are
 
     def rows(name: str, record: dict, path: Path, entry, reading: Optional[dict]) -> dict:
         """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one.
@@ -2555,8 +2560,10 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             except SnapshotError:
                 earlier.append([])
         table = rowhash.Table(path, (reading or {}).get("format"), (reading or {}).get("read_options"))
-        if record.get("content_hash") and rowhash.has_index_column(table):
+        made_of_an_index = rowhash.index_columns_of(table) if record.get("content_hash") else []
+        if made_of_an_index:
             index_columns.append(record.get("id") or name)
+            index_names[record.get("id") or name] = made_of_an_index
         try:
             return _rows_of(name, record, path, entry, reading, earlier[0])
         except rowhash.NotNow as error:
@@ -2686,6 +2693,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             return SnapshotReport(
                 same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same), not_hashed_now=not_now,
                 index_columns=index_columns,
+                index_column_names=index_names,
             )
         if same.built_by_run:
             # Made again for what the one before lacks: the bytes are still
@@ -2733,6 +2741,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         rows_said=rows_said,
         rows_beside=beside,
         index_columns=index_columns,
+        index_column_names=index_names,
     )
 
 
@@ -2756,13 +2765,12 @@ def _rows_since(directory: Path, taken: Snapshot, store: Store) -> tuple:
         return None, []
     before = earlier[-1]
     told = []
+    read = standins.reads_here(store)  # a line of output is not worth fetching a table for
     for name, record in sorted(taken.assets.items()):
         if (record.get("ref") or {}).get("kind") != "dataframe" or name not in before.assets:
             continue
-        try:
-            what = standins.since(before.assets[name], record, taken, store)
-        except Exception:  # noqa: BLE001 - a snapshot is made whatever becomes of what is said of it
-            what = None
+        # A snapshot is made whatever becomes of what is said of it: since() raises nothing
+        what = standins.since(before.assets[name], record, taken, store, read=read)
         if what:
             told.append((record["id"], what))
     return (before, told) if told else (None, [])

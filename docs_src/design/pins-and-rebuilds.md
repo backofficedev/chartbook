@@ -144,7 +144,7 @@ ftsfr/fed_yield_curve: 1 moved. Its 1 chart is not pinned: each build draws it a
   ftsfr/fed_yield_curve:treasury_yields
     sha256:b47d6f2bd9db… -> sha256:48b68a0be6a0…
     24 new rows, through 2026-11-11; earlier rows unchanged
-  From its snapshot at 8cb1e03, made 2026-11-17 07:41 UTC.
+  From its snapshot at f321fcb, made 2026-11-17 09:41 UTC.
 Wrote chartbook.lock.
 ```
 
@@ -157,8 +157,8 @@ arrived between the two builds. *As built (step 7):*
 
 ```text
 $ chartbook snapshot
-ftsfr/fed_yield_curve at 8cb1e03: 2 asset(s) in the store
-  Beside the snapshot before it, made 2026-11-17 07:41 UTC:
+ftsfr/fed_yield_curve at f321fcb: 2 asset(s) in the store
+  Beside the snapshot before it, of f321fcb, made 2026-11-17 09:41 UTC:
     ftsfr/fed_yield_curve:treasury_yields: 24 new rows, through 2026-11-11; earlier rows unchanged
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
@@ -577,20 +577,40 @@ page had only the two phrases:*
 - **One line for each dataframe whose file changed:** `24 new rows, through 2026-11-11; earlier
   rows unchanged`; `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows,
   through 2026-11-12`; or `the same rows, in other bytes`, where another writer wrote what was
-  there. Under the two hashes in `chartbook update`, and under `Beside the snapshot before it,
-  made …` in `chartbook snapshot`.
+  there. Under the two hashes in `chartbook update`, and under `Beside the snapshot before it, of
+  f321fcb, made …` in `chartbook snapshot`.
 - **Beside what.** `update`: the pin the lockfile had. `snapshot`: the newest earlier snapshot of
-  that pipeline in the store, at whatever commit. A first snapshot says nothing, and "the same as
-  the last one" is what `chartbook snapshot` has always said of the same bytes: `No new snapshot:
-  the same bytes and the same pins as the one made …`.
+  that pipeline in the store, at whatever commit, which is why the line names its commit: the one
+  before may be another branch's, and its rows are then another's. A first snapshot says nothing,
+  and "the same as the last one" is what `chartbook snapshot` has always said of the same bytes:
+  `No new snapshot: the same bytes and the same pins as the one made …`.
 - **A table with no `date_col`** has nothing to tell a new row from a changed one by: `its rows
-  changed (2 rows before, 3 now); it has no date column to tell new rows by`.
+  changed (2 rows before, 3 now); it has no date column to tell new rows by`. Its two records, of
+  one hash each, say that between them, and nothing is read.
+- **Where the two were not dated alike,** the line says what is true of that case and no more. A
+  table whose entry lost its `date_col` and still has the column: `16 new rows; earlier rows
+  unchanged`, with no last date to give. One that lost the column itself: `its rows are no longer
+  dated by 'ds', so new rows cannot be told from changed ones (80 rows before, 96 now)`. One that
+  gained a `date_col`: `the same rows, in other bytes; now dated by 'ds'`, or `its rows changed
+  (80 rows before, 96 now); the earlier record had no date column to tell new rows by`. One that
+  had no rows: `it had no rows, and has 80 now`. Rows with no date where there were none: `it has
+  2 rows with no date, and the earlier one had none`.
+- **Where earlier rows changed and the table has the pandas index column,** the line ends: `It
+  has the column pandas makes of an index with no name (__index_level_0__), which may be the whole
+  difference`.
 - **Nothing is said** where the earlier record has no rows to compare (a pin from before rows
-  were hashed, a table whose rows are not hashed), and nothing stops either command.
+  were hashed, a table whose rows are not hashed), and nothing stops either command: whatever
+  goes wrong in telling it, a store that cannot be reached among them, the line is left out and
+  the pin moves, or the snapshot is made. (Found by review: `update` stopped where it could not
+  fetch a table.)
 - **What it costs.** The earlier record's periods are compared as a check compares them: what
-  the two records show to be the same is not read, so a table that gained rows has its last
-  period read, once. The owner's `snapshot` and a reader's `update` on the same machine share
-  what was found.
+  the two records show to be the same is not hashed, so a table that gained rows has its last
+  period hashed, once (the file is read through to find those rows: 0.1 s for three million rows
+  on a local disk, as the review of this step measured it). The owner's `snapshot` and a reader's
+  `update` on the same machine
+  share what was found. **A store that is not a folder on this machine is not read for it:** a line
+  of output is not worth fetching a table for, so there the line is said only where the two
+  records, or what is remembered, already tell it.
 
 ## Reads
 
@@ -698,6 +718,14 @@ a warning that fails nothing:
 ```
 
 A frame indexed by date under a name (`set_index("ds")`) has no such column, and is told nothing.
+The column of a level with no name of an index of several (`__index_level_1__`) is told of in the
+same words, by its own name. Only a parquet file is looked at, by its first file's columns where
+it is several: pandas writes no such column into a CSV. `chartbook check --skip-outputs`, which is
+not to look at what a build writes, opens no file for it.
+
+*Not built, and the maintainer's to say:* the warning is repeated at every snapshot and every
+check, for an index that really holds dates too, with no way to say "I know". A name on the index
+(`rename_axis("ds")`) ends it.
 
 ## Folders of files
 
