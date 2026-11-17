@@ -203,6 +203,164 @@ class TestWhenTheRowsAreHashedAgain:
         assert not snapshot.make(rates, store=store).made
 
 
+    def test_a_date_column_declared_since_is(self, rates, store, monkeypatch):
+        """What the message invites: a table with no hash for want of a date column is hashed once its entry names one."""
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 2_000)  # under what the table counts for whole
+        table = json.loads(json.dumps(MANIFEST))
+        del table["dataframes"]["treasury"]["date_col"]
+        _write_manifest(rates, table)
+        commit_pipeline(rates)
+        first = snapshot.make(rates, store=store)
+        assert first.snapshot.assets["treasury"]["not_hashed"].startswith("it has no date column, and its rows count for")
+        assert "date_col" not in first.snapshot.assets["treasury"]
+        _write_manifest(rates, MANIFEST)
+        commit_pipeline(rates)
+        second = snapshot.make(rates, store=store)
+        record = second.snapshot.assets["treasury"]
+        assert second.not_hashed == [] and record["date_col"] == "ds" and len(record["rows"]) == 2
+        assert record["content_hash"] == first.snapshot.assets["treasury"]["content_hash"]
+
+    def test_why_a_table_has_no_hash_is_taken_from_an_earlier_snapshot_too(self, rates, store, monkeypatch):
+        """The same bytes, dated by the same column: what was said of their rows is said again, and nothing is read."""
+        monkeypatch.setattr(rowhash, "PERIOD_BYTES", 20)
+        monkeypatch.setattr(rowhash, "MOST_BYTES", 40)  # under what one day of the one counts for, and the whole of the other
+        first = snapshot.make(rates, store=store)
+        assert [asset for asset, _ in first.not_hashed] == ["acme/rates:codes", "acme/rates:treasury"]
+        assert first.snapshot.assets["treasury"]["date_col"] == "ds" and "date_col" not in first.snapshot.assets["codes"]
+        monkeypatch.undo()
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(store.root))
+        monkeypatch.setattr(rowhash, "fields_of", lambda *arguments, **options: pytest.fail("hashed again"))
+        again = snapshot.make(rates, store=store)
+        assert not again.made and [asset for asset, _ in again.not_hashed] == ["acme/rates:codes", "acme/rates:treasury"]
+
+    def test_one_whose_date_column_dates_nothing_is_not_hashed_again(self, rates, store, monkeypatch):
+        """A column the table does not have, and a column of numbers: hashed as a table with no dates, once."""
+        table = json.loads(json.dumps(MANIFEST))
+        table["dataframes"]["treasury"]["date_col"] = "y"
+        table["dataframes"]["codes"]["date_col"] = "nowhere"
+        _write_manifest(rates, table)
+        commit_pipeline(rates)
+        first = snapshot.make(rates, store=store).snapshot
+        assert list(first.assets["treasury"]["rows"]) == ["all"] and "date_col" not in first.assets["treasury"]
+        self._later_commit(rates)
+        monkeypatch.setattr(rowhash, "fields_of", lambda *arguments, **options: pytest.fail("hashed again"))
+        second = snapshot.make(rates, store=store).snapshot
+        assert second.commit != first.commit and second.assets["treasury"]["rows"] == first.assets["treasury"]["rows"]
+
+
+class TestRowsThatCouldNotBeHashed:
+    """A snapshot is of the bytes, and is made whatever becomes of hashing their rows."""
+
+    def _full(self, monkeypatch) -> None:
+        def flush(self):
+            raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(rowhash._Pieces, "flush", flush)
+
+    def test_no_room_for_scratch_files_stops_no_snapshot(self, rates, store, monkeypatch):
+        self._full(monkeypatch)
+        made = snapshot.make(rates, store=store)
+        assert made.made and made.not_hashed == []
+        ((asset, why),) = made.not_hashed_now
+        assert asset == "acme/rates:treasury" and "No space left on device" in why
+        record = made.snapshot.assets["treasury"]
+        assert record["content_hash"] and not {"rows", "not_hashed", "as_of"} & set(record)
+        # One that needs no scratch file is hashed all the same
+        assert list(made.snapshot.assets["codes"]["rows"]) == ["all"]
+
+    def test_the_command_says_it_and_the_next_one_hashes_them(self, rates, store, monkeypatch):
+        self._full(monkeypatch)
+        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        assert result.exit_code == 0, result.output
+        assert "  rows not hashed this time: acme/rates:treasury (OSError: " in result.output
+        assert "Its bytes are in the snapshot; `chartbook snapshot` again hashes its rows." in result.output
+        monkeypatch.undo()
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(store.root))
+        again = snapshot.make(rates, store=store)
+        assert again.made and again.not_hashed_now == [] and len(again.snapshot.assets["treasury"]["rows"]) == 2
+
+    def test_a_date_no_record_can_write_stops_none_either(self, rates, store):
+        """Seconds written as microseconds: said in the record, as any table whose rows have no hash."""
+        far = _yields(4).with_columns(pl.col("ds").cast(pl.Datetime("us")).cast(pl.Int64).mul(1_000_000).cast(pl.Datetime("us")))
+        far.write_parquet(rates / "_data" / "treasury.parquet")
+        made = snapshot.make(rates, store=store)
+        assert made.made and made.not_hashed_now == []
+        ((asset, why),) = made.not_hashed
+        assert asset == "acme/rates:treasury" and "outside the years 1 to 9999" in why
+        assert made.snapshot.assets["treasury"]["date_col"] == "ds"
+
+
+class TestAFolderReadFromTheStore:
+    """The store keeps each file once: what stands in for a pin is hashed from there, and has to be the reader's rows."""
+
+    def test_two_partitions_that_are_one_file(self, work, store):
+        """polars drops a key's column when it writes, so two partitions can be the same bytes: read once for each, with each one's key."""
+        from chartbook.resolve import _held
+
+        directory = work / "regional"
+        _write_manifest(
+            directory,
+            {"project": {"id": "acme/regional"}, "dataframes": {"sales": {"path": "./_data/sales", "date_col": "ds", "docs": "d"}}},
+        )
+        for region in ("eu", "us"):
+            (directory / "_data" / "sales" / f"region={region}").mkdir(parents=True)
+            _yields(3).write_parquet(directory / "_data" / "sales" / f"region={region}" / "part.parquet")
+        commit_pipeline(directory)
+        taken = snapshot.make(directory, store=store).snapshot
+        record = taken.assets["sales"]
+        whole = pl.concat([_yields(3).with_columns(region=pl.lit(region)) for region in ("eu", "us")])
+        assert record["row_count"] == 12 and record["rows"] == {"2025-12-01/2025-12-03": rowhash.hash_frame(whole, "ds")}
+        kept = rowhash.Table.at(_held(store, dict(record), taken.pipeline))
+        assert len({str(path) for path in kept.inside.values()}) == 1  # one file in the store, for both
+        assert kept.scan().collect().height == 12
+        assert rowhash.hash_rows(kept, "ds").fields() == {key: record[key] for key in rowhash.FIELDS if key in record}
+        assert rowhash.hash_in(kept, "ds", record["rows"], record["as_of"]).same
+
+
+class TestTheSchemas:
+    """What says a dataframe's rows goes together, and a period is a period."""
+
+    @pytest.fixture
+    def pinned(self, rates, report, store):
+        pin_from_snapshots(report, store)
+        return json.loads((report / lock.LOCK_FILE).read_text(encoding="utf-8"))
+
+    def _refused(self, document: dict, change) -> bool:
+        changed = json.loads(json.dumps(document))
+        (record,) = [record for record in changed["records"] if record.get("id") == "acme/rates:treasury"]
+        change(record)
+        try:
+            jsonschema.validate(changed, json.loads(lock.schema_path().read_text(encoding="utf-8")))
+        except jsonschema.ValidationError:
+            return True
+        return False
+
+    def test_what_is_written_fits(self, pinned):
+        assert not self._refused(pinned, lambda record: None)
+        assert not self._refused(pinned, lambda record: [record.pop(key) for key in ("as_of", "rows", "row_count")] and record.update(not_hashed="why"))
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            lambda record: record["rows"].update(banana="sha256:00"),
+            lambda record: record["rows"].update({"2024-01-01": "sha256:00"}),
+            lambda record: record["rows"].update(all="sha256:00"),
+            lambda record: record.update(not_hashed="why"),
+            lambda record: record.update(as_of="last Tuesday"),
+            lambda record: record.pop("rows"),
+            lambda record: record.pop("row_count"),
+            lambda record: record.pop("date_col"),
+            lambda record: record.update(rows=["sha256:00"]),
+        ],
+        ids=[
+            "a key that is no period", "one date where two are written", "all beside periods", "rows beside why there are none",
+            "a last date that is no date", "a last date and a count of no rows", "rows with no count", "a last date of no column", "rows in a list",
+        ],
+    )
+    def test_nonsense_is_refused(self, pinned, change):
+        assert self._refused(pinned, change)
+
+
 class TestATableInASource:
 
     def test_a_table_written_out_as_parquet_has_its_rows(self, work, store):

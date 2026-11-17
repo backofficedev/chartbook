@@ -234,7 +234,8 @@
     },
     "as_of": {
       "type": "string",
-      "description": "The last timestamp in the dataframe's date column when its rows were hashed: the data's own last date, never the time on the clock. In UTC, a date alone at midnight (`2026-10-30`), else with its time (`2026-10-30T16:00:00`, with a fraction of six or nine digits where it has one). Absent for a dataframe with no date column, or with no dated row."
+      "description": "The last timestamp in the dataframe's date column when its rows were hashed: the data's own last date, never the time on the clock. In UTC, a date alone at midnight (`2026-10-30`), else with its time (`2026-10-30T16:00:00`, with a fraction of six or nine digits where it has one). Absent for a dataframe with no date column, or with no dated row.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d{6}(\\d{3})?)?)?$"
     },
     "rows": {
       "type": "object",
@@ -242,11 +243,23 @@
       "additionalProperties": {
         "type": "string",
         "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      },
+      "propertyNames": {
+        "pattern": "^(none|all|\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d{6}(\\d{3})?)?)?/\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d{6}(\\d{3})?)?)?)$"
+      },
+      "if": {
+        "required": [
+          "all"
+        ]
+      },
+      "then": {
+        "maxProperties": 1
       }
     },
     "not_hashed": {
       "type": "string",
-      "description": "Why the dataframe's rows have no hash, where they have none: a column of a kind the form does not take, a piece too large to hold, more columns than are read at once. A pin of it is then met by the same file only. Absent when `rows` is there."
+      "description": "Why the dataframe's rows have no hash, where they have none: a column of a kind the form does not take, a piece too large to hold, more columns than are read at once. A pin of it is then met by the same file only. Absent when `rows` is there.",
+      "minLength": 1
     },
     "format": {
       "enum": [
@@ -367,5 +380,21 @@
       }
     }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "dependentRequired": {
+    "as_of": [
+      "rows",
+      "date_col"
+    ]
+  },
+  "allOf": [
+    {
+      "not": {
+        "required": [
+          "rows",
+          "not_hashed"
+        ]
+      }
+    }
+  ]
 }

@@ -331,6 +331,11 @@ class SnapshotReport:
         not_hashed: The dataframes whose rows have no hash, each with why
             (:class:`chartbook.rowhash.NotHashed`): a pin of one is met by
             the same file and by nothing else.
+        not_hashed_now: The dataframes whose rows could not be hashed this
+            time, for no fault of theirs, each with why
+            (:class:`chartbook.rowhash.NotNow`): the record says nothing
+            of their rows, and the next snapshot of the same bytes hashes
+            them.
     """
 
     snapshot: Snapshot
@@ -342,6 +347,7 @@ class SnapshotReport:
     documents_skipped: list[tuple[str, str]] = field(default_factory=list)
     stores: list[str] = field(default_factory=list)
     not_hashed: list[tuple[str, str]] = field(default_factory=list)
+    not_hashed_now: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -1512,6 +1518,32 @@ def _made_at(taken: Snapshot) -> datetime:
 FUTURE_SLACK_SECONDS = 600
 
 
+def builds_at(found: list, pipeline: Optional[str], commit: str, named: Optional[str] = None, now: Optional[datetime] = None) -> list:
+    """The snapshots that hold a dependency as it was pinned at one commit, for what its lockfile does not: the one its entry names first, then the others of that pipeline at that commit, newest first.
+
+    One definition, for a read of an asset the lockfile does not hold, for
+    the checks that say whether such a read will work, and for ``store
+    gc``, which keeps them.
+
+    :param found: The store's snapshots that owners made
+        (:func:`readable_snapshots`): one a pin made from a clone is no
+        build of the pipeline's owner.
+    :param pipeline: The pipeline the pins came from, by its own ID. With
+        none, nothing is taken: another pipeline's snapshot of the same
+        commit (a repository of several) is not this one's.
+    :param named: When the snapshot the entry names was made. That one is
+        the pin itself, and is taken whatever its date; any other dated
+        after now is not, so that a record written to win is never the
+        newest.
+    """
+    if not isinstance(pipeline, str) or not pipeline or not isinstance(commit, str) or not commit:
+        return []
+    at = [taken for taken in found if taken.commit == commit and taken.pipeline == pipeline]
+    exact = [taken for taken in at if isinstance(named, str) and taken.same_moment(commit, named)]
+    others = [taken for taken in at if not any(taken is one for one in exact) and not made_in_the_future(taken, now)]
+    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path)), reverse=True)
+
+
 def made_in_the_future(taken: Snapshot, now: Optional[datetime] = None) -> bool:
     """Whether a snapshot says it was made later than now: a clock far ahead, or a record written to win.
 
@@ -1698,15 +1730,12 @@ def plan_removals(
     noted = noted or {}
     # A lockfile may name a snapshot this store does not have: its author's,
     # where each person builds the other pipeline themselves. What is read
-    # of it is then read from a snapshot here of that commit, the newest of
-    # each pipeline: that one stands in, and is kept as the named one would be
+    # of it is then read from the snapshots here of that commit: the newest
+    # that holds what is asked for, which need not be the newest of them
+    # (builds_at). They stand in, each of them, and are kept as the named one would be
     here = {(taken.commit, taken.made_at) for taken in every}
     absent = {commit for commit, made_at in set(pinned) | set(noted) if (commit, made_at) not in here}
-    standing: dict = {}
-    for taken in every:
-        if taken.commit in absent and not made_in_the_future(taken, now):
-            standing[(taken.pipeline, taken.subdirectory, taken.commit)] = taken
-    by_standing = {id(taken) for taken in standing.values()}
+    by_standing = {id(taken) for taken in every if taken.commit in absent and not made_in_the_future(taken, now)}
     by_label = _holding_labelled(every, labelled or {})
     # An asset marked `keep = true` keeps every version of its bytes: for
     # each, the newest snapshot of the pipeline holding it, as a label keeps
@@ -2444,14 +2473,28 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     marked, locked = keeps_of(raw), locks_of(raw)
     earlier: list = []  # this pipeline's snapshots, read once if a dataframe asks
 
+    not_now: list[tuple[str, str]] = []  # the dataframes whose rows could not be hashed this time, each with why
+
     def rows(name: str, record: dict, path: Path, entry, reading: Optional[dict]) -> dict:
-        """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one."""
+        """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one.
+
+        A snapshot is of the bytes, and is made whatever becomes of this:
+        where the rows could not be hashed, for want of room for the
+        scratch files say, the record says nothing of them and the report
+        says why.
+        """
+        from chartbook import rowhash
+
         if not earlier:
             try:
                 earlier.append(history(directory, store))
             except SnapshotError:
                 earlier.append([])
-        return _rows_of(name, record, path, entry, reading, earlier[0])
+        try:
+            return _rows_of(name, record, path, entry, reading, earlier[0])
+        except rowhash.NotNow as error:
+            not_now.append((record.get("id") or name, str(error)))
+            return {}
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
         found = hashing.find_files(absolute)
@@ -2554,10 +2597,13 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         # has lost its index or its documents (its assets were put back
         # above): an index is made again with the time it is made, so it is
         # not the same object, and the new snapshot holds both
-        # Or the rows of a dataframe, which a snapshot made before rows were hashed does not say
+        # Or the rows of a dataframe, which a snapshot made before rows were hashed does not
+        # say, and one made before its entry named its dates says otherwise
+        from chartbook import rowhash
+
         says_its_rows = all(
             not any(key in record for key in ("rows", "not_hashed"))
-            or any(key in (same.assets.get(name) or {}) for key in ("rows", "not_hashed"))
+            or all(record.get(key) == (same.assets.get(name) or {}).get(key) for key in rowhash.FIELDS)
             for name, record in snapshot.assets.items()
         )
         says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags and says_its_rows
@@ -2570,7 +2616,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-            return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same))
+            return SnapshotReport(
+                same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same), not_hashed_now=not_now
+            )
         if same.built_by_run:
             # Made again for what the one before lacks: the bytes are still
             # the ones a run built, from these same pins
@@ -2612,6 +2660,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         index_skipped=index_skipped,
         documents_skipped=documents_skipped,
         not_hashed=_not_hashed(snapshot),
+        not_hashed_now=not_now,
     )
 
 
@@ -2627,17 +2676,24 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
     """What a dataframe's record says of its rows: their hash by period, up to its last date (:mod:`chartbook.rowhash`).
 
     ``date_col``, ``as_of``, ``rows`` and ``row_count``; or ``not_hashed``,
-    why its rows have no hash; or nothing, for a file that cannot be read
-    as a table (``docs_src/design/pins-and-rebuilds.md``, "A dataframe's
-    record"). Hashing reads every row, so what an earlier snapshot of the
-    same bytes said, read the same way and dated by the same column, is
-    taken as it is.
+    why its rows have no hash, with the ``date_col`` they would be dated
+    by; or nothing, for a file that cannot be read as a table
+    (``docs_src/design/pins-and-rebuilds.md``, "A dataframe's record").
+    Hashing reads every row, so what an earlier snapshot of the same bytes
+    said, read the same way and dated by the same column, is taken as it
+    is: its rows, or why it has none. The column is the one that dates
+    the rows now, which is the entry's ``date_col`` where the table has it
+    and it holds dates: so an entry that declares one since, or another,
+    is hashed again, and one that names a column of numbers is not hashed
+    again at every snapshot.
 
     :param record: Its record so far, with its ``content_hash``.
     :param path: Its file, glob or folder, on disk.
     :param entry: Its entry in the manifest, for its ``date_col``.
     :param reading: Its ``format`` and ``read_options``, if it has them.
     :param earlier: This pipeline's snapshots, oldest first.
+    :raises chartbook.rowhash.NotNow: If its rows could not be hashed this
+        time, for no fault of the table's.
     """
     from chartbook import rowhash
 
@@ -2645,16 +2701,20 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
         return {}
     declared = entry.get("date_col") if isinstance(entry, dict) else None
     declared = declared if isinstance(declared, str) and declared else None
+    reading = reading or {}
+    table = rowhash.Table(path, reading.get("format"), reading.get("read_options"))
+    try:
+        dated = rowhash.dated_by(table, declared)
+    except rowhash.NotRead:
+        return {}
     for taken in reversed(earlier):
         before = taken.assets.get(name) or {}
         if before.get("content_hash") != record["content_hash"] or before.get("location") != record.get("location"):
             continue
         said = {key: before[key] for key in rowhash.FIELDS if key in before}
-        # By the same date column, or by none where the entry declares none
-        if "not_hashed" in said or ("rows" in said and said.get("date_col") == declared):
+        if ("rows" in said or "not_hashed" in said) and said.get("date_col") == dated:
             return said
-    reading = reading or {}
-    return rowhash.fields_of(rowhash.Table(path, reading.get("format"), reading.get("read_options")), declared)
+    return rowhash.fields_of(table, declared)
 
 
 #: The one file in a snapshot's index object.

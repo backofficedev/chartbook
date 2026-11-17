@@ -103,28 +103,21 @@ class Found:
 
 
 def candidates(entry: Mapping, snapshots: list) -> list:
-    """Your snapshots that may stand in for a dependency's pin: of the pipeline it was pinned from, by its own ID, at the commit it was pinned at, newest first, and none dated after now.
+    """Your snapshots that may stand in for a dependency's pin: of the pipeline it was pinned from, by its own ID, at the commit it was pinned at; the one its entry names first, then the others newest first, and none of those dated after now (:func:`chartbook.snapshot.builds_at`).
 
-    A dependency pinned from its repository (``git``) has none: its bytes
-    are that commit's, the same for everyone.
+    The same snapshots a read takes for what the lockfile does not hold
+    of the dependency. One pinned from its repository (``git``) has none:
+    its bytes are that commit's, the same for everyone.
 
     :param snapshots: The store's snapshots that owners made
         (:func:`chartbook.snapshot.readable_snapshots`).
     """
-    from chartbook import snapshot
+    from chartbook import lock, snapshot
 
     location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
-    commit = location.get("commit")
-    if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not commit:
+    if location.get("kind") not in ("store", "path"):
         return []
-    pipeline = entry.get("pinned_from") or location.get("pipeline")
-    if not isinstance(pipeline, str) or not pipeline:
-        return []  # a lockfile so old that it does not say which pipeline: another's build of that commit is not yours
-    found = [
-        taken for taken in snapshots
-        if taken.commit == commit and taken.pipeline == pipeline and not snapshot.made_in_the_future(taken)
-    ]
-    return sorted(found, key=lambda taken: (taken.made_at, snapshot._count(taken.path)), reverse=True)
+    return snapshot.builds_at(snapshots, lock.pinned_pipeline(entry), location.get("commit"), entry.get("snapshot"))
 
 
 def find(entry: Mapping, records: Mapping, store, snapshots: list) -> Found:
