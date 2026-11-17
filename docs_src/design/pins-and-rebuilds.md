@@ -736,6 +736,19 @@ not to look at what a build writes, opens no file for it.
 check, for an index that really holds dates too, with no way to say "I know". A name on the index
 (`rename_axis("ds")`) ends it.
 
+*On the class's own table, as built, 2026-11-17.* Two builds of `ftsfr/fed_yield_curve` at commit
+5bb7217 are in the maintainer's store: one of 382,232 rows through 2026-10-02, and a later pull of
+382,802 rows. On scratch copies, with the earlier one as the pin and the later one beside it:
+
+| The two files | The later pull holds the pinned rows | Periods that differ | Newer rows |
+|---|---|---|---|
+| As they are, with `__index_level_0__` | No | 66 of 66 | 570 |
+| With that column dropped, as step 8 will write them | Yes | 0 | 570 |
+
+And the message for the first says it: `has the column pandas makes of an index with no name
+(__index_level_0__), which may be the whole difference`. So for this table the check cannot pass
+until its pipeline writes `index=False` and the report is pinned again, which is step 8.
+
 ## Folders of files
 
 A dataframe can be a folder of files, partitioned Hive-style, often by date. *Proposed; decided as
@@ -1044,4 +1057,4 @@ match. The page is to be corrected.
 7. What `update` and `snapshot` say; the warning for a pandas index in `check` and `snapshot`.
    **Built.**
 8. The class's upstreams and the template write `index=False`; the report is pinned again.
-9. The guide, the reference, the changelog, the skill.
+9. The guide, the reference, the changelog, the skill. **Written.**
