@@ -156,6 +156,22 @@ class TestTheSameRows:
             frame = pl.DataFrame({name: [2, 1], "b": [3, 4]})
             assert hash_frame(frame) == _by_hand([{name: 2, "b": 3}, {name: 1, "b": 4}], {name: "int", "b": "int"}), name
 
+    def test_a_column_named_like_a_pattern_of_every_kind_that_is_looked_into(self):
+        """A date, a time in milliseconds and an unsigned number are looked into before they are put in one form: by their place, too."""
+        import datetime
+
+        plain = pl.DataFrame(
+            {"d": [datetime.date(2024, 1, 2)], "t": [datetime.datetime(2024, 1, 2, 16)], "u": [2**63 + 5]},
+            schema={"d": pl.Date, "t": pl.Datetime("ms"), "u": pl.UInt64},
+        )
+        named = plain.clone()
+        named.columns = ["^d$", "^t$", "^u$"]  # polars itself cannot make such a frame of times by their names
+        assert hash_frame(named) != hash_frame(plain)  # the names are part of what is hashed
+        # By their place here too: a test that names them would be asking polars for a pattern
+        assert hash_frame(named, "^d$") == hash_frame(named.select(pl.nth(2), pl.nth(1), pl.nth(0)), "^d$")
+        finer = named.with_columns(pl.nth(0).cast(pl.Datetime("us")), pl.nth(1).cast(pl.Datetime("us")))
+        assert hash_frame(finer) == hash_frame(named)
+
     def test_the_rows_are_sorted_on_every_column(self):
         """Down to the last: rows alike in all but their last column come in one order however they were written."""
         frame = pl.DataFrame({"a": [1, 1, 1, 1], "b": ["x", "x", "x", "x"], "c": [0.5, 0.25, None, 0.75], "z": [4, 3, 2, 1]})

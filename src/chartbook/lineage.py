@@ -179,8 +179,17 @@ def walk(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, reh
         root.gaps = [f"its lockfile cannot be checked: {error}"]
     found, unreadable = snapshot.readable_snapshots(store)
     walker = _Walker(store, found, unreadable)
+    try:
+        # The folder of each dependency named by its path, which says whose snapshots its pins came from
+        folders = {key: declared.get("_resolved_path") for key, declared in lock._read_pipeline(directory)[1].items()}
+    except Exception:  # noqa: BLE001 - a manifest that cannot be read: said above, with its lockfile
+        folders = {}
     for entry in locked.dependencies if locked is not None else []:
-        root.children.append(walker.guarded(lambda: walker.from_lockfile(entry, locked.assets_of(entry.get("id"))), entry))
+        root.children.append(
+            walker.guarded(
+                lambda: walker.from_lockfile(entry, locked.assets_of(entry.get("id")), folders.get(entry.get("id"))), entry
+            )
+        )
     lineage = Lineage(root, snapshots=len(walker.visited))
     walker.check_objects(lineage, rehash)
     return lineage
@@ -222,8 +231,30 @@ class _Walker:
         )
         return f"its snapshot at {commit[:7]}, made {made_at}, is not in the store{said}"
 
-    def from_lockfile(self, entry: dict, records: dict) -> Node:
-        """A dependency of the pipeline's own lockfile. Its gaps are the pipeline's, said at the top."""
+    def _stood_in(self, entry: dict, node: Node):
+        """The build of yours a snapshot recorded as standing in for the one its pin names (``stood_in``, when it was made), if the store has it; else None."""
+        stood = entry.get("stood_in")
+        if not isinstance(stood, str) or not stood:
+            return None
+        pipeline = lock.pinned_pipeline(entry)
+        return next(
+            (taken for taken in self._at(node.commit, stood) if pipeline is None or taken.pipeline == pipeline), None
+        )
+
+    def _missing_both(self, entry: dict, node: Node) -> str:
+        """What to say where neither the snapshot a pin names nor the build recorded as standing in for it is in the store."""
+        said = self._missing(node.commit, node.made_at)
+        stood = entry.get("stood_in")
+        if isinstance(stood, str) and stood:
+            return f"{said}; nor is the build of {node.commit[:7]}, made {stood}, that stood in for it"
+        return said
+
+    def from_lockfile(self, entry: dict, records: dict, folder=None) -> Node:
+        """A dependency of the pipeline's own lockfile. Its gaps are the pipeline's, said at the top.
+
+        :param folder: The folder of a ``path`` dependency, as the manifest
+            resolves it (:func:`chartbook.lock.pinned_pipeline`).
+        """
         key = _text(entry.get("id")) or "?"
         location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
         node = Node(label=key, commit=_text(location.get("commit")), made_at=_text(entry.get("snapshot")))
@@ -251,12 +282,12 @@ class _Walker:
         ]
         if not held and not at:
             # The snapshot the lockfile names is not here. One of yours of
-            # that commit that holds every pin of it stands in: what was
-            # read was read from it
+            # that commit that meets every pin of it stands in, as for
+            # `chartbook pin --check`: what is read is read from it
             from chartbook import standins
 
-            stood = standins.find(entry, hashed, self.store, self.found)
-            if stood.stands_in and all(met.held for met in stood.met.values()):
+            stood = standins.find(entry, hashed, self.store, self.found, folder)
+            if stood.stands_in:
                 node.stands_in = True
                 return self._up(node, stood.snapshot, depth=1, labels=labels)
         if not held:
@@ -277,8 +308,12 @@ class _Walker:
             # by every build): the snapshot the entry names is what was read
             at = self._at(node.commit, node.made_at)
             if not at:
+                yours = self._stood_in(entry, node)
+                if yours is not None:
+                    node.stands_in = True
+                    return self._up(node, yours, depth)
                 node.kind = "missing"
-                node.gaps.append(self._missing(node.commit, node.made_at))
+                node.gaps.append(self._missing_both(entry, node))
                 return node
             return self._up(node, at[0], depth)
         if not expected:
@@ -293,6 +328,14 @@ class _Walker:
             )
             return node
         at = self._at(node.commit, node.made_at)
+        if not at:
+            # The snapshot that recorded this input read a build of its maker's own in the
+            # place of the one pinned, having checked that it met every pin: the lineage
+            # goes on up from that build
+            yours = self._stood_in(entry, node)
+            if yours is not None:
+                node.stands_in = True
+                return self._up(node, yours, depth)
         matching = []
         for taken in at:
             made, labels = self._pinned_hash(taken, key, expected)
@@ -301,7 +344,7 @@ class _Walker:
         if not matching:
             node.kind = "missing" if not at else "mismatch"
             if not at:
-                node.gaps.append(self._missing(node.commit, node.made_at))
+                node.gaps.append(self._missing_both(entry, node))
             else:
                 unlisted = getattr(self, "listing_error", "")
                 said = f"; the store's objects could not be listed ({unlisted})" if unlisted else ""
