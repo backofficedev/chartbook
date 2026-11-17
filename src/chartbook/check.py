@@ -756,6 +756,16 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     folder = store if isinstance(store, FolderStore) else None
     advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])
     records = [r for r in locked.assets_of(key).values() if r.get("content_hash")] if pinned else []
+    if pinned and locked.earlier and folder is not None:
+        # What a lockfile of an earlier version held of it, and still pins where it is written again
+        try:
+            records += list(
+                lock.still_pinned(locked.earlier_of(key), pinned, folder, lambda: snapshot.readable_snapshots(folder)[0]).values()
+            )
+        except (StoreError, OSError, ValueError, snapshot.SnapshotError):
+            pass
+    # A record kept of an earlier lockfile is a pin only where its bytes are (lock.still_pinned)
+    records = [r for r in records if lock.in_lockfile(r) or folder is None or folder.has(r["content_hash"])]
     # Pinned, too, by the snapshot its entry names, with none of its assets in the lockfile
     if not (records or lock.names_a_snapshot(pinned)) or lock._declared_elsewhere(pinned, lock._dependency_entry(key, entry)):
         return (
@@ -772,13 +782,8 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     try:
         whole = folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
         if whole and folder is not None and not records:
-            # Pinned by its entry alone: what is read of it is read from a build of that commit, as a read takes one
-            whole = bool(
-                snapshot.builds_at(
-                    snapshot.readable_snapshots(folder)[0], lock.pinned_pipeline(pinned),
-                    pinned["location"]["commit"], pinned.get("snapshot"),
-                )
-            )
+            # Pinned by its entry alone: what is read of it is read from a snapshot, as a read finds one
+            whole = bool(lock.read_from(pinned, snapshot.readable_snapshots(folder)[0]))
     except (StoreError, OSError, ValueError, snapshot.SnapshotError) as error:  # a store that cannot be read, a half-synced store.json
         # What the system says names the store's path, which may carry a password (//user:pw@host)
         return (
