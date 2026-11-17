@@ -193,28 +193,36 @@ it is in says that it is of rows.
 
    | Kind | What is of it | In its one type |
    |---|---|---|
-   | `int` | A whole number of any width, signed or not | 64 bits, signed |
+   | `int` | A whole number of any width, signed or not, whose numbers all fit 64 signed bits | 64 bits, signed |
    | `uint64` | An unsigned 64-bit column with a number past 2^63 - 1 | 64 bits, unsigned *(proposed)* |
-   | `float` | A 32- or 64-bit float | 64 bits, IEEE 754; `-0.0` is `0.0`, and every NaN is the one NaN `0x7ff8000000000000` |
+   | `float` | A float of any width | 64 bits, IEEE 754; `-0.0` is `0.0`, and every NaN is the one NaN `0x7ff8000000000000` |
    | `bool` | A boolean | A bit |
    | `text` | Text, and a category or an enum | Its UTF-8 bytes |
    | `binary` | Bytes | As they are *(proposed)* |
    | `timestamp` | A date, and a date with a time, in any unit, with a time zone or none | Whole microseconds from 1970-01-01 in UTC, rounded down, and the nanoseconds left over, 0 to 999. A date is its midnight; a time with no zone is taken as UTC *(the nanoseconds, and a date as a timestamp, proposed)* |
    | `duration` | A length of time, in any unit | As a timestamp: microseconds, and the nanoseconds left over *(proposed)* |
    | `time` | A time of day | Nanoseconds from midnight, 64 bits *(proposed)* |
-   | `decimal` | A decimal of any precision and scale | Its value as text, written one way: no zero after its last digit, no point with nothing after it, `0` and not `-0` *(proposed)* |
-   | `null` | A column with no value in any row, whatever its type | Nothing *(proposed: a writer gives a column of nothing whatever type it likes)* |
+   | `decimal` | A decimal of any precision and scale | Its value as text, written one way: plain digits with no exponent, a `-` before a negative, at least one digit before a point (`0.25`); then, where it has a point, the zeros at its end taken off, and the point too if nothing is left after it (`1.50` is `1.5`, `100.00` is `100`, and `100` stays `100`); and `0`, never `-0` *(proposed)* |
+   | `null` | A column of any kind above with no value in any row; so every column of a table with no rows | Nothing *(proposed: a writer gives a column of nothing whatever type it likes)* |
 
-   A column of lists or of structs is of no kind, and a table with one has no rows hash yet
-   *(proposed)*. A whole number is not a float, and a decimal is neither: `1`, `1.0` and a decimal
-   `1` are three values.
+   A column of lists or of structs is of no kind, with values in it or none, and a table with
+   one has no rows hash yet *(proposed)*. Nor has one with a whole number past 64 bits in a
+   column wider than 64, or a date past what 64 bits of microseconds hold (the year 294247). A
+   whole number is not a float, and a decimal is neither: `1`, `1.0` and a decimal `1` are three
+   values. An empty value is not NaN: a float column where pandas wrote NaN as an empty value
+   holds another value than one that kept its NaN.
+
+   `uint64` and `null` are told from the rows that are hashed, not from the column's type: the
+   rows of a period, where a table is hashed a period at a time. A column that is `int` in one
+   period can be `null` in the next.
 
 2. **The rows are sorted on every column:** the table's date column first, if it has one, and
    the rest in the order of their names. Within a column, least first: an empty value after
    every value, NaN after every number, false before true, text and bytes by their bytes, a
    decimal by its value. Two rows alike in every column stay two rows. Since every column is
    sorted on, the order the rows came in does not matter. *The date column is part of the
-   form:* a table hashed with another date column is hashed otherwise.
+   form:* sorted on another column first, rows may be fed in another order, and give another
+   hash. Its name is not fed, and a date column the table does not have is as none.
 
 3. **The bytes fed to SHA-256.** Every number is little-endian.
 
@@ -238,8 +246,10 @@ it is in says that it is of rows.
 
 So a timestamp in nanoseconds with nothing finer than a microsecond in it gives the hash the
 same timestamps in microseconds give, and one with something finer does not: every value is
-seen. `tests/test_rowhash.py` writes this form a second time, in plain Python, and holds the
-module to it; and holds one table's hash to a value written down there.
+seen. `tests/test_rowhash.py` writes this form a second time, in plain Python, for every kind,
+and holds the module to it; and holds two tables' hashes, with every kind between them, to
+values written down there. They are the same on polars 1.33.1 with pyarrow 16.1.0, numpy 1.26.4
+and Python 3.10, the oldest of each ChartBook takes, and on polars 2.1.0 with Python 3.13.
 
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
