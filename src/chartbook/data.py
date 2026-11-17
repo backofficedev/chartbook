@@ -621,13 +621,15 @@ def _cut_pandas(frame, date_col: str, as_of: Optional[str]):
     unnamed = re.fullmatch(r"__index_level_(\d+)__", date_col)
     if date_col in frame.columns:
         dates = frame[date_col]
-    elif date_col in names:
-        dates = frame.index.get_level_values(date_col).to_series()
-    elif unnamed and int(unnamed.group(1)) < len(names) and names[int(unnamed.group(1))] is None:
-        # What pandas makes of an index, or a level of one, with no name
+    elif names.count(date_col) == 1:
+        dates = frame.index.get_level_values(names.index(date_col)).to_series()
+    elif unnamed and int(unnamed.group(1)) < len(names) and date_col not in names:
+        # What pandas makes of an index, or a level of one, with no name: told by its place
         dates = frame.index.get_level_values(int(unnamed.group(1))).to_series()
     else:
-        return None
+        return None  # nowhere, or under a name two levels share
+    if getattr(dates, "ndim", 1) != 1:
+        return None  # two columns of one name
     held = pl.from_pandas(dates.reset_index(drop=True)).alias("when")
     if held.dtype == pl.Categorical or held.dtype == pl.Enum or isinstance(held.dtype, (pl.Categorical, pl.Enum)):
         held = held.cast(pl.String)  # a folder's key, which pandas reads as a category

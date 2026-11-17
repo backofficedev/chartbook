@@ -1883,16 +1883,44 @@ def build_it_said(entry: Optional[dict]) -> str:
     )
 
 
+def one_to_move_to(entry: dict, folder: Optional[Union[str, Path]], store: Store, snapshots: Callable[[], list]) -> bool:
+    """Whether ``chartbook update`` would find a snapshot of a dependency other than the one it is pinned to, so that offering it is no false lead.
+
+    For a dependency named by its folder, as ``update`` looks: the newest
+    snapshot at the commit the folder is on, or before it
+    (:func:`chartbook.snapshot.newest_for`); none where the folder is not
+    on this machine. For one named by its ID, any other snapshot of its
+    pipeline in the store.
+    """
+    location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
+    commit, made = location.get("commit"), entry.get("snapshot")
+    if location.get("kind") == "path":
+        if folder is None:
+            return False
+        try:
+            newest, _ = snapshot.newest_for(folder, store)
+        except (snapshot.SnapshotError, StoreError, OSError, ValueError):
+            return False
+        return newest is not None and not newest.same_moment(commit, made)
+    theirs = pinned_pipeline(entry, folder)
+    return any(taken.pipeline == theirs and not taken.same_moment(commit, made) for taken in snapshots())
+
+
 def not_in_store_said(
-    key: str, entry: dict, absent: list, pinned: int, store: Store, movable: bool = True, named_here: bool = False
+    key: str, entry: dict, absent: list, pinned: int, store: Store, movable: bool = True, named_here: bool = False,
+    in_part: Iterable[str] = (),
 ) -> list:
     """What ``pin --check`` says of a dependency whose pinned bytes the store does not have, with no build of yours to stand in: once for the dependency, and each way on in a line.
 
     :param movable: Whether the store has a snapshot of that pipeline for
-        ``chartbook update`` to move the pin to; with none, it is not offered.
+        ``chartbook update`` to move the pin to (:func:`one_to_move_to`);
+        with none, it is not offered.
     :param named_here: Whether the store has the snapshot the pins are of
         (:func:`has_named`): then they are lost from it, or not synced yet,
         and no build of yours is read in their place.
+    :param in_part: The pins of it whose file the store has in part. While
+        there are any, no build is read in the place of the others: the
+        store is taken to be on its way to having them.
     """
     one = len(absent) == 1
     commit = (entry.get("location") or {}).get("commit") or ""
@@ -1908,7 +1936,12 @@ def not_in_store_said(
         if movable:
             lines.append(f"  To move the pin to another snapshot the store has: chartbook update {key}")
         return lines
-    lines = [f"{counted}, and no build of yours at {commit[:7]} stands in: {names}"]
+    waiting = ", ".join(asset.split(":", 1)[-1] for asset in in_part)
+    if waiting:
+        # Said for what it is: a build of yours may well hold these, and is not read while the store is arriving
+        lines = [f"{counted}, and no build is read in {'its' if one else 'their'} place while {waiting} is in the store in part: {names}"]
+    else:
+        lines = [f"{counted}, and no build of yours at {commit[:7]} stands in: {names}"]
     build = build_it_said(entry)
     if build:
         lines.append(f"  To build it yourself: {build}.")
@@ -2132,6 +2165,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
         # Pinned bytes the store does not have, nor the snapshot they are of: a
         # snapshot of yours of that commit may hold the same rows, and stand in for it
         stood = your_build(entry, assets, store, snapshots_in_store, dependencies[key].get("_resolved_path"))
+        in_part: list = []  # its pins whose file the store has in part
         if stood is not None and stood.stands_in:
             report.stood_in[key] = stood
         elif stood is not None:
@@ -2214,6 +2248,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                     )
                 )
             elif unsynced := _incomplete(store, assets[asset_id]):
+                in_part.append(asset_id)
                 report.problems.append(
                     FrozenProblem(key, asset_id, f"is pinned at {content_hash[:19]}…, and {unsynced}.")
                 )
@@ -2222,14 +2257,11 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
         absent = [problem.asset for problem in report.problems if problem.dependency == key and problem.kind == "not_in_store"]
         if absent:
             pinned = sum(1 for record in assets.values() if record.get("content_hash"))
-            # `chartbook update` is a way on only where the store has a snapshot of it to move to
-            theirs = pinned_pipeline(entry, dependencies[key].get("_resolved_path"))
-            named_here = has_named(entry, snapshots_in_store(), dependencies[key].get("_resolved_path"))
-            movable = any(
-                taken.pipeline == theirs and not taken.same_moment(entry["location"].get("commit"), entry.get("snapshot"))
-                for taken in snapshots_in_store()
-            )
-            report.not_in_store[key] = not_in_store_said(key, entry, absent, pinned, store, movable, named_here)
+            # `chartbook update` is a way on only where it would find a snapshot to move to
+            folder = dependencies[key].get("_resolved_path")
+            named_here = has_named(entry, snapshots_in_store(), folder)
+            movable = one_to_move_to(entry, folder, store, snapshots_in_store)
+            report.not_in_store[key] = not_in_store_said(key, entry, absent, pinned, store, movable, named_here, in_part)
     for key in sorted(set(entries) - set(dependencies)):
         report.problems.append(
             FrozenProblem(key, None, "is in the lockfile and no longer in [dependencies]. Run `chartbook pin`.")
@@ -2807,11 +2839,17 @@ def _sync_from_snapshots(
         if stood is not None:
             report.stood_in[key] = stood
 
-        def or_build_it() -> str:
-            """The way on that is a build of your own, where one could meet the pin: not where the store has the snapshot pinned."""
-            if not build_it_said(was) or has_named(was, every(), directory):
-                return ""
-            return f"; or build it yourself, {build_it_said(was)}"
+        def ways_on() -> str:
+            """What puts a lost pin back, by what this store has: a newer snapshot for `chartbook update` to move to, the pinned snapshot made again where the store has it, a build of your own where it has not."""
+            ways = []
+            if newer:
+                ways.append("`chartbook update` moves to the newest one")
+            if has_named(was, every(), directory):
+                ways.append("`chartbook snapshot` in its folder at that commit makes it again")
+            said = f" Otherwise a snapshot puts it there: {', or '.join(ways)}" if ways else ""
+            if not has_named(was, every(), directory) and build_it_said(was):
+                said += f"{'; or' if ways else ' Otherwise'} build it yourself, {build_it_said(was)}"
+            return said
 
         for record in had.values():
             old = record.get("content_hash")
@@ -2838,11 +2876,7 @@ def _sync_from_snapshots(
                         key,
                         record["id"],
                         old=old,
-                        detail=(
-                            f"it is not in the store at {store}. {NOT_SYNCED_YET}. Otherwise a "
-                            f"snapshot puts it there: `chartbook update` moves to the newest one"
-                            + or_build_it()
-                        ),
+                        detail=f"it is not in the store at {store}. {NOT_SYNCED_YET}.{ways_on()}",
                     )
                 )
             elif unsynced := _incomplete(store, record):

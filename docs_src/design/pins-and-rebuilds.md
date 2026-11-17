@@ -189,7 +189,9 @@ An asset that is not in the lockfile is still read from the snapshot the lockfil
 commit and time, when a store has that snapshot. So a team that shares a store reads the same
 chart as before. Without it, the asset comes from your own build, with nothing checked: the newest
 snapshot of that pipeline at that commit that your store has. With no snapshot at that commit, the
-read stops and says which commit to build.
+read stops and says which commit to build. (Since step 5, where the dependency also has pins: from
+the build of yours that stands in for them, and from none where no build of yours meets them. See
+"The check, cheapest first".)
 
 Every lockfile is written again once. The class report's goes from 34 asset records to 17.
 
@@ -517,8 +519,11 @@ remembered against the pin and that snapshot's file, so a read does not hash the
   one by the same file or, for a dataframe, by the same rows. So everything read of one dependency
   comes from one build of it (or from the store, for a file that came out in the same bytes): a
   table is not read from a build that fails another pin, and a chart that is not in the lockfile is
-  read from the build that stands in, not from a newer one. The newest build that meets them all is
-  the one; where none does, the newest is the one reported.
+  read from the build that stands in, not from a newer one. Where the dependency has pins and no
+  build of yours meets them, nothing of it is read, a chart no more than a table: a chart drawn
+  from rows that are not the pinned ones is not the pinned chart. (A dependency with no pin at all,
+  one that makes only charts, has none to fail, and is read from your newest build.) The newest
+  build that meets them all is the one; where none does, the newest is the one reported.
 - **A model, and anything else locked, is met by the same file only.** So is a dataframe whose pin
   records no rows: one made before rows were hashed, one whose rows are not hashed, or a table that
   had no rows when it was pinned (it has no period, so nothing would tell its columns). The message
@@ -544,9 +549,11 @@ remembered against the pin and that snapshot's file, so a read does not hash the
 - **A snapshot records it.** A snapshot of the pipeline that read the build is not refused, and
   the dependency's entry among its `inputs` gains `stood_in`, when that build was made. So
   `chartbook lineage` goes on up from that build, one level up as well (a pipeline that depends on
-  the report), and names the build the report was made from, not a later one. `chartbook pin
-  --check`, `chartbook lineage --check`, `chartbook snapshot` and `chartbook check` ask one
-  question, by one function.
+  the report). It is the build that stood in when the snapshot was made: under `chartbook run
+  --snapshot`, the one the build read. A newer build of the upstream makes no new snapshot of the
+  reader, whose bytes and pins are the same: the one recorded stays. What a snapshot records is
+  taken at its word, as its pins are; it is not checked again. `chartbook pin --check`, `chartbook
+  lineage --check`, `chartbook snapshot` and `chartbook check` ask one question, by one function.
 - **What the lockfile says of a table's rows is checked where the pinned snapshot is.** The
   author's store has it, and `chartbook lineage --check` and `chartbook snapshot` there compare the
   lockfile's record of rows with that snapshot's own. A lockfile whose rows were changed by hand,
@@ -554,7 +561,9 @@ remembered against the pin and that snapshot's file, so a read does not hash the
   other pipeline.
 - **Where there is no build of yours,** the check says it once for the dependency, with how to
   build it at the pinned commit (scenario 2 above), and `chartbook pin` and a read name the same
-  way on. For a dependency named by its ID whose repository is not named as the pipeline is, it
+  way on. `chartbook update` is offered, by the check and by `chartbook pin`, only where it would
+  find a snapshot to move to, looked for as `update` looks. Where a pinned file is in the store in
+  part, the line says that no build is read in its place while it is, and not that you have none. For a dependency named by its ID whose repository is not named as the pipeline is, it
   says which folder of the repository: "in a clone of <repository>, in the folder of acme/rates".
 
 ## What each command does

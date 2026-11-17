@@ -64,7 +64,7 @@ ftsfr/fed_yield_curve: your build of 79986dd, made 2026-11-17 09:21 UTC, does no
 ```
 
 - **Where a store is shared, nothing changes.** A store that has the snapshot the lockfile names has the pin: a file of it the store lacks is lost, or not synced yet, and is said to be, as before. No other build of that commit is read in its place.
-- A build stands in for a dependency whole. A table is not read from a build that fails another pin of the same dependency, and a chart that is not in the lockfile is read from the build that stands in.
+- A build stands in for a dependency whole. A table is not read from a build that fails another pin of the same dependency; a chart that is not in the lockfile is read from the build that stands in, and from none where the dependency has pins that no build of yours meets.
 - The check is cheapest first: the same file (nothing is read); then the two records of rows (nothing is read where they say it all); then only the periods still to be told, which for a build with newer rows is the last. What was found is remembered in this machine's cache folder, so a table is hashed once.
 - A model is met by the same file only, and so is a dataframe whose pin records no rows: **a lockfile pinned before this version has to be pinned again, from a snapshot made by this version, before a rebuild can meet it.** A version pinned by its label (`model/ar1@champion`) is met by the same file only too.
 - When a table that is not met has the column pandas makes of an index with no name (`__index_level_0__`), the message says that it may be the whole difference, and the two ways out.

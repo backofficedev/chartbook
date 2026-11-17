@@ -425,3 +425,22 @@ class TestEveryWayOfReadingGivesThePinnedRows:
         _rebuild(rates, _student(work, monkeypatch), {"treasury": (frame, "obs.date", _pandas)})
         assert _rows(report, "treasury") == {"polars": 80, "polars_eager": 80, "pandas": 80, "sql": 80}
         assert '"obs.date" <= ' in data.ref("acme/rates:treasury", project_dir=report)
+
+    def test_two_levels_of_an_index_under_one_name(self, work, monkeypatch):
+        """pandas cannot say which level a shared name means: the rows are cut by polars, and no pandas error is raised."""
+        import pandas as pd
+
+        def write(frame: pl.DataFrame, path: Path) -> None:
+            held = frame.to_pandas()
+            held.index = pd.MultiIndex.from_arrays([pd.to_datetime(held["ds"]), held["x"]], names=["k", "k"])
+            held.drop(columns=["ds", "x"]).to_parquet(path)
+
+        full = pl.DataFrame(
+            {"ds": [date(2025, 12, 1) + timedelta(days=i) for i in range(12)], "x": list(range(12)), "y": [0.5] * 12}
+        )
+        rates, report = _pin(work, monkeypatch, {"t": (full.head(8), "k", write)})
+        _rebuild(rates, _student(work, monkeypatch), {"t": (full, "k", write)})
+        if not resolve_module.resolve("acme/rates:t", start_dirs=[report]).stands_in:
+            pytest.skip("this pandas and pyarrow write no such file")
+        assert data.load("acme/rates:t", format="polars_eager", project_dir=report).height == 8
+        assert len(data.load("acme/rates:t", format="pandas", project_dir=report)) == 8
