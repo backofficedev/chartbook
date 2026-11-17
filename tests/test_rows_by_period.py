@@ -671,7 +671,6 @@ class TestWhatTheReviewFound:
         with pytest.raises(NotHashed, match="its rows of 2022-11-01 to 2022-12-31 count for more than"):
             hash_in(Table(tmp_path / "t.parquet"), "ds", record.rows, record.as_of)
         # Nor a table with no date column
-        whole = hash_rows(Table(tmp_path / "t.parquet"), None) if False else None
         monkeypatch.undo()
         whole = hash_rows(Table(tmp_path / "t.parquet"), None)
         monkeypatch.setattr(rowhash, "MOST_BYTES", 5_000)
