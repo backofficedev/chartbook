@@ -93,7 +93,7 @@ table; `data.path` hands over the file as it is; and `data.as_of` says where the
 ```python
 last  = data.as_of("fed_yield_curve:treasury_rates")           # datetime.date(2026, 10, 30): the pin's last date
 frame = pd.read_parquet(data.path("fed_yield_curve:treasury_rates"))
-frame = frame[frame["date"] <= last]                           # what data.load() gives
+frame = frame[frame["date"].isna() | (frame["date"] <= last)]  # what data.load() gives: a row with no date is the pin's too
 ```
 
 SQL reads the same datasets, named in braces. ChartBook puts each name in and DuckDB runs the rest:

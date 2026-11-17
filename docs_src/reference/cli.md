@@ -620,17 +620,17 @@ An asset that is declared and not built is listed, and the rest is in the snapsh
 
 ```console
 $ chartbook snapshot
-ftsfr/fed_yield_curve at 8cb1e03: 2 asset(s) in the store
-  Beside the snapshot before it, made 2026-11-17 07:41 UTC:
+ftsfr/fed_yield_curve at f321fcb: 2 asset(s) in the store
+  Beside the snapshot before it, of f321fcb, made 2026-11-17 09:41 UTC:
     ftsfr/fed_yield_curve:treasury_yields: 24 new rows, through 2026-11-11; earlier rows unchanged
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
 
-or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12` when the source has revised its past, and `the same rows, in other bytes` when only the writer changed. Three more lines may follow the first, each for one dataframe:
+or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12` when the source has revised its past, and `the same rows, in other bytes` when only the writer changed. The one before is named by its commit as well as its time, since it may be another branch's. Nothing in telling this stops a snapshot, and a store that is not a folder on this machine is not read for it. Three more lines may follow the first, each for one dataframe:
 
-- `rows not hashed: … (why). A pin of it is met by the same file, and by no rebuild.` A column of lists or structs; a single day, the rows with no date, or a table with no `date_col`, over 256 MB; more than 256 columns; a file over 128 MB that is not parquet; a date outside the years 1 to 9999.
+- `rows not hashed: … (why). A pin of it is met by the same file, and by no rebuild.` A column of lists or structs; a single day, the rows with no date, or a table with no `date_col`, whose rows count for more than 128 MB (eight bytes a value, and sixteen and its own bytes for one of text); more than 256 columns; a CSV or JSON lines table of more than 32 MB of text; an Arrow IPC file; a date outside the years 1 to 9999.
 - `rows not hashed this time: … (why).` No room for the scratch files, say. The snapshot is made all the same, and the next `chartbook snapshot` hashes them.
-- `…: its file has the column pandas makes of an index with no name (__index_level_0__).` Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names: `to_parquet(index=False)` drops it, and `reset_index()` keeps it as a column with a name. {ref}`chartbook check <chartbook-check>` warns of the same.
+- `…: its file has the column pandas makes of an index with no name (__index_level_0__).` Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names: `to_parquet(index=False)` drops it, and `reset_index()` keeps it as a column with a name. {ref}`chartbook check <chartbook-check>` warns of the same, of a parquet file, and not with `--skip-outputs`.
 
 **A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`). A commit is often tagged after it is built: run `chartbook snapshot` again after tagging, and since the tags are new it records them, with the same bytes; and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
 

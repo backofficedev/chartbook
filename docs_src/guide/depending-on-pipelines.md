@@ -187,26 +187,31 @@ the lockfile names, and ChartBook checks that what they built holds the pinned r
 
 ```console
 $ chartbook pin --check
-ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/.chartbook/store, and no build of yours at a27e383 stands in: treasury_yields
-  To build it yourself: in ../fed_yield_curve, `git checkout a27e383` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
+ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/.chartbook/store, and no build of yours at 0db8051 stands in: treasury_yields
+  To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
   …
-$ cd ../fed_yield_curve && git checkout a27e383 && chartbook run --snapshot
+$ cd ../fed_yield_curve && git checkout 0db8051 && chartbook run --snapshot
 $ cd ../report && chartbook pin --check
-ftsfr/fed_yield_curve: read from your own build of a27e383
+ftsfr/fed_yield_curve: read from your own build of 0db8051, made 2026-11-17 09:22 UTC
   treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
 1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
 ```
 
 Your build is not the author's file: another day, another writer, and the source has published
-since. It **stands in** for the pinned snapshot when it meets every pin of that dependency. The
-lockfile is not touched, so everyone is checked against the same pin.
+since. It **stands in** for the pinned snapshot when it meets every pin of that dependency, and
+then everything read of that dependency is read from it. The lockfile is not touched, so everyone
+is checked against the same pin. A build is named by its commit and when it was made, since you
+may have several of one commit: the newest that meets every pin is the one.
+
+This is for a store that does not have the snapshot the lockfile names. A store that has it has
+the pin itself, and nothing stands in for it there: see "In CI, and on a shared store" below.
 
 | Between the pin and your build | What the check says |
 |---|---|
 | New rows after the pin's last date | Met. They are counted, and left out of what you read |
 | The same rows in other bytes: another parquet writer, another row order | Met |
 | An old value revised, or arriving late (FRED, Ken French) | Not met: `the rows of 2024-01-02 to 2024-12-31 differ` |
-| A model, or a dataframe with no rows recorded | Met by the same file only |
+| A model, a version pinned by its label, or a dataframe with no rows recorded | Met by the same file only |
 
 A read then gives the pinned rows, on every machine:
 
@@ -218,7 +223,8 @@ path  = data.path("fed_yield_curve:treasury_yields")     # your build's file as 
 
 `data.load` and `data.sql` leave out the rows after the pin's last date; only `chartbook update`
 brings later rows. `data.path` hands over the file as it is and says so once, and `data.as_of` is
-where the pinned rows end, for a reader of your own. When the source has changed its past, the
+where the pinned rows end, for a reader of your own (which has then to keep the rows with no date
+itself: `data.load` does). When the source has changed its past, the
 check exits 1 and a read stops, each naming the periods that differ. Nothing brings revised data
 back: a shared store does, by keeping the bytes. To go on with what you built,
 `chartbook update ftsfr/fed_yield_curve` pins your build, and the lockfile's diff shows which
@@ -237,14 +243,17 @@ Three things on the other pipeline's side make this work:
 `chartbook update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
 2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of … differ`. A few tables
 have no rows hash, and `chartbook snapshot` says which and why: a column of lists, a single day
-over 256 MB, more than 256 columns. {design}`pins-and-rebuilds` has the whole design.
+whose rows count for more than 128 MB, more than 256 columns, a large CSV. {design}`pins-and-rebuilds`
+has the whole design.
 
 ## In CI, and on a shared store
 
 A build server changes nothing: `chartbook run --frozen` builds only if the lockfile is complete
 and every pin is in the store, and fails with a list of what is missing otherwise. A team points
 every machine at one store, and a dependency named by its ID is read on any of them; a half-synced
-file makes a command say so and ask you to run it again.
+file makes a command say so and ask you to run it again. A shared store has the snapshot the
+lockfile names, so that snapshot is the pin: where a file of it is missing, it is lost or still on
+its way, and no other build of that commit is read in its place.
 
 ## Models have versions
 
