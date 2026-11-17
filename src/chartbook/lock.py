@@ -29,10 +29,18 @@ newest snapshot, or to what its ``rev`` means now.
 The file is JSON in the index's own format: the same envelope, and records
 with the same field names (``docs_src/design/index-schema.md``). It holds
 this pipeline's ``Pipeline`` record, cut down to its ``dependencies``, and
-one record for each asset of each dependency, cut down to its ``id``, its
-declared ``path`` and its ``content_hash``. There is no timestamp, no
-ChartBook version and no absolute path in it, so pinning twice with nothing
-changed writes the same bytes.
+one record for each asset of each dependency that code reads, cut down to
+its ``id``, its declared ``path`` and its ``content_hash``. There is no
+timestamp, no ChartBook version and no absolute path in it, so pinning
+twice with nothing changed writes the same bytes.
+
+**What is in it, by kind** (:func:`in_lockfile`;
+``docs_src/design/pins-and-rebuilds.md``). A dataframe and a model always.
+A chart, a notebook, a note or a plain file only when its owner's manifest
+says ``lock = true``: each is drawn from the data, and drawn anew by every
+build, so no rebuild gives its bytes again. An asset that is not in the
+lockfile is still read from the snapshot the lockfile names
+(:func:`chartbook.resolve.resolve`).
 
 An asset the other pipeline declares and has not built is recorded without
 a ``content_hash``. It is not pinned, and asking for it will fail.
@@ -86,7 +94,7 @@ from chartbook.manifest import (
     resolve_project_type,
     validate_dependencies,
 )
-from chartbook.refs import AssetRef
+from chartbook.refs import KIND_TABLES, AssetRef
 from chartbook.replacing import replace_when_let
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
@@ -96,8 +104,20 @@ from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, Stor
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
 
-#: The version of the lockfile's envelope.
-SCHEMA = "chartbook/lock/v1"
+#: The version of the lockfile's envelope. Version 2 holds a record only
+#: for an asset that :func:`in_lockfile` says is pinned.
+SCHEMA = "chartbook/lock/v2"
+
+#: The versions of a lockfile this version reads. One of version 1 held a
+#: record for every asset of every dependency: it is read as version 2
+#: would have it, and written again as version 2 by the next command that
+#: writes the lockfile.
+READS = ("chartbook/lock/v1", SCHEMA)
+
+#: The kinds of asset a lockfile holds whatever their owner says: what code
+#: reads. Any other kind is in it only when its entry in its owner's
+#: manifest says ``lock = true``.
+LOCKED_KINDS = frozenset({"dataframe", "model"})
 
 #: The kinds of link a pin may be stored with: a copy-on-write clone, or a
 #: copy. Decided by the maintainer: a pin must not change when the other
@@ -118,11 +138,104 @@ def schema_path() -> Path:
     An asset record in a lockfile fits the index's schema for its kind
     (:func:`chartbook.index.schema_path`), with fields left out.
     """
-    return SCHEMAS_DIR / "lock" / "v1.json"
+    return SCHEMAS_DIR / "lock" / "v2.json"
 
 
 class LockError(Exception):
     """Raised when a lockfile cannot be read, or a project cannot be pinned."""
+
+
+def in_lockfile(record: dict) -> bool:
+    """Whether a lockfile holds an asset's record.
+
+    The lockfile is about what code reads: a dataframe and a model are
+    always in it. A chart, a notebook, a note or a plain file is drawn from
+    the data, and drawn anew by every build (a Plotly chart has a random id
+    in its page, an executed notebook the time of each cell), so it is in
+    it only when its owner's manifest says ``lock = true``, which a
+    snapshot's record carries. Decided by the maintainer on 2026-11-15
+    (``docs_src/design/pins-and-rebuilds.md``): there is no setting for a
+    whole kind.
+
+    This is the rule for a dependency pinned from a snapshot, which each
+    person may have to build again. One pinned from its repository
+    (``git``) is pinned whole, as it always was: its bytes are its
+    commit's, the same for everyone, and nothing but the lockfile names
+    them.
+
+    :param record: An asset's record, as a snapshot or a lockfile has it.
+    """
+    ref = record.get("ref")
+    kind = ref.get("kind") if isinstance(ref, dict) else None
+    return kind in LOCKED_KINDS or record.get("lock") is True
+
+
+def pinned_pipeline(entry: Optional[dict], folder: Optional[Union[str, Path]] = None) -> Optional[str]:
+    """The pipeline a dependency's pins came from, by its own ID.
+
+    As its entry in the lockfile says it. An entry written before 0.3.0
+    does not say: for a dependency named by its folder, it is then the
+    pipeline that folder holds, where the folder is on this machine. One
+    answer, for a read, for the checks and for what a lockfile keeps when
+    it is written again; None where nothing says.
+
+    :param folder: The folder of a ``path`` dependency, as the manifest resolves it.
+    """
+    if not isinstance(entry, dict):
+        return None
+    location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
+    found = entry.get("pinned_from") or location.get("pipeline")
+    if isinstance(found, str) and found:
+        return found
+    if folder is not None and location.get("kind") == "path":
+        try:
+            return snapshot.pipeline_in(folder)
+        except (snapshot.SnapshotError, OSError, ValueError):
+            return None
+    return None
+
+
+def read_from(entry: Optional[dict], snapshots: list, folder: Optional[Union[str, Path]] = None) -> list:
+    """The snapshots an asset that a lockfile does not hold is read from, for one dependency, in the order they are tried.
+
+    The snapshot its entry names, alone, where the store has it: a
+    snapshot is taken whole, and that one is the pin. Where the store does
+    not have it, your own builds of that pipeline at that commit, newest
+    first (:func:`chartbook.snapshot.builds_at`). One rule, for a read
+    (:func:`chartbook.resolve.resolve`), for the checks that say whether a
+    read will work, for what ``store gc`` keeps, and for which records of
+    an earlier lockfile stay in it.
+
+    :param snapshots: The store's snapshots that owners made.
+    """
+    location = entry.get("location") if isinstance(entry, dict) and isinstance(entry.get("location"), dict) else {}
+    named = (entry or {}).get("snapshot")
+    found = snapshot.builds_at(snapshots, pinned_pipeline(entry, folder), location.get("commit"), named)
+    exact = [taken for taken in found if isinstance(named, str) and taken.same_moment(location.get("commit"), named)]
+    return exact or found
+
+
+def from_a_snapshot(entry: Optional[dict]) -> bool:
+    """Whether a dependency is pinned from a snapshot (its entry's ``location.kind`` is ``store`` or ``path``), which each person may have to build again; and not from its repository, which is pinned whole."""
+    location = entry.get("location") if isinstance(entry, dict) else None
+    return isinstance(location, dict) and location.get("kind") in ("store", "path")
+
+
+def names_a_snapshot(entry: Optional[dict]) -> bool:
+    """Whether a lockfile's entry for a dependency names the snapshot it was pinned from, by its commit and its time.
+
+    That is the pin of a dependency none of whose assets is in the lockfile
+    (one that makes only charts, say): its entry is all the lockfile has of
+    it, and what is read of it is read from that snapshot.
+    """
+    if not isinstance(entry, dict) or not isinstance(entry.get("location"), dict):
+        return False
+    location = entry["location"]
+    return (
+        location.get("kind") in ("store", "path")
+        and isinstance(location.get("commit"), str) and bool(location["commit"])
+        and isinstance(entry.get("snapshot"), str) and bool(entry["snapshot"])
+    )
 
 
 @dataclass
@@ -137,19 +250,36 @@ class Lock:
             pins came from by its own ID, whatever the key: the snapshot's,
             or the one a ``git`` dependency's clone holds. A pin made before
             0.3.0 has none until it is made again or moved.
-        assets: One record for each asset of each dependency, by asset ID.
-            A record with a ``content_hash`` is a pin.
+        assets: One record for each asset of each dependency that a
+            lockfile holds (:func:`in_lockfile`), by asset ID. A record
+            with a ``content_hash`` is a pin.
+        read_as: The version of the file this was read from
+            (:data:`READS`); :data:`SCHEMA` for one made here.
+        left_out: For a file of an earlier version: how many records it
+            held that this version does not (its charts, notebooks, notes
+            and plain files), by the plural of their kind.
+        earlier: Those records, by asset ID. They are no pins. What they
+            name is not let go, though: while the file is still of the
+            earlier version a read falls back on one where the store does
+            not have the snapshot its dependency names, and ``store gc``
+            keeps its bytes; and when the file is written again, one whose
+            bytes the store has and that snapshot would not give stays in
+            it, a pin as it was (:func:`still_pinned`). A file of this
+            version has none.
     """
 
     root: str
     dependencies: list[dict] = field(default_factory=list)
     assets: dict[str, dict] = field(default_factory=dict)
+    read_as: str = field(default=SCHEMA, compare=False)
+    left_out: dict = field(default_factory=dict, compare=False)
+    earlier: dict = field(default_factory=dict, compare=False)
 
     def hashes(self) -> set[str]:
-        """The content hash of every pinned asset: what the store must keep."""
+        """The content hash of every pinned asset, and of what a file of an earlier version still names: what the store must keep."""
         return {
             record["content_hash"]
-            for record in self.assets.values()
+            for record in (*self.assets.values(), *self.earlier.values())
             if record.get("content_hash")
         }
 
@@ -211,6 +341,14 @@ class Lock:
             if record.get("pipeline") == dependency
         }
 
+    def earlier_of(self, dependency: str) -> dict[str, dict]:
+        """The records a file of an earlier version held of one dependency that this version does not, by asset ID."""
+        return {
+            asset_id: record
+            for asset_id, record in self.earlier.items()
+            if record.get("pipeline") == dependency
+        }
+
     def to_document(self) -> dict:
         """The lockfile as it is written: an envelope and a list of records."""
         pipeline = {
@@ -247,6 +385,14 @@ def _a_local_lockfile(path: Union[str, Path]) -> bool:
 def read_lock(path: Union[str, Path]) -> Optional[Lock]:
     """Read a lockfile.
 
+    One of an earlier version (:data:`READS`) is read as this version
+    would have written it: the records it held of the charts, notebooks,
+    notes and plain files of a dependency pinned from a snapshot are left
+    out (:func:`in_lockfile`), counted in ``left_out`` and kept in
+    ``earlier``, and each dependency's ``pinned_hash`` is the hash over
+    what is left. Nothing is written here; the next command that writes
+    the lockfile writes it in this version, and says so.
+
     :param path: A ``chartbook.lock``, or the directory holding one.
     :returns: What it holds, or None if there is no such file.
     :raises LockError: If the file is not a lockfile this version reads.
@@ -259,12 +405,13 @@ def read_lock(path: Union[str, Path]) -> Optional[Lock]:
     try:
         with open(path, encoding="utf-8") as f:
             document = json.load(f)
-        if document.get("schema") != SCHEMA:
+        if document.get("schema") not in READS:
             raise ValueError(
                 f"its schema is {document.get('schema')!r}, and this version of "
                 f"ChartBook reads {SCHEMA!r}"
             )
-        lock = Lock(root=document["root"])
+        lock = Lock(root=document["root"], read_as=document["schema"])
+        earlier = document["schema"] != SCHEMA
         for record in document["records"]:
             if record.get("kind") == "Pipeline":
                 lock.dependencies = list(record.get("dependencies", []))
@@ -274,11 +421,150 @@ def read_lock(path: Union[str, Path]) -> Optional[Lock]:
                             "it lists a dependency without an id that is a name. The file is not one "
                             "ChartBook wrote: restore it from git, or remove it and run `chartbook pin`"
                         )
-            elif "id" in record:
+        # Pinned from a snapshot, which each person may build again; one from its repository is pinned whole
+        from_snapshots = {
+            entry["id"] for entry in lock.dependencies
+            if isinstance(entry.get("location"), dict) and entry["location"].get("kind") in ("store", "path")
+        }
+        for record in document["records"]:
+            if record.get("kind") != "Pipeline" and "id" in record:
+                ref = record.get("ref")
+                kind = ref.get("kind") if isinstance(ref, dict) else None
+                if earlier and kind in KIND_TABLES and not in_lockfile(record) and record.get("pipeline") in from_snapshots:
+                    # A chart, a notebook, a note or a file: no pin in this version
+                    lock.left_out[KIND_TABLES[kind]] = lock.left_out.get(KIND_TABLES[kind], 0) + 1
+                    lock.earlier[record["id"]] = record
+                    continue
                 lock.assets[record["id"]] = record
+        if lock.left_out:
+            # One hash over what is pinned of each dependency, as this version makes it
+            for position, entry in enumerate(lock.dependencies):
+                entry = {k: v for k, v in entry.items() if k != "pinned_hash"}
+                overall = pinned_hash(lock.assets_of(entry["id"]).values())
+                if overall is not None:
+                    entry["pinned_hash"] = overall
+                lock.dependencies[position] = entry
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise LockError(f"Cannot read {path}: {error}") from None
     return lock
+
+
+def holds_a_pin(entry: Optional[dict], records: dict) -> bool:
+    """Whether a lockfile pins something of a dependency, so that ``pin`` leaves it where it is.
+
+    Bytes of it: a record with a content hash. Or the snapshot its entry
+    names (:func:`names_a_snapshot`): a snapshot is taken whole, so that is
+    a pin whatever of it the lockfile holds, and all there is of one whose
+    assets are all outside it (one that makes only charts).
+
+    :param records: The lockfile's records of it, those a file of an
+        earlier version held among them (:meth:`Lock.earlier_of`).
+    """
+    return (
+        any(isinstance(record, dict) and record.get("content_hash") for record in records.values())
+        or names_a_snapshot(entry)
+    )
+
+
+def still_pinned(
+    earlier: dict, entry: Optional[dict], store: Store, snapshots: Callable[[], list],
+    folder: Optional[Union[str, Path]] = None,
+) -> dict:
+    """The records an earlier lockfile held of a dependency that stay in it when it is written again, by asset ID.
+
+    This version does not pin a chart, a notebook, a note or a plain file:
+    it is read from the snapshot the dependency's entry names, or from
+    your own build of that commit (:func:`chartbook.snapshot.builds_at`).
+    So an earlier record of one is let go wherever such a snapshot in the
+    store holds the asset, and wherever the store does not have the
+    record's bytes, there being nothing to keep. That is every lockfile a
+    team shares through a store, and every one whose reader builds the
+    other pipeline themselves, so the file comes out the same on each of
+    their machines.
+
+    Where the store has the bytes and no snapshot to read the asset from
+    (a pin made before pins named snapshots, or one whose snapshot's
+    record is gone from the store), the record is all that is left to
+    read it by: it stays, a pin as it was, so that the asset is still read
+    and ``store gc`` keeps it.
+
+    A record that stays has no ``lock = true`` of its owner's, and is a
+    pin only where the store has its bytes: on a machine that does not,
+    the asset is read as any that the lockfile does not hold, from a build
+    of that commit, and the check passes over the record
+    (:func:`in_lockfile`). So writing a lockfile again takes no read away,
+    on the machine that writes it or on another.
+
+    :param earlier: The earlier records of the dependency (:meth:`Lock.earlier_of`).
+    :param entry: Its entry in the lockfile.
+    :param snapshots: Gives the store's snapshots; asked only if needed.
+    :param folder: The folder of a ``path`` dependency (:func:`pinned_pipeline`).
+    """
+    kept: dict = {}
+    builds = None
+    for asset_id, record in sorted(earlier.items()):
+        content_hash = record.get("content_hash")
+        try:
+            if not content_hash or not store.has(content_hash):
+                continue
+            if builds is None:
+                builds = read_from(entry, snapshots(), folder)
+            name = snapshot.local_name(record)
+            read = any(
+                (taken.assets.get(name) or {}).get("content_hash") and store.has(taken.assets[name]["content_hash"])
+                for taken in builds
+            )
+        except (OSError, StoreError, snapshot.SnapshotError, KeyError, TypeError, ValueError):
+            read = False  # it cannot be told: kept, which loses nothing
+        if not read:
+            kept[asset_id] = record
+    return kept
+
+
+def written_again_said(shown: str, left_out: dict, kept: int = 0) -> str:
+    """What to say, once, when a lockfile of an earlier version is written again in this one.
+
+    :param left_out: What it held that is no longer in it, by the plural of the kind.
+    :param kept: How many such records stay in it (:func:`still_pinned`).
+    """
+    gone = left_out_said(left_out)
+    one = sum(left_out.values()) == 1
+    without = (
+        f" without its {gone}: {'it is' if one else 'they are'} not pinned, and {'is' if one else 'are'} read "
+        f"from the snapshot the lockfile names, or from your own build of that commit where the store does "
+        f"not have that snapshot."
+        if gone else "."
+    )
+    stays = (
+        f" {kept} of its records of charts, notebooks, notes and files stay{'s' if kept == 1 else ''} pinned as "
+        f"{'it was' if kept == 1 else 'they were'}: the store has {'its' if kept == 1 else 'their'} bytes, and "
+        f"no snapshot there to read {'it' if kept == 1 else 'them'} from."
+        if kept else ""
+    )
+    return f"{shown} was in an earlier form, which pinned every asset. It is written again{without}{stays}"
+
+
+def _left_out(locked: Lock, kept: set) -> dict:
+    """What an earlier lockfile held that this version does not, by the plural of the kind, less the records that stay in it (:func:`still_pinned`)."""
+    found: dict = {}
+    for asset_id, record in locked.earlier.items():
+        if asset_id in kept:
+            continue
+        kind = KIND_TABLES.get((record.get("ref") or {}).get("kind"), "others")
+        found[kind] = found.get(kind, 0) + 1
+    return found
+
+
+def left_out_said(left_out: dict) -> str:
+    """The records an earlier lockfile held that this version does not, as words: ``10 charts and 7 notebooks``."""
+    order = list(KIND_TABLES.values())
+    parts = [
+        f"{count} {kind if count != 1 else kind[:-1]}"
+        for kind, count in sorted(left_out.items(), key=lambda item: order.index(item[0]) if item[0] in order else len(order))
+    ]
+    if len(parts) > 1:
+        return ", ".join(parts[:-1]) + " and " + parts[-1]
+    return parts[0] if parts else ""
 
 
 def write_lock(lock: Lock, path: Union[str, Path]) -> bool:
@@ -351,9 +637,14 @@ class PinEvent:
             commit, and this was built from the one before and is not built
             at the new one, so it is no longer pinned), ``unsynced`` (its
             object is in the store with other than the bytes its record
-            says: a store in a synced folder whose sync has not finished).
+            says: a store in a synced folder whose sync has not finished),
+            ``unlocked`` (an asset that is not in the lockfile, a chart say,
+            which every build draws anew: it is read from the snapshot the
+            dependency is pinned to, and not pinned; ``detail`` is its kind).
             For a
             whole dependency: ``removed`` (no longer in ``[dependencies]``),
+            ``at_snapshot`` (it stays pinned to the snapshot its entry names,
+            and none of its assets is in the lockfile),
             ``unreachable`` (its directory holds no pipeline), ``fetched`` (a
             ``git`` dependency was got from its repository), ``unfetched``
             (it could not be), ``relocated`` (the manifest says it is
@@ -419,6 +710,14 @@ class PinReport:
             ``before_writing`` takes its place): neither the lockfile, nor
             the store's note of it, nor any object was written. Empty
             otherwise.
+        earlier: The version the lockfile was in, when this run wrote one
+            of an earlier version again in this one (:data:`READS`). Empty
+            otherwise.
+        left_out: What that earlier lockfile held that this one does not,
+            by the plural of the kind (:attr:`Lock.left_out`).
+        kept_earlier: How many such records stay in this one, pins as they
+            were, the store having their bytes and no snapshot that names
+            them (:func:`still_pinned`).
     """
 
     lockfile: Path
@@ -428,6 +727,9 @@ class PinReport:
     snapshots: dict = field(default_factory=dict)
     unrooted: str = ""
     refused: str = ""
+    earlier: str = ""
+    left_out: dict = field(default_factory=dict)
+    kept_earlier: int = 0
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -1041,14 +1343,19 @@ def _sync_now(
 
     report = PinReport(lockfile=lock_path)
     after = Lock(root=root)
+    kept_earlier: dict = {}  # the records of an earlier lockfile that stay in this one
     cache = hashing.HashCache()
 
     locked_before = {entry["id"] for entry in before.dependencies}
     for key in sorted(locked_before - set(dependencies)):
         if only is not None:
             # Only what was asked is looked at: the rest stays as it was
-            after.dependencies.append(next(entry for entry in before.dependencies if entry["id"] == key))
+            gone = next(entry for entry in before.dependencies if entry["id"] == key)
+            after.dependencies.append(gone)
             after.assets.update(before.assets_of(key))
+            stays = still_pinned(before.earlier_of(key), gone, store, snapshots_in_store) if before.earlier else {}  # its folder is no longer declared
+            after.assets.update(stays)
+            kept_earlier.update(stays)
             continue
         report.events.append(PinEvent("removed", key))
 
@@ -1057,6 +1364,12 @@ def _sync_now(
         entry = dependencies[key]
         may_move = key in moving
         had = before.assets_of(key)
+        if before.earlier:
+            # What an earlier lockfile held of it that this one does not: one that
+            # nothing else names stays a pin, as it was (still_pinned)
+            stays = still_pinned(before.earlier_of(key), locked.get(key), store, snapshots_in_store, entry.get("_resolved_path"))
+            had = {**had, **stays}
+            kept_earlier.update(stays)
         if only is not None and key not in only:
             if key in locked:
                 after.dependencies.append(locked[key])
@@ -1076,7 +1389,7 @@ def _sync_now(
 
                 host = get_default_host()
             was_location = (was or {}).get("location", {})
-            has_bytes = any(record.get("content_hash") for record in had.values())
+            has_bytes = holds_a_pin(was, had)
             from_repository = (
                 has_bytes and was_location.get("kind") == "git" and was_location.get("pipeline") == entry["_store"]
             )
@@ -1117,7 +1430,7 @@ def _sync_now(
 
         if rev_failure is not None:
             # What `rev` means could not be asked, or what it means is not to be taken
-            pinned_now = any(record.get("content_hash") for record in had.values())
+            pinned_now = holds_a_pin(was, had)
             was_location = (was or {}).get("location", {})
             recorded = was_location.get("pipeline") == entry.get("_store") and (
                 was_location.get("commit") or was_location.get("first_commit")
@@ -1332,13 +1645,20 @@ def _sync_now(
 
     # With nothing to lock and no lockfile yet, do not make an empty one; nor
     # for a pin of some dependencies only (the first read of one) that found
-    # nothing of them to record, a snapshot say
-    if lock_path.exists() or (dependencies and (only is None or after.assets)):
+    # nothing of them to record: no asset, and no snapshot taken
+    if lock_path.exists() or (
+        dependencies and (only is None or after.assets or any(names_a_snapshot(entry) for entry in after.dependencies))
+    ):
         report.written = write_lock(after, lock_path)
+        if report.written and before.read_as != SCHEMA:
+            # A lockfile of an earlier version, written again once in this one
+            report.earlier, report.left_out = before.read_as, _left_out(before, set(after.assets))
+            report.kept_earlier = sum(1 for asset_id in kept_earlier if asset_id in after.assets)
     hashes = after.hashes()
     noted_as = _noted_as()
     try:
-        if hashes:
+        # A snapshot it names is kept too, with what the lockfile does not hold of it
+        if hashes or after.snapshots():
             store.add_root(lock_path, hashes, after.snapshots(), machine=noted_as, labelled=after.labelled())
         else:
             store.remove_root(lock_path, machine=noted_as)
@@ -1414,6 +1734,22 @@ class FrozenReport:
         noted: Whether the store's note of this lockfile on this machine
             was written now, to name what it pins (:func:`note_this_machine`).
         unrooted: Why that note could not be written, when it could not.
+        earlier: The version the lockfile is in, when it is an earlier one
+            than this version writes (:data:`READS`): it is checked as this
+            version would have written it. Empty otherwise.
+        left_out: What that earlier lockfile holds that this version does
+            not, and that was therefore not checked, by the plural of the
+            kind (:attr:`Lock.left_out`).
+        by_entry: How many dependencies are pinned by their entry alone,
+            none of their assets being in the lockfile, with a snapshot of
+            the commit it names in the store.
+        kept_earlier: How many records of an earlier lockfile that this
+            version would leave out are checked all the same, as the pins
+            they stay when it is written again (:func:`still_pinned`).
+        passed_over: How many records such a lockfile kept, written again
+            on another machine, that this store does not have the bytes
+            of: no pins here, and read as any asset a lockfile does not
+            hold.
     """
 
     lockfile: Path
@@ -1422,6 +1758,11 @@ class FrozenReport:
     problems: list[FrozenProblem] = field(default_factory=list)
     noted: bool = False
     unrooted: str = ""
+    earlier: str = ""
+    left_out: dict = field(default_factory=dict)
+    by_entry: int = 0
+    kept_earlier: int = 0
+    passed_over: int = 0
 
 
 def _noted_as() -> Optional[str]:
@@ -1461,7 +1802,7 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     from chartbook.config import without_credentials
 
     hashes, snapshots, labelled = locked.hashes(), locked.snapshots(), locked.labelled()
-    if not hashes:
+    if not hashes and not snapshots:
         return False, ""
     noted_as = _noted_as()
     try:
@@ -1495,7 +1836,8 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
     - a dependency in the manifest and not in the lockfile, or in the
       lockfile and no longer in the manifest, or pinned from one place
       while the manifest now says another;
-    - a dependency with nothing pinned;
+    - a dependency with nothing pinned: no asset of it, and no snapshot
+      named for what the lockfile does not hold of it (:func:`in_lockfile`);
     - an asset that was declared and not built when it was pinned;
     - a pinned asset that the store does not have.
 
@@ -1539,7 +1881,18 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
             f"{lock_path} lists a dependency without an id. The file is not one "
             f"ChartBook wrote: restore it from git, or remove it and run `chartbook pin`."
         )
+    if locked.read_as != SCHEMA:
+        report.earlier, report.left_out = locked.read_as, dict(locked.left_out)
+    kept_earlier: dict = {}
     entries = {entry["id"]: entry for entry in locked.dependencies}
+    read: list = []
+
+    def snapshots_in_store() -> list:
+        """The store's snapshots, read once, and only if a pin's bytes are not in it."""
+        if not read:
+            read.append(snapshot.readable_snapshots(store)[0])
+        return read[0]
+
     for key in sorted(dependencies):
         entry = entries.get(key)
         if entry is None:
@@ -1559,10 +1912,33 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                 )
             )
         assets = locked.assets_of(key)
-        if not assets:
+        if locked.earlier:
+            # Checked as this version would write it: what stays a pin then is one now
+            stays = still_pinned(locked.earlier_of(key), entry, store, snapshots_in_store, dependencies[key].get("_resolved_path"))
+            assets = {**assets, **stays}
+            kept_earlier.update(stays)
+        # One whose assets are all drawn anew by every build has none in the
+        # lockfile: its entry names the snapshot they are read from
+        if not assets and not names_a_snapshot(entry):
             report.problems.append(
                 FrozenProblem(key, None, "has nothing pinned. Run `chartbook pin`, and see what it says.", "nothing_pinned")
             )
+        elif not assets and names_a_snapshot(entry):
+            # Its entry is the whole of its pin: what is read of it is read
+            # from a build of that commit, the one a read would take, so the store must have one
+            commit = entry["location"]["commit"]
+            if read_from(entry, snapshots_in_store(), dependencies[key].get("_resolved_path")):
+                report.by_entry += 1
+            else:
+                report.problems.append(
+                    FrozenProblem(
+                        key, None,
+                        f"is pinned to its snapshot at {commit[:7]}, with none of its assets in the lockfile, "
+                        f"and the store at {store} has no snapshot of it at that commit to read them from. "
+                        f"{NOT_SYNCED_YET}. Otherwise build that commit yourself (`chartbook run --snapshot` "
+                        f"there), or `chartbook update {key}` moves to a snapshot the store has.",
+                    )
+                )
         for asset_id in sorted(assets):
             content_hash = assets[asset_id].get("content_hash")
             if not content_hash and assets[asset_id].get("label"):
@@ -1593,6 +1969,11 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                         "not_built",
                     )
                 )
+            elif not in_lockfile(assets[asset_id]) and from_a_snapshot(entry) and not store.has(content_hash):
+                # A record kept of an earlier lockfile, for a store that had its bytes and no snapshot
+                # to read it from (still_pinned): here it is no pin, and is read as any asset the
+                # lockfile does not hold. No rebuild gives a chart's bytes again
+                report.passed_over += 1
             elif not store.has(content_hash):
                 if assets[asset_id].get("label"):
                     remedy = f"its owner makes a snapshot that holds that version again, and then `chartbook update {key}`"
@@ -1631,6 +2012,8 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
         report.problems.append(
             FrozenProblem(key, None, "is in the lockfile and no longer in [dependencies]. Run `chartbook pin`.")
         )
+    if locked.read_as != SCHEMA:
+        report.left_out, report.kept_earlier = _left_out(locked, set(kept_earlier)), len(kept_earlier)
     if note:
         report.noted, report.unrooted = note_this_machine(lock_path, locked, store)
     return report
@@ -2122,6 +2505,9 @@ def _sync_from_snapshots(
     had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
     had = {k: v for k, v in had.items() if k not in had_labels}
     pinned = [record for record in had.values() if record.get("content_hash")]
+    # Pinned, too, with nothing of it in the lockfile: one whose assets are
+    # all drawn anew by every build is pinned by the snapshot its entry names
+    is_pinned = bool(pinned) or names_a_snapshot(was)
     locked_commit = (was or {}).get("location", {}).get("commit")
     locked_made = (was or {}).get("snapshot")
     why = ""
@@ -2129,7 +2515,7 @@ def _sync_from_snapshots(
     identity: dict = {}
     if newest_of is not None:
         newest, why, identity = newest_of()
-        if may_move or not pinned:
+        if may_move or not is_pinned:
             # Said when the choice is made, not on every pin after it
             for status in ("passed_over", "unchecked"):
                 if identity.get(status):
@@ -2177,8 +2563,11 @@ def _sync_from_snapshots(
             kept["pinned_from"] = was["pinned_from"]
         return kept
 
-    if pinned and not may_move:
+    if is_pinned and not may_move:
         # `pin` does not move a pin. It says what a newer snapshot has.
+        if not had and not had_labels:
+            # Nothing of it is in the lockfile: its entry is the pin
+            report.events.append(PinEvent("at_snapshot", key, detail=(locked_commit or "")[:7]))
         if was is not None and _declared_elsewhere(was, listed):
             # The manifest names another folder now. Following it would
             # move the pins, which is an update's job; the lockfile keeps
@@ -2196,6 +2585,10 @@ def _sync_from_snapshots(
                 built = theirs.get(snapshot.local_name(record))
                 said = "a newer snapshot has it: `chartbook update` pins it" if built else _where(record)
                 report.events.append(PinEvent("not_built", key, record["id"], detail=said))
+            elif not in_lockfile(record) and not store.has(old):
+                # Kept of an earlier lockfile, on a machine whose store had its bytes: here
+                # it is read as any asset the lockfile does not hold, and is no pin
+                report.events.append(PinEvent("unlocked", key, record["id"], detail=(record.get("ref") or {}).get("kind", "")))
             elif not store.has(old):
                 report.events.append(
                     PinEvent(
@@ -2213,7 +2606,8 @@ def _sync_from_snapshots(
                 report.events.append(PinEvent("unsynced", key, record["id"], old=old, new=old, detail=unsynced))
             else:
                 now = theirs.get(snapshot.local_name(record))
-                status = "stale" if now is not None and now != old else "kept"
+                # A chart is other bytes in every build: only what code reads is said to have changed
+                status = "stale" if now is not None and now != old and in_lockfile(record) else "kept"
                 report.events.append(PinEvent(status, key, record["id"], old=old, new=old))
         for asset_id, record in sorted(had_labels.items()):
             # A label the owner has since moved is stale, like changed data
@@ -2306,6 +2700,7 @@ def _sync_from_snapshots(
         return dict(had), as_it_was()
 
     records: dict[str, dict] = {}
+    unlocked: set = set()
     for name in sorted(newest.assets):
         # `trained_on` is the owner's record, keyed in the owner's names,
         # and would read as asset IDs here that are not; it stays with the
@@ -2313,6 +2708,15 @@ def _sync_from_snapshots(
         # store: a lockfile records what was got
         record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("trained_on", "keep")}
         asset_id = record["id"]
+        if not in_lockfile(record):
+            # Not in the lockfile: read from this snapshot, and not pinned.
+            # One that was not built is said so, as any asset is
+            unlocked.add(asset_id)
+            if record.get("content_hash"):
+                report.events.append(PinEvent("unlocked", key, asset_id, detail=(record.get("ref") or {}).get("kind", "")))
+            else:
+                report.events.append(PinEvent("not_built", key, asset_id, detail=_where(record)))
+            continue
         before = had.get(asset_id)
         old = (before or {}).get("content_hash")
         new = record.get("content_hash")
@@ -2330,11 +2734,23 @@ def _sync_from_snapshots(
             report.events.append(PinEvent("moved", key, asset_id, old=old, new=new))
         records[asset_id] = record
 
-    # What the lockfile has that this snapshot does not
-    for asset_id in sorted(set(had) - set(records)):
+    # What the lockfile has that this snapshot does not; one its owner no
+    # longer marks `lock = true` is said already, as not pinned
+    for asset_id in sorted(set(had) - set(records) - unlocked):
         old = had[asset_id].get("content_hash")
         if old:
             report.events.append(PinEvent("dropped", key, asset_id, old=old))
+    # And what the snapshot it was pinned to had, outside the lockfile, that
+    # this one does not: a chart its owner no longer declares
+    if locked_commit and locked_made and not newest.same_moment(locked_commit, locked_made):
+        try:
+            earlier = next((taken for taken in (found() if found is not None else []) if taken.same_moment(locked_commit, locked_made)), None)
+        except (OSError, StoreError, snapshot.SnapshotError):
+            earlier = None
+        for name in sorted(set(earlier.assets) - set(newest.assets)) if earlier is not None else ():
+            gone = snapshot.renamed(earlier.assets[name], key)
+            if not in_lockfile(gone) and gone.get("content_hash") and gone["id"] not in had:
+                report.events.append(PinEvent("dropped", key, gone["id"], old=gone["content_hash"]))
 
     # The labels the owner's manifest gave when the snapshot was made, each
     # pinned to the version it names
@@ -2421,12 +2837,17 @@ def _sync_dependency(
         return dict(had)
 
     records: dict[str, dict] = {}
-    # How the owner said to read each dataframe, which its record keeps
+    # How the owner said to read each dataframe, which its record keeps;
+    # and what it marks `lock = true`
     try:
-        entries = _read_manifest_file(Path(directory)).get("dataframes")
+        raw = _read_manifest_file(Path(directory))
     except (OSError, ValueError):
-        entries = None
+        raw = {}
+    entries = raw.get("dataframes")
     entries = entries if isinstance(entries, dict) else {}
+    # Every asset, of whatever kind, and with no mark of `lock = true`, which changes
+    # nothing here: a repository's bytes are its commit's, the same for everyone,
+    # and only the lockfile names them (in_lockfile)
     for ref, declared_path, absolute in declared:
         qualified = ref.in_pipeline(key)
         records[str(qualified)] = _pin_asset(
@@ -2965,18 +3386,22 @@ def _has_a_pin(listed: object, records: dict, declared: dict) -> bool:
     names a commit; one named by its ID and got from its repository, once
     something of it was pinned from that repository with its bytes
     (:func:`clone_instead`); any other once something of it was pinned with
-    its bytes. One that names a snapshot and holds no hash is pinned again.
+    its bytes, or once its entry names the snapshot it was pinned from
+    (:func:`names_a_snapshot`), which is all the lockfile has of one whose
+    assets are all drawn anew by every build.
     """
     if not isinstance(listed, dict) or not isinstance(listed.get("location"), dict):
         return False
     location = listed["location"]
     if "git" in declared:
         return location.get("kind") == "git" and bool(location.get("commit"))
+    if names_a_snapshot(listed):
+        return True  # all there is of one none of whose assets is in the lockfile
     if declared.get("_store") and location.get("kind") == "git":
         return (
             bool(location.get("commit"))
             and location.get("pipeline") == declared["_store"]
-            and any(isinstance(record, dict) and record.get("content_hash") for record in records.values())
+            and holds_a_pin(listed, records)
         )
     return any(
         isinstance(record, dict) and record.get("content_hash") and not (record.get("ref") or {}).get("rev")

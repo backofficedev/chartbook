@@ -723,15 +723,17 @@ A key already in `[dependencies]`, or a `commit` that is not the start of one, w
 chartbook pin [--project-dir PATH] [OPTIONS] [--check]
 ```
 
-Freeze what this pipeline depends on. Each pipeline in {ref}`[dependencies] <dependencies>` is pinned to a snapshot of it, and the content hash of each of its assets is written to `chartbook.lock`, beside `chartbook.toml`.
+Freeze what this pipeline depends on. Each pipeline in {ref}`[dependencies] <dependencies>` is pinned to a snapshot of it, and the content hash of each of its assets that code reads is written to `chartbook.lock`, beside `chartbook.toml`.
 
 ```console
 $ chartbook pin
-ftsfr/fed_yield_curve: 3 pinned, 1 not built
+ftsfr/fed_yield_curve: 3 pinned, 1 not built. Its 2 charts and 1 notebook are not pinned: each build draws them anew
   not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
   From its snapshot at 4f2a91c, made 2026-10-13 18:22 UTC.
 Wrote chartbook.lock.
 ```
+
+**What is in the lockfile, by kind.** A dataframe and a model, always: they are what code reads. A chart, a notebook, a note or a plain file only when its owner's `chartbook.toml` says `lock = true` on it ({ref}`configuration <lock-true>`). Each of those is drawn from the data, and drawn anew by every build: a Plotly chart has a random id in its page, and an executed notebook the time of each cell, so no rebuild gives the same bytes and a pin of them could never be met by anyone who builds the other pipeline themselves. They are still read, `assets.path("fed_yield_curve:chart/curve")`, from the snapshot the lockfile names, when the store has that snapshot, and otherwise from your own newest snapshot of that pipeline at that commit that holds it, with nothing checked. A pipeline that makes only charts is pinned by its entry in the lockfile, which names its snapshot. All of this is for a dependency pinned from a snapshot; one that is a `git` repository is pinned whole, every kind of asset, since its bytes are its commit's and the same for everyone.
 
 **Commit `chartbook.lock`.** It is source. A change to what the project depends on then shows up in a diff, and someone who clones the project sees which data it was built against. It holds no path from your machine, so pinning twice with nothing changed leaves the file as it was.
 

@@ -587,12 +587,21 @@ class TestWorkingOutAPin:
         assert default_store().has(pinned["content_hash"])
 
     def test_a_pin_with_no_bytes_is_worked_out_again(self, chain):
-        """As `pin` takes the newest snapshot again for an entry that names a snapshot and holds no hash."""
+        """As `pin` takes the newest snapshot again for an entry that names no snapshot and holds no hash.
+
+        One that names its snapshot is pinned by that, bytes or none: it is
+        all a lockfile has of a dependency whose assets are all drawn anew
+        by every build (tests/test_lock_by_kind.py).
+        """
         fred, rates, forecast = chain
         path = forecast / "chartbook.lock"
         document = json.loads(path.read_text(encoding="utf-8"))
         for record in document["records"]:
             record.pop("content_hash", None)
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        assert lock.would_pin(forecast) is None
+        for entry in document["records"][0]["dependencies"]:
+            entry.pop("snapshot", None)
         path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         assert [entry["id"] for entry in lock.would_pin(forecast).dependencies] == ["rates"]
 
@@ -653,6 +662,7 @@ class TestWhatTheThirdReviewFound:
         assert lock._has_a_pin(clone, held, by_id) and lock._has_a_pin(clone, {}, by_git)
         # Nothing of it pinned with its bytes, or another pipeline's repository: `pin` looks again
         assert not lock._has_a_pin(clone, {}, by_id)
+        assert not lock._has_a_pin(clone, {"acme/rates:x": {"id": "acme/rates:x"}}, by_id)
         assert not lock._has_a_pin(clone, held, {"_store": "acme/other"})
 
     def test_a_guarded_pin_reads_a_git_dependencys_files_once_and_writes_what_an_unguarded_one_does(self, chain, tmp_path, monkeypatch):

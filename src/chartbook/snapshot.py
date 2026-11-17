@@ -348,6 +348,7 @@ def asset_record(
     single: bool,
     keep: bool = False,
     reading: Optional[dict] = None,
+    locked: bool = False,
 ) -> dict:
     """An asset as a snapshot and a lockfile record it; with its hash if stored.
 
@@ -368,6 +369,10 @@ def asset_record(
         manifest gives them (:func:`chartbook.formats.declared`), kept in
         its ``location`` so that a pipeline that reads the pin reads the
         bytes as their owner said to. Written only when given.
+    :param locked: Whether the manifest marks the asset ``lock = true``: a
+        pipeline that depends on this one pins it in its lockfile, whatever
+        its kind (:func:`chartbook.lock.in_lockfile`). Written only when
+        it does.
     """
     record = {
         "kind": record_kind(ref.kind),
@@ -379,6 +384,8 @@ def asset_record(
     }
     if keep:
         record["keep"] = True
+    if locked:
+        record["lock"] = True
     if content is not None:
         record["content_hash"] = content.content_hash
         record["size_bytes"] = content.size_bytes
@@ -395,15 +402,16 @@ def asset_record(
 
 
 def source_record(
-    ref: AssetRef, pipeline: str, entry: dict, source: Optional[dict], content, keep: bool = False
+    ref: AssetRef, pipeline: str, entry: dict, source: Optional[dict], content, keep: bool = False,
+    locked: bool = False,
 ) -> dict:
     """A dataframe that is a table or a query in a source, as a snapshot records it.
 
     Its ``location`` is the source's, as the index writes it: the kind, the
     source's name and backend, the manifest's public url, and the table's
     name or the query's text. With *content*, the hash of the parquet file
-    the table was written out to, which is what a pin copies. *keep* is as
-    :func:`asset_record` has it.
+    the table was written out to, which is what a pin copies. *keep* and
+    *locked* are as :func:`asset_record` has them.
     """
     location: dict = {
         "kind": "table" if entry.get("table") else "query",
@@ -426,6 +434,8 @@ def source_record(
     }
     if keep:
         record["keep"] = True
+    if locked:
+        record["lock"] = True
     if content is not None:
         record["content_hash"] = content.content_hash
         record["size_bytes"] = content.size_bytes
@@ -594,25 +604,26 @@ def materialize_in_source(
             continue  # a key that is not an address has no reference
         ref = local.in_pipeline(pipeline)
         keep = entry.get("keep") is True
+        locked = entry.get("lock") is True
         source = sources.get(entry.get("source"))
         what = f"table {entry['table']}" if entry.get("table") else "query"
         where = f"{what} in source {entry.get('source')!r}"
         if source is None:
-            found.append((local, source_record(ref, pipeline, entry, None, None, keep=keep), f"{where}: no such source"))
+            found.append((local, source_record(ref, pipeline, entry, None, None, keep=keep, locked=locked), f"{where}: no such source"))
             continue
         if source.get("backend") != "duckdb":
             # A warehouse's table is read where it is, by whoever reads it
-            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
+            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                           f"{where}: a {source.get('backend')} source is read where it is, and a snapshot "
                           f"does not pin it yet"))
             continue
         url = source["_resolved_url"]
         if url == MEMORY_URL:
-            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
+            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                           f"{where}: only a table in a DuckDB file is written out as parquet"))
             continue
         if not Path(duckdb_path(url, directory)).is_file():
-            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
+            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                           f"{where}: the DuckDB file is not there"))
             continue
         with tempfile.TemporaryDirectory() as scratch:
@@ -643,7 +654,7 @@ def materialize_in_source(
                 # The engine's own error, whatever it is; and Polars panics,
                 # which are not Exceptions, for a type it cannot import
                 # (an INTERVAL column). One such table must not stop the snapshot
-                found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
+                found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                               f"{where}: could not be read: {error}"))
                 continue
             finally:
@@ -656,7 +667,7 @@ def materialize_in_source(
                 stored = store.put(out, place=f"{TABLES_DIR}/{name}.parquet", links=("reflink", "copy"))
             else:
                 stored = store.put(out, links=("reflink", "copy"))
-        record = source_record(ref, pipeline, entry, source, stored, keep=keep)
+        record = source_record(ref, pipeline, entry, source, stored, keep=keep, locked=locked)
         if stored.stored:
             record["stored"] = stored.stored  # where it is kept, which make() takes off the record
         found.append((local, record, None))
@@ -1233,13 +1244,32 @@ def keeps_of(raw: dict) -> set[str]:
 
     :returns: ``{"embeddings", "model/forecaster"}``.
     """
+    return _marked(raw, "keep")
+
+
+def locks_of(raw: dict) -> set[str]:
+    """The assets a manifest marks ``lock = true``, by their reference within the pipeline.
+
+    A pipeline that depends on this one pins such an asset in its lockfile
+    whatever its kind (:func:`chartbook.lock.in_lockfile`): a chart, a
+    notebook, a note or a plain file is otherwise left out, since every
+    build draws it anew (``docs_src/design/pins-and-rebuilds.md``). Only
+    ``true`` counts; the manifest loader refuses any other value.
+
+    :returns: ``{"file/parameters"}``.
+    """
+    return _marked(raw, "lock")
+
+
+def _marked(raw: dict, key: str) -> set[str]:
+    """The assets whose entry in a manifest says ``<key> = true``, by their reference within the pipeline."""
     marked: set[str] = set()
     for kind in RESOLVABLE_KINDS:
         entries = raw.get(KIND_TABLES[kind])
         if not isinstance(entries, dict):
             continue
         for name, entry in entries.items():
-            if isinstance(entry, dict) and entry.get("keep") is True:
+            if isinstance(entry, dict) and entry.get(key) is True:
                 try:
                     marked.add(str(AssetRef(kind=kind, name=name)))
                 except ValueError:
@@ -1473,6 +1503,32 @@ def _made_at(taken: Snapshot) -> datetime:
 FUTURE_SLACK_SECONDS = 600
 
 
+def builds_at(found: list, pipeline: Optional[str], commit: str, named: Optional[str] = None, now: Optional[datetime] = None) -> list:
+    """The snapshots that hold a dependency as it was pinned at one commit, for what its lockfile does not: the one its entry names first, then the others of that pipeline at that commit, newest first.
+
+    One definition, for a read of an asset the lockfile does not hold, for
+    the checks that say whether such a read will work, and for ``store
+    gc``, which keeps them.
+
+    :param found: The store's snapshots that owners made
+        (:func:`readable_snapshots`): one a pin made from a clone is no
+        build of the pipeline's owner.
+    :param pipeline: The pipeline the pins came from, by its own ID. With
+        none, nothing is taken: another pipeline's snapshot of the same
+        commit (a repository of several) is not this one's.
+    :param named: When the snapshot the entry names was made. That one is
+        the pin itself, and is taken whatever its date; any other dated
+        after now is not, so that a record written to win is never the
+        newest.
+    """
+    if not isinstance(pipeline, str) or not pipeline or not isinstance(commit, str) or not commit:
+        return []
+    at = [taken for taken in found if taken.commit == commit and taken.pipeline == pipeline]
+    exact = [taken for taken in at if isinstance(named, str) and taken.same_moment(commit, named)]
+    others = [taken for taken in at if not any(taken is one for one in exact) and not made_in_the_future(taken, now)]
+    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path)), reverse=True)
+
+
 def made_in_the_future(taken: Snapshot, now: Optional[datetime] = None) -> bool:
     """Whether a snapshot says it was made later than now: a clock far ahead, or a record written to win.
 
@@ -1657,6 +1713,14 @@ def plan_removals(
     by_elsewhere = newest_holding(set(hashes_elsewhere))
     by_noted = newest_holding(set(hashes_noted))
     noted = noted or {}
+    # A lockfile may name a snapshot this store does not have: its author's,
+    # where each person builds the other pipeline themselves. What is read
+    # of it is then read from the snapshots here of that commit: the newest
+    # that holds what is asked for, which need not be the newest of them
+    # (builds_at). They stand in, each of them, and are kept as the named one would be
+    here = {(taken.commit, taken.made_at) for taken in every}
+    absent = {commit for commit, made_at in set(pinned) | set(noted) if (commit, made_at) not in here}
+    by_standing = {id(taken) for taken in every if taken.commit in absent and not made_in_the_future(taken, now)}
     by_label = _holding_labelled(every, labelled or {})
     # An asset marked `keep = true` keeps every version of its bytes: for
     # each, the newest snapshot of the pipeline holding it, as a label keeps
@@ -1686,6 +1750,8 @@ def plan_removals(
                 why = noted[(taken.commit, taken.made_at)]
             elif id(taken) in by_label:
                 why = by_label[id(taken)]
+            elif id(taken) in by_standing:
+                why = "a lockfile pins a snapshot of its commit that this store does not have, and it stands in"
             elif id(taken) in by_missing:
                 why = "a lockfile that cannot be found named what it holds"
             elif id(taken) in by_elsewhere:
@@ -2365,18 +2431,19 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     assets: dict[str, dict] = {}
     held: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
-    marked = keeps_of(raw)
+    marked, locked = keeps_of(raw), locks_of(raw)
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
         found = hashing.find_files(absolute)
         if found is None or not found.files:
-            assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True, keep=str(local) in marked)
+            assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True, keep=str(local) in marked, locked=str(local) in locked)
             not_built.append((str(ref), declared_path))
             continue
         stored = pending.put(absolute, links=LINKS)
         held[str(local)] = stored.stored
         reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
-        record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked, reading=reading)
+        record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked, reading=reading,
+                              locked=str(local) in locked)
         if local.kind == "model":
             scores = _scores(directory, (raw.get("models") or {}).get(local.name))
             if scores is not None:

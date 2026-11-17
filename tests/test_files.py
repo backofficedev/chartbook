@@ -566,7 +566,10 @@ class TestAcrossPipelines:
         assert record["kind"] == "File" and record["keep"] is True
         assert record["content_hash"] == hashing.hash_path(filings / "_data" / "releases").content_hash
         lock.pin(study)
-        assert lock.read_lock(study / "chartbook.lock").assets["filings:file/releases"]["content_hash"] == record["content_hash"]
+        # A plain file is not pinned unless its owner says `lock = true`: it
+        # is read from the snapshot the lockfile names (tests/test_lock_by_kind.py)
+        locked = lock.read_lock(study / "chartbook.lock")
+        assert locked.assets == {} and lock.names_a_snapshot(locked.dependencies[0])
         found = assets.files("filings:file/releases", project_dir=study)
         assert [p.relative_to(found[0].parent.parent).as_posix() for p in found] == [
             "year=2024/releases.jsonl.gz", "year=2025/releases.jsonl.gz",

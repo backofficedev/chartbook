@@ -124,7 +124,7 @@ Decided by the maintainer, 2026-10-12.
 | 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; built by 2026-10-29 |
 | 12 | {doc}`plan-0.4.0` | What 0.4.0 is for: a catalog is its stores and a machine may have several; the catalog's pages as hubs over versions; a link file for two pipelines at once; `run`, `docs build`, `catalog build` | Proposed and built 2026-10-30 |
 | 13 | {doc}`plan-data-reads` | The store hands out files, never a gathered folder; the catalog reads no data; `data.path`, `data.files`, `data.load`; standalone and shared snapshots; the guide rewritten around use cases | Proposed 2026-10-31; built and released as 0.5.0, 2026-11-01 |
-| 14 | {doc}`pins-and-rebuilds` | A lockfile that a rebuild can meet: only dataframes and models in it; a dataframe pinned by its rows in periods, up to its last date; what each command and read then does | Proposed 2026-11-16; nothing built |
+| 14 | {doc}`pins-and-rebuilds` | A lockfile that a rebuild can meet: only dataframes and models in it; a dataframe pinned by its rows in periods, up to its last date; what each command and read then does | Decided 2026-11-15 and 16; being built, the lockfile by kind first |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
@@ -417,7 +417,7 @@ Wrote chartbook.lock.
 | What | Where |
 |---|---|
 | Reading and writing `chartbook.lock`; `pin()` and `update()`; what `gc` keeps | `chartbook/lock.py` |
-| The lockfile's JSON Schema | `chartbook/schemas/chartbook/lock/v1.json` |
+| The lockfile's JSON Schema | `chartbook/schemas/chartbook/lock/v2.json` (`v1.json`, before 2026-11-16) |
 | Which lockfiles name the store's objects | `chartbook/store.py`: `add_root()`, `roots()`, `remove_root()` |
 | Every asset a pipeline declares with a `path`, from its raw manifest | `chartbook/resolve.py`, `declared_files()` |
 | `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook/cli.py` |

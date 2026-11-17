@@ -72,13 +72,18 @@ def work(tmp_path):
 
 @pytest.fixture
 def maker(work):
-    """A pipeline that declares a dataframe and a chart, built and committed."""
+    """A pipeline that declares a dataframe and a chart, built and committed.
+
+    Its owner marks the chart ``lock = true``, so a pipeline that depends
+    on it pins both: what a pin does with a chart that is not marked is in
+    ``tests/test_lock_by_kind.py``.
+    """
     directory = _manifest(
         work / "maker",
         {
             "project": {"id": "acme/maker"},
             "dataframes": {"rates": {"path": "./_data/rates.parquet", "docs": "d"}},
-            "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "rates", "docs": "d"}},
+            "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "rates", "docs": "d", "lock": True}},
         },
     )
     _build(directory)

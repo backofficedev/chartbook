@@ -1539,7 +1539,8 @@ def _check_entity_fields(manifest: dict, source: str) -> None:
     dataframe, ``sources``, ``providers`` and ``provider_links`` too) is a
     list of strings: a bare string is refused, not read as a list of one,
     since what reads the list would otherwise read the string's letters.
-    ``keep`` is ``true`` or left out (``docs_src/design/keep.md``). A
+    ``keep`` is ``true`` or left out (``docs_src/design/keep.md``), and so
+    is ``lock`` (``docs_src/design/pins-and-rebuilds.md``). A
     note has a ``path``, which is where its page comes from. A model's
     paths are :func:`validate_models`'s to check.
 
@@ -1581,6 +1582,19 @@ def _check_entity_fields(manifest: dict, source: str) -> None:
                     f"{where}: keep = {entry['keep']!r} is {_toml_word(entry['keep'])}, and keep is true, or "
                     f"left out. Write keep = true to keep every version of the {kind} in the store, "
                     f"or take the key out."
+                )
+            if "lock" in entry and entry["lock"] is not True:
+                # A dataframe or a model is in a lockfile whatever this says,
+                # and any other asset only when it says so: `false` says nothing
+                advice = (
+                    f"A {kind} is pinned by a pipeline that depends on this one whatever lock says: take the key out."
+                    if table in ("dataframes", "models") else
+                    f"Write lock = true to have a pipeline that depends on this one pin the {kind} in its "
+                    f"chartbook.lock, or take the key out."
+                )
+                raise ValueError(
+                    f"{where}: lock = {entry['lock']!r} is {_toml_word(entry['lock'])}, and lock is true, or "
+                    f"left out. {advice}"
                 )
             for field in _ENTITY_LIST_KEYS[table]:
                 if field in entry:

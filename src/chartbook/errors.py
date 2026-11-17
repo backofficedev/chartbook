@@ -314,6 +314,12 @@ class AssetNotPinnedError(LookupError):
     working directory. So there has to be a pin, and its bytes have to be
     in the store. The message says which is missing and what to run.
 
+    An asset a lockfile does not hold (a chart, a notebook; a note or a
+    file not marked ``lock = true``, of a dependency pinned from a
+    snapshot) is read from the snapshot the lockfile's entry names, or
+    from your own snapshot of that pipeline at that commit; and this is
+    raised when neither has it.
+
     Attributes:
         asset: The asset's ID, as the lockfile would have it.
         reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,

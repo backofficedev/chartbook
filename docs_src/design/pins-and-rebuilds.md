@@ -6,10 +6,12 @@ lockfile stays useful when the pinned bytes cannot travel, so that each person r
 upstream: what the lockfile holds for each kind of asset, how a dataframe is pinned by its rows as
 well as its bytes, and what each command and each read then does.
 
-Status: **proposed; nothing is built, and no release is named.** Each part says whether the
-maintainer decided it, and when, or whether it is still a proposal. The numbers come from a
-prototype run on 2026-11-15 and 16, on an Apple M3 Max with 64 GB, polars 2.1.0, pyarrow 26.0.0 and
-pandas 3.1.0.
+Status: **being built, step by step, in "The order of work" at the end; no release is named.**
+Built so far: the lockfile by kind (step 2). Each part says whether the maintainer decided it, and
+when, or whether it is a proposal. The items marked *(Proposed.)* were decided as proposed on
+2026-11-16. A choice made while building, on what the page had left open, is marked *Proposed by
+Claude*, with its date, until the maintainer says otherwise. The numbers come from a prototype run
+on 2026-11-15 and 16, on an Apple M3 Max with 64 GB, polars 2.1.0, pyarrow 26.0.0 and pandas 3.1.0.
 ```
 
 ## The story this serves
@@ -100,11 +102,11 @@ arrived between the two builds.
 |---|---|---|
 | Dataframes | Yes | The same file; else the same rows, up to the pin's last date |
 | Models | Yes, as today | The same file |
-| Charts, notebooks, files | No, unless the asset says `lock = true` | The same file, when locked |
+| Charts, notebooks, notes, files | No, unless the asset says `lock = true` | The same file, when locked |
 
-*Decided 2026-11-15.* The lockfile is about what code reads. A chart or a notebook is drawn from
-the data, and is drawn anew by every build. A plain file can be either, so it is left out unless
-its owner says otherwise, with one key on the asset in the owner's manifest:
+*Decided 2026-11-15. Built (step 2).* The lockfile is about what code reads. A chart or a notebook
+is drawn from the data, and is drawn anew by every build. A plain file can be either, so it is left
+out unless its owner says otherwise, with one key on the asset in the owner's manifest:
 
 ```toml
 [files.parameters]
@@ -112,13 +114,119 @@ path = "./_data/parameters.xlsx"
 lock = true
 ```
 
-There is no setting for a whole kind: fixed defaults and one key are one thing to learn.
+The key goes on an asset of any kind, and `true` is the one value it takes. On a dataframe or a
+model it changes nothing. There is no setting for a whole kind: fixed defaults and one key are one
+thing to learn.
 
 An asset that is not in the lockfile is still read from the snapshot the lockfile names, by its
 commit and time, when a store has that snapshot. So a team that shares a store reads the same
-chart as before. Without it, the asset comes from your own build, with nothing checked.
+chart as before. Without it, the asset comes from your own build, with nothing checked: the newest
+snapshot of that pipeline at that commit that your store has. With no snapshot at that commit, the
+read stops and says which commit to build.
 
 Every lockfile is written again once. The class report's goes from 34 asset records to 17.
+
+What was left open here, and how it is built. *Proposed by Claude, 2026-11-16:*
+
+- **Notes** go with charts and notebooks. The decision named three kinds, and a note is a page of
+  prose, as a notebook is a page of output: nothing reads its bytes to compute with.
+- **`chartbook/lock/v2` begins with this step**, and the dataframe's fields below are added to it
+  by step 4, so a lockfile is written again once and not twice.
+- **An old lockfile still works, and is not an error.** It is read as the new form would have
+  written it: its records of charts, notebooks, notes and files are no pins. `pin --check`
+  passes on it and says so, and the first command that writes the lockfile (`pin`, `update`,
+  `run`, a first read that pins) writes it again in the new form and says so, once. The pin does
+  not move. This is what lets a student's check pass on the class report's lockfile as it is,
+  before the report is pinned again (step 8).
+- **Writing it again never takes away a read.** An old record of a chart is let go wherever a
+  snapshot in the store holds the chart to read it from (the one the lockfile names, or a build
+  of yours of that commit), and wherever the store does not have the record's bytes, there being
+  nothing to keep. That is every team with a shared store and every student, so the file comes
+  out the same on each of their machines. Where the store has the bytes and no such snapshot (a
+  pin made before pins named snapshots; a store whose record of the snapshot is gone), the
+  record is all that is left to read the chart by: it stays in the lockfile, a pin as it was,
+  the check counts it, and `store gc` keeps its bytes. `chartbook update` lets it go, since the
+  snapshot it moves to names what it holds. Such a record has no `lock = true`, and is a pin
+  only where the store has its bytes: on another machine, with the same lockfile and a build of
+  its own, the chart is read from that build and the check passes over the record. (As first
+  built, the record was dropped whatever the store had; a review found that the first
+  `chartbook run` after upgrading could then make a chart unreadable, and `store gc` remove the
+  only copy.)
+- **A dependency none of whose assets is in the lockfile** (one that makes only charts) is pinned
+  by its entry, which names its snapshot by commit and time. `pin` does not move it, `store gc`
+  keeps that snapshot, and the check passes when the store has a snapshot to read from, and says
+  why not when it has none.
+- **Where a chart is read from.** From the snapshot the lockfile names, and from no other,
+  where the store has it: a snapshot is taken whole, whatever its date, and one that did not
+  build the chart says so (a later build of that commit is another snapshot, which `chartbook
+  update` moves to). Where the store does not have it, from "your own build": the snapshots of
+  the pipeline the pin came from, by its own ID, and never another pipeline's of the same
+  commit; at the commit the lockfile names; made by its owner's `chartbook snapshot`; not dated
+  after now; the newest of them that holds the chart. The check, `chartbook check`, a read and
+  what a lockfile keeps when it is written again all ask this one question, and `store gc` keeps
+  every such build for as long as a lockfile names a snapshot of that commit that the store
+  does not have. A lockfile from before 0.3.0 does not say which pipeline its pins came from:
+  for a dependency named by its folder it is the pipeline that folder holds.
+- **A dependency pinned from its repository** (`git`) **is pinned whole, as it was before:**
+  every asset of it is in the lockfile, charts and notebooks too, and `lock = true` changes
+  nothing for it. Its bytes are its commit's, the same for everyone, so a pin of them is not
+  what failed for the class; it has no snapshot to read a chart from; and CI reads it from the
+  store with no copy of the repository. (Twice built otherwise and twice taken back after a
+  review: copied into the store by each pin, which failed in a store one may only read; then
+  read from ChartBook's own clone, which a machine that never fetched does not have.)
+- **What `pin` and `update` say of what is not in the lockfile:** how many, by kind; one that is
+  not built, as for any asset; one its owner no longer declares, on an update.
+
+What you see, as built. Each block is from a run against a copy of the class report's lockfile
+and of its six upstreams' snapshots, in a scratch store (the first on 2026-11-16, the rest again
+on 2026-11-17); long lines are wrapped here. A first pin:
+
+```text
+$ chartbook pin
+ftsfr/corp_bond_returns: 2 pinned. Its 2 charts and 1 notebook are not pinned: each build draws them anew
+  From its snapshot at 2b69735, made 2026-11-04 05:51 UTC, which says it was made in https://github.com/ftsfr/corp_bond_returns.
+ftsfr/fed_yield_curve: 1 pinned. Its 1 chart and 2 notebooks are not pinned: each build draws them anew
+  From its snapshot at 5bb7217, made 2026-11-04 05:46 UTC, which says it was made in https://github.com/ftsfr/fed_yield_curve.
+(four more)
+Wrote chartbook.lock.
+```
+
+The class report's lockfile as it is committed today, with a store that has the pinned dataframes:
+
+```text
+$ chartbook pin --check
+chartbook.lock is in an earlier form, which pinned every asset: its 10 charts and 7 notebooks are
+not checked, since no rebuild gives their bytes again. `chartbook pin` writes it again in the new form.
+17 pin(s) of 6 dependencies, all in the store. Nothing written.
+
+$ chartbook pin
+ftsfr/corp_bond_returns: 2 already pinned
+ftsfr/fed_yield_curve: 1 already pinned
+(four more)
+chartbook.lock was in an earlier form, which pinned every asset. It is written again without its
+10 charts and 7 notebooks: they are not pinned, and are read from the snapshot the lockfile
+names, or from your own build of that commit where the store does not have that snapshot.
+Wrote chartbook.lock.
+```
+
+The lockfile then holds 17 records, all dataframes; no pin has moved; a second `chartbook pin`
+says `chartbook.lock is unchanged`; and a chart is read from the snapshot the lockfile names. A
+read of a chart when the store has no snapshot of that commit:
+
+```text
+$ chartbook path ftsfr/fed_yield_curve:chart/yield_curve_replication
+Error: 'ftsfr/fed_yield_curve:chart/yield_curve_replication' is not in chartbook.lock: a chart is
+drawn anew by every build. It is read from a snapshot of ftsfr/fed_yield_curve at 5bb7217, the
+commit the lockfile names, and the store at ~/store has none. Where a store is shared, wait for
+its sync. Otherwise build that commit yourself: in a clone of
+https://github.com/ftsfr/fed_yield_curve, at 5bb7217, `chartbook run --snapshot`.
+```
+
+What this step does not end: a student's dataframe that came out in other bytes. In the same run,
+a store holding the 05:38 build of `ftsfr/fed_yield_curve` at 5bb7217 and not the 05:46 one the
+lockfile names read that pipeline's chart from the 05:38 build, and failed the check on
+`ftsfr_treas_yield_curve_zero_coupon`, its one dataframe. That is what the rows hash and the check
+below are for (steps 3 to 5).
 
 ## A dataframe's record
 
@@ -355,7 +463,7 @@ match. The page is to be corrected.
 1. This page.
 2. The lockfile by kind: dataframes and models; `lock = true`; a read of an asset that is not in
    it, through the snapshot the lockfile names. It ends the failure on charts and notebooks, and
-   needs nothing below.
+   needs nothing below. **Built.**
 3. The rows hash: its form written into the index specification, and tested across writers.
 4. Periods: choosing them within the size, in a snapshot's record and in the lockfile; the test
    under a memory limit.
