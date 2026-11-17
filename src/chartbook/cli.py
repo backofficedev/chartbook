@@ -2702,8 +2702,9 @@ def _echo_frozen_report(step, report):
             f"{who}{report.lockfile.name} is in an earlier form, which pinned every asset"
             + (f": its {gone} {'is' if one else 'are'} not checked, {why}" if gone else "")
             + (
-                f"; {kept} record{'' if kept == 1 else 's'} of that kind {'is' if kept == 1 else 'are'} checked "
-                f"all the same, the store having {'its' if kept == 1 else 'their'} bytes and no snapshot that names them"
+                f"; {kept} of its records of charts, notebooks, notes and files {'is' if kept == 1 else 'are'} checked "
+                f"all the same, the store having {'its' if kept == 1 else 'their'} bytes and no snapshot to read "
+                f"{'it' if kept == 1 else 'them'} from"
                 if kept else ""
             )
             + ". `chartbook pin` writes it again in the new form."
