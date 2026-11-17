@@ -444,3 +444,14 @@ class TestEveryWayOfReadingGivesThePinnedRows:
             pytest.skip("this pandas and pyarrow write no such file")
         assert data.load("acme/rates:t", format="polars_eager", project_dir=report).height == 8
         assert len(data.load("acme/rates:t", format="pandas", project_dir=report)) == 8
+
+    def test_dates_written_as_text_and_held_as_a_category(self, work, monkeypatch):
+        """A category is its text: its rows are dated as the text's are, by the check and by every way of reading."""
+        def category(frame: pl.DataFrame, path: Path) -> None:
+            frame.with_columns(pl.col("ds").dt.strftime("%Y-%m-%d").cast(pl.Categorical)).write_parquet(path)
+
+        rates, report = _pin(work, monkeypatch, {"treasury": (_yields(40), "ds", category)})
+        _rebuild(rates, _student(work, monkeypatch), {"treasury": (_yields(48), "ds", category)})
+        location = resolve_module.resolve("acme/rates:treasury", start_dirs=[report])
+        assert location.stands_in and location.as_of == "2026-01-09"
+        assert _rows(report, "treasury") == {"polars": 80, "polars_eager": 80, "pandas": 80, "sql": 80}
