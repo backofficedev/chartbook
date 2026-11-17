@@ -67,6 +67,23 @@ def drive(tmp_path, monkeypatch):
     return work, machine, rates
 
 
+def _runner() -> CliRunner:
+    """A runner whose result keeps stderr apart from stdout, in click 8.1 as in 8.2 and later."""
+    try:
+        return CliRunner(mix_stderr=False)
+    except TypeError:  # click 8.2 and later keep them apart always
+        return CliRunner()
+
+
+def _with_a_build(project: Path) -> None:
+    """Give a pipeline a build script that leaves a file, as any shell runs it."""
+    manifest = project / "chartbook.toml"
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8") + '\n[scripts]\nbuild = "echo built > built.txt"\n',
+        encoding="utf-8", newline="\n",
+    )
+
+
 def _snapshot_again(rates: Path, value: float, made_at=None) -> snapshot.Snapshot:
     _rates(rates, value)
     (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
@@ -820,18 +837,77 @@ class TestAMachineThatOnlyReads:
         assert "all in the store. Nothing written." in result.output
         assert sorted(p.name for p in roots.iterdir()) == before
 
+    def test_check_writes_nothing_anywhere(self, reader):
+        """Not an object, not a note, and no name for this machine under its home."""
+        work, machine, rates, old, project, clone = reader
+
+        def listing() -> list:
+            return sorted(
+                (str(path.relative_to(work)), path.stat().st_size, path.stat().st_mtime_ns)
+                for path in work.rglob("*") if path.is_file()
+            )
+
+        before = listing()
+        result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(clone)])
+        assert result.exit_code == 0 and listing() == before
+
+    def test_check_and_its_old_name_together_are_refused(self, reader):
+        """One writes the note and the other nothing: which was meant is not guessed."""
+        work, machine, rates, old, project, clone = reader
+        roots = default_store().root / "roots"
+        before = sorted(p.name for p in roots.iterdir())
+        result = CliRunner().invoke(main, ["pin", "--check", "--frozen", "--project-dir", str(clone)])
+        assert result.exit_code == 2
+        assert "--frozen is the old name of --check. Give --check alone" in result.output
+        assert sorted(p.name for p in roots.iterdir()) == before
+
+    def test_the_old_name_is_not_in_help(self):
+        result = CliRunner().invoke(main, ["pin", "--help"])
+        options = [line.split()[0] for line in result.output.split("Options:", 1)[1].splitlines() if line.strip()]
+        assert result.exit_code == 0 and "--check" in options and "--frozen" not in options
+
     def test_the_old_frozen_still_keeps_its_pins(self, reader):
         """`pin --frozen`, deprecated, still leaves the note it left before, and says to use --check."""
         work, machine, rates, old, project, clone = reader
-        result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
+        result = _runner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
         assert result.exit_code == 0
-        assert "`chartbook pin --frozen` is now `chartbook pin --check`" in result.output
-        assert "Nothing written but the store's note that this machine reads these pins." in result.output
+        # The warning on stderr, where a script that reads the result does not meet it
+        assert "`chartbook pin --frozen` is now `chartbook pin --check`" in result.stderr
+        assert "`chartbook run --frozen` and a read through the lockfile leave that note" in result.stderr
+        assert "is now" not in result.stdout
+        assert "Nothing written but the store's note that this machine reads these pins." in result.stdout
         again = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
         assert "all in the store. Nothing written." in again.output  # the note names it all already
         self._a_moves_on_and_clears(machine, rates, project)
         machine("b")
         assert lock.verify(clone).problems == []
+
+    def test_run_frozen_keeps_its_pins(self, reader):
+        """`run --frozen` builds from the lockfile, and is what leaves the note now that `pin --check` does not."""
+        work, machine, rates, old, project, clone = reader
+        _with_a_build(clone)
+        result = CliRunner().invoke(main, ["run", "--frozen", "--project-dir", str(clone)])
+        assert result.exit_code == 0, result.output
+        assert "Nothing written but the store's note that this machine reads these pins." in result.output
+        again = CliRunner().invoke(main, ["run", "--frozen", "--project-dir", str(clone)])
+        assert "all in the store. Nothing written." in again.output  # the note names it all already
+        self._a_moves_on_and_clears(machine, rates, project)
+        machine("b")
+        assert lock.verify(clone).problems == []
+
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
+    def test_run_frozen_says_when_the_note_cannot_be_written_and_builds(self, reader):
+        work, machine, rates, old, project, clone = reader
+        _with_a_build(clone)
+        roots = default_store().root / "roots"
+        roots.chmod(0o555)  # a store this machine may only read
+        try:
+            result = _runner().invoke(main, ["run", "--frozen", "--project-dir", str(clone)])
+        finally:
+            roots.chmod(0o755)
+        assert result.exit_code == 0, result.output
+        assert "the store's note that this machine reads these pins could not be written" in result.stderr
+        assert (clone / "built.txt").is_file()
 
     def test_a_read_keeps_its_pins(self, reader, monkeypatch):
         work, machine, rates, old, project, clone = reader

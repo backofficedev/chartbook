@@ -2689,10 +2689,15 @@ def pin(project_dir, check_only, frozen):
         chartbook pin --project-dir ../rate_forecast
         chartbook pin --check
     """
+    if check_only and frozen:
+        # One is the other's old name, and they differ in what they write: not guessed
+        raise click.UsageError("--frozen is the old name of --check. Give --check alone: it writes nothing.")
     if frozen:
         click.echo(
-            "warning: `chartbook pin --frozen` is now `chartbook pin --check`, which writes nothing; "
-            "--frozen still leaves the store's note for `store gc`, and will be removed.",
+            "warning: `chartbook pin --frozen` is now `chartbook pin --check`, which writes nothing. "
+            "--frozen is still taken for now and, as before, leaves the store's note that this machine "
+            "reads these pins. The flag will be removed: `chartbook run --frozen` and a read through the "
+            "lockfile leave that note.",
             err=True,
         )
     if check_only or frozen:
