@@ -1244,3 +1244,4 @@ def _hash_in(
         if -1 not in pieces.writers or hash_frame(pieces.read(-1), date_col) != rows[NO_DATE]:
             differ.append(NO_DATE)
     return Compared(differ, outside, newer, total, index_column)
+
