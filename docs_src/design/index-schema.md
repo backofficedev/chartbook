@@ -269,14 +269,19 @@ a **period** at a time, and its record says:
   Absent with no `date_col`, or no dated row.
 - `rows` — the rows hash of each period, by the period: the first and the last timestamp seen in
   it, both included, joined by `/`. `"none"` is the rows with no date. With no `date_col` there
-  is one entry, `"all"`. The periods are whoever made the record's to choose (whole years; a
-  year over 128 MB in memory as its months; such a month as its days), and whoever checks a pin
-  reads them from the record and hashes their own rows in those same periods, leaving out the
-  rows after `as_of`. So the rule that chooses them can change, and only the form of the hash
-  has to stay.
+  is one entry, `"all"`. The periods are whoever made the record's to choose, and whoever
+  checks a pin reads them from the record and hashes their own rows in those same periods,
+  leaving out the rows after `as_of`. So the rule that chooses them can change, and only the
+  form of the hash has to stay. ChartBook's rule is whole calendar years; a year whose rows
+  count for more than 128 MB as its months; such a month as its days; where a row counts for
+  eight bytes a column and the bytes of each value of text or binary. That is counted from the
+  rows alone, so the same rows give the same periods, whatever file they came in.
 - `row_count` — how many rows it has.
-- `not_hashed` — in place of `rows`, why its rows have no hash: a column of lists or structs, a
-  day over 256 MB in memory, more than 256 columns. Its pin is its bytes alone.
+- `not_hashed` — in place of `rows`, `as_of` and `row_count`, why its rows have no hash: a column
+  of lists or structs; a day, or its rows with no date, or the whole of a table with no
+  `date_col`, counting for more than 256 MB; more than 256 columns; a file over 128 MB that is
+  not parquet; a date no record can write. `date_col` stands beside it where the rows would be
+  dated by one. Its pin is its bytes alone.
 
 A timestamp is written in UTC: a date alone at midnight (`2026-10-30`), else with its time
 (`2026-10-30T16:00:00`), with a fraction of six digits where it has microseconds and nine where
@@ -720,13 +725,17 @@ paragraph above. There are no `Build` records yet. And the part that freezes any
 missing from it: one record for each asset of each dependency, with its `content_hash`.
 
 *(Changed 2026-11-16, `chartbook/lock/v2`, as built; decided by the maintainer on 2026-11-15,
-{doc}`pins-and-rebuilds`.)* A lockfile holds a record only for an asset that code reads: a
-dataframe and a model always, and a chart, a notebook, a note or a file only when its owner's
-manifest says `lock = true`, which its record then carries as `"lock": true`. Any other asset is
-read from the snapshot its dependency's entry names (`location.commit` and `snapshot`), and that
-entry is the whole pin of a dependency none of whose assets is in the lockfile. A lockfile of
-version 1, which held a record for every asset, is read as version 2 would have written it, and
-written again as version 2 by the next command that writes the lockfile.
+{doc}`pins-and-rebuilds`.)* Of a dependency pinned from a snapshot (`location.kind` `store` or
+`path`), a lockfile holds a record only for an asset that code reads: a dataframe and a model
+always, and a chart, a notebook, a note or a file only when its owner's manifest says
+`lock = true`, which its record then carries as `"lock": true`. Any other asset is read from the
+snapshot its dependency's entry names (`location.commit` and `snapshot`), and that entry is the
+whole pin of a dependency none of whose assets is in the lockfile. Of a dependency pinned from
+its repository (`location.kind` `git`) it holds a record for every asset, as version 1 did. A
+lockfile of version 1, which held a record for every asset of every dependency, is read as
+version 2 would have written it, and written again as version 2 by the next command that writes
+the lockfile; a version 1 record that version 2 would leave out stays in it, without `"lock"`,
+where the store has its bytes and no snapshot to read the asset from.
 
 ```json
 {

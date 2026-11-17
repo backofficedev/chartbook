@@ -315,11 +315,10 @@ class AssetNotPinnedError(LookupError):
     in the store. The message says which is missing and what to run.
 
     An asset a lockfile does not hold (a chart, a notebook; a note or a
-    file not marked ``lock = true``) is read from the snapshot the
-    lockfile's entry names, or from your own snapshot of that pipeline at
-    that commit, or, for a dependency that is a git repository, from
-    ChartBook's own copy of the repository at the pinned commit; and this
-    is raised when none of them has it.
+    file not marked ``lock = true``, of a dependency pinned from a
+    snapshot) is read from the snapshot the lockfile's entry names, or
+    from your own snapshot of that pipeline at that commit; and this is
+    raised when neither has it.
 
     Attributes:
         asset: The asset's ID, as the lockfile would have it.
@@ -331,10 +330,7 @@ class AssetNotPinnedError(LookupError):
             was not written), ``"working"`` (a batch
             run does not read a working folder), ``"in_source"`` (a table
             the pinned snapshot did not write out), ``"no_pipeline"`` (a
-            batch run outside any pipeline, where nothing records a read),
-            ``"not_fetched"`` (a git dependency's pinned commit is not in
-            ChartBook's copy of its repository on this machine),
-            ``"outside"`` (the asset's file is outside its repository), or
+            batch run outside any pipeline, where nothing records a read), or
             ``"differs"`` (the store does not have the pinned bytes, and a
             build of yours of the pinned commit does not hold the same
             rows: :mod:`chartbook.standins`).

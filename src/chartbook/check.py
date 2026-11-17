@@ -734,9 +734,13 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     try:
         whole = folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
         if whole and folder is not None and not records:
-            # Pinned by its entry alone: what is read of it is read from a snapshot of that commit
-            commit = pinned["location"]["commit"]
-            whole = any(taken.commit == commit for taken in snapshot.readable_snapshots(folder)[0])
+            # Pinned by its entry alone: what is read of it is read from a build of that commit, as a read takes one
+            whole = bool(
+                snapshot.builds_at(
+                    snapshot.readable_snapshots(folder)[0], lock.pinned_pipeline(pinned),
+                    pinned["location"]["commit"], pinned.get("snapshot"),
+                )
+            )
     except (StoreError, OSError, ValueError, snapshot.SnapshotError) as error:  # a store that cannot be read, a half-synced store.json
         # What the system says names the store's path, which may carry a password (//user:pw@host)
         return (
