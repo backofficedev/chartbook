@@ -1687,6 +1687,17 @@ def plan_removals(
     by_elsewhere = newest_holding(set(hashes_elsewhere))
     by_noted = newest_holding(set(hashes_noted))
     noted = noted or {}
+    # A lockfile may name a snapshot this store does not have: its author's,
+    # where each person builds the other pipeline themselves. What is read
+    # of it is then read from a snapshot here of that commit, the newest of
+    # each pipeline: that one stands in, and is kept as the named one would be
+    here = {(taken.commit, taken.made_at) for taken in every}
+    absent = {commit for commit, made_at in set(pinned) | set(noted) if (commit, made_at) not in here}
+    standing: dict = {}
+    for taken in every:
+        if taken.commit in absent and not made_in_the_future(taken, now):
+            standing[(taken.pipeline, taken.subdirectory, taken.commit)] = taken
+    by_standing = {id(taken) for taken in standing.values()}
     by_label = _holding_labelled(every, labelled or {})
     # An asset marked `keep = true` keeps every version of its bytes: for
     # each, the newest snapshot of the pipeline holding it, as a label keeps
@@ -1716,6 +1727,8 @@ def plan_removals(
                 why = noted[(taken.commit, taken.made_at)]
             elif id(taken) in by_label:
                 why = by_label[id(taken)]
+            elif id(taken) in by_standing:
+                why = "a lockfile pins a snapshot of its commit that this store does not have, and it stands in"
             elif id(taken) in by_missing:
                 why = "a lockfile that cannot be found named what it holds"
             elif id(taken) in by_elsewhere:
