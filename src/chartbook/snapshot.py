@@ -1931,7 +1931,7 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
 
     A snapshot records what its pipeline was pinned to (``inputs``: each
     dependency's commit and the hash over its pins), and the assets it holds
-    were made from those bytes. So first the check ``chartbook pin --frozen``
+    were made from those bytes. So first the check ``chartbook pin --check``
     makes (:func:`chartbook.lock.verify`): a lockfile, every dependency in
     it, pinned from where the manifest says, its bytes in the store. Then,
     for a ``path`` dependency something was pinned from: that its pin names

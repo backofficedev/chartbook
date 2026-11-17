@@ -284,7 +284,7 @@ Error: acme/forecast cannot have a snapshot: its lockfile does not match its dep
 Run `chartbook pin`, then snapshot again.
 ```
 
-It is the check `chartbook pin --frozen` already makes, run first. B's snapshot then holds B's
+It is the check `chartbook pin --check` already makes (`pin --frozen` through 0.5.2), run first. B's snapshot then holds B's
 outputs and its lockfile; A's bytes are in the store already, named by that lockfile.
 
 **Recommended: 6b.** *Decided by the maintainer 2026-10-16: 6b, a snapshot only with full
@@ -295,7 +295,7 @@ was pinned does not stop it, since B cannot have read it.
 ## How strict, where
 
 "Batch" is `chartbook run` (it sets an environment variable that the `data.load` calls in its
-build see), `chartbook snapshot`, `chartbook pin --frozen` and CI. Everything else is interactive.
+build see), `chartbook snapshot`, `chartbook pin --check` and CI. Everything else is interactive.
 With the recommended options:
 
 | `data.load` of another pipeline finds | In a notebook or script in a pipeline | In a batch run |

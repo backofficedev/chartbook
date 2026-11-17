@@ -1162,7 +1162,7 @@ class TestReadOnly:
         with pytest.raises(ReadOnlyStoreError) as caught:
             reader.add_root(work / "chartbook.lock", [])
         explained = _explain_os_error(caught.value)
-        assert explained.startswith(f"The store {URL} refused to write") and "use --frozen" in explained
+        assert explained.startswith(f"The store {URL} refused to write") and "use `run --frozen` (or `pin --check` to only check)" in explained
 
     def test_a_bucket_that_is_not_there(self, work, client):
         store = S3Store("s3://no-such-bucket/p", cache=work / "c", client=client)
@@ -1226,7 +1226,7 @@ class TestTwoPipelinesOnAnS3Store:
         assert report.unrooted and "refused to write" in report.unrooted
         assert (forecast / lock.LOCK_FILE).is_file()
 
-        # And offline, what it read before: `pin --frozen` and a read
+        # And offline, what it read before: `pin --check` and a read
         _offline(client, monkeypatch)
         store_module._found_whole.clear()
         assert lock.verify(forecast).problems == []
@@ -1387,7 +1387,7 @@ def _pinned_commit(forecast: Path) -> str:
 
 
 class TestASnapshotHalfUploaded:
-    """A record whose files are not all in the bucket: `pin`, `update`, `pin --frozen` and a read
+    """A record whose files are not all in the bucket: `pin`, `update`, `pin --check` and a read
     all say it is not fully uploaded yet, as they say of a half-synced folder, and making the
     snapshot again puts back what is missing."""
 
@@ -1451,7 +1451,7 @@ class TestASnapshotHalfUploaded:
         (problem,) = lock.verify(forecast).problems
         assert "does not have _data/parts/part-1.parquet yet: it is not fully uploaded yet" in problem.message
         assert {e.status for e in lock.pin(forecast).problems} == {"unsynced"}
-        frozen = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(forecast)])
+        frozen = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(forecast)])
         assert frozen.exit_code == 1 and "not fully uploaded yet" in frozen.output
         updated = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
         assert updated.exit_code == 1 and "not fully synced: rates:parts" in updated.output

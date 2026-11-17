@@ -1445,7 +1445,7 @@ def _noted_as() -> Optional[str]:
 def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool, str]:
     """Make the store's note of a lockfile on this machine name what it pins now, as a pin does.
 
-    A machine that only reads (``--frozen``, a read through the lockfile)
+    A machine that only reads (``run --frozen``, a read through the lockfile)
     is kept this way: ``store gc`` on another machine keeps what a note
     records, and would otherwise know nothing of this one's pins. The note
     is replaced with what the lockfile pins now, as ``pin`` and ``update``
@@ -1484,9 +1484,10 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
 def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, note: bool = False) -> FrozenReport:
     """Say whether a pipeline can be built from its lockfile alone.
 
-    This is ``--frozen``: what CI runs, and what anyone with a store they
-    may only read runs. It opens no repository, fetches nothing, pins
-    nothing and does not write the lockfile. It reads the manifest's
+    This is ``pin --check``, and the gate ``run --frozen`` passes before it
+    builds: what CI runs, and what anyone with a store they may only read
+    runs. It opens no repository, fetches nothing, pins nothing and does
+    not write the lockfile. It reads the manifest's
     ``[dependencies]``, the lockfile and the store, and reports a problem
     for
 
@@ -1498,7 +1499,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
     - an asset that was declared and not built when it was pinned;
     - a pinned asset that the store does not have.
 
-    The stricter choice the design kept for ``--frozen``: where ``pin``
+    The stricter choice the design kept for this check: where ``pin``
     records an unbuilt asset and goes on, ``verify`` counts it a problem,
     since the build that follows may need it.
 
@@ -1506,9 +1507,9 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
     :param store: The store the pins should be in; this user's by default.
     :param note: Whether to make the store's note of the lockfile on this
         machine name what it pins (:func:`note_this_machine`), so that
-        ``store gc`` on another machine keeps it: the one thing ``--frozen``
-        writes, and only when the note lacks something. Nothing is written
-        without it.
+        ``store gc`` on another machine keeps it: the one thing ``run
+        --frozen`` writes, and only when the note lacks something. ``pin
+        --check`` passes False. Nothing is written without it.
     :returns: What was found. No problems means the build can go ahead.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         is there and cannot be read.

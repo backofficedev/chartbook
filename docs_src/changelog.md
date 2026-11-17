@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `chartbook pin --frozen` is `chartbook pin --check`, and writes nothing
+
+`pin --frozen` borrowed its name from `run --frozen`, where it means what it means in `cargo` and `uv`: build from the lockfile as it is. On `pin` it meant "do not pin, check", which the name did not say. `chartbook pin --check` is that check: it pins nothing, fetches nothing and writes nothing, not the lockfile, no object, and no longer the store's note that this machine reads these pins. It exits `1` unless the pipeline can be built from its lockfile alone, as before, and says `Nothing written.` The note that keeps a machine's pins from `store gc` on another machine is left by what reads them: `chartbook run --frozen`, which builds from the lockfile, and a read through it (`data.load`), as before. A CI job that only ran `pin --frozen`, and no build, no longer leaves that note; run `run --frozen`, or read through the lockfile, where gc on another machine must keep what CI pins. `pin --frozen` is still taken: it prints a warning that it is now `--check`, leaves the note as it did, and will be removed; `--check` and `--frozen` together are refused. Read-only store errors now say to use `run --frozen`, or `pin --check` to only check. `chartbook run --frozen` is unchanged.
+
 ## [0.5.2] - 2026-11-04
 
 ### Changed — the tutorial clones and builds; nothing is downloaded

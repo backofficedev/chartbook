@@ -213,12 +213,12 @@ class TestFrozen:
         from chartbook.cli import main
 
         monkeypatch.setenv("CHARTBOOK_STORE", str(store.root))
-        result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(downstream)])
+        result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(downstream)])
         assert result.exit_code == 1 and "does not exist" in result.output
         assert "Nothing written" in result.output and not (downstream / lock.LOCK_FILE).exists()
         _train(rates)
         pin_from_snapshots(downstream, store)
-        result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(downstream)])
+        result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(downstream)])
         assert result.exit_code == 0, result.output
         assert "4 pin(s) of 1 dependency, all in the store. Nothing written." in result.output
 
