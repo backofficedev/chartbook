@@ -281,7 +281,10 @@ a **period** at a time, and its record says:
 - `not_hashed` — in place of `rows`, `as_of` and `row_count`, why its rows have no hash: a column
   of lists or structs; a day, or its rows with no date, or the whole of a table with no
   `date_col`, counting for more than 128 MB; more than 256 columns; a CSV or JSON lines table
-  of more than 32 MB of text, or an Arrow IPC file; a date no record can write. `date_col`
+  of more than 32 MB of text, or an Arrow IPC file; a date no record can write, or dates in
+  more than 1,024 calendar years; a parquet file written so that it cannot be read a little at
+  a time (pages, dictionaries or a footer too large: it says which, and that the same rows
+  written with smaller pages can be hashed). `date_col`
   stands beside it where the rows would be dated by one. It names no folder of the machine that
   wrote it. Its pin is its bytes alone.
 

@@ -104,12 +104,50 @@ OTHER_BYTES = 32 * 1024 * 1024
 #: than a period. A wider table has no rows hash.
 MOST_COLUMNS = 256
 
-#: How much of a file is read at a time, in bytes as Arrow holds them, and
-#: the most rows. What a row takes is measured from the rows as they are
-#: read, never from the file: a file that holds its text once in a
-#: dictionary says a few bytes a row for rows of kilobytes.
+#: How much of a file is handed on at a time, in bytes as its rows take
+#: once each value is written out, and the most rows.
 BATCH_BYTES = 8 * 1024 * 1024
 BATCH_ROWS = 16_384
+
+#: What reading a parquet file a little at a time is held to, told from
+#: the file's own page headers before a row of it is read
+#: (:func:`_rows_at_a_time`). A reader holds a page of every column at
+#: once, and its dictionary, whatever is asked of it; and a page holds
+#: what its writer put in it, a megabyte by default and far more where
+#: values are long. So a file is refused, unread, where a row group's
+#: largest pages and dictionaries together are more than :data:`HELD_MOST`
+#: (256 columns of a megabyte page and a megabyte dictionary are within
+#: it; a dictionary of text counts twice, held as its page and as its
+#: values), and where one row may be more than :data:`ROW_MOST` of text.
+#: These are of the file as it is written, not of its rows: the same rows
+#: written with smaller pages have a rows hash.
+HELD_MOST = 640 * 1024 * 1024
+ROW_MOST = 192 * 1024 * 1024
+
+#: The most a run of rows may take as it is read, at worst, before it is
+#: handed on :data:`BATCH_BYTES` at a time. At worst: each row of text
+#: held by a dictionary its longest value, and each page of other text
+#: wholly inside the run. What is read is nearly always a small part of
+#: this.
+READ_MOST = 64 * 1024 * 1024
+
+#: The most that the pages a run of rows begins and ends in may add to
+#: that. Rows are read a whole number at a time, and what any such run
+#: takes is known only in whole pages: so a run is held to
+#: :data:`READ_MOST` and the two pages of each column of text it may
+#: begin and end in, up to this. Past it a row group is read a row at a
+#: time, which is slow and holds no more than a page of each column.
+PARTIAL_MOST = 256 * 1024 * 1024
+
+#: The most a parquet file's footer may be, in bytes. The footer lists
+#: every column of every row group, and is read whole before anything
+#: else: 164 MB of one, of 6,000 row groups of 251 columns, took 1.8 GB.
+FOOTER_MOST = 16 * 1024 * 1024
+
+#: The most calendar years a table's dates may fall in. Each period is
+#: put by in a file of its own while a table is read; ten thousand of them
+#: are no time series, and took 3 GB of scratch and a quarter of an hour.
+MOST_YEARS = 1024
 
 #: The key of the period of the rows whose date is empty, and of the one
 #: hash of a table with no date column.
@@ -550,15 +588,40 @@ class Table:
         :raises NotRead: If the reader cannot read it as a table.
         """
         if self._schema is None:
+            self._footers_within()
             try:
                 self._schema = self.scan().collect_schema()
+            except FileNotFoundError as error:
+                raise NotRead(_first_line(error)) from None  # nothing there: no table, and nothing to say of one
+            except (OSError, MemoryError):
+                raise  # a file that cannot be opened now, no memory: this machine's, not the table's
             except Exception as error:  # noqa: BLE001 - whatever the reader raises for what is no table
+                trouble = _this_machines(error)
+                if trouble is not None:
+                    raise trouble from None
                 raise NotRead(_first_line(error)) from None
             except BaseException as error:  # polars panics are not Exceptions
                 if type(error).__name__ != "PanicException":
                     raise
                 raise NotRead(_first_line(error)) from None
         return self._schema
+
+    def _footers_within(self) -> None:
+        """Refuse a parquet table one of whose files has a footer too large to read (:data:`FOOTER_MOST`), before any of it is read.
+
+        :raises NotHashed: Naming the file and its footer's size.
+        """
+        from chartbook import formats
+
+        try:
+            read = formats.reading(self.path, self.format, self.read_options)
+            if read.format != "parquet":
+                return
+            files = formats.files_of(self.path, read, self.files, self.listed, self.inside)
+        except Exception:  # noqa: BLE001 - nothing there, or a format ChartBook does not read: said where it is read
+            return
+        for file in files:
+            _footer_within(file)
 
     def arrow_schema(self):
         """Its columns as Arrow holds them here: the reader's types, a category as its text."""
@@ -716,15 +779,41 @@ class Table:
 
 
 def _text_bytes(file, most: int) -> int:
-    """How many bytes of text a file is, unzipped; counted no further than one past *most*."""
-    if not str(file).lower().endswith(".gz"):
-        return os.path.getsize(file)
-    import gzip
+    """How many bytes of text a file is, unpacked; counted no further than one past *most*.
 
+    A packed file is known by how it begins, as the reader knows it, and
+    not by its name: gzip, zlib or zstd. So the same text counts the same
+    whatever it is kept in and whatever it is called.
+    """
+    with open(file, "rb") as held:
+        begins = held.read(4)
+    if begins[:2] == b"\x1f\x8b":
+        import gzip
+
+        opened = gzip.open(file, "rb")
+    elif begins == b"\x28\xb5\x2f\xfd":
+        import pyarrow as pa
+
+        opened = pa.CompressedInputStream(pa.OSFile(str(file), "rb"), "zstd")
+    elif len(begins) >= 2 and begins[0] == 0x78 and (begins[0] * 256 + begins[1]) % 31 == 0:
+        import zlib
+
+        count, unpack = 0, zlib.decompressobj()
+        with open(file, "rb") as held:
+            while count <= most:
+                packed = held.read(256 * 1024)
+                if not packed:
+                    break
+                while packed and count <= most:
+                    count += len(unpack.decompress(packed, 1024 * 1024))
+                    packed = unpack.unconsumed_tail
+        return count
+    else:
+        return os.path.getsize(file)
     count = 0
-    with gzip.open(file, "rb") as held:
+    with opened:
         while count <= most:
-            read = held.read(1024 * 1024)
+            read = opened.read(1024 * 1024)
             if not read:
                 break
             count += len(read)
@@ -748,6 +837,20 @@ def _as_the_table_has_it(value, kind, written: Optional[str]):
         text = None if written == "__HIVE_DEFAULT_PARTITION__" else unquote(written)
         return pl.Series(value.name, [text], dtype=pl.String)
     return value.cast(kind, strict=False)
+
+
+def _this_machines(error: BaseException) -> Optional[BaseException]:
+    """The trouble of this machine's that an error came of, if it came of one: a file that may not be opened, a disk that failed, no memory; None for a file that is not there, and for anything else.
+
+    ChartBook's reader says what a file could not be read as, and keeps
+    what the system said as the cause.
+    """
+    seen = 0
+    while error is not None and seen < 8:
+        if isinstance(error, (OSError, MemoryError)) and not isinstance(error, FileNotFoundError):
+            return error
+        error, seen = error.__cause__ or error.__context__, seen + 1
+    return None
 
 
 def _first_line(error: BaseException) -> str:
@@ -789,47 +892,393 @@ def _added_by_the_reader(one, file, wanted: list):
     return one.select([pl.nth(names.index(name)) for name in extra]).head(1).collect()
 
 
-def _spread_out(batch) -> int:
-    """How many bytes a batch takes once each value is written out: what it takes as it is, and for a column held as a dictionary, each row's own copy of its value.
+# --- How a parquet file is laid out, told before it is read ----------------------
 
-    A file written from a dictionary comes back as one, a megabyte for a
-    million rows of long text, and is then spread out to be hashed. What
-    is to be bounded is the batch spread out.
+
+def _footer_within(file) -> None:
+    """Refuse a parquet file whose footer is more than :data:`FOOTER_MOST`, by the eight bytes it ends with.
+
+    :raises NotHashed: Naming the file and the size of its footer.
     """
+    try:
+        with open(file, "rb") as held:
+            held.seek(0, os.SEEK_END)
+            if held.tell() < 12:
+                return  # no parquet file: said by whoever reads it
+            held.seek(-8, os.SEEK_END)
+            ends = held.read(8)
+    except OSError:
+        return  # said by whoever reads it
+    if ends[4:] != b"PAR1":
+        return
+    size = int.from_bytes(ends[:4], "little")
+    if size > FOOTER_MOST:
+        raise NotHashed(
+            f"{Path(str(file)).name} has a footer of {size / 2**20:,.0f} MB, which lists every column of every row "
+            f"group and is read whole before any row: a rows hash reads one of up to {FOOTER_MOST // 2**20} MB. "
+            f"Written with fewer row groups, its rows can be hashed"
+        )
+
+
+class _Short(Exception):
+    """Raised when a page header runs past the bytes that were read of it."""
+
+    def __init__(self, needed: int = 0):
+        super().__init__(needed)
+        self.needed = needed
+
+
+def _number(data, at: int) -> tuple:
+    """A whole number as a page header writes one (a varint), and where it ends."""
+    found = shift = 0
+    while True:
+        if at >= len(data):
+            raise _Short(at + 1)
+        byte = data[at]
+        at += 1
+        found |= (byte & 0x7F) << shift
+        if not byte & 0x80:
+            return found, at
+        shift += 7
+        if shift > 70:
+            raise ValueError("a number of more than 64 bits")
+
+
+def _passed(data, at: int, kind: int, depth: int) -> int:
+    """Where a value of a page header ends, by its type: nothing of it is kept."""
+    if depth > 24:
+        raise ValueError("a page header nested too deep")
+    if kind in (1, 2):
+        return at
+    if kind == 3:
+        return at + 1
+    if kind in (4, 5, 6):
+        return _number(data, at)[1]
+    if kind == 7:
+        return at + 8
+    if kind == 8:
+        size, at = _number(data, at)
+        return at + size
+    if kind in (9, 10):
+        if at >= len(data):
+            raise _Short(at + 1)
+        head = data[at]
+        at += 1
+        size, of = head >> 4, head & 0x0F
+        if size == 15:
+            size, at = _number(data, at)
+        for _ in range(size):
+            at = at + 1 if of in (1, 2) else _passed(data, at, of, depth + 1)
+        return at
+    if kind == 11:
+        size, at = _number(data, at)
+        if size:
+            if at >= len(data):
+                raise _Short(at + 1)
+            head = data[at]
+            at += 1
+            for _ in range(size):
+                for of in (head >> 4, head & 0x0F):
+                    at = at + 1 if of in (1, 2) else _passed(data, at, of, depth + 1)
+        return at
+    if kind == 12:
+        return _header_fields(data, at, depth + 1)[1]
+    raise ValueError(f"a value of no type a page header has ({kind})")
+
+
+def _header_fields(data, at: int, depth: int = 0) -> tuple:
+    """The whole numbers and the structs of a struct in a page header (Thrift's compact form), by field number, and where it ends.
+
+    Only what tells a page's size is kept; text and lists, a page's
+    statistics among them, are passed over wherever they end.
+    """
+    found, last = {}, 0
+    while True:
+        if at >= len(data):
+            raise _Short(at + 1)
+        head = data[at]
+        at += 1
+        if head == 0:
+            return found, at
+        kind, step = head & 0x0F, head >> 4
+        if step:
+            number = last + step
+        else:
+            raw, at = _number(data, at)
+            number = (raw >> 1) ^ -(raw & 1)
+        last = number
+        if kind in (4, 5, 6):
+            raw, at = _number(data, at)
+            found[number] = (raw >> 1) ^ -(raw & 1)
+        elif kind == 12:
+            found[number], at = _header_fields(data, at, depth + 1)
+        else:
+            at = _passed(data, at, kind, depth)
+        if at > len(data):
+            raise _Short(at)
+
+
+#: The page types of a parquet file, and the encodings that hold a value as
+#: a place in a dictionary, or as what it adds to the value before it.
+_DATA_PAGES, _DICTIONARY_PAGE = (0, 3), 2
+_BY_DICTIONARY, _BY_PREFIX = (2, 8), 7
+
+
+def _pages(held, start: int, length: int, values: int) -> Iterator:
+    """Each page of a column chunk, from its header alone: its type, what it takes unpacked, how many values it has, how they are written, and where in the file its own bytes begin and how many they are.
+
+    :param held: The file, open to be read.
+    :param start: Where the chunk begins, and *length* how many bytes it is.
+    :param values: How many values the chunk has, which ends it.
+    :raises ValueError: If what is there is no run of pages.
+    """
+    at, end, counted, seen = start, start + length, 0, 0
+    while at < end and (counted < values or not seen):
+        want = 256
+        while True:
+            held.seek(at)
+            data = held.read(want)
+            try:
+                found, used = _header_fields(data, 0)
+                break
+            except _Short as short:
+                if len(data) < want or want > 64 * 1024 * 1024:
+                    raise ValueError("a page header runs past its file") from None
+                want = max(want * 8, short.needed + 64)
+        kind, spread, packed = found.get(1), found.get(2), found.get(3)
+        if not all(isinstance(one, int) and one >= 0 for one in (kind, spread, packed)):
+            raise ValueError("a page header with no sizes")
+        inner = found.get(5) or found.get(8) or found.get(7) or {}
+        inner = inner if isinstance(inner, dict) else {}
+        count = inner.get(1, 0)
+        written = inner.get(4 if isinstance(found.get(8), dict) else 2)
+        if kind in _DATA_PAGES:
+            counted += count if isinstance(count, int) and count > 0 else 0
+        seen += 1
+        if seen > 50_000_000:
+            raise ValueError("more pages than a column chunk has")
+        yield kind, spread, count if isinstance(count, int) else 0, written, at + used, packed
+        at += used + packed
+
+
+#: What pyarrow calls the ways a parquet page is packed.
+_PACKED_AS = {"SNAPPY": "snappy", "GZIP": "gzip", "ZSTD": "zstd", "LZ4_RAW": "lz4_raw", "BROTLI": "brotli"}
+
+
+def _longest_value(held, at: int, packed: int, spread: int, how: str) -> int:
+    """The longest value of a dictionary page of text, in bytes: read from the page, which says each value's length before it; the whole page's size where that cannot be read.
+
+    Text held by a dictionary is a few bytes a row in its file and a
+    value a row once read, so what a run of rows takes is what the longest
+    value takes, at worst. A megabyte of dictionary may be fifty values of
+    twenty kilobytes, and then sixteen thousand rows are 300 MB.
+    """
+    if spread <= 4096:
+        return spread  # short enough whatever is in it
+    try:
+        held.seek(at)
+        data = held.read(packed)
+        if how != "UNCOMPRESSED":
+            import pyarrow as pa
+
+            data = pa.Codec(_PACKED_AS[how]).decompress(data, decompressed_size=spread, asbytes=True)
+        longest, place, end = 0, 0, len(data)
+        length = struct.Struct("<I").unpack_from
+        while place + 4 <= end:
+            (size,) = length(data, place)
+            if size > longest:
+                longest = size
+            place += 4 + size
+        return longest if place == end else spread
+    except Exception:  # noqa: BLE001 - a packing pyarrow has no name for here, a page that is not what it should be: the worst it can be
+        return spread
+
+
+def _most_in(starts, sizes, rows: int, most: int) -> int:
+    """The most bytes any *most* rows in a row may take in one column, counted in whole pages: what the pages such a run begins and ends in hold, with those between.
+
+    :param starts: The row each page begins at.
+    :param sizes: What each page takes unpacked.
+    :param rows: How many rows the column chunk has.
+    """
+    import numpy as np
+
+    if not len(starts):
+        return 0
+    following = np.append(starts[1:], rows)
+    # A run that begins on the last row of a page ends furthest on: `most` rows from there
+    last = np.searchsorted(starts, following + most - 1, side="left")
+    gathered = np.concatenate(([0], np.cumsum(sizes, dtype="float64")))
+    return int((gathered[last] - gathered[: len(starts)]).max())
+
+
+def _rows_at_a_time(held, group, wanted: dict, file) -> int:
+    """How many rows of a row group are read at once, from its page headers; refused where what a reader must hold of it is too much.
+
+    A reader holds a page of every column, and each column's dictionary,
+    while it reads a row group: so those together are held to
+    :data:`HELD_MOST`, or the file has no rows hash. What a run of rows
+    takes once read is: a column of one width, that width a row; text
+    held by a dictionary, the dictionary's longest value a row
+    (:func:`_longest_value`); and other text, the pages the run lies in,
+    counted whole, since what one value of a page takes is not said
+    anywhere but in the page. The most rows are read for which that is
+    within :data:`READ_MOST` and the pages a run begins and ends in.
+
+    :param held: The file, open to be read.
+    :param group: The row group's metadata.
+    :param wanted: The columns to be read, each with the bytes a value of
+        it takes, or None for text.
+    :param file: The file's path, for what is said of it.
+    :raises NotHashed: If the row group cannot be read within what is held.
+    """
+    import numpy as np
+
+    rows = group.num_rows
+    kept = 0
+    largest = ("", 0)
+    columns = []
+    for place in range(group.num_columns):
+        column = group.column(place)
+        name = column.path_in_schema
+        if name not in wanted:
+            continue
+        begins = column.data_page_offset
+        if column.has_dictionary_page and column.dictionary_page_offset and 0 < column.dictionary_page_offset < begins:
+            begins = column.dictionary_page_offset
+        try:
+            pages = list(_pages(held, begins, column.total_compressed_size, column.num_values))
+        except (ValueError, OSError, RecursionError):
+            # Not told: taken for the worst a chunk can be, one page of all of it
+            pages = [(0, column.total_uncompressed_size, column.num_values, 0, 0, 0)]
+        of_text = column.physical_type == "BYTE_ARRAY"
+        of_dictionary = [page for page in pages if page[0] == _DICTIONARY_PAGE]
+        of_values = [(spread, count, written) for kind, spread, count, written, _, _ in pages if kind in _DATA_PAGES]
+        top = max((spread for spread, _, _ in of_values), default=0)
+        # A dictionary of text is held twice over, as its page and as the values read from it
+        dictionary = sum(page[1] for page in of_dictionary) * (2 if of_text else 1)
+        kept += top + dictionary
+        if top + dictionary > largest[1]:
+            largest = (name, top + dictionary)
+        columns.append((name, column, of_text, of_dictionary, of_values, top))
+    if kept > HELD_MOST:
+        raise NotHashed(
+            f"{Path(str(file)).name} has pages too large to read a little at a time: a reader holds a row group's "
+            f"largest pages and dictionaries at once, {kept / 2**20:,.0f} MB here ({_name_said(largest[0])} alone "
+            f"{largest[1] / 2**20:,.0f} MB), and a rows hash reads up to {HELD_MOST // 2**20} MB. "
+            f"Written with smaller pages, its rows can be hashed"
+        )
+    fixed, longest, most_text = 0, 0, 0
+    text = []
+    for name, column, of_text, of_dictionary, of_values, top in columns:
+        if not of_text:
+            fixed += wanted[name] or 16
+            continue
+        fixed += 8  # where a value begins and ends
+        if any(written in _BY_DICTIONARY for _, _, written in of_values):
+            # A row of it is a value of the dictionary once read: the longest, at worst
+            longest += max(
+                (_longest_value(held, at, packed, spread, column.compression) for _, spread, _, _, at, packed in of_dictionary),
+                default=top,
+            )
+        spelled = [(spread, count, written) for spread, count, written in of_values if written not in _BY_DICTIONARY]
+        if not spelled:
+            continue
+        counts = np.array([max(1, count) for _, count, _ in spelled], dtype="int64")
+        # A value written as what it adds to the one before may be as long as its page, each of them
+        sizes = np.array(
+            [spread * (count if written == _BY_PREFIX else 1) for spread, count, written in spelled], dtype="float64"
+        )
+        starts = np.concatenate(([0], np.cumsum(counts)[:-1]))
+        text.append((starts, sizes, int(counts.sum())))
+        most_text += int(sizes.max())
+    if longest + most_text > ROW_MOST:
+        raise NotHashed(
+            f"{Path(str(file)).name} holds text in pages or dictionaries too large to read a row at a time: one row "
+            f"may take {(longest + most_text) / 2**20:,.0f} MB, and a rows hash reads rows of up to "
+            f"{ROW_MOST // 2**20} MB. Written with smaller pages, its rows can be hashed"
+        )
+    if 2 * most_text > PARTIAL_MOST:
+        return 1
+    allowed = READ_MOST + 2 * most_text
+    # What is known for sure, the columns of one width, is read a batch at a time; what is only bounded, up to the bound
+    most = max(1, min(BATCH_ROWS, BATCH_BYTES // max(1, fixed)))
+    while most > 1:
+        at_worst = (fixed + longest) * most + sum(_most_in(starts, sizes, count, most) for starts, sizes, count in text)
+        if at_worst <= allowed:
+            break
+        most //= 2
+    return max(1, min(most, rows or 1))
+
+
+def _row_sizes(batch):
+    """What each row of a batch takes once every value is written out, in bytes: its own bytes for text, a dictionary's value for each row that names it, and its width for anything else."""
+    import numpy as np
     import pyarrow as pa
     import pyarrow.compute as pc
 
-    size = 0
+    def of_text(kind) -> bool:
+        return pa.types.is_string(kind) or pa.types.is_large_string(kind) or pa.types.is_binary(kind) or pa.types.is_large_binary(kind)
+
+    sizes = np.zeros(batch.num_rows, dtype="int64")
     for column in batch.columns:
-        if pa.types.is_dictionary(column.type):
-            values = column.dictionary
-            if pa.types.is_string(values.type) or pa.types.is_large_string(values.type) or pa.types.is_binary(values.type) or pa.types.is_large_binary(values.type):
-                long = pc.binary_length(values)
-                taken = pc.sum(pc.take(long, column.indices)).as_py() or 0
-                size += int(taken) + 8 * len(column)
+        kind = column.type
+        if pa.types.is_dictionary(kind):
+            if of_text(column.dictionary.type) and len(column.dictionary):
+                long = pc.binary_length(column.dictionary)
+                sizes += pc.fill_null(pc.take(long, column.indices), 0).to_numpy(zero_copy_only=False).astype("int64") + 8
             else:
-                size += 8 * len(column)
+                sizes += 8
+        elif of_text(kind):
+            sizes += pc.fill_null(pc.binary_length(column), 0).to_numpy(zero_copy_only=False).astype("int64") + 8
         else:
-            size += column.nbytes
-    return size
+            try:
+                sizes += max(1, kind.bit_width // 8)
+            except ValueError:
+                sizes += 16
+    return sizes
+
+
+def _a_little_at_a_time(batch) -> Iterator:
+    """A batch in runs of rows that take about :data:`BATCH_BYTES` each once written out, and never less than a row."""
+    import numpy as np
+
+    sizes = _row_sizes(batch)
+    if int(sizes.sum()) <= 2 * BATCH_BYTES:
+        yield batch
+        return
+    gathered = np.cumsum(sizes)
+    start, before = 0, 0
+    while start < batch.num_rows:
+        end = int(np.searchsorted(gathered, before + BATCH_BYTES, side="right"))
+        end = max(end, start + 1)
+        yield batch.slice(start, end - start)
+        start, before = end, int(gathered[end - 1])
 
 
 def _parquet_batches(file, target, added) -> Iterator:
     """One parquet file's rows as Arrow record batches of the *target* schema, a few megabytes at a time; *added* is a frame of one row whose columns go on every row.
 
-    How many rows a batch has is set by what the rows take once they are
-    read, never by what the file says: text that a file holds once, in a
-    dictionary, is a few bytes a row there and kilobytes in memory. So a
-    row group is begun with a few rows, and begun again from where it was
-    with more, or with fewer, as its rows turn out: a batch is held to
-    about :data:`BATCH_BYTES`, down to one row.
+    What reading a row group takes is told before it is read, from its
+    page headers and its dictionaries (:func:`_rows_at_a_time`): how many
+    rows are read at once, and whether it can be read within what is held
+    at all. So nothing here is learnt by reading too much first. A batch
+    whose columns come as dictionaries, as a category does, is written
+    out in runs of rows of about :data:`BATCH_BYTES`
+    (:func:`_a_little_at_a_time`).
+
+    :raises NotHashed: If the file is written so that it cannot be read
+        within what is held: a footer, a page or a dictionary too large.
     """
     import pyarrow as pa
     import pyarrow.parquet as pq
 
     pl = _polars()
     try:
-        opened = pq.ParquetFile(str(file), pre_buffer=False)
+        _footer_within(file)
+        # A little of each column at a time, and never a column chunk whole
+        buffer = max(64 * 1024, min(1024 * 1024, (48 * 1024 * 1024) // max(1, len(target.names))))
+        opened = pq.ParquetFile(str(file), pre_buffer=False, buffer_size=buffer)
         metadata = opened.metadata
         if not metadata.num_rows:
             return
@@ -843,9 +1292,6 @@ def _parquet_batches(file, target, added) -> Iterator:
             ).to_arrow(compat_level=pl.CompatLevel.oldest())
             constant = {name: plain.column(name)[0] for name in plain.column_names}
         own = [name for name in target.names if name in opened.schema_arrow.names and name not in constant]
-        # A little of each column at a time, and never a column chunk whole
-        buffer = max(64 * 1024, min(1024 * 1024, (48 * 1024 * 1024) // max(1, len(own))))
-        opened = pq.ParquetFile(str(file), pre_buffer=False, buffer_size=buffer)
 
         def finished(batch):
             count = batch.num_rows
@@ -866,37 +1312,28 @@ def _parquet_batches(file, target, added) -> Iterator:
                 count = min(BATCH_ROWS, metadata.num_rows - start)
                 yield finished(pa.RecordBatch.from_arrays([pa.nulls(count)], names=["__none__"]))
             return
-        rows = 256  # to begin with, until the rows say what they take
-        for group in range(metadata.num_row_groups):
-            total, done = metadata.row_group(group).num_rows, 0
-            while done < total:
-                passed, again = 0, False
+        # What a value of each column takes once read: its width, or None for text
+        wanted = {}
+        for name in own:
+            kind = target.field(name).type
+            if pa.types.is_string(kind) or pa.types.is_large_string(kind) or pa.types.is_binary(kind) or pa.types.is_large_binary(kind):
+                wanted[name] = None
+            else:
+                try:
+                    wanted[name] = max(1, kind.bit_width // 8)
+                except ValueError:
+                    wanted[name] = 16
+        with open(file, "rb") as held:
+            for group in range(metadata.num_row_groups):
+                described = metadata.row_group(group)
+                if not described.num_rows:
+                    continue
+                rows = _rows_at_a_time(held, described, wanted, file)
                 for batch in opened.iter_batches(batch_size=rows, columns=own, row_groups=[group], use_threads=True):
-                    if passed < done:
-                        # Handed on already, before this row group was begun again
-                        skip = min(batch.num_rows, done - passed)
-                        passed += skip
-                        if skip == batch.num_rows:
-                            continue
-                        batch = batch.slice(skip)
                     if not batch.num_rows:
                         continue
-                    size = _spread_out(batch)
-                    fit = max(1, min(BATCH_ROWS, int(batch.num_rows * BATCH_BYTES / max(1, size))))
-                    if size > 4 * BATCH_BYTES and batch.num_rows > 1:
-                        # Far more than a batch is to be: not handed on, and the group begun again with fewer
-                        rows, again = fit, True
-                        break
-                    yield finished(batch)
-                    done += batch.num_rows
-                    passed = done
-                    if fit >= 4 * rows and done < total:
-                        # Its rows are small: the rest of the group with more of them at a time
-                        rows, again = fit, True
-                        break
-                    rows = min(rows, fit) if size > 2 * BATCH_BYTES else rows
-                if not again:
-                    break
+                    for some in _a_little_at_a_time(batch):
+                        yield finished(some)
     except (NotHashed, OSError, MemoryError):
         raise  # what is no fault of the file's is not said of the file
     except Exception as error:  # noqa: BLE001 - whatever pyarrow raises for a file it cannot read, or a type it cannot cast
@@ -1157,6 +1594,10 @@ def fields_of(table: "Table", date_col: Optional[str] = None) -> dict:
         dated = dated_by(table, date_col)
     except NotRead:
         return {}
+    except NotHashed as error:
+        return {"not_hashed": _first_line(error)}  # a file written so that it is not read: its footer too large
+    except (OSError, MemoryError) as error:
+        raise NotNow(f"{type(error).__name__}: {_first_line(error)}") from None
     try:
         return hash_rows(table, date_col).fields()
     except NotHashed as error:
@@ -1260,7 +1701,8 @@ class _Pieces:
     def add(self, key, batch, size: int, span=None) -> None:
         """Put a batch's rows in a piece; *size* is what they count for, and *span* the least and greatest timestamp among them."""
         self.waiting.setdefault(key, []).append(batch)
-        self.held += batch.nbytes
+        # What it holds, and what it costs to hold at all: a slice of one row of 256 columns is mostly the latter
+        self.held += batch.nbytes + 64 * batch.num_columns
         self.sizes[key] = self.sizes.get(key, 0) + int(size)
         self.counts[key] = self.counts.get(key, 0) + batch.num_rows
         if span is not None:
@@ -1379,11 +1821,8 @@ def _whole(table: Table, scratch: Path, most: int):
         size += int(row_bytes(batch, weighed).sum())
         rows += batch.num_rows
         if size > most:
-            batches = None
-        elif batches is not None:
-            batches.append(batch)
-    if batches is None:
-        return None, rows
+            return None, rows  # read no further: it is not held, and how many more rows it has is not asked
+        batches.append(batch)
     return _as_polars(pa.Table.from_batches(batches, schema=target)), rows
 
 
@@ -1432,7 +1871,8 @@ def _dated_by(schema, date_col: Optional[str]) -> bool:
     if date_col is None or date_col not in schema.names():
         return False
     kind = schema[date_col]
-    return kind == pl.Date or isinstance(kind, pl.Datetime) or kind == pl.String
+    # Text is read as dates; and a category is its text, as the form has it
+    return kind == pl.Date or isinstance(kind, pl.Datetime) or _kind_of(date_col, kind) == "text"
 
 
 #: A table whose files are over this on disk has its rows put by month from
@@ -1455,10 +1895,18 @@ def _hash_rows(table: Table, date_col: Optional[str], scratch: Path) -> RowsReco
     by_month = table.on_disk() > _BY_MONTH_FROM
     pieces = _Pieces(scratch / "pieces", table.arrow_schema())
     count = 0
+    in_years: set = set()
     for batch in table.batches(scratch=scratch):
         micro, left, empty = _stamps(batch.column(date_col))
         months = _months(np.floor_divide(micro, _DAY), empty)
         index = months if by_month else months - months % 12
+        in_years.update(np.unique(months[~empty] // 12).tolist())
+        if len(in_years) > MOST_YEARS:
+            # Said as soon as it is so, and not after a file has been put by for each
+            raise NotHashed(
+                f"its dates fall in more than {MOST_YEARS:,} calendar years, and a rows hash holds a period for "
+                f"each year: {MOST_YEARS:,} at most"
+            )
         _put(pieces, batch, np.where(empty, -1, index), _ordered(micro, left), left is not None)
         count += batch.num_rows
     pieces.close()
