@@ -804,9 +804,9 @@ process that stops itself the moment its memory passes 2 GB.
 | Table | Rows by columns | Periods | Hashed in | Checked in | Peak memory |
 |---|---|---|---|---|---|
 | The class's yield curve | 383 thousand by 4 | 66 | 0.5 s | 0.1 s | 0.21 GB |
-| CRSP daily | 27.8 million by 8 | 26 | 7.4 s | 6.9 s | 1.03 GB |
-| GKX characteristics | 2.6 million by 99 | 42 | 3.2 s | 2.9 s | 1.36 GB |
-| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 27.3 s | 26.9 s | 1.26 GB |
+| CRSP daily | 27.8 million by 8 | 26 | 6.8 s | 6.2 s | 1.09 GB |
+| GKX characteristics | 2.6 million by 99 | 42 | 3.4 s | 2.7 s | 1.45 GB |
+| RavenPack, 19 text columns | 28.1 million by 27 | 234 | 28.5 s | 28.0 s | 1.21 GB |
 
 Hashing the bytes of the same files took under a second each. The time for the rows is paid once
 for each snapshot of new bytes, and in a check only when the files differ, and then only for the
@@ -826,16 +826,65 @@ peaked at 7.6 GB, and three more over 2 GB).
 
 | A table made by the test | As a file | Periods | Peak memory |
 |---|---|---|---|
-| 99 columns of floats, 400 thousand rows, one row group | 300 MB | 4 | 1.09 GB |
+| 99 columns of floats, 400 thousand rows, one row group | 300 MB | 4 | 1.01 GB |
 | 12 columns of text, 1.5 million rows, one row group | 350 MB | 48 | 0.50 GB |
-| One text column of 20 KB, 50 texts over 300 thousand rows (6 GB of rows) | 2 MB | 750 | 0.49 GB |
-| 60 text columns of 200 characters, 20 texts each, 300 thousand rows | 11 MB | 36 | 0.59 GB |
+| One text column of 20 KB, 50 texts over 300 thousand rows (6 GB of rows) | 2 MB | 750 | 0.48 GB |
+| 60 text columns of 200 characters, 20 texts each, 300 thousand rows | 11 MB | 36 | 0.61 GB |
 | One day at the 128 MB limit: 200 columns of one-character text | | 1 | 0.80 GB |
-| One day at the limit: 100 columns of decimals | | 1 | 0.82 GB |
-| One day at the limit: 254 columns of floats | | 1 | 1.16 GB |
+| One day at the limit: 100 columns of decimals | | 1 | 0.80 GB |
+| One day at the limit: 254 columns of floats | | 1 | 1.17 GB |
 | A document of 2 MB a row, forty a day | | 10 | 0.38 GB |
 | A CSV at its limit, 32 MB of text | 32 MB | 4 | 0.40 GB |
 | A CSV of single digits, 200 columns, at its limit | 32 MB | 1 | 1.03 GB |
+
+**A third review broke the limit again, with files and not with rows:** tables whose rows are
+within every rule, written so that reading them took 3 to 7 GB. The worst was written by
+pyarrow's defaults. What they have in common is that **what a reader holds is set by how a file
+is written**: a page of every column at once, each column's dictionary, the footer whole,
+whatever is asked of it. pyarrow puts a thousand values to a page whatever they hold, so a
+megabyte once in sixty-seven rows makes pages of 15 MB, and documents of 2 MB make pages of 190
+MB (polars gives a long value a page of its own). And the reader then in place learnt what a row
+takes by reading some first: 256 rows of 7 MB were 1.8 GB before anything was measured.
+
+*So what reading a row group takes is told from the file before a row of it is read. Proposed by
+Claude, 2026-11-17:* every page of a parquet file begins with a header that says what it takes
+unpacked and how many values it has, and a dictionary page says each value's length. ChartBook
+reads those, a few bytes a page (1.8 s for RavenPack's 39,615 pages), and from them:
+
+- **how many rows to read at once**, so that no run of rows can take more than is held, at worst
+  (each row of text held by a dictionary its longest value; each page of other text wholly in
+  the run). Nothing is learnt by reading too much first, and no row group is begun again;
+- **whether the file can be read within the limit at all.** It is refused, unread, with why and
+  what would mend it, where a row group's largest pages and dictionaries are more than 640 MB
+  together (256 columns of a megabyte page and a megabyte dictionary are within that); where one
+  row may be more than 192 MB of text; and where the footer is more than 16 MB (said by the
+  file's last eight bytes: 164 MB of footer, of 6,000 row groups of 251 columns, took 1.8 GB to
+  read once, and was read three times).
+
+**Such a refusal is of the file as it is written, not of its rows:** the same rows written with
+smaller pages have a rows hash, and `not_hashed` says so ("Written with smaller pages, its rows
+can be hashed"). That is the one place where what is recorded depends on more than the rows. A
+table that is read is recorded by its rows alone, as before: the test writes one table four ways
+and gets one record. The other way, to hash such a file whatever it takes, is the 5 GB the review
+measured. *(The maintainer's to overrule.)*
+
+| A file written so as to be hard to read | What happens | Peak memory |
+|---|---|---|
+| A megabyte once in 67 rows, as pyarrow writes it: pages of 15 MB | Hashed | 0.53 GB |
+| 400 MB of long rows, then 100 thousand short ones, in one row group | Hashed | 0.90 GB |
+| Documents of 2 MB, no two alike, in pages of 190 MB | Hashed | 0.71 GB |
+| One value of 300 MB | Refused: "one row may take 286 MB" | 0.40 GB |
+| 1,200 row groups of 200 columns: a footer of 25 MB | Refused, by its last eight bytes | 0.06 GB |
+| A page to a column chunk, 30 columns, 20 MB a page (600 MB held) | Hashed | 1.39 GB |
+| The same at 25 MB a page (757 MB held) | Refused | 0.09 GB |
+| A dictionary page of 300 MB | Hashed | 0.97 GB |
+| A dictionary page of 450 MB | Refused | 0.10 GB |
+| 254 columns of floats, each with a megabyte of dictionary, as pyarrow writes them | Hashed | 1.30 GB |
+| A million dates in ten thousand years, 255 columns | Refused: "more than 1,024 calendar years" | 0.14 GB |
+
+Before, the first six took 6.5, 5.6, 2.4, 2.7, 5.4 and 6.0 GB (measured by the review, at larger
+sizes of the same shapes). The peaks just inside the limits, 1.39 and 1.30 GB, are what the
+limits were set by.
 
 What the memory is, as measured:
 
@@ -848,11 +897,16 @@ What the memory is, as measured:
   years of months is not stopped by the 256 files a process may have open on a Mac; a scratch
   folder a killed process left is removed a day later; and where the cache cannot be written
   the system's temporary folder is used.
-- **A batch is measured from its rows, never from the file.** A file that holds its text once,
-  in a dictionary, says a few bytes a row for rows of kilobytes: reckoned from the file, a batch
-  of 65,536 such rows was 780 MB. A row group is begun with a few rows, and begun again from
-  where it was with more, or fewer, as its rows turn out, so a batch is about 8 MB, down to one
-  row.
+- **A batch is told from the file's page headers and dictionaries, never from its sizes on
+  disk.** A file that holds its text once, in a dictionary, says a few bytes a row for rows of
+  kilobytes: reckoned from the file's sizes, a batch of 65,536 such rows was 780 MB. So the
+  longest value of each dictionary is read (it is in the dictionary page), and a row counts for
+  that, at worst. A batch is handed on about 8 MB at a time, down to one row. (The reader
+  before this one began a row group with 256 rows and began it again with more or fewer as its
+  rows turned out; it is gone: see the third review above.)
+- **A table's dates fall in 1,024 calendar years at most.** Each period is put by in a file of
+  its own, and a million rows scattered over ten thousand years were 3 GB of them and a quarter
+  of an hour. *(Proposed by Claude.)*
 - **Sorting a period takes five to eight times its size,** more for many columns. A single day
   at the limit peaked at 0.8 GB of short text and 1.2 GB of floats in 254 columns.
 - **Rows with no date are one piece too,** and held to the same 128 MB: a file of text dates
@@ -860,7 +914,8 @@ What the memory is, as measured:
   were.
 - **Only parquet is read a little at a time.** A CSV or JSON lines table is read whole, once,
   and a number that is two bytes of text is eight in memory. So one of more than 32 MB of text
-  has no rows hash; a gzipped file is measured by its text, read through and not held. An Arrow
+  has no rows hash; a packed file (gzip, zlib or zstd, known by how it begins and not by its
+  name, as the reader knows it) is measured by its text, read through and not held. An Arrow
   IPC file has none at all: what it takes in memory cannot be told from its file, and 19 MB of
   one, compressed, was 4.2 GB. *(Proposed by Claude.)*
 - **A page or two of every column is held while a file is read,** about 2.7 MB a column: 99
@@ -895,6 +950,11 @@ What was learned about reading, from the prototype:
   in memory, so one over 128 MB has no rows hash. The same for the rows of a dated table that
   have no date.
 - **A table of more than 256 columns,** for the memory a file's columns take while it is read.
+- **A parquet file written so that it cannot be read a little at a time:** pages or dictionaries
+  of more than 640 MB together in a row group, a row that may be more than 192 MB of text, a
+  footer of more than 16 MB. The same rows written with smaller pages, or fewer row groups, have
+  a rows hash.
+- **Dates in more than 1,024 calendar years.**
 - **A CSV or JSON lines table of more than 32 MB of text,** which is read whole; and **an Arrow
   IPC file** of any size.
 - **A date outside the years 1 to 9999,** or past what 64 bits of microseconds hold: a record
