@@ -660,9 +660,11 @@ class TestWhatTheThirdReviewFound:
         by_id, by_git = {"_store": "acme/rates"}, {"git": "https://example.org/acme/rates"}
         held = {"acme/rates:x": {"content_hash": "sha256:" + "1" * 64}}
         assert lock._has_a_pin(clone, held, by_id) and lock._has_a_pin(clone, {}, by_git)
-        # Nothing of it pinned with its bytes, or another pipeline's repository: `pin` looks again
-        assert not lock._has_a_pin(clone, {}, by_id)
+        # Declared and not built, so nothing of it pinned with its bytes; or another pipeline's repository: `pin` looks again
+        assert not lock._has_a_pin(clone, {"acme/rates:x": {"id": "acme/rates:x"}}, by_id)
         assert not lock._has_a_pin(clone, held, {"_store": "acme/other"})
+        # Nothing of it in the lockfile at all (it makes only charts): its entry, with its commit, is its pin
+        assert lock._has_a_pin(clone, {}, by_id)
 
     def test_a_guarded_pin_reads_a_git_dependencys_files_once_and_writes_what_an_unguarded_one_does(self, chain, tmp_path, monkeypatch):
         from chartbook import hashing

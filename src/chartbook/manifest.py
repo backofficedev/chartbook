@@ -1586,10 +1586,15 @@ def _check_entity_fields(manifest: dict, source: str) -> None:
             if "lock" in entry and entry["lock"] is not True:
                 # A dataframe or a model is in a lockfile whatever this says,
                 # and any other asset only when it says so: `false` says nothing
+                advice = (
+                    f"A {kind} is pinned by a pipeline that depends on this one whatever lock says: take the key out."
+                    if table in ("dataframes", "models") else
+                    f"Write lock = true to have a pipeline that depends on this one pin the {kind} in its "
+                    f"chartbook.lock, or take the key out."
+                )
                 raise ValueError(
                     f"{where}: lock = {entry['lock']!r} is {_toml_word(entry['lock'])}, and lock is true, or "
-                    f"left out. Write lock = true to have a pipeline that depends on this one pin the "
-                    f"{kind} in its chartbook.lock, or take the key out."
+                    f"left out. {advice}"
                 )
             for field in _ENTITY_LIST_KEYS[table]:
                 if field in entry:
