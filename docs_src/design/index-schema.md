@@ -284,7 +284,7 @@ a **period** at a time, and its record says:
   of more than 32 MB of text, or an Arrow IPC file; a date no record can write, or dates in
   more than 1,024 calendar years; a parquet file written so that it cannot be read a little at
   a time (pages, dictionaries or a footer too large: it says which, and that the same rows
-  written with smaller pages can be hashed). `date_col`
+  written with fewer values a page can be hashed). `date_col`
   stands beside it where the rows would be dated by one. It names no folder of the machine that
   wrote it. Its pin is its bytes alone.
 
