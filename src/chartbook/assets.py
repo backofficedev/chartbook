@@ -127,11 +127,16 @@ def _say_newer_rows(asset: AssetRef, location) -> None:
     if said in _said_newer:
         return
     _said_newer.add(said)
-    through = f"after {location.as_of}, the last date chartbook.lock pins" if location.as_of else "that the pin does not: it pins no dated row"
+    if location.as_of:
+        through = f"after {location.as_of}, the last date chartbook.lock pins"
+        yours = f"keeps the rows up to data.as_of({str(asset)!r})"
+    else:
+        # A pin of rows with no date alone: it has no last date, and data.as_of() gives None
+        through = "that the pin does not: it pins no dated row"
+        yours = f"keeps the rows with no {location.date_col}"
     sys.stderr.write(
         f"{asset}: this file is your own build's, and has {newer:,} row{'' if newer == 1 else 's'} {through}. "
-        f"data.load() and data.sql() leave them out; a reader of your own keeps the rows up to "
-        f"data.as_of({str(asset)!r}).\n"
+        f"data.load() and data.sql() leave them out; a reader of your own {yours}.\n"
     )
 
 

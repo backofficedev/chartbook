@@ -556,7 +556,13 @@ def load(
     cut = _cut(location)
     if format == "pandas":
         frame = formats.to_pandas(location, where)
-        return _cut_pandas(frame, *cut) if cut is not None else frame
+        if cut is None:
+            return frame
+        kept = _cut_pandas(frame, *cut)
+        if kept is None:
+            # The date column is nowhere pandas put it: the rows as polars tells them, never the whole frame
+            kept = _pinned(formats.scan_location(location, where), cut).collect().to_pandas()
+        return kept
     if format == "polars_eager":
         return _pinned(formats.scan_location(location, where), cut).collect()
     if format == "polars-lazyframe":
@@ -599,23 +605,37 @@ def _cut_pandas(frame, date_col: str, as_of: Optional[str]):
 
     The rows are told as a rows hash tells them, by polars, from the date
     column wherever pandas put it: a column, or the index, or one level of
-    it. The frame keeps its own types and its index.
+    it, by its name or, for a level with no name, by its place (the file's
+    ``__index_level_1__`` is the index's second level). The frame keeps
+    its own types and its index.
+
+    :returns: The frame's pinned rows; None where the column is nowhere
+        pandas put it, so that the caller cuts the table another way and
+        never hands over the whole of it.
     """
     import polars as pl
 
     from chartbook import rowhash
 
+    names = list(frame.index.names or [])
+    unnamed = re.fullmatch(r"__index_level_(\d+)__", date_col)
     if date_col in frame.columns:
         dates = frame[date_col]
-    elif date_col in (frame.index.names or []):
+    elif date_col in names:
         dates = frame.index.get_level_values(date_col).to_series()
+    elif unnamed and int(unnamed.group(1)) < len(names) and names[int(unnamed.group(1))] is None:
+        # What pandas makes of an index, or a level of one, with no name
+        dates = frame.index.get_level_values(int(unnamed.group(1))).to_series()
     else:
-        return frame  # no such column as pandas reads it: nothing to tell the rows by
+        return None
     held = pl.from_pandas(dates.reset_index(drop=True)).alias("when")
     if held.dtype == pl.Categorical or held.dtype == pl.Enum or isinstance(held.dtype, (pl.Categorical, pl.Enum)):
         held = held.cast(pl.String)  # a folder's key, which pandas reads as a category
     dated = pl.DataFrame({"when": held})
-    kept = dated.select(rowhash.up_to(dated.schema, "when", as_of)).to_series()
+    try:
+        kept = dated.select(rowhash.up_to(dated.schema, "when", as_of)).to_series()
+    except rowhash.NotHashed:
+        return None  # what pandas has there holds no dates: a range's positions, say
     return frame[kept.to_numpy()]
 
 
@@ -657,7 +677,11 @@ def as_of(
     >>> frame = frame[frame["ds"] <= data.as_of("fed_yield_curve:treasury_yields")]  # doctest: +SKIP
 
     The same on every machine that has the lockfile, whichever file is
-    read.
+    read. That comparison is yours, and :func:`load` is exact where it is
+    not: it drops a row with no date, which the pin holds (keep them with
+    ``frame["ds"].isna() | ...``); a column of text has to be read as dates
+    before it compares with one; and in a column of nanoseconds, rows
+    within the microsecond after the pin's last one come in too.
 
     :param ref: ``"pipeline:name"``, a dataframe of a pipeline declared in
         ``[dependencies]``.
@@ -897,15 +921,17 @@ def _sql_up_to(location, date_col: str, as_of: Optional[str]) -> Optional[str]:
 
     For a parquet file whose date column is a column of the files
     themselves, of dates or of times: there DuckDB reads the type the file
-    says, and a comparison with a date or a timestamp is exact. Text that
-    is read as dates, a column a folder's name makes, and any other format
-    are left to polars, which tells a row's date as a rows hash does
-    (:func:`chartbook.rowhash.up_to`).
+    says, and a comparison with a date or a timestamp is exact. Left to
+    polars, which tells a row's date as a rows hash does
+    (:func:`chartbook.rowhash.up_to`), are: text that is read as dates
+    (its rows with no date are text, not null); a column a folder's name
+    makes; a column beside another whose name differs only by case, which
+    DuckDB cannot tell apart; times written as INT96, which DuckDB reads
+    to the microsecond and polars to the nanosecond; and any other format.
     """
     import polars as pl
 
     from chartbook import formats, rowhash
-    from chartbook.backends import quote_identifier
 
     try:
         read = formats.reading_of(location)
@@ -914,12 +940,22 @@ def _sql_up_to(location, date_col: str, as_of: Optional[str]) -> Optional[str]:
         files = formats.files_of(location.path, read, location.files, location.listed, getattr(location, "inside", None))
         import pyarrow.parquet as pq
 
-        if not files or any(date_col not in pq.read_schema(str(file)).names for file in files[:8]):
+        if not files:
             return None
+        for file in files[:8]:
+            written = pq.read_metadata(str(file)).schema
+            names = list(written.names)
+            if date_col not in names or sum(name.lower() == date_col.lower() for name in names) != 1:
+                return None
+            if written.column(names.index(date_col)).physical_type == "INT96":
+                return None
         kind = rowhash.Table.at(location).schema()[date_col]
     except Exception:  # noqa: BLE001 - whatever cannot be told of the files: left to polars
         return None
-    column = quote_identifier(date_col)
+    if kind != pl.Date and not isinstance(kind, pl.Datetime):
+        return None
+    # The column itself, whatever is in its name: a dot there is no table's name
+    column = '"' + date_col.replace('"', '""') + '"'
     if as_of is None:
         return f"{column} is null"
     micro, left = rowhash.stamp_of(as_of)
@@ -931,8 +967,6 @@ def _sql_up_to(location, date_col: str, as_of: Optional[str]) -> Optional[str]:
     clock = f"{seconds // 3600:02d}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}.{fraction:06d}"
     if kind == pl.Date:
         last = f"DATE '{said}'"
-    elif not isinstance(kind, pl.Datetime):
-        return None
     elif kind.time_zone and kind.time_unit == "ns":
         return None  # DuckDB holds a time with a zone to the microsecond
     elif kind.time_zone:

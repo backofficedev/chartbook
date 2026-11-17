@@ -251,9 +251,15 @@ class TestPath:
 
     def test_the_command_says_it_too(self, stood_in):
         report, _ = stood_in
-        result = CliRunner().invoke(main, ["path", "acme/rates:treasury", "--project-dir", str(report)])
+        try:
+            runner = CliRunner(mix_stderr=False)
+        except TypeError:  # a click that keeps the two streams apart always
+            runner = CliRunner()
+        result = runner.invoke(main, ["path", "acme/rates:treasury", "--project-dir", str(report)])
         assert result.exit_code == 0, result.output
-        assert "has 16 rows after 2026-01-09" in result.output or "has 16 rows after 2026-01-09" in (result.stderr if result.stderr_bytes is not None else "")
+        # On stderr, so that what a script takes from stdout is the path alone
+        assert "has 16 rows after 2026-01-09" in result.stderr and "has 16 rows" not in result.stdout
+        assert result.stdout.strip().endswith("treasury.parquet") and len(result.stdout.strip().splitlines()) == 1
 
 
 class TestAsOf:
@@ -307,3 +313,115 @@ class TestAsOf:
         report, _ = stood_in
         with pytest.raises(ValueError):
             data.as_of("acme/rates:chart/curve", project_dir=report)
+
+
+def _rows(report: Path, name: str) -> dict:
+    """How many rows each way of reading a pinned dataframe gives."""
+    ref = f"acme/rates:{name}"
+    return {
+        "polars": data.load(ref, project_dir=report).collect().height,
+        "polars_eager": data.load(ref, format="polars_eager", project_dir=report).height,
+        "pandas": len(data.load(ref, format="pandas", project_dir=report)),
+        "sql": data.sql("select count(*) as n from {" + ref + "}", project_dir=report).collect()["n"][0],
+    }
+
+
+class TestEveryWayOfReadingGivesThePinnedRows:
+    """Found by review: tables for which one way of reading gave other rows than the rest."""
+
+    def test_text_dates_in_a_form_that_is_not_read_as_dates(self, work, monkeypatch):
+        """Such a row has no date, and is text, not null: SQL's `is null` kept none of them."""
+        frame = pl.DataFrame({"ds": [f"12/{day:02d}/2025" for day in range(1, 13)], "x": list(range(12))})
+        rates, report = _pin(work, monkeypatch, {"t": (frame, "ds", _polars)})
+        _rebuild(rates, _student(work, monkeypatch), {"t": (frame.reverse(), "ds", _pandas)})
+        assert resolve_module.resolve("acme/rates:t", start_dirs=[report]).stands_in
+        assert _rows(report, "t") == {"polars": 12, "polars_eager": 12, "pandas": 12, "sql": 12}
+        # And there is no text for it in SQL: said, where before the text given kept no row
+        with pytest.raises(ValueError, match="there is no text for that in SQL"):
+            data.ref("acme/rates:t", project_dir=report)
+
+    def test_a_pin_of_rows_with_no_date_alone(self, work, monkeypatch, capsys):
+        """It has no last date: every dated row of your build is newer, and none is the pin's."""
+        undated = pl.DataFrame({"ds": [None, None], "unique_id": ["T8", "T9"], "y": [0.5, 0.6]}, schema=_yields(1).schema)
+        rates, report = _pin(work, monkeypatch, {"treasury": (undated, "ds", _polars)})
+        _rebuild(rates, _student(work, monkeypatch), {"treasury": (pl.concat([undated, _yields(3)]), "ds", _pandas)})
+        assert resolve_module.resolve("acme/rates:treasury", start_dirs=[report]).stands_in
+        assert _rows(report, "treasury") == {"polars": 2, "polars_eager": 2, "pandas": 2, "sql": 2}
+        assert data.as_of("acme/rates:treasury", project_dir=report) is None
+        capsys.readouterr()
+        assert pl.read_parquet(data.path("acme/rates:treasury", project_dir=report)).height == 8
+        said = capsys.readouterr().err
+        assert "has 6 rows that the pin does not: it pins no dated row" in said
+        # data.as_of() is None there, and is not what to keep rows by
+        assert "a reader of your own keeps the rows with no ds." in said and "data.as_of" not in said
+
+    def test_a_date_index_with_no_name(self, work, monkeypatch):
+        """A frame indexed by date, with no name on the index: the file's `__index_level_0__`."""
+        def write(frame: pl.DataFrame, path: Path) -> None:
+            frame.to_pandas().set_index("ds").rename_axis(None).to_parquet(path)
+
+        full = pl.DataFrame({"ds": [date(2025, 12, 1) + timedelta(days=i) for i in range(12)], "x": list(range(12))})
+        rates, report = _pin(work, monkeypatch, {"t": (full.head(8), "__index_level_0__", write)})
+        _rebuild(rates, _student(work, monkeypatch), {"t": (full, "__index_level_0__", write)})
+        assert _rows(report, "t") == {"polars": 8, "polars_eager": 8, "pandas": 8, "sql": 8}
+        frame = data.load("acme/rates:t", format="pandas", project_dir=report)
+        assert frame.index.name is None and str(frame.index.max())[:10] == "2025-12-08" and list(frame.columns) == ["x"]
+
+    def test_a_level_with_no_name_of_an_index_of_two(self, work, monkeypatch):
+        def write(frame: pl.DataFrame, path: Path) -> None:
+            frame.to_pandas().set_index(["x", "ds"]).rename_axis(["x", None]).to_parquet(path)
+
+        full = pl.DataFrame(
+            {"ds": [date(2025, 12, 1) + timedelta(days=i) for i in range(12)], "x": list(range(12)), "y": [0.5] * 12}
+        )
+        rates, report = _pin(work, monkeypatch, {"t": (full.head(8), "__index_level_1__", write)})
+        _rebuild(rates, _student(work, monkeypatch), {"t": (full, "__index_level_1__", write)})
+        assert _rows(report, "t") == {"polars": 8, "polars_eager": 8, "pandas": 8, "sql": 8}
+        assert data.load("acme/rates:t", format="pandas", project_dir=report).index.nlevels == 2
+
+    def test_a_date_column_that_pandas_puts_nowhere_is_never_the_whole_frame(self, stood_in, monkeypatch):
+        import pandas as pd
+
+        assert data._cut_pandas(pd.DataFrame({"x": [1, 2]}), "nowhere", "2026-01-09") is None
+        assert data._cut_pandas(pd.DataFrame({"x": [1, 2]}), "__index_level_0__", "2026-01-09") is None  # a range, with no dates
+        report, _ = stood_in
+        monkeypatch.setattr(data, "_cut_pandas", lambda *arguments: None)
+        frame = data.load("acme/rates:treasury", format="pandas", project_dir=report)
+        assert len(frame) == 80 and str(frame["ds"].max())[:10] == "2026-01-09"
+
+    def test_two_columns_that_differ_only_by_case(self, work, monkeypatch):
+        """DuckDB tells no such two apart, so its text would have compared the wrong one."""
+        frame = pl.DataFrame(
+            {
+                "ds": [date(2020, 1, 1)] * 12,
+                "DS": [date(2025, 12, 1) + timedelta(days=i) for i in range(12)],
+                "x": list(range(12)),
+            }
+        )
+        rates, report = _pin(work, monkeypatch, {"t": (frame.head(8), "DS", _polars)})
+        _rebuild(rates, _student(work, monkeypatch), {"t": (frame, "DS", _pandas)})
+        assert data.load("acme/rates:t", format="polars_eager", project_dir=report).height == 8
+        assert data._sql_up_to(resolve_module.resolve("acme/rates:t", start_dirs=[report]), "DS", "2025-12-08") is None
+        assert data.sql("select count(*) as n from {acme/rates:t}", project_dir=report).collect()["n"][0] == 8
+
+    def test_times_written_as_int96(self, work, monkeypatch):
+        """Read to the nanosecond by polars and to the microsecond by DuckDB: left to polars."""
+        import pyarrow.parquet as pq
+
+        def int96(frame: pl.DataFrame, path: Path) -> None:
+            pq.write_table(frame.to_arrow(), path, use_deprecated_int96_timestamps=True)
+
+        ticks = pl.DataFrame(
+            {"t": [1_700_000_000_000_000_000 + 250 * i for i in range(12)], "x": list(range(12))}
+        ).with_columns(pl.col("t").cast(pl.Datetime("ns")))
+        rates, report = _pin(work, monkeypatch, {"ticks": (ticks.head(7), "t", int96)})
+        _rebuild(rates, _student(work, monkeypatch), {"ticks": (ticks, "t", int96)})
+        assert data.load("acme/rates:ticks", format="polars_eager", project_dir=report)["x"].to_list() == list(range(7))
+        assert data.sql("select x from {acme/rates:ticks} order by x", project_dir=report).collect()["x"].to_list() == list(range(7))
+
+    def test_a_date_column_with_a_dot_in_its_name(self, work, monkeypatch):
+        frame = _yields(48).rename({"ds": "obs.date"})
+        rates, report = _pin(work, monkeypatch, {"treasury": (frame.head(80), "obs.date", _polars)})
+        _rebuild(rates, _student(work, monkeypatch), {"treasury": (frame, "obs.date", _pandas)})
+        assert _rows(report, "treasury") == {"polars": 80, "polars_eager": 80, "pandas": 80, "sql": 80}
+        assert '"obs.date" <= ' in data.ref("acme/rates:treasury", project_dir=report)
