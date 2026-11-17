@@ -89,9 +89,10 @@ class TestASnapshotCarriesItsLineage:
         assert default_store().delete(pinned)
         with pytest.raises(snapshot.SnapshotError, match="rates: 1 of its 2 pins is not in the store at .*") as raised:
             snapshot.make(forecast)
-        # Said once, in one line, with each way on
+        # Said once, in one line, with each way on: the store has the snapshot it is of, so it is lost, or on its way
         (gap,) = [line for line in str(raised.value).splitlines() if line.startswith("  rates: ")]
-        assert "To build it yourself: in ../rates, `git checkout " in gap and "chartbook update rates." in gap
+        assert "which has the snapshot it is of: " in gap and "wait for the sync to finish" in gap
+        assert "`chartbook snapshot` in its folder at " in gap and "build it yourself" not in gap
 
     def test_full_lineage_is_a_snapshot_and_records_it(self, two):
         rates, forecast = two

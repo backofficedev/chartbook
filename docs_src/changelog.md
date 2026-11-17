@@ -39,16 +39,17 @@ data.as_of("fed_yield_curve:treasury_yields")    # datetime.date(2026, 10, 30)
 
 - **`data.as_of(ref)` is new:** the last date of a dataframe as `chartbook.lock` pins it, the data's own and never the clock's. A `date` or a `datetime`, as the file's date column is, so that it compares with the column; `None` for a dataframe with no `date_col`, with no dated row, or pinned before pins recorded their rows.
 - **`data.path`, `data.files`, `assets.path` and `chartbook path`** hand over the file as it is, newer rows and all, and say so once on stderr: `…: this file is your own build's, and has 24 rows after 2026-10-30, the last date chartbook.lock pins. data.load() and data.sql() leave them out; a reader of your own keeps the rows up to data.as_of('…').` No copy of the file is cut and kept.
-- **`data.sql` and `data.ref`** read a parquet file through `(select * from read_parquet(…) where "ds" is null or "ds" <= DATE '2026-10-30')`; where SQL has no sure way to say it (a date column of text, a CSV), DuckDB is handed what `data.load` gives.
-- `format="pandas"` keeps its types and its index. Rows with no date are the pin's, and are kept. A dataframe with no `date_col` is read whole. A read of the pinned file itself, where the store has it, is as it was.
+- **`data.sql` and `data.ref`** read a parquet file through `(select * from read_parquet(…) where "ds" is null or "ds" <= DATE '2026-10-30')`; where SQL has no sure way to say it (a date column of text, one beside another whose name differs only by case, times written as INT96, a CSV), DuckDB is handed what `data.load` gives.
+- `format="pandas"` keeps its types and its index, and finds the date column wherever pandas put it: a column, the index, or a level of it, with a name or with none. Rows with no date are the pin's, and are kept. A dataframe with no `date_col` is read whole. A read of the pinned file itself, where the store has it, is as it was.
+- Every way of reading gives the same rows. A comparison of your own with `data.as_of` is not as exact as `data.load`: it drops a row with no date, and its docstring says what else to mind.
 
 ### Added — a pin is met by a build of your own that holds the same rows
 
-Where no store is shared, each person builds the other pipeline themselves, at the commit `chartbook.lock` names. That build has the pinned rows in other bytes, and newer rows besides, and until now it met no pin. Now a snapshot of yours of the same pipeline at the same commit **stands in** for the one the lockfile names when it meets every pin of that dependency: each by the same file or, for a dataframe, by the same rows up to the pin's last date.
+Where no store is shared, each person builds the other pipeline themselves, at the commit `chartbook.lock` names. That build has the pinned rows in other bytes, and newer rows besides, and until now it met no pin. Now, where the store does not have the snapshot the lockfile names, a snapshot of yours of the same pipeline at the same commit **stands in** for it when it meets every pin of that dependency: each by the same file or, for a dataframe, by the same rows up to the pin's last date.
 
 ```text
 $ chartbook pin --check
-ftsfr/fed_yield_curve: read from your own build of a27e383
+ftsfr/fed_yield_curve: read from your own build of 0db8051, made 2026-11-17 09:22 UTC
   treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
 1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
 ```
@@ -57,16 +58,20 @@ ftsfr/fed_yield_curve: read from your own build of a27e383
 
 ```text
 $ chartbook pin --check
-ftsfr/fed_yield_curve: your build of c1e5899 does not match the pin
+ftsfr/fed_yield_curve: your build of 79986dd, made 2026-11-17 09:21 UTC, does not match the pin
   treasury_yields: the rows of 2025-09-26 to 2025-12-31 differ
   To read your build instead: chartbook update ftsfr/fed_yield_curve
 ```
 
+- **Where a store is shared, nothing changes.** A store that has the snapshot the lockfile names has the pin: a file of it the store lacks is lost, or not synced yet, and is said to be, as before. No other build of that commit is read in its place.
+- A build stands in for a dependency whole. A table is not read from a build that fails another pin of the same dependency, and a chart that is not in the lockfile is read from the build that stands in.
 - The check is cheapest first: the same file (nothing is read); then the two records of rows (nothing is read where they say it all); then only the periods still to be told, which for a build with newer rows is the last. What was found is remembered in this machine's cache folder, so a table is hashed once.
-- A model is met by the same file only, and so is a dataframe whose pin records no rows: **a lockfile pinned before this version has to be pinned again, from a snapshot made by this version, before a rebuild can meet it.**
+- A model is met by the same file only, and so is a dataframe whose pin records no rows: **a lockfile pinned before this version has to be pinned again, from a snapshot made by this version, before a rebuild can meet it.** A version pinned by its label (`model/ar1@champion`) is met by the same file only too.
 - When a table that is not met has the column pandas makes of an index with no name (`__index_level_0__`), the message says that it may be the whole difference, and the two ways out.
-- `chartbook lineage` says which build stands in, a snapshot of a pipeline that read one records it as its lineage, and `store gc` keeps it.
-- Where the store has neither the pinned bytes nor a build of yours, `pin --check` now says so once for each dependency, with each way on in a line, the first being how to build it yourself: `` in ../fed_yield_curve, `git checkout a27e383` and `chartbook run --snapshot` ``. `chartbook pin` and a read name the same way.
+- `chartbook lineage` says which build stands in, and `store gc` keeps it. A snapshot of a pipeline that read one records it: the dependency's entry among the snapshot's `inputs` gains `stood_in`, when that build was made, and the lineage of whatever depends on that snapshot goes on up from it.
+- `chartbook lineage --check` and `chartbook snapshot`, where the store has the pinned snapshot, compare what the lockfile records of each table's rows with that snapshot's own record: a lockfile whose rows were changed by hand, or merged from two, is a gap.
+- `chartbook check` counts a build that stands in when a dependency's folder is not on this machine.
+- Where the store has neither the pinned bytes nor a build of yours, `pin --check` now says so once for each dependency, with each way on in a line, the first being how to build it yourself: `` in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot` ``. `chartbook pin` and a read name the same way. `chartbook update` is offered only where the store has a snapshot to move to.
 - A read raises `AssetNotPinnedError` with the new reason `"differs"` when a build of yours is there and does not match.
 
 ### Added — a snapshot records a dataframe's rows, by period, up to its last date
@@ -83,11 +88,11 @@ ftsfr/fed_yield_curve: your build of c1e5899 does not match the pin
 "row_count": 382802
 ```
 
-`as_of` is the table's own last date, never the clock's. `rows` has a line for each period: a calendar year, or a month or a day of one where a year's rows count for more than 128 MB (eight bytes a column and the bytes of its text, counted from the rows, so that the same rows give the same lines whatever file they came in), written by the first and the last timestamp seen in it. Rows with no date are the period `none`, and a dataframe with no `date_col` has the one line `all`. When a pin moves, the lines before the last stay as they were unless a value in them changed, so a lockfile's diff shows which periods did. A folder of files, a glob and one file of the same rows give the same lines, and so does a table or a query written out from a DuckDB file. Nothing checks a pin by its rows yet: that is the next step ({design}`pins-and-rebuilds`).
+`as_of` is the table's own last date, never the clock's. `rows` has a line for each period: a calendar year, or a month or a day of one where a year's rows count for more than 128 MB (eight bytes a value, and sixteen and its own bytes for one of text, counted from the rows, so that the same rows give the same lines whatever file they came in), written by the first and the last timestamp seen in it. Rows with no date are the period `none`, and a dataframe with no `date_col` has the one line `all`. When a pin moves, the lines before the last stay as they were unless a value in them changed, so a lockfile's diff shows which periods did. A folder of files, a glob and one file of the same rows give the same lines, and so does a table or a query written out from a DuckDB file. Nothing checks a pin by its rows yet: that is the next step ({design}`pins-and-rebuilds`).
 
-A table is never held whole to be hashed. Its files are read a few thousand rows at a time, each row goes to a scratch file for its period in ChartBook's cache folder, and each period is sorted and hashed alone. On the four tables the design names, the largest 28 million rows of text, the peak was 1.45 GB, under the target of 2 GB that keeps a machine with 8 GB safe; `tests/test_rows_memory.py` holds that under a memory limit. The same bytes are hashed once: a later snapshot of them takes what an earlier one said. A snapshot from before this release has no rows, so the same commit and the same bytes make one new snapshot, once, to say them.
+A table is never held whole to be hashed. Its files are read a few thousand rows at a time, each row goes to a scratch file for its period in ChartBook's cache folder, and each period is sorted and hashed alone. On the four tables the design names, the largest 28 million rows of text, the peak was 1.36 GB, under the target of 2 GB that keeps a machine with 8 GB safe; `tests/test_rows_memory.py` holds that under a memory limit. The same bytes are hashed once: a later snapshot of them takes what an earlier one said. A snapshot from before this release has no rows, so the same commit and the same bytes make one new snapshot, once, to say them.
 
-Some dataframes have no rows hash, and `chartbook snapshot` says which and why (`rows not hashed: …`): a column of lists or structs; one day, the rows with no date, or a table with no `date_col`, over 256 MB; more than 256 columns; a file over 128 MB that is not parquet, which is read whole; a date outside the years 1 to 9999. Such a dataframe is pinned by its bytes alone, as before. A snapshot is never stopped by the rows: where they could not be hashed for want of room for the scratch files, say, it is made all the same, says `rows not hashed this time: …`, and the next `chartbook snapshot` hashes them.
+Some dataframes have no rows hash, and `chartbook snapshot` says which and why (`rows not hashed: …`): a column of lists or structs; one day, the rows with no date, or a table with no `date_col`, over 128 MB; more than 256 columns; a CSV or JSON lines table of more than 32 MB of text, which is read whole, and an Arrow IPC file, whose size in memory its file does not say; a date outside the years 1 to 9999. Such a dataframe is pinned by its bytes alone, as before. A snapshot is never stopped by the rows: where they could not be hashed for want of room for the scratch files, say, it is made all the same, says `rows not hashed this time: …`, and the next `chartbook snapshot` hashes them.
 
 ### Added — a rows hash: a hash of a table's rows, and not of its file
 

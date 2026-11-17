@@ -954,8 +954,9 @@ class TestClearingOldSnapshots:
         content_hash = next(iter(report.events)).new or [e.new for e in report.events if e.new][0]
         store.delete(content_hash)
         (problem,) = lock.verify(user, store).problems
-        assert "`chartbook update acme/maker` moves to a snapshot the store has; or build it yourself, in " in problem.message
-        assert "`chartbook run --snapshot`" in problem.message
+        # The store has the snapshot it was pinned from: that one is the pin, and no other build stands in for it
+        assert "`chartbook update acme/maker` moves to a snapshot the store has, or `chartbook snapshot`" in problem.message
+        assert "build it yourself" not in problem.message
 
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
     def test_pinning_from_a_snapshot_needs_no_write_to_the_store(self, maker, user):

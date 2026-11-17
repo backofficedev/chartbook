@@ -2556,14 +2556,22 @@ def _echo_pin_report(report):
             elif event.status == "differs":
                 click.echo(f"  differs: {event.asset}: {event.detail}")
         stood = getattr(report, "stood_in", {}).get(dependency)
-        if stood is not None and counts.get("differs"):
+        if stood is not None and not stood.stands_in:
+            from chartbook import standins
+
+            with_index = [unmet.asset.split(":", 1)[-1] for unmet in stood.unmet if unmet.index_column]
+            if with_index:
+                click.echo(f"  {lock.index_column_said(with_index)}")
+            yours = lock.read_yours_said(dependency, stood)
             click.echo(
-                f"  Your build of {stood.snapshot.commit[:7]} does not match the pin. "
-                f"To read your build instead: chartbook update {dependency}"
+                f"  Your build of {standins.build_said(stood.snapshot)}, does not match the pin."
+                + (f" {yours}" if yours else "")
             )
         elif stood is not None and counts.get("stood_in"):
             # The store does not have the pinned bytes, and a snapshot of yours holds the same rows
-            click.echo(f"  Read from your own build of {stood.snapshot.commit[:7]}.")
+            from chartbook import standins
+
+            click.echo(f"  Read from your own build of {standins.build_said(stood.snapshot)}.")
             for line in _met_by_rows(stood):
                 click.echo(f"  {line}")
         if dependency in report.snapshots:
@@ -2713,7 +2721,9 @@ def _echo_frozen_report(step, report):
         )
     # A dependency read from a snapshot of yours, which holds the pinned rows in other bytes
     for key, stood in sorted(getattr(report, "stood_in", {}).items()):
-        click.echo(f"{who}{key}: read from your own build of {stood.snapshot.commit[:7]}")
+        from chartbook import standins
+
+        click.echo(f"{who}{key}: read from your own build of {standins.build_said(stood.snapshot)}")
         for line in _met_by_rows(stood):
             click.echo(f"  {line}")
     if not report.problems:
