@@ -260,7 +260,7 @@ def said(compared: "rowhash.Compared", record: Mapping, than: str = "the pin", y
     parts = []
     if rowhash.ALL in compared.differ:
         # One hash of all its rows: with no date column, a row more is a difference like any other
-        parts.append("its rows differ (the pin has no date column, so a row more is a difference like any other)")
+        parts.append(f"its rows differ ({than} has no date column, so a row more is a difference like any other)")
     if periods:
         shown = periods[:3]
         more = len(periods) - len(shown)
