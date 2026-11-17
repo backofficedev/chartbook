@@ -804,4 +804,4 @@ match. The page is to be corrected.
 7. What `update` and `snapshot` say; the warning for a pandas index in `check` and `snapshot`.
    **Built.**
 8. The class's upstreams and the template write `index=False`; the report is pinned again.
-9. The guide, the reference, the changelog, the skill.
+9. The guide, the reference, the changelog, the skill. **Written.**

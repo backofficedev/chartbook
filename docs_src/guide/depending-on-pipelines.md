@@ -163,6 +163,82 @@ means a snapshot's folder is never deleted by hand: another snapshot may keep fi
 `chartbook store gc` removes snapshots safely, and after a snapshot or a catalog build one line says
 what it would clear. {doc}`catalogs-and-data` has the store side of this.
 
+## What a pin holds
+
+`chartbook.lock` pins what code reads: every **dataframe** and every **model** of a dependency,
+each by the hash of its file. A chart, a notebook, a note or a plain file is not pinned: each is
+drawn from the data, and drawn anew by every build (a Plotly chart has a random id in its page, an
+executed notebook the time of each cell), so no second build has the same bytes. It is still read,
+`assets.path("fed_yield_curve:chart/curve")`, from the snapshot the lockfile names. Its owner pins
+one all the same with `lock = true` on the asset, for a file that is an input and not an output
+({ref}`configuration <lock-true>`).
+
+For a dataframe the lockfile records its **rows** as well as its file: the last date in it
+(`as_of`), and a hash of the rows of each calendar year up to that date. That is what lets a pin be
+met by a file that is not the pinned one, which the next section is about. It needs the
+dataframe's `date_col` in its owner's manifest; without one the table has a single hash of all its
+rows.
+
+## With no shared store: build the other pipeline yourself
+
+A class, or two people on two laptops, share a repository and no store. The lockfile then names
+snapshots only its author has. So each person builds the other pipeline themselves, at the commit
+the lockfile names, and ChartBook checks that what they built holds the pinned rows.
+
+```console
+$ chartbook pin --check
+ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/.chartbook/store, and no build of yours at a27e383 stands in: treasury_yields
+  To build it yourself: in ../fed_yield_curve, `git checkout a27e383` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
+  …
+$ cd ../fed_yield_curve && git checkout a27e383 && chartbook run --snapshot
+$ cd ../report && chartbook pin --check
+ftsfr/fed_yield_curve: read from your own build of a27e383
+  treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
+1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
+```
+
+Your build is not the author's file: another day, another writer, and the source has published
+since. It **stands in** for the pinned snapshot when it meets every pin of that dependency. The
+lockfile is not touched, so everyone is checked against the same pin.
+
+| Between the pin and your build | What the check says |
+|---|---|
+| New rows after the pin's last date | Met. They are counted, and left out of what you read |
+| The same rows in other bytes: another parquet writer, another row order | Met |
+| An old value revised, or arriving late (FRED, Ken French) | Not met: `the rows of 2024-01-02 to 2024-12-31 differ` |
+| A model, or a dataframe with no rows recorded | Met by the same file only |
+
+A read then gives the pinned rows, on every machine:
+
+```python
+rates = data.load("fed_yield_curve:treasury_yields")     # the pinned rows: nothing after 2026-10-30
+last  = data.as_of("fed_yield_curve:treasury_yields")    # datetime.date(2026, 10, 30)
+path  = data.path("fed_yield_curve:treasury_yields")     # your build's file as it is, newer rows and all
+```
+
+`data.load` and `data.sql` leave out the rows after the pin's last date; only `chartbook update`
+brings later rows. `data.path` hands over the file as it is and says so once, and `data.as_of` is
+where the pinned rows end, for a reader of your own. When the source has changed its past, the
+check exits 1 and a read stops, each naming the periods that differ. Nothing brings revised data
+back: a shared store does, by keeping the bytes. To go on with what you built,
+`chartbook update ftsfr/fed_yield_curve` pins your build, and the lockfile's diff shows which
+periods changed.
+
+Three things on the other pipeline's side make this work:
+
+- **Declare `date_col`** on each dataframe, so its rows are hashed by period and new rows are told
+  from old ones.
+- **Write parquet without the pandas index:** `df.to_parquet(path, index=False)`. An index with no
+  name is written as a column of row positions, which shift when a pull has more rows, so no later
+  build has the pinned rows. `chartbook snapshot` and `chartbook check` say when a file has one.
+- **Snapshot and pin with this version.** A lockfile pinned before ChartBook recorded rows is met
+  by the same file only, until it is pinned again.
+
+`chartbook update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
+2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of … differ`. A few tables
+have no rows hash, and `chartbook snapshot` says which and why: a column of lists, a single day
+over 256 MB, more than 256 columns. {doc}`../design/pins-and-rebuilds` has the whole design.
+
 ## In CI, and on a shared store
 
 A build server changes nothing: `chartbook run --frozen` builds only if the lockfile is complete

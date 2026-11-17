@@ -65,8 +65,8 @@ chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets ba
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
-chartbook pin --check        # Write nothing; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3]); was `pin --frozen`
-chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
+chartbook pin --check        # Write nothing; exit 1 unless the lockfile is complete and every pin is met: its file is in the store, or a build of your own of the pinned commit holds the same rows up to the pin's last date (no shared store: `git checkout <commit>` in the upstream, `chartbook run --snapshot`) (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3]); was `pin --frozen`
+chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot; says of each dataframe whether it gained rows or its earlier rows changed
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
 chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`

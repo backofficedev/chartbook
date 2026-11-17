@@ -233,7 +233,7 @@ Where more than one run differs (`transcripts_2026_q4` beside the other quarters
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook run` in a pipeline with no build command (where `chartbook run` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), and a dataframe's path that names one file of a set (above).
+**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook run` in a pipeline with no build command (where `chartbook run` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), a dataframe's path that names one file of a set (above), and a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin of it names (`to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name).
 
 **Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
 
@@ -616,6 +616,22 @@ A snapshot records what the pipeline was pinned to, so after `chartbook update` 
 
 An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
 
+**A dataframe's rows.** Beside the hash of each dataframe's file, a snapshot records its rows: the last date in it (`as_of`, the data's own and never the clock's) and a hash of the rows of each calendar year up to that date, a year over 128 MB by month and such a month by day. A pin copies them, and they are what lets a build of someone else's own meet the pin ({ref}`chartbook pin <a-build-of-your-own>`). They are dated by the dataframe's `date_col`; with none, the table has one hash of all its rows. The table is read a little at a time, never whole, so the memory this takes is set by a period and not by the table. A new snapshot says what each dataframe's rows did beside the snapshot before it:
+
+```console
+$ chartbook snapshot
+ftsfr/fed_yield_curve at 8cb1e03: 2 asset(s) in the store
+  Beside the snapshot before it, made 2026-11-17 07:41 UTC:
+    ftsfr/fed_yield_curve:treasury_yields: 24 new rows, through 2026-11-11; earlier rows unchanged
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+```
+
+or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12` when the source has revised its past, and `the same rows, in other bytes` when only the writer changed. Three more lines may follow the first, each for one dataframe:
+
+- `rows not hashed: … (why). A pin of it is met by the same file, and by no rebuild.` A column of lists or structs; a single day, the rows with no date, or a table with no `date_col`, over 256 MB; more than 256 columns; a file over 128 MB that is not parquet; a date outside the years 1 to 9999.
+- `rows not hashed this time: … (why).` No room for the scratch files, say. The snapshot is made all the same, and the next `chartbook snapshot` hashes them.
+- `…: its file has the column pandas makes of an index with no name (__index_level_0__).` Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names: `to_parquet(index=False)` drops it, and `reset_index()` keeps it as a column with a name. {ref}`chartbook check <chartbook-check>` warns of the same.
+
 **A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`). A commit is often tagged after it is built: run `chartbook snapshot` again after tagging, and since the tags are new it records them, with the same bytes; and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
 
 **The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs build` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
@@ -782,6 +798,8 @@ chartbook.lock is unchanged.
 
 1 thing(s) could not be pinned.
 ```
+
+When a pin moves, `update` says under the two hashes what the dataframe's rows are beside the pin it had: `24 new rows, through 2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ`, so a revision by the source is seen when the pin is moved, and the lockfile's diff shows which periods changed.
 
 `pin --check` and a read (`data.load`, `data.path`) say the same of a pin whose object is not whole. An object that is not in the store at all is `lost`, and in a store that machines share through a synced folder the likeliest cause is a sync that has not finished, on this machine or on the one that put it there: the message says what to do on each side.
 
