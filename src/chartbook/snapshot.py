@@ -2824,6 +2824,11 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
         dated = rowhash.dated_by(table, declared)
     except rowhash.NotRead:
         return {}
+    except rowhash.NotHashed:
+        dated = None  # a file not read at all, its footer too large: said below, with why
+    except (OSError, MemoryError) as error:
+        # A file that may not be opened now, no memory: this machine's, this time
+        raise rowhash.NotNow(f"{type(error).__name__}: {rowhash._first_line(error)}") from None
     for taken in reversed(earlier):
         before = taken.assets.get(name) or {}
         if before.get("content_hash") != record["content_hash"] or before.get("location") != record.get("location"):
