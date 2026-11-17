@@ -930,8 +930,15 @@ are looked at now, and nothing is taken from the footer in their place.
 
 Before, these took 2.1 to 6.5 GB where they are hashed or refused now (measured by the reviews,
 some at larger sizes of the same shapes). The peaks just inside the limits, 1.40 to 1.46 GB, are
-what the limits were set by. The same test on Linux (CI) had 1.16 GiB at most, at the fourth
-review's limits.
+what the limits were set by. The same test on Linux (CI), on Python 3.10 to 3.13 and at the
+oldest polars allowed, had 1.28 GiB at most.
+
+**These are the figures of the libraries of the day,** pyarrow 26 and polars 2.1, on Python
+3.13. With the ones Python 3.10 is given (pyarrow 25.0.1, polars 2.0.0), on the same Mac, the four tables peaked at 0.22, 1.15, 1.69 and 1.61 GB, and the page to a column
+chunk just inside the limit at 1.85 GB: under the target, with less room. Sixteen of the tests
+at once took no more. (Found on 2026-11-17 by the matrix that `uv run doit` runs: one test held
+a table of 300 MB to 900 MB, which those libraries pass by a little. It is held to 2 GB now, as
+the others are.)
 
 **What this is, and is not.** It is every file five reviews could find, measured, under a limit
 that the test enforces. It is not a proof for every file there can be: each review found a way

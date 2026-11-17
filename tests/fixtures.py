@@ -5,6 +5,7 @@ This module provides utilities to create complete pipeline and catalog
 projects for integration testing.
 """
 
+import contextlib
 import functools
 import os
 import subprocess
@@ -40,6 +41,73 @@ def remove_tree(path) -> None:
     from chartbook.store import _remove_tree
 
     _remove_tree(path)  # as given: a test that sets os.name to "nt" cannot make a Path on POSIX
+
+
+@contextlib.contextmanager
+def kept_out_of_home(scratch: Path):
+    """Point all that ChartBook keeps for a user at folders under *scratch*, until the block ends.
+
+    The store, the caches, the settings, the trust file and the machine's name
+    are per user and live under ``~/.chartbook`` (or where its settings say:
+    a store may be a synced folder). A test that pins, or a command it runs
+    in a subprocess, must never read or write there. Setting the environment
+    variables is what a user would do to move them, so code that asks for
+    "this user's store" gets a scratch one. Tests of where the default is
+    clear the variables themselves.
+
+    What is set is set by patches of this block's own, never by the
+    ``monkeypatch`` a test asks for, and is undone when the block ends,
+    however it ends. ``tests/conftest.py`` uses it twice: around every test,
+    and around the whole run.
+    """
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("CHARTBOOK_STORE", str(scratch / "store"))
+        monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(scratch / "git"))
+        monkeypatch.setenv("CHARTBOOK_CACHE", str(scratch / "cache"))
+        # The organization's settings file, read where the user's is silent:
+        # a real one on this machine must not reach a test
+        monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(scratch / "system-settings.toml"))
+        # A test is interactive unless it says otherwise, even under `chartbook run`
+        monkeypatch.delenv("CHARTBOOK_BATCH", raising=False)
+        # Every folder a test builds is trusted to run, as the user's own would
+        # be once trusted, and CI's own `CI=true` does not reach a test: the
+        # tests of trust itself (tests/test_trust.py) clear the first and set
+        # the second themselves
+        monkeypatch.setenv("CHARTBOOK_TRUST", "all")
+        monkeypatch.delenv("CI", raising=False)
+        # The name of the machine in a store's notes, which is otherwise made
+        # once and kept under the home folder: a `chartbook` a test runs in a
+        # subprocess, with the real home, must not make one there. A test of
+        # two machines clears it
+        monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "a-test-machine")
+        # The user-level Claude Code skill, which commands compare with the
+        # package: this machine's own copy, perhaps an old one, must not reach a
+        # test's output (`chartbook check` warns of it)
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(scratch / "claude"))
+        # No git housekeeping in the background: `git commit` may start `gc
+        # --auto` or maintenance detached, which goes on writing under
+        # .git/objects after the command returns, and a test that then removes
+        # the repository (shutil.rmtree) races it: "No such file or directory:
+        # 'fb'" on CI, once in many runs. These are git's own environment
+        # settings, read before any config file, so every git a test or a
+        # command it runs starts has them
+        monkeypatch.setenv("GIT_CONFIG_COUNT", "2")
+        monkeypatch.setenv("GIT_CONFIG_KEY_0", "gc.auto")
+        monkeypatch.setenv("GIT_CONFIG_VALUE_0", "0")
+        monkeypatch.setenv("GIT_CONFIG_KEY_1", "maintenance.auto")
+        monkeypatch.setenv("GIT_CONFIG_VALUE_1", "false")
+        # Nor does the user's own ~/.chartbook (their catalog and settings) reach
+        # a test; a test that moves HOME gets the one under it
+        from chartbook import backends, config
+
+        real_home = Path.home()
+
+        def config_dir() -> Path:
+            return Path.home() / ".chartbook" if Path.home() != real_home else scratch / "user" / ".chartbook"
+
+        monkeypatch.setattr(config, "get_global_config_dir", config_dir)
+        monkeypatch.setattr(backends, "get_global_config_dir", config_dir)
+        yield
 
 
 def create_sample_parquet(path: Path, columns: dict = None, rows: int = 10) -> Path:
