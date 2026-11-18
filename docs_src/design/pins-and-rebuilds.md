@@ -801,8 +801,9 @@ has it too.
 were merged: whether the stores there already are still work, how someone on an earlier ChartBook
 is told to upgrade, and how upgrading is made easy. The release is 0.6.0: it writes a lockfile that
 0.5 cannot read, which is what a new minor number is for before 1.0. And the class's report asks
-for `chartbook>=0.5.1,<0.6` in its own `pyproject.toml`: a 0.5.3 would reach every student at
-their next `uv sync`, mid-homework, and 0.6.0 reaches none of them until step 8 raises that line.*
+for `chartbook>=0.5.1,<0.6` in its own `pyproject.toml`: another 0.5 release would reach every
+student at their next `uv sync`, mid-homework, and 0.6.0 reaches none of them until step 8 raises
+that line.*
 
 **A store is shared across versions. A lockfile is not.** Each half was tried on 2026-11-18, with
 ChartBook 0.5.1 as PyPI has it and this version, on one scratch store, and the first on copies of
