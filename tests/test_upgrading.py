@@ -282,8 +282,8 @@ class TestPinUpdateAndAddRaiseTheLine:
             # One that shuts out the whole line before it, and admits the lines before that
             ("!=0.5.*", ">=0.6.0,!=0.5.*"),
             ("<2,!=0.5.*", ">=0.6.0,<2,!=0.5.*"),
-            # A release candidate of it is before it
-            (">=0.6.0rc1", ">=0.6.0"),
+            # The line before every other one
+            ("<0.1", ">=0.6.0,<0.1"),
         ],
     )
     def test_the_rest_of_what_it_says_is_kept(self, was, now):
@@ -295,9 +295,17 @@ class TestPinUpdateAndAddRaiseTheLine:
         assert not manifest.admits_before(now, "0.6.0")
         assert SpecifierSet(now).contains("0.6.0") == SpecifierSet(was).contains("0.6.0")
 
+    def test_a_floor_with_a_patch_number_asks_of_its_own_line(self):
+        assert manifest.admits_before("==0.6.0", "0.6.1") and manifest.admits_before("~=0.6.0", "0.6.2")
+        assert not manifest.admits_before(">=0.6.1", "0.6.1") and not manifest.admits_before("==0.6.1", "0.6.1")
+
     @pytest.mark.parametrize(
         "enough",
-        [">=0.6.0", ">=0.6", ">=0.6,<1", "==0.6.*", ">=1.0", "~=0.6.0", ">0.6.0", "!=0.5.*,!=0.4.*,!=0.3.*,!=0.2.*,!=0.1.*,!=0.0.*"],
+        [
+            ">=0.6.0", ">=0.6", ">=0.6,<1", "==0.6.*", ">=1.0", "~=0.6.0", ">0.6.0", "!=0.5.*,!=0.4.*,!=0.3.*,!=0.2.*,!=0.1.*,!=0.0.*",
+            # A release candidate of 0.6.0 itself is not an earlier ChartBook, however the line lets it in
+            ">=0.6.0rc1",
+        ],
     )
     def test_one_that_asks_for_enough_is_left(self, enough, report, rates, store):
         assert not manifest.admits_before(enough, "0.6.0")
@@ -406,6 +414,22 @@ class TestPinUpdateAndAddRaiseTheLine:
         assert 'chartbook.toml: write requires_chartbook = ">=0.6.0" under [project]' in result.output
         assert "It was not written for you: the file could not be written (Permission denied)." in result.output
         assert _asked_for(report) == ">=0.5.0" and mode == stat.S_IREAD and (report / "chartbook.lock").is_file()
+
+    @pytest.mark.skipif(sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="a file's mode stops no write here")
+    def test_nothing_names_pin_for_a_manifest_it_cannot_write(self, report, rates, store):
+        """A build and the check say what to write, and not that a command writes it which would then say it could not."""
+        snapshot.make(rates, store=store)
+        (report / "chartbook.toml").write_text(REPORT + '\n[scripts]\nbuild = "echo built"\n', encoding="utf-8", newline="\n")
+        os.chmod(report / "chartbook.toml", stat.S_IREAD)
+        try:
+            ran, checked = _run("run"), _run("check", "--skip-outputs")
+        finally:
+            os.chmod(report / "chartbook.toml", stat.S_IREAD | stat.S_IWRITE)
+        assert ran.exit_code == 0, ran.output
+        assert 'chartbook.toml: write requires_chartbook = ">=0.6.0" under [project]' in ran.output
+        assert "It was not written for you: the file could not be written (Permission denied)." in ran.output
+        assert "`chartbook pin`" not in ran.output
+        assert 'Write ">=0.6.0", and it is told to upgrade, and how' in checked.output and "`chartbook pin` does" not in checked.output
 
     @pytest.mark.skipif(sys.platform == "win32", reason="a file's mode is another thing there")
     def test_the_files_mode_is_kept(self, report, rates, store):
@@ -529,7 +553,11 @@ class TestABuildAndAReadNeverWriteAManifest:
         result = _run("run", "--upstream")
         assert result.exit_code == 0, result.output
         assert _asked_for(b) == ">=0.5.0"
-        told = f'{b / "chartbook.toml"}: requires_chartbook = ">=0.5.0" admits a ChartBook that cannot read chartbook.lock'
+        told = (
+            f'{b / "chartbook.toml"}: requires_chartbook = ">=0.5.0" admits a ChartBook that cannot read chartbook.lock, which is '
+            f"of a version that began with 0.6.0: such a one says only which version it reads. `chartbook pin` in {b} raises "
+            f'the line to ">=0.6.0", and it is then told to upgrade, and how.'
+        )
         if ignored:
             assert "requires_chartbook" not in result.output and _git(work, "status", "--porcelain") == ""
         else:
@@ -906,11 +934,132 @@ class TestPinsFromBeforeRowsWereRecorded:
         why = {"not_hashed": "column 'l' is List(Int64)"}
         before = lock.Lock(root="r", assets={
             "gained": record("a"), "says_why": record("a"), "had_them": record("a", **rows), "had_a_reason": record("a", **why),
-            "moved": record("a"), "still_none": record("a"),
+            "moved": record("a"), "still_none": record("a"), "said_why_already": record("a", **why), "lost_them": record("a", **rows),
+            "moved_to_one_with_none": record("a"),
         })
         after = lock.Lock(root="r", assets={
             "gained": record("a", **rows), "says_why": record("a", **why), "had_them": record("a", **rows),
             "had_a_reason": record("a", **rows), "moved": record("c", **rows), "still_none": record("a"), "new": record("d", **rows),
+            "said_why_already": record("a", **why), "lost_them": record("a", **why), "moved_to_one_with_none": record("c", **why),
         })
         assert lock.rows_pinned_now(after, before) == ["gained"]
         assert lock.rows_not_hashed_now(after, before) == [("says_why", "column 'l' is List(Int64)")]
+
+
+class TestWhatTheSecondReviewFound:
+    """Each of these was a gap a second review of the rework found, or a change to the code that no test noticed."""
+
+    def test_a_read_that_writes_the_lockfile_again_says_what_a_pin_would_of_its_rows(self, report, rates, store, work, capsys):
+        """A dependency added since, read before any command: the read pins it and writes the earlier lockfile again, and the pin after it finds nothing to say."""
+        from chartbook import data
+
+        _as_an_earlier_one_made_it(snapshot.make(rates, store=store).snapshot)
+        assert not lock.pin(report, store).problems
+        _as_version_1(report, store)
+        other = _upstream(
+            work / "other",
+            {"project": {"id": "acme/other"}, "dataframes": {"t": {"path": "./_data/t.parquet", "docs": "d"}}},
+            {"_data/t.parquet": pl.DataFrame({"a": [1, 2, 3]})},
+        )
+        snapshot.make(other, store=store)
+        (report / "chartbook.toml").write_text(REPORT + '"acme/other" = { path = "../other" }\n', encoding="utf-8", newline="\n")
+        capsys.readouterr()
+        assert data.load("acme/other:t").collect().height == 3
+        said = capsys.readouterr().err.splitlines()
+        assert any(line.startswith("chartbook.lock was in an earlier form") for line in said)
+        assert _earlier(2) in said and TOLD in said and said.index(_earlier(2)) < said.index(TOLD)
+        assert lock.read_lock(report).read_as == lock.SCHEMA
+
+    def test_a_lockfile_git_tracks_is_not_one_it_ignores_whatever_the_rules_say(self, report, rates, store):
+        """Added by force past a rule that would leave it out: it is in the repository, and reaches whoever clones it."""
+        snapshot.make(rates, store=store)
+        assert not lock.pin(report, store).problems
+        (report / ".gitignore").write_text("/chartbook.lock\n", encoding="utf-8", newline="\n")
+        _git(report, "init", "--quiet", "-b", "main")
+        _git(report, "add", "-A")
+        _git(report, "add", "--force", "chartbook.lock")
+        _git(report, "commit", "--quiet", "-m", "The report, its lockfile too")
+        assert not snapshot.ignored_by_git(report / "chartbook.lock")
+        assert RAISED in _run("pin").output.splitlines() and _asked_for(report) == ">=0.6.0"
+
+    def test_a_project_a_repository_above_it_leaves_out_whole_is_held_to_its_lockfile(self, report, rates, store, work):
+        """A home folder kept in git with everything ignored: that says nothing of how this project is shared."""
+        (work / ".gitignore").write_text("*\n", encoding="utf-8", newline="\n")
+        _git(work, "init", "--quiet", "-b", "main")
+        snapshot.make(rates, store=store)
+        assert snapshot.ignored_by_git(report / "chartbook.lock") and snapshot.ignored_by_git(report / "chartbook.toml")
+        assert RAISED in _run("pin").output.splitlines() and _asked_for(report) == ">=0.6.0"
+
+    @pytest.mark.parametrize("error", [FileNotFoundError("git"), __import__("subprocess").TimeoutExpired("git", 5)])
+    def test_with_no_git_to_ask_nothing_is_taken_to_be_ignored(self, error, report, monkeypatch):
+        def no_git(*arguments, **options):
+            raise error
+
+        monkeypatch.setattr(snapshot.subprocess, "run", no_git)
+        assert snapshot.ignored_by_git(report / "chartbook.lock") is False
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="a second name for a file is made another way there")
+    def test_a_manifest_with_a_second_name_keeps_it(self, report, rates, store, work):
+        os.link(report / "chartbook.toml", work / "the-same-file.toml")
+        snapshot.make(rates, store=store)
+        assert _run("pin").exit_code == 0
+        assert _asked_for(report) == ">=0.6.0"
+        assert (work / "the-same-file.toml").read_text(encoding="utf-8") == (report / "chartbook.toml").read_text(encoding="utf-8")
+        assert (work / "the-same-file.toml").stat().st_ino == (report / "chartbook.toml").stat().st_ino
+
+    def test_a_file_left_by_a_write_that_was_killed_is_removed_by_the_next(self, report, rates, store):
+        old = report / ("chartbook.toml." + "0" * 32 + ".tmp")
+        new = report / ("chartbook.toml." + "1" * 32 + ".tmp")
+        other = report / "chartbook.toml.bak.tmp"
+        for path in (old, new, other):
+            path.write_text("half", encoding="utf-8")
+        long_ago = old.stat().st_mtime - 3600
+        os.utime(old, (long_ago, long_ago))
+        os.utime(other, (long_ago, long_ago))
+        snapshot.make(rates, store=store)
+        assert _run("pin").exit_code == 0 and _asked_for(report) == ">=0.6.0"
+        # The one a minute old and more goes; one of a pin that may be at work now stays, and so does a file of another name
+        assert not old.exists() and new.exists() and other.exists()
+
+    def test_a_build_and_a_read_say_what_to_write_where_no_command_can(self, report, rates, store, capsys):
+        """A line written inline: `chartbook pin` could not rewrite it either, so it is not named."""
+        from chartbook import data
+
+        text = (
+            'project = { id = "acme/report", requires_chartbook = ">=0.5.0" }\n\n[scripts]\nbuild = "echo built"\n\n'
+            '[dependencies]\n"acme/rates" = { path = "../rates" }\n'
+        )
+        (report / "chartbook.toml").write_text(text, encoding="utf-8", newline="\n")
+        snapshot.make(rates, store=store)
+        capsys.readouterr()
+        assert data.load("acme/rates:treasury").collect().height == 80
+        said = capsys.readouterr().err
+        assert NOT_IN_PLACE in said.splitlines() and "`chartbook pin`" not in said
+        ran = _run("run")
+        assert ran.exit_code == 0 and f"acme/report: {NOT_IN_PLACE}" in ran.output.splitlines() and "`chartbook pin`" not in ran.output
+        assert (report / "chartbook.toml").read_text(encoding="utf-8") == text
+
+    def test_the_snapshots_line_for_one_dataframe(self, work, store):
+        one = _upstream(
+            work / "one",
+            {"project": {"id": "acme/one"}, "dataframes": {"t": {"path": "./_data/t.parquet", "docs": "d"}}},
+            {"_data/t.parquet": pl.DataFrame({"a": [1, 2, 3]})},
+        )
+        _as_an_earlier_one_made_it(snapshot.make(one, store=store).snapshot)
+        again = _run("snapshot", "--no-gc-reminder", "--project-dir", str(one))
+        (said,) = [line for line in again.output.splitlines() if line.startswith("  The same files")]
+        assert said.endswith("UTC, which says nothing of the rows of 1 dataframe: this one records them, so that a rebuild can meet a pin of it.")
+
+    def test_a_listing_of_one_pipeline_says_nothing_of_anothers_records(self, rates, store, work):
+        other = _upstream(
+            work / "other",
+            {"project": {"id": "acme/other"}, "dataframes": {"t": {"path": "./_data/t.parquet", "docs": "d"}}},
+            {"_data/t.parquet": pl.DataFrame({"a": [1, 2, 3]})},
+        )
+        snapshot.make(other, store=store)
+        TestAFileOfALaterVersion().later(snapshot.make(rates, store=store).snapshot)
+        of_other = _run("store", "ls", "acme/other").output
+        assert "acme/other (1 snapshot(s))" in of_other and "not listed" not in of_other
+        of_rates = _run("store", "ls", "acme/rates").output
+        assert "  not listed: Cannot read the snapshot " in of_rates
+        assert of_rates.splitlines()[-1] == "No snapshot of acme/rates that this ChartBook can read."

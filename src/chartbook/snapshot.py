@@ -823,7 +823,8 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
 def ignored_by_git(path: Union[str, Path]) -> bool:
     """Whether git ignores a file: one in a repository whose rules leave it out, and that it does not track.
 
-    False where that cannot be told: no repository there, or no git.
+    False where that cannot be told: no repository there, no git, or a
+    git that does not answer in a moment.
     """
     path = Path(path)
     try:
@@ -831,8 +832,9 @@ def ignored_by_git(path: Union[str, Path]) -> bool:
             ["git", "-C", str(path.parent), "check-ignore", "--quiet", "--", path.name],
             capture_output=True,
             env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
+            timeout=5,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
     return result.returncode == 0
 

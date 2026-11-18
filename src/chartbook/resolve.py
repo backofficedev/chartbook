@@ -2253,17 +2253,26 @@ def _pinned_now(report, key: str) -> None:
             f"{taken.made_at[:16].replace('T', ' ')} UTC ({report.lockfile.name}). "
             f"`chartbook update {key}` moves it.\n"
         )
+    from chartbook import lock
+
     if report.earlier and report.written:
         # The lockfile was of an earlier version, and this pin wrote it again: said here as `chartbook pin` says it
-        from chartbook import lock
-
         sys.stderr.write(lock.written_again_said(report.lockfile.name, report.left_out, report.kept_earlier) + "\n")
+    if report.written:
+        # And what `chartbook pin` says of the rows of what it pins, when it writes a lockfile: a read
+        # that writes one says it too, since the pin after it finds nothing changed and says nothing
+        if getattr(report, "without_rows", None):
+            sys.stderr.write(lock.without_rows_said(report.without_rows) + "\n")
+        if getattr(report, "rows_now", None):
+            sys.stderr.write(lock.rows_now_said(report.rows_now) + "\n")
+        for asset, why in getattr(report, "not_hashed_now", ()):
+            sys.stderr.write(f"{asset}: its rows are not hashed ({why}): it stays pinned by its file alone.\n")
     if getattr(report, "floor", None) is not None:
         # And the ChartBook the manifest asks for, where it admits one that cannot read this lockfile:
         # a read writes no manifest, and says which command does
-        from chartbook import lock
-
-        sys.stderr.write(lock.floor_said(report.floor, report.floor.manifest.name, report.lockfile.name) + "\n")
+        sys.stderr.write(
+            lock.floor_said(report.floor, report.floor.manifest.name, report.lockfile.name, lock.where_to_pin(report.floor)) + "\n"
+        )
 
 
 #: When a read last tried to pin a dependency that had no snapshot, so that

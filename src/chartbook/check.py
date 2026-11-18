@@ -758,10 +758,8 @@ def _asks_for_too_little(pipeline_dir: Path, toml_file: Path) -> Optional[Proble
     if found is None:
         return None
     text, was, now = found
-    from chartbook.manifest import with_requires_chartbook
-
-    # Only where `chartbook pin` can: a line it cannot rewrite in place is the user's to write
-    by_pin = " (`chartbook pin` does)" if with_requires_chartbook(text, now) is not None else ""
+    # Only where `chartbook pin` can: a line it cannot rewrite in place, or a file it cannot write, is the user's
+    by_pin = "" if lock.cannot_be_raised(toml_file, text, now) else " (`chartbook pin` does)"
     return Problem(
         toml_file, "project", "requires_chartbook",
         f'"{was}" admits a ChartBook that cannot read {lock.LOCK_FILE}, which is of a version that began with '

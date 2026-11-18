@@ -604,10 +604,12 @@ class Floor:
             ``update`` and ``add``, which a person runs to change what the
             project pins. A build and a read never write a manifest, and
             say which command does.
-        why_not: Where it was to be written and was not, why. The line is
-            then the user's to write.
-        in_place: Whether its line is one that can be rewritten in place,
-            so that ``chartbook pin`` can be named as what raises it.
+        why_not: Where it was to be written and was not, or could not be
+            by ``chartbook pin`` either, why. The line is then the user's
+            to write.
+        by_pin: Whether ``chartbook pin`` can write it
+            (:func:`cannot_be_raised`), so that a build and a read can
+            name that command as what raises it.
     """
 
     manifest: Path
@@ -616,7 +618,7 @@ class Floor:
     written: bool = False
     asked: bool = False
     why_not: str = ""
-    in_place: bool = True
+    by_pin: bool = True
 
 
 def floor_of(manifest_file: Union[str, Path]) -> Optional[tuple[str, str, str]]:
@@ -643,15 +645,37 @@ def floor_of(manifest_file: Union[str, Path]) -> Optional[tuple[str, str, str]]:
 def floor_wanted(project_dir: Union[str, Path]) -> Optional[tuple[str, str, str]]:
     """:func:`floor_of` a pipeline's manifest, where its lockfile is one that reaches other people; None where it reaches no one.
 
-    A lockfile that git ignores is this machine's alone: each person's
-    ChartBook writes their own, in the version it reads, and nobody on an
-    earlier ChartBook is handed this one. Raising the manifest there would
-    make them upgrade for nothing.
+    A lockfile that git ignores, beside a manifest that it does not, is
+    this machine's alone: the project is shared through git with its
+    lockfile left out, so each person's ChartBook writes their own, in the
+    version it reads, and nobody on an earlier ChartBook is handed this
+    one. Raising the manifest there would make them upgrade for nothing.
+    Where git ignores the manifest too (a project under a repository that
+    leaves the whole of it out), git says nothing of how it is shared, and
+    it is held to its lockfile as any other is.
     """
-    found = floor_of(Path(project_dir) / MANIFEST_NAME)
-    if found is None or snapshot.ignored_by_git(Path(project_dir) / LOCK_FILE):
+    project_dir = Path(project_dir)
+    found = floor_of(project_dir / MANIFEST_NAME)
+    if found is None:
+        return None
+    if snapshot.ignored_by_git(project_dir / LOCK_FILE) and not snapshot.ignored_by_git(project_dir / MANIFEST_NAME):
         return None
     return found
+
+
+def cannot_be_raised(manifest_file: Union[str, Path], text: str, now: str) -> str:
+    """Why ``chartbook pin`` could not write a manifest's ``requires_chartbook``; empty where it can.
+
+    Asked before anything is written, and by what only tells (a build, a
+    read, ``chartbook check``), so that none of them names a command that
+    would then say it could not.
+    """
+    if with_requires_chartbook(text, now) is None:
+        return "its line there is not one that can be rewritten in place"
+    if not os.access(os.path.realpath(manifest_file), os.W_OK):
+        # A file its owner has made read-only is not written over by moving another into its place
+        return f"the file could not be written ({os.strerror(errno.EACCES)})"
+    return ""
 
 
 def _write_in_its_place(path: Path, text: str) -> None:
@@ -659,14 +683,27 @@ def _write_in_its_place(path: Path, text: str) -> None:
 
     A manifest opened for writing is empty until its text is in it, and a
     disk that fills then leaves it cut short. The file a link points at is
-    the one replaced, so the link stays; its mode is kept.
+    the one replaced, so the link stays; its mode is kept. A file that has
+    another name as well (a hard link) is written where it is, since a
+    file moved over one name would leave the other with the old text. And
+    a file left beside it by a write that was killed before its move is
+    removed first.
     """
+    import re
     import shutil
+    import time
 
     target = Path(os.path.realpath(path))
-    if not os.access(target, os.W_OK):
-        # A file its owner has made read-only is not written over by moving another into its place
-        raise PermissionError(errno.EACCES, os.strerror(errno.EACCES), str(target))
+    left = re.compile(re.escape(target.name) + r"\.[0-9a-f]{32}\.tmp")
+    for beside in target.parent.iterdir():
+        # Not one of a pin at work now: pins of one lockfile take turns, and this is a minute old
+        with contextlib.suppress(OSError):
+            if left.fullmatch(beside.name) and time.time() - beside.stat().st_mtime > 60:
+                beside.unlink()
+    if target.stat().st_nlink > 1:
+        with open(target, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        return
     temporary = target.with_name(f"{target.name}.{uuid.uuid4().hex}.tmp")
     try:
         with open(temporary, "w", encoding="utf-8", newline="") as f:  # the text has its own line endings
@@ -707,15 +744,14 @@ def see_to_the_floor(project_dir: Union[str, Path], write: bool = False) -> Opti
         return None
     text, was, now = found
     floor = Floor(manifest_file, was, now, asked=write)
-    changed = with_requires_chartbook(text, now)
-    if changed is None:
-        floor.in_place = False
-        floor.why_not = "its line there is not one that can be rewritten in place"
+    floor.why_not = cannot_be_raised(manifest_file, text, now)
+    if floor.why_not:
+        floor.by_pin = False
         return floor
     if not write:
         return floor
     try:
-        _write_in_its_place(manifest_file, changed)
+        _write_in_its_place(manifest_file, with_requires_chartbook(text, now))
     except OSError as error:
         floor.why_not = f"the file could not be written ({error.strerror or error})"
         return floor
@@ -723,10 +759,12 @@ def see_to_the_floor(project_dir: Union[str, Path], write: bool = False) -> Opti
     return floor
 
 
-def floor_said(floor: Floor, shown: str, lockfile: str = LOCK_FILE) -> str:
+def floor_said(floor: Floor, shown: str, lockfile: str = LOCK_FILE, where: str = "") -> str:
     """What to say of a manifest whose ``requires_chartbook`` admits a ChartBook that cannot read its lockfile (:func:`see_to_the_floor`).
 
     :param shown: The manifest's path, as it is to be printed.
+    :param where: For a build or a read in another folder than the
+        manifest's: `` in FOLDER``, where ``chartbook pin`` is to be run.
     """
     why = f"{lockfile} is of a version that began with ChartBook {SINCE}, and an earlier one cannot read it"
     if floor.written:
@@ -734,16 +772,25 @@ def floor_said(floor: Floor, shown: str, lockfile: str = LOCK_FILE) -> str:
             f'{shown}: requires_chartbook is now "{floor.now}" (it was "{floor.was}"). {why}: with this line it is '
             f"told to upgrade, and how. Commit the manifest with the lockfile."
         )
-    if floor.asked or not floor.in_place:
+    if floor.asked or not floor.by_pin:
         return (
             f'{shown}: write requires_chartbook = "{floor.now}" under [project] (it says "{floor.was}"). {why}: '
             f"with that line it is told to upgrade, and how. It was not written for you: {floor.why_not}."
         )
     return (
         f'{shown}: requires_chartbook = "{floor.was}" admits a ChartBook that cannot read {lockfile}, which is of a '
-        f'version that began with {SINCE}: such a one says only which version it reads. `chartbook pin` raises the '
-        f'line to "{floor.now}", and it is then told to upgrade, and how.'
+        f'version that began with {SINCE}: such a one says only which version it reads. `chartbook pin`{where} raises '
+        f'the line to "{floor.now}", and it is then told to upgrade, and how.'
     )
+
+
+def where_to_pin(floor: Floor) -> str:
+    """`` in FOLDER`` for a manifest that is not in the folder a command is run in, where ``chartbook pin`` is to be run; else empty."""
+    folder = floor.manifest.parent
+    try:
+        return "" if folder.resolve() == Path.cwd().resolve() else f" in {folder}"
+    except OSError:
+        return f" in {folder}"
 
 
 def _from_before_rows(taken) -> bool:

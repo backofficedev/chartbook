@@ -223,7 +223,9 @@ def admits_before(value: str, since: str) -> bool:
     first and a last of every release line before *since*
     (:func:`_versions_before`). So ``">=0.5.0"``, ``">0.5.1"``, ``"<1"``,
     ``"!=0.5.3"`` and ``"!=0.5.*"`` admit one before ``0.6.0``, and
-    ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not.
+    ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not. A release
+    candidate of *since* itself is not counted as before it, however the
+    specifier names it (``">=0.6.0rc1"``, as ``"==0.6.*"``).
 
     :raises Exception: packaging's, where the value is not a specifier.
     """
@@ -237,7 +239,7 @@ def admits_before(value: str, since: str) -> bool:
             probes.append(Version(clause.version.removesuffix(".*")))
         except InvalidVersion:
             continue  # an arbitrary one (===): it names no version to ask of
-    return any(probe < floor and wanted.contains(probe, prereleases=True) for probe in probes)
+    return any(Version(probe.base_version) < floor and wanted.contains(probe, prereleases=True) for probe in probes)
 
 
 def raised_to(value: str, since: str) -> str:

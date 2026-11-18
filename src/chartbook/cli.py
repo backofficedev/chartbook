@@ -2611,7 +2611,8 @@ def _echo_pin_report(report):
         click.echo(f"{asset}: its rows are not hashed ({why}): it stays pinned by its file alone.")
     floor = getattr(report, "floor", None)
     if floor is not None:
-        click.echo(lock.floor_said(floor, display_path(floor.manifest, relative_to=Path.cwd()), report.lockfile.name))
+        manifest_shown = display_path(floor.manifest, relative_to=Path.cwd())
+        click.echo(lock.floor_said(floor, manifest_shown, report.lockfile.name, lock.where_to_pin(floor)))
     if report.written:
         click.echo(f"Wrote {shown}.")
     elif report.lockfile.exists():
@@ -3488,7 +3489,7 @@ def _run_script(
             from chartbook.check import display_path
 
             shown = display_path(pins.floor.manifest, relative_to=Path.cwd())
-            click.echo(f"{step.id}: {lock.floor_said(pins.floor, shown, pins.lockfile.name)}")
+            click.echo(f"{step.id}: {lock.floor_said(pins.floor, shown, pins.lockfile.name, lock.where_to_pin(pins.floor))}")
 
     try:
         report = runner.run(

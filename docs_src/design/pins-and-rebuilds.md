@@ -822,10 +822,13 @@ then is the thing to get right.
 **The lineage, which 0.5 gets wrong.** A snapshot records what its pipeline was pinned to, with one
 hash over what was pinned of each dependency. Since step 2 that hash is over the dataframes and the
 models; 0.5 works it out over every asset. So for a snapshot this version made of a pipeline that
-itself pins another with a chart or a notebook, 0.5's `chartbook lineage` says `its snapshot … does
-not hold what was pinned`, one level up, and its `snapshot --deep` refuses. Its reads, its pins and
-`pin --frozen` are as they were, and this version walks both. Nothing in this version can mend it:
-the two cannot both be recorded under the one name 0.5 reads. (Found by review, with the real 0.5.1.)
+itself pins another which has, beside its dataframes or models, anything a lockfile no longer holds
+(a chart, a notebook, a note, a plain file), 0.5's `chartbook lineage` says `its snapshot … does not
+hold what was pinned`, one level up, and its `snapshot --deep` refuses. A dependency of dataframes
+alone, of charts alone, or whose chart is marked `lock = true`, shows no gap. Its reads, its pins,
+`pin --frozen` and a plain `snapshot` are as they were, and this version walks both. Nothing in this
+version can mend it: the two cannot both be recorded under the one name 0.5 reads. (Found by review,
+with the real 0.5.1, and the cases by a second.)
 
 ### What an earlier ChartBook says
 
@@ -877,7 +880,7 @@ What was chosen, and why:
   too, but a run that snapshots must leave the folder as its commit has it, and a `git`
   dependency is built in ChartBook's own copy of its repository, whose manifest is nobody's to
   commit. So `chartbook run`, and a first read that pins, write no manifest and say which command
-  does, each time, in one line: `chartbook.toml: requires_chartbook = ">=0.5.0" admits a ChartBook
+  does (and in which folder, for an upstream built first), each time, in one line: `chartbook.toml: requires_chartbook = ">=0.5.0" admits a ChartBook
   that cannot read chartbook.lock, which is of a version that began with 0.6.0: such a one says
   only which version it reads. `chartbook pin` raises the line to ">=0.6.0", and it is then told
   to upgrade, and how.` Of a dependency's copy they say nothing. (As first built, every pin
@@ -888,22 +891,29 @@ What was chosen, and why:
   nothing here to be kept true: it is left without the key, and an earlier ChartBook there says
   which lockfile version it reads. `chartbook init` has written the key since 0.2.0, and the
   class's report and its upstreams have it.
-- **Not where git ignores the lockfile.** That lockfile is this machine's alone: each person's
+- **Not where git ignores the lockfile, and not the manifest.** The project is then shared through
+  git with its lockfile left out, and that lockfile is this machine's alone: each person's
   ChartBook writes its own, and nobody on an earlier one is handed this one. Raising the manifest
   there would make them upgrade for nothing. One that git tracks, or would, is on its way to
-  someone.
+  someone; and where git ignores the manifest too (a project under a home folder kept in git
+  with everything left out), git says nothing of how it is shared, and it is held to its
+  lockfile as any other is.
 - **The rest of what the line says is kept.** `">=0.5.0"` becomes `">=0.6.0"`, and `">=0.5,<0.7"`
   becomes `">=0.6.0,<0.7"`: a lower bound under 0.6.0 goes, and every other clause stays as it
   was written. A line that already admits no earlier ChartBook (`">=0.6"`, `"==0.6.*"`) is not
   touched. Whether a line admits one is asked of the first and a last version of every release
-  line before 0.6.0, so that `"!=0.5.*"`, which lets 0.4 in, is raised too.
+  line before 0.6.0, so that `"!=0.5.*"`, which lets 0.4 in, is raised too. A release candidate
+  of 0.6.0 itself is not counted as an earlier ChartBook, however a line lets it in.
 - **In place, and whole or not at all.** The manifest is edited as text, as `chartbook add` edits
   it: comments, order, quotes and line endings stay, and the edit is kept only if the file then
   parses to what it was with that one value changed. The new text is written to a file beside
   the manifest and moved over it, so a disk that fills leaves the manifest as it was; a link
-  stays a link, and the file's mode is kept. A line that cannot be rewritten that way (an inline
+  stays a link, the file's mode is kept, a file with a second name (a hard link) is written
+  where it is so that both names have it, and a file left beside the manifest by a write that
+  was killed is removed by the next. A line that cannot be rewritten that way (an inline
   `project = { … }`, a string over several lines, a file its owner made read-only) is left, the
-  command says what to write there and why it did not, and exits as it would have.
+  command says what to write there and why it did not, and exits as it would have; and neither
+  a build nor the check then names `chartbook pin` as what would write it.
 - **Last, and whenever a version 2 lockfile is there.** After the lockfile and the store's note
   of it, so that nothing which stops a pin leaves a manifest written and unsaid. And not only
   when the lockfile is written: a manifest put back by hand, or merged from a branch that had
@@ -950,7 +960,9 @@ the reader runs `chartbook update`. Three lines say so, each at the moment it ma
   it gives), and, for a pin that did not move, from the lockfile having been of version 1. A
   dataframe whose rows are not hashed says why and is not of these, nor is one pinned from its
   repository. Whoever pins cannot tell a table 0.5 did not hash from a file that is no table,
-  so the advice promises a new snapshot only "where a table's rows can be recorded".
+  so the advice promises a new snapshot only "where a table's rows can be recorded". A first
+  read that writes the lockfile says the same on stderr, since the pin after it finds nothing
+  changed and says nothing.
 - **To the upstream's owner.** A build that changed nothing now has a new snapshot, and
   `chartbook snapshot` says why:
 
