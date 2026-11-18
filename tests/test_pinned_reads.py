@@ -443,9 +443,12 @@ class TestEveryWayOfReadingGivesThePinnedRows:
         _rebuild(rates, _student(work, monkeypatch), {"t": (full, "k", write)})
         try:
             stands_in = resolve_module.resolve("acme/rates:t", start_dirs=[report]).stands_in
-        except AssetNotPinnedError:
+        except AssetNotPinnedError as error:
             # An earlier pyarrow (23) reads no batch of a file with two columns of one name: its rows
-            # are not hashed, so nothing stands in, and there is no read here to ask about
+            # are not hashed, so nothing stands in, and there is no read here to ask about. Any other
+            # reason a read stops for is this test's to fail on
+            if "could not be read a batch at a time" not in str(error):
+                raise
             stands_in = False
         if not stands_in:
             pytest.skip("this pandas and pyarrow write no such file, or read none of it a batch at a time")

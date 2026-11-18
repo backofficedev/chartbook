@@ -2259,7 +2259,8 @@ def _pinned_now(report, key: str) -> None:
 
         sys.stderr.write(lock.written_again_said(report.lockfile.name, report.left_out, report.kept_earlier) + "\n")
     if getattr(report, "floor", None) is not None:
-        # And what was done about the ChartBook the manifest asks for, which a lockfile of this version raises
+        # And the ChartBook the manifest asks for, where it admits one that cannot read this lockfile:
+        # a read writes no manifest, and says which command does
         from chartbook import lock
 
         sys.stderr.write(lock.floor_said(report.floor, report.floor.manifest.name, report.lockfile.name) + "\n")

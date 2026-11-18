@@ -271,11 +271,12 @@ cannot read it. What tells an earlier ChartBook to upgrade, and how, is the line
 requires_chartbook = ">=0.6.0"
 ```
 
-`chartbook init` writes that line, and `chartbook pin`, `update` and `run` raise it when they
-write a lockfile that needs more than it says: commit the two files together. Everyone else is
-then told what to install by the first command they run, and in a uv project, where
-`uv add "chartbook>=0.6.0"` records the same floor, they get it at their next `uv sync`. The
-changelog's "Read this first" has the steps for each release that changes a file.
+`chartbook init` writes that line, and `chartbook pin` and `chartbook update` raise it when they
+leave a lockfile that needs more than it says: commit the two files together. (`chartbook run`
+writes no manifest, and says that `chartbook pin` does.) Everyone else is then told what to
+install by the first command they run, and in a uv project, where `uv add "chartbook>=0.6.0"`
+records the same floor, they get it at their next `uv sync`. The changelog's "Read this first"
+has the steps for each release that changes a file.
 
 ## Models have versions
 

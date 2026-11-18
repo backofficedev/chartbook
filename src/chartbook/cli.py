@@ -2606,6 +2606,9 @@ def _echo_pin_report(report):
         click.echo(lock.without_rows_said(report.without_rows))
     if getattr(report, "rows_now", None):
         click.echo(lock.rows_now_said(report.rows_now))
+    for asset, why in getattr(report, "not_hashed_now", ()):
+        # The other outcome of a snapshot made again: a table that cannot be hashed says why, and the lockfile with it
+        click.echo(f"{asset}: its rows are not hashed ({why}): it stays pinned by its file alone.")
     floor = getattr(report, "floor", None)
     if floor is not None:
         click.echo(lock.floor_said(floor, display_path(floor.manifest, relative_to=Path.cwd()), report.lockfile.name))
@@ -2649,10 +2652,12 @@ def _run_pin(project_dir, dependencies=None, on_refused=None):
 
     project_dir = resolve_project_dir(project_dir)
     try:
+        # The two commands a person runs to change what the project pins: they see to the manifest's
+        # requires_chartbook as well, which a build and a read never write
         if dependencies is None:
-            report = lock.pin(project_dir)
+            report = lock.pin(project_dir, raise_floor=True)
         else:
-            report = lock.update(project_dir, dependencies)
+            report = lock.update(project_dir, dependencies, raise_floor=True)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -3410,9 +3415,11 @@ def _echo_snapshot(report, upstream=False):
     if getattr(report, "rows_first_said", None) is not None and report.made:
         # Made of the same files as one already here, for what that one does not say: an owner who
         # has just upgraded sees why a build that changed nothing has a new snapshot
+        count = getattr(report, "rows_first_count", 0)
         click.echo(
-            f"  The same files as the snapshot made {_when(report.rows_first_said.made_at)}, which says nothing of its "
-            f"dataframes' rows: this one records them, so that a rebuild can meet a pin of it."
+            f"  The same files as the snapshot made {_when(report.rows_first_said.made_at)}, which says nothing of "
+            f"the rows of {count} dataframe{'' if count == 1 else 's'}: this one records them, so that a rebuild can "
+            f"meet a pin of {'it' if count == 1 else 'them'}."
         )
     if getattr(report, "rows_said", None):
         # Each dataframe whose file changed, beside the snapshot before this one
@@ -3469,10 +3476,19 @@ def _run_script(
         # Said only when there is something to say: a pin that is not
         # simply still in place, or a lockfile that was written
         quiet = ("kept", "not_built")  # as they were the last time
-        # Or a manifest whose requires_chartbook the pin raised, or could not: never done in silence
-        if pins.written or getattr(pins, "floor", None) is not None or any(event.status not in quiet for event in pins.events):
+        if step.source == "git":
+            # ChartBook's own copy of a dependency: its lockfile goes nowhere, and its manifest is nobody's to write here
+            pins.floor = None
+        if pins.written or any(event.status not in quiet for event in pins.events):
             click.echo(f"{step.id}: pinning what it depends on")
             _echo_pin_report(pins)
+        elif getattr(pins, "floor", None) is not None:
+            # Nothing of the pins to say, and a manifest that admits a ChartBook which cannot read the
+            # lockfile: a run writes no manifest, and says each time which command does
+            from chartbook.check import display_path
+
+            shown = display_path(pins.floor.manifest, relative_to=Path.cwd())
+            click.echo(f"{step.id}: {lock.floor_said(pins.floor, shown, pins.lockfile.name)}")
 
     try:
         report = runner.run(
@@ -3606,7 +3622,7 @@ def store_ls(pipeline, store_name):
     except (ValueError, OSError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    shown = unreachable = 0
+    shown = unreachable = unread = 0
     for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
@@ -3617,7 +3633,8 @@ def store_ls(pipeline, store_name):
             unreachable += 1
             continue
         try:
-            found = [r for r in records() if r.readable and (pipeline is None or r.pipeline == pipeline)]
+            every = list(records())
+            found = [r for r in every if r.readable and (pipeline is None or r.pipeline == pipeline)]
         except (StoreUnreachableError, OSError, StoreError) as error:
             click.echo(f"Store {name}: {the_store}: unreachable ({_said(error)})", err=True)
             unreachable += 1
@@ -3625,6 +3642,21 @@ def store_ls(pipeline, store_name):
         found.sort(key=lambda r: (r.pipeline, r.made_at))
         if len(stores) > 1 or name:
             click.echo(f"Store {name or the_store}: {the_store}" if name else f"Store: {the_store}")
+        # A record this ChartBook cannot read is not listed, and is not passed over in silence: one a
+        # later ChartBook wrote says so, and how to get that one
+        from chartbook import snapshot as snapshots
+        from chartbook.store import pipeline_folder
+
+        for record in every:
+            if record.readable or (pipeline is not None and pipeline_folder(pipeline) not in record.path.parts):
+                continue
+            try:
+                snapshots.read(record.path)
+                why = f"the snapshot record {record.path} is not where a record of what it says is kept"
+            except snapshots.SnapshotError as error:
+                why = _said(error)
+            click.echo(f"  not listed: {why}", err=True)
+            unread += 1
         current = None
         for record in found:
             if record.pipeline != current:
@@ -3646,6 +3678,8 @@ def store_ls(pipeline, store_name):
             shown += 1
     if not shown:
         said = "No snapshots" if pipeline is None else f"No snapshot of {pipeline}"
+        if unread:
+            said += " that this ChartBook can read"
         click.echo(f"{said} in the stores that could be read." if unreachable else f"{said}.")
         for name, the_store, reachable in stores:
             root = getattr(the_store, "root", None)

@@ -198,26 +198,32 @@ def later_form_said(found, reads: str) -> str:
     )
 
 
-def _just_before(since: str):
-    """A version below *since* and above every release before it: ``0.5.99999`` for ``0.6.0``."""
+def _versions_before(since: str) -> list:
+    """Versions to ask a specifier of, to learn whether it admits one below *since*: in each release line before it, the first and one past any last.
+
+    For ``0.6.0``: ``0.0.0`` and ``0.0.99999``, ``0.1.0`` and ``0.1.99999``,
+    and so on through ``0.5.99999``. A specifier that shuts out a whole
+    line by a wildcard (``!=0.5.*``) is then still asked of the lines
+    before it. Lines are counted up to 99 a place, far past any ChartBook
+    has had.
+    """
     from packaging.version import Version
 
-    release = list(Version(since).release)
-    while release and release[-1] == 0:
-        release.pop()
-    if not release:
-        return Version("0.dev0")
-    release[-1] -= 1
-    return Version(".".join(str(part) for part in (*release, 99999)))
+    major, minor, patch = (list(Version(since).release) + [0, 0, 0])[:3]
+    lines = [(m, n) for m in range(min(major, 99) + 1) for n in range(100 if m < major else min(minor, 100))]
+    probes = [Version(f"{m}.{n}.{p}") for m, n in lines for p in (0, 99999)]
+    probes += [Version(f"{major}.{minor}.{p}") for p in sorted({0, patch - 1} & set(range(patch)))]
+    return probes
 
 
 def admits_before(value: str, since: str) -> bool:
     """Whether a ``requires_chartbook`` admits a release of ChartBook earlier than *since*.
 
-    Asked of the versions that tell: each one the specifier names, and one
-    just below *since*, which every bound under it lets in. So
-    ``">=0.5.0"``, ``">0.5.1"``, ``"<1"`` and ``"!=0.5.3"`` admit one before
-    ``0.6.0``, and ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not.
+    Asked of the versions that tell: each one the specifier names, and the
+    first and a last of every release line before *since*
+    (:func:`_versions_before`). So ``">=0.5.0"``, ``">0.5.1"``, ``"<1"``,
+    ``"!=0.5.3"`` and ``"!=0.5.*"`` admit one before ``0.6.0``, and
+    ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not.
 
     :raises Exception: packaging's, where the value is not a specifier.
     """
@@ -225,7 +231,7 @@ def admits_before(value: str, since: str) -> bool:
     from packaging.version import InvalidVersion, Version
 
     wanted, floor = SpecifierSet(value), Version(since)
-    probes = [_just_before(since)]
+    probes = _versions_before(since)
     for clause in wanted:
         try:
             probes.append(Version(clause.version.removesuffix(".*")))
@@ -263,7 +269,7 @@ def with_requires_chartbook(text: str, value: str) -> Optional[str]:
     """A manifest's text with ``[project] requires_chartbook`` set to *value*, all else as it was; None where no line can be rewritten to give that.
 
     Edited as text, as :func:`with_dependency` edits it, so comments,
-    order, spacing and line endings stay. Only a line that holds the key
+    order, spacing, quotes and line endings stay. Only a line that holds the key
     and a string, the whole of it on that line, is rewritten, and the edit
     is kept only if the result parses to the manifest as it was with that
     one value changed: a line that looks like the key inside a string, or
@@ -294,7 +300,9 @@ def with_requires_chartbook(text: str, value: str) -> Optional[str]:
         r"""(?:"[^"\\\r\n]*"|'[^'\r\n]*')"""
     )
     for line in re.finditer(is_the_line, text):
-        candidate = text[:line.end(1)] + json.dumps(value) + text[line.end():]
+        # In the quotes it had, where they can hold it: a specifier has no quote of either kind
+        literal = text[line.end(1)] == "'" and "'" not in value
+        candidate = text[:line.end(1)] + (f"'{value}'" if literal else json.dumps(value)) + text[line.end():]
         if gives_it(candidate):
             return candidate
     return None

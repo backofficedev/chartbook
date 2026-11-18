@@ -66,8 +66,9 @@ def test_a_fixture_of_the_run_is_kept_out(asked_by_a_fixture_of_the_run, tmp_pat
     _all_scratch(asked_by_a_fixture_of_the_run, tmp_path_factory.getbasetemp())
 
 
-#: Each test's own scratch folder here, in the order the tests ran in this process
-_SCRATCH_OF_EARLIER_TESTS: list = []
+#: What each test here left in its own scratch store, in the order the tests ran in this process. A
+#: file and not its folder: the next test's scratch folder may be given the name the last one had
+_LEFT_BY_EARLIER_TESTS: list = []
 
 
 def test_a_test_is_given_scratch_folders(tmp_path_factory):
@@ -76,12 +77,12 @@ def test_a_test_is_given_scratch_folders(tmp_path_factory):
     store = Path(os.environ["CHARTBOOK_STORE"])
     (store / "objects").mkdir(parents=True)
     (store / "objects" / "one").write_bytes(b"of this test")
-    _SCRATCH_OF_EARLIER_TESTS.append(store.parent)
+    _LEFT_BY_EARLIER_TESTS.append(store / "objects" / "one")
 
 
 def test_its_scratch_folders_go_with_it():
     """Every test's stores and sites kept to the end of a run filled a runner's disk once."""
-    assert not any(folder.exists() for folder in _SCRATCH_OF_EARLIER_TESTS), _SCRATCH_OF_EARLIER_TESTS
+    assert not any(left.exists() for left in _LEFT_BY_EARLIER_TESTS), _LEFT_BY_EARLIER_TESTS
 
 
 def test_the_places_named_are_not_the_default_ones(monkeypatch):

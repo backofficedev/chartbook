@@ -593,21 +593,30 @@ def left_out_said(left_out: dict) -> str:
 
 @dataclass
 class Floor:
-    """What was done about a manifest whose ``requires_chartbook`` admitted a ChartBook that cannot read its lockfile.
+    """A manifest whose ``requires_chartbook`` admits a ChartBook that cannot read its lockfile, and what was done about it.
 
     Attributes:
         manifest: The manifest's path.
-        was: What it said.
+        was: What it says, or said.
         now: What it says now, or is to say.
-        written: Whether the manifest was written. Where it was not,
-            ``why_not`` says why, and the line is the user's to write.
+        written: Whether the manifest was written.
+        asked: Whether the command is one that writes it: ``chartbook pin``,
+            ``update`` and ``add``, which a person runs to change what the
+            project pins. A build and a read never write a manifest, and
+            say which command does.
+        why_not: Where it was to be written and was not, why. The line is
+            then the user's to write.
+        in_place: Whether its line is one that can be rewritten in place,
+            so that ``chartbook pin`` can be named as what raises it.
     """
 
     manifest: Path
     was: str
     now: str
     written: bool = False
+    asked: bool = False
     why_not: str = ""
+    in_place: bool = True
 
 
 def floor_of(manifest_file: Union[str, Path]) -> Optional[tuple[str, str, str]]:
@@ -631,7 +640,46 @@ def floor_of(manifest_file: Union[str, Path]) -> Optional[tuple[str, str, str]]:
         return None
 
 
-def see_to_the_floor(project_dir: Union[str, Path]) -> Optional[Floor]:
+def floor_wanted(project_dir: Union[str, Path]) -> Optional[tuple[str, str, str]]:
+    """:func:`floor_of` a pipeline's manifest, where its lockfile is one that reaches other people; None where it reaches no one.
+
+    A lockfile that git ignores is this machine's alone: each person's
+    ChartBook writes their own, in the version it reads, and nobody on an
+    earlier ChartBook is handed this one. Raising the manifest there would
+    make them upgrade for nothing.
+    """
+    found = floor_of(Path(project_dir) / MANIFEST_NAME)
+    if found is None or snapshot.ignored_by_git(Path(project_dir) / LOCK_FILE):
+        return None
+    return found
+
+
+def _write_in_its_place(path: Path, text: str) -> None:
+    """Write a file's new text so that it is whole or as it was: to a file beside it, moved over it.
+
+    A manifest opened for writing is empty until its text is in it, and a
+    disk that fills then leaves it cut short. The file a link points at is
+    the one replaced, so the link stays; its mode is kept.
+    """
+    import shutil
+
+    target = Path(os.path.realpath(path))
+    if not os.access(target, os.W_OK):
+        # A file its owner has made read-only is not written over by moving another into its place
+        raise PermissionError(errno.EACCES, os.strerror(errno.EACCES), str(target))
+    temporary = target.with_name(f"{target.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with open(temporary, "w", encoding="utf-8", newline="") as f:  # the text has its own line endings
+            f.write(text)
+        shutil.copymode(target, temporary)
+        replace_when_let(temporary, target)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            temporary.unlink()
+        raise
+
+
+def see_to_the_floor(project_dir: Union[str, Path], write: bool = False) -> Optional[Floor]:
     """See that a manifest which says which ChartBook it needs asks for one that reads its lockfile.
 
     For a pipeline whose lockfile is of this version (:data:`SCHEMA`),
@@ -639,26 +687,35 @@ def see_to_the_floor(project_dir: Union[str, Path]) -> Optional[Floor]:
     ``its schema is 'chartbook/lock/v2', and this version of ChartBook reads
     'chartbook/lock/v1'``; given a ``requires_chartbook`` it does not meet,
     it says which version to install, and the command that installs it.
-    So ``requires_chartbook = ">=0.5.0"`` becomes ``">=0.6.0"``, in the
-    manifest's own text, with every other character of the file as it was
-    (:func:`chartbook.manifest.with_requires_chartbook`).
+    So ``requires_chartbook = ">=0.5.0"`` is to become ``">=0.6.0"``.
 
-    :returns: What was done, for the command to say; None where the
-        manifest asks for nothing, or already asks for enough.
+    :param write: Whether to write it: in the manifest's own text, with
+        every other character of the file as it was
+        (:func:`chartbook.manifest.with_requires_chartbook`). For
+        ``chartbook pin``, ``update`` and ``add``. A build (``chartbook
+        run``) and a read never write a manifest: a run that snapshots
+        must leave the folder as its commit has it, and a dependency built
+        in ChartBook's own copy has a manifest that is nobody's to commit.
+        They are told what is wanted, and which command writes it.
+    :returns: What is wanted, and what was done, for the command to say;
+        None where the manifest asks for nothing, or already for enough,
+        or the lockfile is one git ignores (:func:`floor_wanted`).
     """
     manifest_file = Path(project_dir) / MANIFEST_NAME
-    found = floor_of(manifest_file)
+    found = floor_wanted(project_dir)
     if found is None:
         return None
     text, was, now = found
-    floor = Floor(manifest_file, was, now)
+    floor = Floor(manifest_file, was, now, asked=write)
     changed = with_requires_chartbook(text, now)
     if changed is None:
+        floor.in_place = False
         floor.why_not = "its line there is not one that can be rewritten in place"
         return floor
+    if not write:
+        return floor
     try:
-        with open(manifest_file, "w", encoding="utf-8", newline="") as f:
-            f.write(changed)
+        _write_in_its_place(manifest_file, changed)
     except OSError as error:
         floor.why_not = f"the file could not be written ({error.strerror or error})"
         return floor
@@ -667,28 +724,40 @@ def see_to_the_floor(project_dir: Union[str, Path]) -> Optional[Floor]:
 
 
 def floor_said(floor: Floor, shown: str, lockfile: str = LOCK_FILE) -> str:
-    """What to say of a manifest's ``requires_chartbook`` when a lockfile it cannot be read without was written or found (:func:`see_to_the_floor`).
+    """What to say of a manifest whose ``requires_chartbook`` admits a ChartBook that cannot read its lockfile (:func:`see_to_the_floor`).
 
     :param shown: The manifest's path, as it is to be printed.
     """
-    why = (
-        f"{lockfile} is of a version that began with ChartBook {SINCE}, and an earlier one cannot read it"
-    )
+    why = f"{lockfile} is of a version that began with ChartBook {SINCE}, and an earlier one cannot read it"
     if floor.written:
         return (
-            f'{shown}: requires_chartbook is now "{floor.now}" (it was "{floor.was}"). {why}: it is now told '
-            f"to upgrade, and how. Commit the two files together."
+            f'{shown}: requires_chartbook is now "{floor.now}" (it was "{floor.was}"). {why}: with this line it is '
+            f"told to upgrade, and how. Commit the manifest with the lockfile."
+        )
+    if floor.asked or not floor.in_place:
+        return (
+            f'{shown}: write requires_chartbook = "{floor.now}" under [project] (it says "{floor.was}"). {why}: '
+            f"with that line it is told to upgrade, and how. It was not written for you: {floor.why_not}."
         )
     return (
-        f'{shown}: write requires_chartbook = "{floor.now}" under [project] (it says "{floor.was}"). {why}: '
-        f"with that line it is told to upgrade, and how. It was not written for you: {floor.why_not}."
+        f'{shown}: requires_chartbook = "{floor.was}" admits a ChartBook that cannot read {lockfile}, which is of a '
+        f'version that began with {SINCE}: such a one says only which version it reads. `chartbook pin` raises the '
+        f'line to "{floor.now}", and it is then told to upgrade, and how.'
     )
 
 
 def _from_before_rows(taken) -> bool:
-    """Whether a snapshot was made by a ChartBook from before rows were recorded (:data:`SINCE`), going by what it says made it."""
+    """Whether a snapshot was made by a ChartBook from before rows were recorded (:data:`SINCE`).
+
+    Going by what it says made it, and by what it says: one that records
+    the rows of any dataframe, or why one has none, is not from before,
+    whatever version it names (a build of this ChartBook made before it
+    had its number).
+    """
     from packaging.version import InvalidVersion, Version
 
+    if any("rows" in record or "not_hashed" in record for record in (getattr(taken, "assets", None) or {}).values()):
+        return False
     made_by = (getattr(taken, "built_with", None) or {}).get("chartbook")
     try:
         return Version(str(made_by)) < Version(SINCE)
@@ -706,6 +775,11 @@ def pinned_before_rows(after: Lock, before: Lock, snapshots: dict) -> list[str]:
     as a lockfile of the earlier version had it, which recorded none. One
     whose rows are not hashed says why, and is not of these; nor is a file
     this ChartBook's own snapshot found to be no table.
+
+    Only what this run pinned, moved, or wrote again from a lockfile of the
+    earlier version: a record that a lockfile of this version already had,
+    as it is, was told of when it was made, and is not told of again each
+    time another dependency moves.
     """
     from_snapshots = {
         entry["id"] for entry in after.dependencies
@@ -717,6 +791,8 @@ def pinned_before_rows(after: Lock, before: Lock, snapshots: dict) -> list[str]:
         if (ref.get("kind") if isinstance(ref, dict) else None) != "dataframe" or record.get("pipeline") not in from_snapshots:
             continue
         if not record.get("content_hash") or "rows" in record or "not_hashed" in record:
+            continue
+        if before.read_as == SCHEMA and before.assets.get(asset_id) == record:
             continue
         taken = snapshots.get(record.get("pipeline"))
         if taken is not None:
@@ -743,6 +819,23 @@ def rows_pinned_now(after: Lock, before: Lock) -> list[str]:
     return sorted(found)
 
 
+def rows_not_hashed_now(after: Lock, before: Lock) -> list[tuple[str, str]]:
+    """The dataframes pinned to the same file as before whose record now says why its rows are not hashed, and said nothing of them: ``(asset ID, why)``.
+
+    The other outcome of a snapshot made again by a ChartBook that hashes
+    rows: a table it cannot hash (a column of lists, say) stays pinned by
+    its file alone, and the lockfile is written to say why.
+    """
+    found = []
+    for asset_id, record in after.assets.items():
+        had = before.assets.get(asset_id)
+        if not had or not record.get("content_hash") or had.get("content_hash") != record["content_hash"]:
+            continue
+        if isinstance(record.get("not_hashed"), str) and "rows" not in had and "not_hashed" not in had:
+            found.append((asset_id, record["not_hashed"]))
+    return sorted(found)
+
+
 def rows_now_said(now: list) -> str:
     """What to say, when a lockfile is written, of the dataframes whose pins record their rows from now on (:func:`rows_pinned_now`)."""
     one = len(now) == 1
@@ -759,8 +852,9 @@ def without_rows_said(without: list) -> str:
         f"{len(without)} dataframe{' is' if one else 's are'} pinned by {'its file' if one else 'their files'} alone: "
         f"{'its snapshot is' if one else 'their snapshots are'} from before ChartBook {SINCE}, which recorded no rows, "
         f"and no rebuild meets such a pin. To pin {'its' if one else 'their'} rows: `chartbook snapshot` again in "
-        f"{'its pipeline' if one else 'each of their pipelines'}, with this version (the same commit and the same files "
-        f"make a new snapshot, once, that records them), then `chartbook update` here."
+        f"{'its pipeline' if one else 'each of their pipelines'}, with this version, then `chartbook update` here. "
+        f"Nothing has to be built again: where a table's rows can be recorded, the same commit and the same files make "
+        f"a new snapshot, once."
     )
 
 
@@ -941,6 +1035,8 @@ class PinReport:
             it did not (:func:`rows_pinned_now`), by asset ID. What the
             reader's ``chartbook update`` does once an upstream has been
             snapshotted again by a ChartBook that records them.
+        not_hashed_now: And those whose pin now says why its rows are not
+            hashed (:func:`rows_not_hashed_now`), each with why.
     """
 
     lockfile: Path
@@ -958,6 +1054,7 @@ class PinReport:
     floor: Optional["Floor"] = None
     without_rows: list = field(default_factory=list)
     rows_now: list = field(default_factory=list)
+    not_hashed_now: list = field(default_factory=list)
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -1491,10 +1588,11 @@ def _sync(
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
     before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
+    raise_floor: bool = False,
 ) -> PinReport:
     """:func:`_sync_now`, one at a time for each lockfile."""
     with _one_at_a_time(Path(project_dir) / LOCK_FILE):
-        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here, before_writing)
+        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here, before_writing, raise_floor)
 
 
 def _sync_now(
@@ -1506,6 +1604,7 @@ def _sync_now(
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
     before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
+    raise_floor: bool = False,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
@@ -1531,6 +1630,10 @@ def _sync_now(
         moved entries would close a cycle of dependencies, or lead into
         one, is refused (:func:`_refuse_a_cycle`); a caller that gives its
         own guard decides instead.
+    :param raise_floor: Whether to write the manifest's
+        ``requires_chartbook`` where it admits a ChartBook that cannot
+        read the lockfile (:func:`see_to_the_floor`). Without it the
+        report says what is wanted, and nothing of the manifest is written.
     """
     project_dir = Path(project_dir).resolve()
     from chartbook.multi_store import with_dependencies
@@ -1886,10 +1989,7 @@ def _sync_now(
             # Said when pins are made or moved, and when an earlier lockfile is written again: never by a pin that changes nothing
             report.without_rows = pinned_before_rows(after, before, report.snapshots)
             report.rows_now = rows_pinned_now(after, before)
-    if lock_path.exists() and (report.written or before.read_as == SCHEMA):
-        # The lockfile is of this version, which a ChartBook before SINCE cannot read: a manifest that
-        # says which one it needs says so too, whether the lockfile was written just now or before
-        report.floor = see_to_the_floor(project_dir)
+            report.not_hashed_now = rows_not_hashed_now(after, before)
     hashes = after.hashes()
     noted_as = _noted_as()
     try:
@@ -1913,6 +2013,11 @@ def _sync_now(
         # A store that is read-only for this user: the pins are in it, the
         # lockfile names them, and only the note for `gc` is missing
         report.unrooted = said
+    if lock_path.exists() and (report.written or before.read_as == SCHEMA):
+        # The lockfile is of this version, which a ChartBook before SINCE cannot read: a manifest that
+        # says which one it needs is to say so too, whether the lockfile was written just now or before.
+        # Last, so that nothing that stops a pin leaves a manifest written and unsaid
+        report.floor = see_to_the_floor(project_dir, write=raise_floor)
     return report
 
 
@@ -3583,6 +3688,7 @@ def pin(
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
     before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
+    raise_floor: bool = False,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -3617,6 +3723,11 @@ def pin(
         pinned from the clone (:func:`clone_instead`).
     :param built_here: The IDs of pipelines a run builds itself (a
         catalog's own), which are never cloned.
+    :param raise_floor: Whether to raise the manifest's
+        ``requires_chartbook`` where it admits a ChartBook that cannot
+        read the lockfile (:func:`see_to_the_floor`), as ``chartbook pin``
+        does. A build and a read leave the manifest as it is, and the
+        report's ``floor`` says what is wanted.
     :param before_writing: Called with the lockfile as it would be written;
         what it returns, if anything, is why nothing is written. It takes
         the place of the default guard, which refuses a lockfile that would
@@ -3634,6 +3745,7 @@ def pin(
         clone_missing=clone_missing,
         built_here=built_here,
         before_writing=before_writing,
+        raise_floor=raise_floor,
     )
 
 
@@ -3963,6 +4075,7 @@ def update(
     dependencies: Iterable[str] = (),
     store: Optional[Store] = None,
     git_cache: Optional[GitCache] = None,
+    raise_floor: bool = False,
 ) -> PinReport:
     """Move a pipeline's pins forward to what its dependencies have now.
 
@@ -3977,6 +4090,10 @@ def update(
         ``[dependencies]`` (the scope may be left off when unambiguous).
         All of them by default.
     :param store: The store to pin into; this user's by default.
+    :param raise_floor: Whether to raise the manifest's
+        ``requires_chartbook`` where it admits a ChartBook that cannot
+        read the lockfile (:func:`see_to_the_floor`), as ``chartbook
+        update`` does.
     :returns: What was done. An asset whose pin changed has the status
         ``moved``.
     :raises LockError: If *project_dir* is not a pipeline, its lockfile
@@ -3988,6 +4105,7 @@ def update(
         store,
         move=list(dependencies),
         git_cache=git_cache,
+        raise_floor=raise_floor,
     )
 
 

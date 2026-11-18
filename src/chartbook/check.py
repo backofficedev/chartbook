@@ -743,7 +743,8 @@ def _asks_for_too_little(pipeline_dir: Path, toml_file: Path) -> Optional[Proble
     is too old: then it says what to install. ``chartbook pin`` raises the
     line when it writes such a lockfile; this is for one that was put back,
     merged, or could not be written. A manifest without the key says
-    nothing of versions, and is not held to any.
+    nothing of versions, and is not held to any; nor is one whose lockfile
+    git ignores, which reaches no one else.
     """
     from chartbook import lock
 
@@ -753,14 +754,18 @@ def _asks_for_too_little(pipeline_dir: Path, toml_file: Path) -> Optional[Proble
         return None  # said already, by _pinned_keys
     if locked is None or locked.read_as != lock.SCHEMA:
         return None
-    found = lock.floor_of(toml_file)
+    found = lock.floor_wanted(pipeline_dir)
     if found is None:
         return None
-    _, was, now = found
+    text, was, now = found
+    from chartbook.manifest import with_requires_chartbook
+
+    # Only where `chartbook pin` can: a line it cannot rewrite in place is the user's to write
+    by_pin = " (`chartbook pin` does)" if with_requires_chartbook(text, now) is not None else ""
     return Problem(
         toml_file, "project", "requires_chartbook",
         f'"{was}" admits a ChartBook that cannot read {lock.LOCK_FILE}, which is of a version that began with '
-        f'{lock.SINCE}: such a one says only which version it reads. Write "{now}" (`chartbook pin` does), and it '
+        f'{lock.SINCE}: such a one says only which version it reads. Write "{now}"{by_pin}, and it '
         f"is told to upgrade, and how",
     )
 
