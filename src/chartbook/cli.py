@@ -2602,6 +2602,13 @@ def _echo_pin_report(report):
     if report.earlier:
         # Said once: the next pin finds it in this form
         click.echo(lock.written_again_said(shown, report.left_out, report.kept_earlier))
+    if getattr(report, "without_rows", None):
+        click.echo(lock.without_rows_said(report.without_rows))
+    if getattr(report, "rows_now", None):
+        click.echo(lock.rows_now_said(report.rows_now))
+    floor = getattr(report, "floor", None)
+    if floor is not None:
+        click.echo(lock.floor_said(floor, display_path(floor.manifest, relative_to=Path.cwd()), report.lockfile.name))
     if report.written:
         click.echo(f"Wrote {shown}.")
     elif report.lockfile.exists():
@@ -3400,6 +3407,13 @@ def _echo_snapshot(report, upstream=False):
             f"  rows not hashed this time: {asset} ({why}). Its bytes are in the snapshot; "
             f"`chartbook snapshot` again hashes its rows."
         )
+    if getattr(report, "rows_first_said", None) is not None and report.made:
+        # Made of the same files as one already here, for what that one does not say: an owner who
+        # has just upgraded sees why a build that changed nothing has a new snapshot
+        click.echo(
+            f"  The same files as the snapshot made {_when(report.rows_first_said.made_at)}, which says nothing of its "
+            f"dataframes' rows: this one records them, so that a rebuild can meet a pin of it."
+        )
     if getattr(report, "rows_said", None):
         # Each dataframe whose file changed, beside the snapshot before this one
         # Named by its commit too: the one before may be of another branch, and its rows are then another's
@@ -3455,7 +3469,8 @@ def _run_script(
         # Said only when there is something to say: a pin that is not
         # simply still in place, or a lockfile that was written
         quiet = ("kept", "not_built")  # as they were the last time
-        if pins.written or any(event.status not in quiet for event in pins.events):
+        # Or a manifest whose requires_chartbook the pin raised, or could not: never done in silence
+        if pins.written or getattr(pins, "floor", None) is not None or any(event.status not in quiet for event in pins.events):
             click.echo(f"{step.id}: pinning what it depends on")
             _echo_pin_report(pins)
 

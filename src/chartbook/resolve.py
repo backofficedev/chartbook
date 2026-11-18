@@ -2258,6 +2258,11 @@ def _pinned_now(report, key: str) -> None:
         from chartbook import lock
 
         sys.stderr.write(lock.written_again_said(report.lockfile.name, report.left_out, report.kept_earlier) + "\n")
+    if getattr(report, "floor", None) is not None:
+        # And what was done about the ChartBook the manifest asks for, which a lockfile of this version raises
+        from chartbook import lock
+
+        sys.stderr.write(lock.floor_said(report.floor, report.floor.manifest.name, report.lockfile.name) + "\n")
 
 
 #: When a read last tried to pin a dependency that had no snapshot, so that

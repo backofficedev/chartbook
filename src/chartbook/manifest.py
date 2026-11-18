@@ -178,6 +178,128 @@ def require_chartbook(raw_manifest: dict, source: str = "chartbook.toml") -> Non
         )
 
 
+def later_form_said(found, reads: str) -> str:
+    """What to add where a file is in a later form than this ChartBook reads: that a later one wrote it, and how to get one.
+
+    ``chartbook/lock/v3`` beside the ``chartbook/lock/v2`` this one reads
+    is a later one's file. Anything else (another kind of file, an earlier
+    form no longer read, no form at all) gets no advice: empty.
+    """
+    from chartbook.__about__ import __version__
+
+    is_form = re.compile(r"(chartbook/[a-z_]+/v)([0-9]{1,9})")
+    theirs = is_form.fullmatch(found) if isinstance(found, str) else None
+    ours = is_form.fullmatch(reads)
+    if not theirs or not ours or theirs.group(1) != ours.group(1) or int(theirs.group(2)) <= int(ours.group(2)):
+        return ""
+    return (
+        f". A later ChartBook than this one ({__version__}) wrote it. Install it: `pip install -U chartbook`, or "
+        f"`uv sync --upgrade-package chartbook` in a uv project"
+    )
+
+
+def _just_before(since: str):
+    """A version below *since* and above every release before it: ``0.5.99999`` for ``0.6.0``."""
+    from packaging.version import Version
+
+    release = list(Version(since).release)
+    while release and release[-1] == 0:
+        release.pop()
+    if not release:
+        return Version("0.dev0")
+    release[-1] -= 1
+    return Version(".".join(str(part) for part in (*release, 99999)))
+
+
+def admits_before(value: str, since: str) -> bool:
+    """Whether a ``requires_chartbook`` admits a release of ChartBook earlier than *since*.
+
+    Asked of the versions that tell: each one the specifier names, and one
+    just below *since*, which every bound under it lets in. So
+    ``">=0.5.0"``, ``">0.5.1"``, ``"<1"`` and ``"!=0.5.3"`` admit one before
+    ``0.6.0``, and ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not.
+
+    :raises Exception: packaging's, where the value is not a specifier.
+    """
+    from packaging.specifiers import SpecifierSet
+    from packaging.version import InvalidVersion, Version
+
+    wanted, floor = SpecifierSet(value), Version(since)
+    probes = [_just_before(since)]
+    for clause in wanted:
+        try:
+            probes.append(Version(clause.version.removesuffix(".*")))
+        except InvalidVersion:
+            continue  # an arbitrary one (===): it names no version to ask of
+    return any(probe < floor and wanted.contains(probe, prereleases=True) for probe in probes)
+
+
+def raised_to(value: str, since: str) -> str:
+    """A ``requires_chartbook`` with *since* as the earliest ChartBook it admits, and the rest of what it says kept.
+
+    ``">=0.5.0"`` gives ``">=0.6.0"``, and ``">=0.5,<0.7"`` gives
+    ``">=0.6.0,<0.7"``: a lower bound under *since* goes, since the new one
+    says more, and every other clause stays as it was written.
+    """
+    from packaging.specifiers import InvalidSpecifier, Specifier
+    from packaging.version import InvalidVersion, Version
+
+    floor, kept = Version(since), []
+    for written in value.split(","):
+        written = written.strip()
+        if not written:
+            continue
+        try:
+            clause = Specifier(written)
+            if clause.operator in (">=", ">") and Version(clause.version) < floor:
+                continue
+        except (InvalidSpecifier, InvalidVersion):
+            pass
+        kept.append(written)
+    return ",".join([f">={since}", *kept])
+
+
+def with_requires_chartbook(text: str, value: str) -> Optional[str]:
+    """A manifest's text with ``[project] requires_chartbook`` set to *value*, all else as it was; None where no line can be rewritten to give that.
+
+    Edited as text, as :func:`with_dependency` edits it, so comments,
+    order, spacing and line endings stay. Only a line that holds the key
+    and a string, the whole of it on that line, is rewritten, and the edit
+    is kept only if the result parses to the manifest as it was with that
+    one value changed: a line that looks like the key inside a string, or
+    under another table, is never written into.
+
+    :param text: The ``chartbook.toml`` as it is, which has the key.
+    :param value: The specifier to write.
+    """
+    try:
+        raw = tomli.loads(text)
+    except tomli.TOMLDecodeError:
+        return None
+    project = raw.get("project")
+    if not isinstance(project, dict) or not isinstance(project.get("requires_chartbook"), str):
+        return None
+    wanted = {**raw, "project": {**project, "requires_chartbook": value}}
+
+    def gives_it(candidate: str) -> bool:
+        try:
+            got = tomli.loads(candidate)
+        except tomli.TOMLDecodeError:
+            return False
+        # As text, so that nan, which equals nothing, compares; keys in any order
+        return json.dumps(got, sort_keys=True, default=str) == json.dumps(wanted, sort_keys=True, default=str)
+
+    is_the_line = (
+        r"""(?m)^([ \t]*(?:project[ \t]*\.[ \t]*)?requires_chartbook[ \t]*=[ \t]*)"""
+        r"""(?:"[^"\\\r\n]*"|'[^'\r\n]*')"""
+    )
+    for line in re.finditer(is_the_line, text):
+        candidate = text[:line.end(1)] + json.dumps(value) + text[line.end():]
+        if gives_it(candidate):
+            return candidate
+    return None
+
+
 def resolve_project_type(raw_manifest: dict, source: str = "chartbook.toml") -> str:
     """Resolve a manifest's project type, inferring from structure when unset.
 

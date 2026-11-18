@@ -734,6 +734,37 @@ def _pinned_keys(pipeline_dir: Path) -> Optional[set[str]]:
     return {listed["id"] for listed in locked.dependencies if listed.get("id")}
 
 
+def _asks_for_too_little(pipeline_dir: Path, toml_file: Path) -> Optional[Problem]:
+    """A manifest whose ``requires_chartbook`` admits a ChartBook that cannot read the pipeline's lockfile; None where it does not.
+
+    A lockfile of this version (:data:`chartbook.lock.SCHEMA`) is read
+    by ChartBook :data:`chartbook.lock.SINCE` and later. An earlier one
+    says only which version it reads, unless the manifest tells it that it
+    is too old: then it says what to install. ``chartbook pin`` raises the
+    line when it writes such a lockfile; this is for one that was put back,
+    merged, or could not be written. A manifest without the key says
+    nothing of versions, and is not held to any.
+    """
+    from chartbook import lock
+
+    try:
+        locked = lock.read_lock(pipeline_dir)
+    except lock.LockError:
+        return None  # said already, by _pinned_keys
+    if locked is None or locked.read_as != lock.SCHEMA:
+        return None
+    found = lock.floor_of(toml_file)
+    if found is None:
+        return None
+    _, was, now = found
+    return Problem(
+        toml_file, "project", "requires_chartbook",
+        f'"{was}" admits a ChartBook that cannot read {lock.LOCK_FILE}, which is of a version that began with '
+        f'{lock.SINCE}: such a one says only which version it reads. Write "{now}" (`chartbook pin` does), and it '
+        f"is told to upgrade, and how",
+    )
+
+
 def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: Path) -> tuple[str, bool]:
     """What to say of a ``path`` dependency whose folder is not here, and whether the pipeline builds without it.
 
@@ -840,6 +871,9 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         toml_file = pipeline_dir / "chartbook.toml"
         pinned = _pinned_keys(pipeline_dir)
+        too_little = _asks_for_too_little(pipeline_dir, toml_file)
+        if too_little is not None:
+            problems.append(too_little)
         for key, entry in (pipeline_manifest.get("dependencies") or {}).items():
             table = _dependency_table(key)
             location = locate_pipeline(key, dependencies={key: entry})

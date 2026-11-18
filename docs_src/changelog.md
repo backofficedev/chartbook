@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Read this first: upgrading from 0.5
+
+**A store needs nothing.** Its layout is the same, and ChartBook 0.5 and this one can share a store: 0.5 lists, pins and reads the snapshots this one makes, and its `store gc` keeps what a lockfile of this one reads (on the machine that has that lockfile it stops, says it cannot read it, and removes nothing).
+
+**A lockfile is written again once, and 0.5 cannot read what this version writes.** The first `chartbook pin`, `update` or `run` after you upgrade writes `chartbook.lock` in its new version, without its charts and notebooks, and says so. No pin moves. ChartBook 0.5, given that lockfile, says only `its schema is 'chartbook/lock/v2', and this version of ChartBook reads 'chartbook/lock/v1'`. So where your `chartbook.toml` says which ChartBook it needs, the same command raises that line, and 0.5 then says what to install, with the command:
+
+```text
+$ chartbook pin
+ftsfr/fed_yield_curve: 1 already pinned
+chartbook.lock was in an earlier form, which pinned every asset. It is written again without its 1 chart and 2 notebooks: they are not pinned, and are read from the snapshot the lockfile names, or from your own build of that commit where the store does not have that snapshot.
+1 dataframe is pinned by its file alone: its snapshot is from before ChartBook 0.6.0, which recorded no rows, and no rebuild meets such a pin. To pin its rows: `chartbook snapshot` again in its pipeline, with this version (the same commit and the same files make a new snapshot, once, that records them), then `chartbook update` here.
+chartbook.toml: requires_chartbook is now ">=0.6.0" (it was ">=0.5.0"). chartbook.lock is of a version that began with ChartBook 0.6.0, and an earlier one cannot read it: it is now told to upgrade, and how. Commit the two files together.
+Wrote chartbook.lock.
+```
+
+**A pin made under 0.5 is met by the same file only,** since its snapshot recorded no rows. A team that shares a store reads the same files as before and needs no more than the upgrade. For pins that a build of someone's own can meet (the reason for this release), the other pipeline is snapshotted again, which takes no new build.
+
+In order:
+
+1. Upgrade: `pip install -U chartbook`, or `uv add "chartbook>=0.6.0"` in a uv project, where everyone else then gets it at their next `uv sync`.
+2. In each pipeline that others pin: `chartbook snapshot`. The same commit and the same files make one new snapshot, which records each dataframe's rows, and the command says that is why it was made.
+3. In each pipeline that pins them: `chartbook update`, which says `already pinned`, since no file changed, and then what did: `2 dataframes have their rows pinned now, as well as their files: a build of someone's own that holds the same rows meets the pin.` Commit `chartbook.lock` and `chartbook.toml` together.
+4. A script that ran `chartbook pin --frozen` runs `chartbook pin --check` (below).
+
+A dataframe whose file has the column pandas makes of an index with no name is told of at step 2, and is worth mending there (`to_parquet(index=False)`): with it, no later build has the pinned rows.
+
+### Added — the move to a new version is told by the commands
+
+- **`chartbook pin`, `update` and `run` raise `[project] requires_chartbook`** when they leave a lockfile an earlier ChartBook cannot read under a manifest that admits one: `">=0.5.0"` becomes `">=0.6.0"`, and `">=0.5,<0.7"` becomes `">=0.6.0,<0.7"`. The line is rewritten in place, and every other character of the file stays: comments, order, quotes, line endings. A manifest without the key says nothing of versions and is left without it. A line that cannot be rewritten in place (an inline `project = { … }`, a string over several lines, a file that cannot be written) is left, and the command says what to write there. A first read that pins says it on stderr. `chartbook pin --check` writes nothing, this included.
+- **`chartbook check` fails** on a lockfile of this version under a `requires_chartbook` that admits an earlier ChartBook (a manifest put back, or merged from a branch that had not moved), and names `chartbook pin`, which ends it.
+- **A pin from a snapshot of an earlier ChartBook says what it is.** When `pin` or `update` writes a lockfile that holds dataframes pinned from snapshots made before 0.6.0, it says how many, that no rebuild meets such a pin, and the two commands that give pins one can meet. It is said when the lockfile is written, never by a pin that changes nothing. And when an `update` leaves a pin on the same file and takes its rows from a newer snapshot of it, it says how many pins record their rows from then on.
+- **`chartbook snapshot` says why a build that changed nothing has a new snapshot:** `The same files as the snapshot made 2026-11-04 05:46 UTC, which says nothing of its dataframes' rows: this one records them, so that a rebuild can meet a pin of it.` Once: the next one says `No new snapshot`.
+- **A file of a later version says how to get the ChartBook that wrote it.** A lockfile or a snapshot whose version is later than this ChartBook reads now ends: `A later ChartBook than this one (0.6.0) wrote it. Install it: \`pip install -U chartbook\`, or \`uv sync --upgrade-package chartbook\` in a uv project`. The next change of a file's version is then told by every ChartBook from this one on, whatever a manifest says.
+
 ### Added — `chartbook update` and `chartbook snapshot` say what a dataframe's rows did
 
 A pin that moves says, for each dataframe, what its rows are beside the pin it had; a snapshot says the same beside the snapshot before it:
@@ -104,7 +138,7 @@ A pin recorded the hash of every asset of every dependency, charts and notebooks
 
 An asset that is not in the lockfile is still read, `assets.path("rates:chart/curve")` and the rest, from the snapshot the lockfile names, by its commit and time, when a store has that snapshot: a team that shares a store reads the same chart as before, and `store gc` keeps that snapshot. Where the store does not have that snapshot, the asset is read from your own snapshot of that pipeline at that commit, the newest that holds it, with nothing checked, and `store gc` keeps your snapshots of that commit while a lockfile names one of it that the store does not have. With no snapshot at that commit the read stops and names the commit to build. A dependency that makes only charts is pinned by its entry in the lockfile, which names its snapshot; `pin` does not move it and `update` does.
 
-The lockfile is `chartbook/lock/v2`. One written before is still read, as the new form would have written it, and nothing fails for its age: `pin --check` passes on it and says `chartbook.lock is in an earlier form, which pinned every asset: its 10 charts and 7 notebooks are not checked…`, and the first command that writes the lockfile (`pin`, `update`, `run`, a first read that pins) writes it again in the new form, once, and says so. The pin does not move, and writing it again takes no read away: where the store has an old record's bytes and no snapshot to read that chart from (a pin made before pins named snapshots, or a store whose record of the snapshot is gone), the record stays in the lockfile, a pin as it was, and the message says how many did; on another machine, whose store does not have those bytes, such a record is no pin and the chart is read from a build there. A ChartBook from before this release does not read a version 2 lockfile, and says which version it reads. The design, and what comes after this step, is {design}`pins-and-rebuilds`.
+The lockfile is `chartbook/lock/v2`. One written before is still read, as the new form would have written it, and nothing fails for its age: `pin --check` passes on it and says `chartbook.lock is in an earlier form, which pinned every asset: its 10 charts and 7 notebooks are not checked…`, and the first command that writes the lockfile (`pin`, `update`, `run`, a first read that pins) writes it again in the new form, once, and says so. The pin does not move, and writing it again takes no read away: where the store has an old record's bytes and no snapshot to read that chart from (a pin made before pins named snapshots, or a store whose record of the snapshot is gone), the record stays in the lockfile, a pin as it was, and the message says how many did; on another machine, whose store does not have those bytes, such a record is no pin and the chart is read from a build there. A ChartBook from before this release does not read a version 2 lockfile, and says which version it reads, unless the manifest's `requires_chartbook` tells it that it is too old: the command that writes the lockfile again sees to that line ("Read this first", above). The design, and what comes after this step, is {design}`pins-and-rebuilds`.
 
 ### Changed — `chartbook pin --frozen` is `chartbook pin --check`, and writes nothing
 
