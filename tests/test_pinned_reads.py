@@ -20,6 +20,7 @@ from click.testing import CliRunner
 from chartbook import assets, config, data, lock, snapshot
 from chartbook import resolve as resolve_module
 from chartbook.cli import main
+from chartbook.errors import AssetNotPinnedError
 from chartbook.store import FolderStore
 from tests.fixtures import commit_pipeline
 
@@ -440,8 +441,14 @@ class TestEveryWayOfReadingGivesThePinnedRows:
         )
         rates, report = _pin(work, monkeypatch, {"t": (full.head(8), "k", write)})
         _rebuild(rates, _student(work, monkeypatch), {"t": (full, "k", write)})
-        if not resolve_module.resolve("acme/rates:t", start_dirs=[report]).stands_in:
-            pytest.skip("this pandas and pyarrow write no such file")
+        try:
+            stands_in = resolve_module.resolve("acme/rates:t", start_dirs=[report]).stands_in
+        except AssetNotPinnedError:
+            # An earlier pyarrow (23) reads no batch of a file with two columns of one name: its rows
+            # are not hashed, so nothing stands in, and there is no read here to ask about
+            stands_in = False
+        if not stands_in:
+            pytest.skip("this pandas and pyarrow write no such file, or read none of it a batch at a time")
         assert data.load("acme/rates:t", format="polars_eager", project_dir=report).height == 8
         assert len(data.load("acme/rates:t", format="pandas", project_dir=report)) == 8
 
