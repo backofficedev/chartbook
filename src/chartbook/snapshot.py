@@ -820,11 +820,12 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     return found
 
 
-def ignored_by_git(path: Union[str, Path]) -> bool:
-    """Whether git ignores a file: one in a repository whose rules leave it out, and that it does not track.
+def ignored_by_git(path: Union[str, Path]) -> Optional[bool]:
+    """Whether git ignores a file: True for one in a repository whose rules leave it out, and that it does not track; False for one it tracks, or would.
 
-    False where that cannot be told: no repository there, no git, or a
-    git that does not answer in a moment.
+    None where that cannot be told: no repository there, no git, or a git
+    that does not answer in a moment. A caller that acts on either answer
+    asks for it by name (``is True``, ``is False``).
     """
     path = Path(path)
     try:
@@ -835,8 +836,9 @@ def ignored_by_git(path: Union[str, Path]) -> bool:
             timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return False
-    return result.returncode == 0
+        return None
+    # 0: ignored. 1: not ignored. Anything else is git saying it cannot tell (128: no repository)
+    return {0: True, 1: False}.get(result.returncode)
 
 
 def record_name(subdirectory: str) -> str:

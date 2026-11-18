@@ -2261,12 +2261,9 @@ def _pinned_now(report, key: str) -> None:
     if report.written:
         # And what `chartbook pin` says of the rows of what it pins, when it writes a lockfile: a read
         # that writes one says it too, since the pin after it finds nothing changed and says nothing
+        # (A read moves no pin, so none of them gains its rows here: that is `chartbook update`'s to say)
         if getattr(report, "without_rows", None):
             sys.stderr.write(lock.without_rows_said(report.without_rows) + "\n")
-        if getattr(report, "rows_now", None):
-            sys.stderr.write(lock.rows_now_said(report.rows_now) + "\n")
-        for asset, why in getattr(report, "not_hashed_now", ()):
-            sys.stderr.write(f"{asset}: its rows are not hashed ({why}): it stays pinned by its file alone.\n")
     if getattr(report, "floor", None) is not None:
         # And the ChartBook the manifest asks for, where it admits one that cannot read this lockfile:
         # a read writes no manifest, and says which command does

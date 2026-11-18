@@ -284,6 +284,8 @@ class TestPinUpdateAndAddRaiseTheLine:
             ("<2,!=0.5.*", ">=0.6.0,<2,!=0.5.*"),
             # The line before every other one
             ("<0.1", ">=0.6.0,<0.1"),
+            # One that lets in neither end of the line before it, and what lies between
+            (">=0.5.1,!=0.5.99999", ">=0.6.0,!=0.5.99999"),
         ],
     )
     def test_the_rest_of_what_it_says_is_kept(self, was, now):
@@ -553,10 +555,11 @@ class TestABuildAndAReadNeverWriteAManifest:
         result = _run("run", "--upstream")
         assert result.exit_code == 0, result.output
         assert _asked_for(b) == ">=0.5.0"
+        # With the command to run, and where: the upstream's folder is not the one the run was started in
         told = (
             f'{b / "chartbook.toml"}: requires_chartbook = ">=0.5.0" admits a ChartBook that cannot read chartbook.lock, which is '
-            f"of a version that began with 0.6.0: such a one says only which version it reads. `chartbook pin` in {b} raises "
-            f'the line to ">=0.6.0", and it is then told to upgrade, and how.'
+            f"of a version that began with 0.6.0: such a one says only which version it reads. `chartbook pin --project-dir {b}` "
+            f'raises the line to ">=0.6.0", and it is then told to upgrade, and how.'
         )
         if ignored:
             assert "requires_chartbook" not in result.output and _git(work, "status", "--porcelain") == ""
@@ -991,35 +994,82 @@ class TestWhatTheSecondReviewFound:
         assert RAISED in _run("pin").output.splitlines() and _asked_for(report) == ">=0.6.0"
 
     @pytest.mark.parametrize("error", [FileNotFoundError("git"), __import__("subprocess").TimeoutExpired("git", 5)])
-    def test_with_no_git_to_ask_nothing_is_taken_to_be_ignored(self, error, report, monkeypatch):
+    def test_with_no_git_to_ask_it_cannot_be_told(self, error, report, monkeypatch):
+        """Neither ignored nor not: a caller that leaves a manifest alone for git's answer needs the answer."""
+        assert snapshot.ignored_by_git(report / "chartbook.lock") is None  # no repository here
+
         def no_git(*arguments, **options):
             raise error
 
         monkeypatch.setattr(snapshot.subprocess, "run", no_git)
-        assert snapshot.ignored_by_git(report / "chartbook.lock") is False
+        assert snapshot.ignored_by_git(report / "chartbook.lock") is None
+
+    @pytest.mark.parametrize(("of_the_lockfile", "of_the_manifest", "left"), [
+        (True, False, True),    # shared through git, its lockfile left out
+        (True, None, False),    # git answered once and not again
+        (True, True, False),    # the whole project left out of a repository above it
+        (None, False, False),
+        (False, False, False),
+    ])
+    def test_the_manifest_is_left_only_on_both_of_gits_answers(self, of_the_lockfile, of_the_manifest, left, report, rates, store, monkeypatch):
+        answers = {"chartbook.lock": of_the_lockfile, "chartbook.toml": of_the_manifest}
+        monkeypatch.setattr(snapshot, "ignored_by_git", lambda path: answers[Path(path).name])
+        snapshot.make(rates, store=store)
+        result = _run("pin")
+        assert result.exit_code == 0, result.output
+        assert (RAISED not in result.output.splitlines()) == left and _asked_for(report) == (">=0.5.0" if left else ">=0.6.0")
+        # And the check asks the same question, and gets the same answer
+        (report / "chartbook.toml").write_text(REPORT, encoding="utf-8", newline="\n")
+        assert ("requires_chartbook" not in _run("check", "--skip-outputs").output) == left
 
     @pytest.mark.skipif(sys.platform == "win32", reason="a second name for a file is made another way there")
-    def test_a_manifest_with_a_second_name_keeps_it(self, report, rates, store, work):
+    def test_a_manifest_with_a_second_name_is_the_users_to_write(self, report, rates, store, work):
+        """A new file moved over one name would leave the other with the old text, and a write in place can be cut short: neither is done."""
         os.link(report / "chartbook.toml", work / "the-same-file.toml")
         snapshot.make(rates, store=store)
-        assert _run("pin").exit_code == 0
-        assert _asked_for(report) == ">=0.6.0"
-        assert (work / "the-same-file.toml").read_text(encoding="utf-8") == (report / "chartbook.toml").read_text(encoding="utf-8")
+        result = _run("pin")
+        assert result.exit_code == 0, result.output
+        assert (
+            "It was not written for you: the file has a second name (a hard link), which a new file moved over this one "
+            "would leave with the old text."
+        ) in result.output
+        assert (report / "chartbook.toml").read_text(encoding="utf-8") == REPORT == (work / "the-same-file.toml").read_text(encoding="utf-8")
         assert (work / "the-same-file.toml").stat().st_ino == (report / "chartbook.toml").stat().st_ino
+        assert "`chartbook pin` does" not in _run("check", "--skip-outputs").output
 
-    def test_a_file_left_by_a_write_that_was_killed_is_removed_by_the_next(self, report, rates, store):
-        old = report / ("chartbook.toml." + "0" * 32 + ".tmp")
-        new = report / ("chartbook.toml." + "1" * 32 + ".tmp")
-        other = report / "chartbook.toml.bak.tmp"
-        for path in (old, new, other):
-            path.write_text("half", encoding="utf-8")
-        long_ago = old.stat().st_mtime - 3600
-        os.utime(old, (long_ago, long_ago))
-        os.utime(other, (long_ago, long_ago))
+    @pytest.mark.skipif(sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="a folder's mode stops no write here")
+    def test_a_folder_that_cannot_be_written_is_asked_of_too(self, report, rates, store):
+        """The new text is written beside the manifest, so its folder has to take a file: asked before any command is named as what writes it."""
         snapshot.make(rates, store=store)
-        assert _run("pin").exit_code == 0 and _asked_for(report) == ">=0.6.0"
-        # The one a minute old and more goes; one of a pin that may be at work now stays, and so does a file of another name
-        assert not old.exists() and new.exists() and other.exists()
+        (report / "chartbook.toml").write_text(REPORT + '\n[scripts]\nbuild = "echo built"\n', encoding="utf-8", newline="\n")
+        assert not lock.pin(report, store).problems  # the lockfile, while the folder takes one
+        os.chmod(report, stat.S_IREAD | stat.S_IEXEC)
+        try:
+            pinned, ran, checked = _run("pin"), _run("run"), _run("check", "--skip-outputs")
+        finally:
+            os.chmod(report, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+        for told in (pinned, ran):
+            assert told.exit_code == 0, told.output
+            assert 'chartbook.toml: write requires_chartbook = ">=0.6.0" under [project]' in told.output
+            assert "It was not written for you: the file could not be written (Permission denied)." in told.output
+        assert "`chartbook pin`" not in ran.output and "`chartbook pin` does" not in checked.output
+        assert _asked_for(report) == ">=0.5.0"
+
+    def test_a_read_from_a_folder_inside_the_project_says_where_to_pin(self, report, rates, store, monkeypatch, capsys):
+        """`chartbook pin` in a notebook's folder finds no manifest: the line gives the command whole."""
+        from chartbook import data
+
+        snapshot.make(rates, store=store)
+        (report / "notebooks").mkdir()
+        monkeypatch.chdir(report / "notebooks")
+        assert data.load("acme/rates:treasury").collect().height == 80
+        said = capsys.readouterr().err
+        assert f"`chartbook pin --project-dir {report}` raises the line to \">=0.6.0\"" in said
+
+    def test_a_folder_with_a_space_in_its_name_is_quoted(self, work):
+        floor = lock.Floor(work / "my report (draft)" / "chartbook.toml", ">=0.5.0", ">=0.6.0")
+        assert lock.where_to_pin(floor) == f' --project-dir "{work / "my report (draft)"}"'
+        assert lock.where_to_pin(lock.Floor(Path.cwd() / "chartbook.toml", ">=0.5.0", ">=0.6.0")) == ""
 
     def test_a_build_and_a_read_say_what_to_write_where_no_command_can(self, report, rates, store, capsys):
         """A line written inline: `chartbook pin` could not rewrite it either, so it is not named."""

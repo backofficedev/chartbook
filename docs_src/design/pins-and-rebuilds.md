@@ -880,7 +880,8 @@ What was chosen, and why:
   too, but a run that snapshots must leave the folder as its commit has it, and a `git`
   dependency is built in ChartBook's own copy of its repository, whose manifest is nobody's to
   commit. So `chartbook run`, and a first read that pins, write no manifest and say which command
-  does (and in which folder, for an upstream built first), each time, in one line: `chartbook.toml: requires_chartbook = ">=0.5.0" admits a ChartBook
+  does (`chartbook pin --project-dir FOLDER`, for an upstream built first or a read from a
+  notebook's folder), each time, in one line: `chartbook.toml: requires_chartbook = ">=0.5.0" admits a ChartBook
   that cannot read chartbook.lock, which is of a version that began with 0.6.0: such a one says
   only which version it reads. `chartbook pin` raises the line to ">=0.6.0", and it is then told
   to upgrade, and how.` Of a dependency's copy they say nothing. (As first built, every pin
@@ -897,7 +898,8 @@ What was chosen, and why:
   there would make them upgrade for nothing. One that git tracks, or would, is on its way to
   someone; and where git ignores the manifest too (a project under a home folder kept in git
   with everything left out), git says nothing of how it is shared, and it is held to its
-  lockfile as any other is.
+  lockfile as any other is. Both answers are needed: where git gives neither a yes nor a no (no
+  repository, no git, none in five seconds), the manifest is held to its lockfile.
 - **The rest of what the line says is kept.** `">=0.5.0"` becomes `">=0.6.0"`, and `">=0.5,<0.7"`
   becomes `">=0.6.0,<0.7"`: a lower bound under 0.6.0 goes, and every other clause stays as it
   was written. A line that already admits no earlier ChartBook (`">=0.6"`, `"==0.6.*"`) is not
@@ -908,12 +910,15 @@ What was chosen, and why:
   it: comments, order, quotes and line endings stay, and the edit is kept only if the file then
   parses to what it was with that one value changed. The new text is written to a file beside
   the manifest and moved over it, so a disk that fills leaves the manifest as it was; a link
-  stays a link, the file's mode is kept, a file with a second name (a hard link) is written
-  where it is so that both names have it, and a file left beside the manifest by a write that
-  was killed is removed by the next. A line that cannot be rewritten that way (an inline
-  `project = { … }`, a string over several lines, a file its owner made read-only) is left, the
-  command says what to write there and why it did not, and exits as it would have; and neither
-  a build nor the check then names `chartbook pin` as what would write it.
+  stays a link, and the file's mode is kept. What cannot be written that way is left, the
+  command says what to write there and why it did not, and exits as it would have: a line that
+  is not the key and a string on one line (an inline `project = { … }`, a string over several
+  lines), a file its owner made read-only or whose folder takes no new file, and a file with a
+  second name (a hard link), which a file moved over this one would leave with the old text.
+  Neither a build nor the check then names `chartbook pin` as what would write it. (A second
+  review found a write in place for the hard link could be cut short as before, and a sweep of
+  files left by a killed write that could stop the write it was for: both are gone. Such a file,
+  `chartbook.toml.<32 digits>.tmp`, is left where a process dies between the write and the move.)
 - **Last, and whenever a version 2 lockfile is there.** After the lockfile and the store's note
   of it, so that nothing which stops a pin leaves a manifest written and unsaid. And not only
   when the lockfile is written: a manifest put back by hand, or merged from a branch that had
