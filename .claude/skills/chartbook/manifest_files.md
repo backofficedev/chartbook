@@ -56,7 +56,7 @@ All keys are optional:
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.5.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.5.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write. `chartbook pin` and `update` raise it in place (`">=0.5.0"` to `">=0.6.0"`) when they leave a `chartbook.lock` an earlier ChartBook cannot read, and say so: commit both files (`chartbook run` writes no manifest, and says that `chartbook pin` does) | `""` (any) |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |

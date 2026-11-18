@@ -237,8 +237,11 @@ Three things on the other pipeline's side make this work:
 - **Write parquet without the pandas index:** `df.to_parquet(path, index=False)`. An index with no
   name is written as a column of row positions, which shift when a pull has more rows, so no later
   build has the pinned rows. `chartbook snapshot` and `chartbook check` say when a file has one.
-- **Snapshot and pin with this version.** A lockfile pinned before ChartBook recorded rows is met
-  by the same file only, until it is pinned again.
+- **Snapshot and pin with ChartBook 0.6.0 or later.** A pin made from a snapshot of an earlier
+  ChartBook records no rows, and is met by the same file only. `chartbook pin` says when a pin is
+  of that kind. To pin its rows, nothing has to be built again: `chartbook snapshot` in the other
+  pipeline makes a new snapshot of the same files, which records them, and `chartbook update` in
+  yours moves to it.
 
 `chartbook update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
 2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of … differ`. A few tables
@@ -254,6 +257,26 @@ every machine at one store, and a dependency named by its ID is read on any of t
 file makes a command say so and ask you to run it again. A shared store has the snapshot the
 lockfile names, so that snapshot is the pin: where a file of it is missing, it is lost or still on
 its way, and no other build of that commit is read in its place.
+
+## When ChartBook itself moves on
+
+A store is shared across versions of ChartBook, and a lockfile is not. A store's layout has been
+the same since 0.3, so two people on different versions can use one. `chartbook.lock` has a
+version of its own, and the one this ChartBook writes began with 0.6.0: an earlier ChartBook
+cannot read it. What tells an earlier ChartBook to upgrade, and how, is the line in
+`chartbook.toml` that says which one the pipeline needs:
+
+```toml
+[project]
+requires_chartbook = ">=0.6.0"
+```
+
+`chartbook init` writes that line, and `chartbook pin` and `chartbook update` raise it when they
+leave a lockfile that needs more than it says: commit the two files together. (`chartbook run`
+writes no manifest, and says that `chartbook pin` does.) Everyone else is then told what to
+install by the first command they run, and in a uv project, where `uv add "chartbook>=0.6.0"`
+records the same floor, they get it at their next `uv sync`. The changelog's "Read this first"
+has the steps for each release that changes a file.
 
 ## Models have versions
 

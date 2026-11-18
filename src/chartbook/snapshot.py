@@ -95,7 +95,7 @@ from chartbook.identity import (
     web_link,
 )
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
-from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
+from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, later_form_said, resolve_project_type
 from chartbook.refs import KIND_TABLES, AssetRef
 from chartbook.resolve import MANIFEST_NAME, RESOLVABLE_KINDS, declared_files
 from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store, plain_parts
@@ -347,6 +347,14 @@ class SnapshotReport:
             none of an index of several.
         index_column_names: And which columns those are, by the
             dataframe's ID.
+        rows_first_said: For a snapshot that was made of the same files as
+            one already at this commit: that one, where it says nothing of
+            a dataframe's rows that this one records. A snapshot made by a
+            ChartBook from before rows were recorded is why this one was
+            made at all, and the command says so.
+        rows_first_count: And how many dataframes' rows this one is the
+            first to record. One whose rows are not hashed is not counted:
+            the command says why it has none.
     """
 
     snapshot: Snapshot
@@ -363,6 +371,8 @@ class SnapshotReport:
     rows_beside: Optional[Snapshot] = None
     index_columns: list[str] = field(default_factory=list)
     index_column_names: dict = field(default_factory=dict)
+    rows_first_said: Optional[Snapshot] = None
+    rows_first_count: int = 0
 
 
 def asset_record(
@@ -810,6 +820,27 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     return found
 
 
+def ignored_by_git(path: Union[str, Path]) -> Optional[bool]:
+    """Whether git ignores a file: True for one in a repository whose rules leave it out, and that it does not track; False for one it tracks, or would.
+
+    None where that cannot be told: no repository there, no git, or a git
+    that does not answer in a moment. A caller that acts on either answer
+    asks for it by name (``is True``, ``is False``).
+    """
+    path = Path(path)
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(path.parent), "check-ignore", "--quiet", "--", path.name],
+            capture_output=True,
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    # 0: ignored. 1: not ignored. Anything else is git saying it cannot tell (128: no repository)
+    return {0: True, 1: False}.get(result.returncode)
+
+
 def record_name(subdirectory: str) -> str:
     """The name a pipeline's records are kept under in a store, from its folder in its repository.
 
@@ -850,7 +881,7 @@ def read(path: Union[str, Path]) -> Snapshot:
         if document.get("schema") not in READS:
             raise ValueError(
                 f"its schema is {document.get('schema')!r}, and this version of "
-                f"ChartBook reads {SCHEMA!r}"
+                f"ChartBook reads {SCHEMA!r}{later_form_said(document.get('schema'), SCHEMA)}"
             )
         code = document["code"]
         # A record may come from a store anyone on a team writes; what names
@@ -2661,6 +2692,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     # be the one a pin takes. What it was pinned to is part of what a
     # snapshot says, so one whose pins have moved since is not given back
     same = None
+    rows_first_said, rows_first_count = None, 0  # the one of the same files that says nothing of the rows this one records
     for taken in before:
         if taken.content() != snapshot.content() or _inputs_key(taken.inputs) != _inputs_key(snapshot.inputs):
             break
@@ -2704,6 +2736,14 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             # Made again for what the one before lacks: the bytes are still
             # the ones a run built, from these same pins
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
+        # The dataframes whose rows this one records and that one said nothing of. A table whose rows
+        # are not hashed is not of them: of it the command says why, and no rebuild meets a pin of it
+        rows_first_count = sum(
+            1 for name, record in snapshot.assets.items()
+            if "rows" in record and not any(key in (same.assets.get(name) or {}) for key in ("rows", "not_hashed"))
+        )
+        if rows_first_count:
+            rows_first_said = same
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
     new_versions = []
@@ -2747,6 +2787,8 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         rows_beside=beside,
         index_columns=index_columns,
         index_column_names=index_names,
+        rows_first_said=rows_first_said,
+        rows_first_count=rows_first_count,
     )
 
 

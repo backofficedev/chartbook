@@ -233,6 +233,8 @@ Where more than one run differs (`transcripts_2026_q4` beside the other quarters
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
+**A lockfile the manifest does not ask enough for** is a problem. `chartbook.lock` in the version this ChartBook writes cannot be read by one from before 0.6.0, which says only which version it reads; given a `requires_chartbook` it does not meet, it says what to install. `chartbook pin` raises that line when it writes such a lockfile. A manifest that was put back, or merged from a branch that had not moved, or left by a `chartbook run` (which writes no manifest), is caught here: `[project] requires_chartbook: ">=0.5.0" admits a ChartBook that cannot read chartbook.lock …. Write ">=0.6.0" (\`chartbook pin\` does)`, where the command is named only if it can rewrite the line. A manifest without the key is not held to any version, nor is one whose lockfile git ignores and whose manifest it does not.
+
 **Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook run` in a pipeline with no build command (where `chartbook run` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), a dataframe's path that names one file of a set (above), and a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin of it names (`to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name).
 
 **Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
@@ -612,7 +614,7 @@ ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 No new snapshot: the same bytes and the same pins as the one made 2026-10-13 18:22 UTC.
 ```
 
-A snapshot records what the pipeline was pinned to, so after `chartbook update` it is made again with the same bytes: a pipeline that pins this one then reads where they came from. Two checkouts of one pipeline that share a store and pin differently (a lockfile git ignores) each make their own when they snapshot, and the newest is the one a pin takes.
+A snapshot records what the pipeline was pinned to, so after `chartbook update` it is made again with the same bytes: a pipeline that pins this one then reads where they came from. And it records each dataframe's rows, which a snapshot made by a ChartBook from before 0.6.0 does not: the same bytes as such a one make a new snapshot, once, and the command says why: `The same files as the snapshot made 2026-11-04 05:46 UTC, which says nothing of the rows of 1 dataframe: this one records them, so that a rebuild can meet a pin of it.` (A table whose rows cannot be hashed is not counted there: `rows not hashed: …` says why it has none.) Two checkouts of one pipeline that share a store and pin differently (a lockfile git ignores) each make their own when they snapshot, and the newest is the one a pin takes.
 
 An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
 
@@ -752,6 +754,28 @@ Wrote chartbook.lock.
 **What is in the lockfile, by kind.** A dataframe and a model, always: they are what code reads. A chart, a notebook, a note or a plain file only when its owner's `chartbook.toml` says `lock = true` on it ({ref}`configuration <lock-true>`). Each of those is drawn from the data, and drawn anew by every build: a Plotly chart has a random id in its page, and an executed notebook the time of each cell, so no rebuild gives the same bytes and a pin of them could never be met by anyone who builds the other pipeline themselves. They are still read, `assets.path("fed_yield_curve:chart/curve")`, from the snapshot the lockfile names, when the store has that snapshot, and otherwise from your own newest snapshot of that pipeline at that commit that holds it, with nothing checked. A pipeline that makes only charts is pinned by its entry in the lockfile, which names its snapshot. All of this is for a dependency pinned from a snapshot; one that is a `git` repository is pinned whole, every kind of asset, since its bytes are its commit's and the same for everyone.
 
 **Commit `chartbook.lock`.** It is source. A change to what the project depends on then shows up in a diff, and someone who clones the project sees which data it was built against. It holds no path from your machine, so pinning twice with nothing changed leaves the file as it was.
+
+**A lockfile, and the ChartBook that reads it.** The lockfile is `chartbook/lock/v2`, which began with ChartBook 0.6.0. One written before is still read, and is written again once, by the first `pin`, `update` or `run`, which says so; no pin moves. An earlier ChartBook cannot read version 2, and says only which version it reads. So where `chartbook.toml` says which ChartBook the pipeline needs, `chartbook pin`, `update` and `add` raise that line when they leave a version 2 lockfile beside it (`requires_chartbook = ">=0.5.0"` becomes `">=0.6.0"`, and `">=0.5,<0.7"` becomes `">=0.6.0,<0.7"`), and an earlier ChartBook is then told what to install:
+
+```console
+chartbook.toml: requires_chartbook is now ">=0.6.0" (it was ">=0.5.0"). chartbook.lock is of a version that began with ChartBook 0.6.0, and an earlier one cannot read it: with this line it is told to upgrade, and how. Commit the manifest with the lockfile.
+```
+
+The line is rewritten in place: comments, order, quotes and line endings stay, and the file is whole or as it was (its new text is written beside it and moved over it). A manifest without the key says nothing of versions, and is left without it. So is one whose lockfile git ignores while it does not ignore the manifest: the project is shared through git with its lockfile left out, and that lockfile reaches no one else. What cannot be written so (an inline `project = { … }`, a string over several lines, a file made read-only, or one with a second name) is left, and the command says what to write there and why it did not. `pin --check` writes nothing, this included, and `chartbook check` fails on a version 2 lockfile under a line that admits an earlier ChartBook.
+
+A build and a read never write a manifest. `chartbook run`, and a first read that pins, say which command does (`chartbook pin --project-dir FOLDER`, where the manifest is in another folder than the command), each time, until it has been run; where that command could not write the line either, they say what to write:
+
+```console
+chartbook.toml: requires_chartbook = ">=0.5.0" admits a ChartBook that cannot read chartbook.lock, which is of a version that began with 0.6.0: such a one says only which version it reads. `chartbook pin` raises the line to ">=0.6.0", and it is then told to upgrade, and how.
+```
+
+**A pin from a snapshot that an earlier ChartBook made** records no rows, since none were hashed before 0.6.0, and is met by the same file only. `pin` and `update` say so when they write the lockfile, and what gives pins a rebuild can meet:
+
+```console
+1 dataframe is pinned by its file alone: its snapshot is from before ChartBook 0.6.0, which recorded no rows, and no rebuild meets such a pin. To pin its rows: `chartbook snapshot` again in its pipeline, with this version, then `chartbook update` here. Nothing has to be built again: where a table's rows can be recorded, the same commit and the same files make a new snapshot, once.
+```
+
+It is said of what the command has just pinned, moved, or written again in the new form: never by a pin that changes nothing, and not again of a dependency that stays where it is while another moves. Once the other pipeline has such a snapshot, `chartbook update` says `already pinned` of a table whose file is the same, writes the lockfile all the same, and says why: `1 dataframe has its rows pinned now, as well as its file: a build of someone's own that holds the same rows meets the pin.` A table whose rows cannot be hashed says so there too: `acme/rates:nested: its rows are not hashed (column 'l' is List(Int64) …): it stays pinned by its file alone.`
 
 **What is asked for, and what was got.** It is the split between `requirements.txt` and `uv.lock`:
 
@@ -1393,10 +1417,10 @@ chartbook install claude-skill -f           # overwrite files changed by hand wi
 
 ```yaml
 metadata:
-  chartbook-version: "0.5.2"
+  chartbook-version: "0.6.0"
 ```
 
-A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.5.1 to 0.5.2`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
+A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.5.2 to 0.6.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
 
 **Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
 
