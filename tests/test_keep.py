@@ -68,7 +68,8 @@ COSTLY = {
         "embeddings": {"path": "./_data/embeddings.parquet", "docs": "d", "keep": True},
         "summary": {"path": "./_data/summary.parquet", "docs": "d"},
     },
-    "scripts": {"build": "echo built >> build.log"},
+    # A build that writes what it declares, as a run requires of one (and says so in build.log)
+    "scripts": {"build": "echo built >> build.log && echo made >> _data/embeddings.parquet && echo made >> _data/summary.parquet"},
 }
 
 

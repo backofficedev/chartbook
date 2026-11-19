@@ -221,11 +221,12 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
   not, the manifest does not load, and the error shows the line to add.
 - A `path` dependency is read through **snapshots**, never through its folder
   (people and agents work on different pipelines at the same time, and a folder
-  may be half-way through a change). In the OTHER pipeline, its owner runs
-  `chartbook run --snapshot` (build, then snapshot; or `chartbook snapshot`
-  alone after a build): everything in that folder must be committed, and its
-  built assets are copied to the store, labelled with the commit. It is made on
-  purpose, not by every build. A snapshot never contains anything from `.env`,
+  may be half-way through a change). In the OTHER pipeline, its owner commits
+  and runs `chartbook run`: a build with everything in that folder committed
+  ends with a snapshot, its built assets copied to the store and labelled with
+  the commit. A build of uncommitted work makes none, and says so in its last
+  line. (`chartbook snapshot` alone makes one of a build already on disk.)
+  A snapshot never contains anything from `.env`,
   so a setting that changes results (a data window, a cutoff date) lives in a
   committed file, never in `.env`: two people with different `.env` files who
   build the same commit must get the same bytes.

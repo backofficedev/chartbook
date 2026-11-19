@@ -1032,7 +1032,13 @@ class TestCommand:
         monkeypatch.chdir(_pipeline(work / "top", {"build": LOG}))
         result = self._run()
         assert result.exit_code == 0, result.output
-        assert result.output.splitlines() == ["top: build", "Ran build in 1 pipeline(s)."]
+        assert result.output.splitlines() == [
+            "top: build",
+            "Ran build in 1 pipeline(s).",
+            # A build is followed by a snapshot where there can be one, and by why not where there cannot
+            "top: not snapshotted: this folder is in no git repository.",
+            "  A snapshot is of a commit: `git init`, commit, and `chartbook run` again.",
+        ]
         assert _order(work) == ["top"]
 
     def test_run_in_a_catalog(self, chain, work, monkeypatch):

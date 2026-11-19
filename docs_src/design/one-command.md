@@ -156,10 +156,12 @@ What was left open, *proposed by Claude, 2026-11-19:*
 - **Whatever else stops a snapshot is said the same way:** a folder in no git repository, a store
   that cannot be written or is not there, a `chartbook.links.toml` in the folder, a gap in what it
   was pinned to. A pipeline that declares nothing yet is told nothing. A store that is not there
-  is not made, unless it is the default one under `~/.chartbook`: a share that is not mounted
-  must not become an empty folder. And a run asks no question about which store: it follows the
-  catalog. *(Found by review: a snapshot can be refused for more reasons than the page named, and
-  can ask.)*
+  is made where the folder it goes in exists, and not where that folder is missing too: a share
+  that is not mounted must not become an empty folder. *(As built: the page first said "unless it
+  is the default one under `~/.chartbook`", which refused a new store named by `CHARTBOOK_STORE`
+  on its first use.)* And a run asks no question about which store: it follows the catalog.
+  *(Found by review: a snapshot can be refused for more reasons than the page named, and can
+  ask.)*
 - **`chartbook run --snapshot` is the strict form,** as it is today: it refuses to build with
   anything uncommitted, on a branch or not, and fails if no snapshot can be made. For a script
   that must end with one, and for building someone's pipeline at the commit they pinned
@@ -352,8 +354,9 @@ On the {doc}`../roadmap`, with what was said of each:
 One pull request each. Each changes the reference, the skill and the assistant files for what it
 changes.
 
-1. This page.
+1. This page. *Merged 2026-11-19.*
 2. `chartbook run` looks for what was declared, and makes a snapshot when everything is committed.
+   *Built 2026-11-19.*
 3. A snapshot clears its pipeline's old snapshots; the reminder goes.
 4. `chartbook run --check`; `chartbook check` is gone.
 5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone.

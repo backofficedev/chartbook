@@ -129,6 +129,14 @@ class SnapshotError(Exception):
     """Raised when a snapshot cannot be made, or a pipeline has none to find."""
 
 
+class NothingToSnapshot(SnapshotError):
+    """A pipeline with nothing to take a snapshot of: it declares nothing with a path, or has built none of what it declares.
+
+    Not a fault of anything: a pipeline just begun. ``chartbook snapshot``
+    says so; a run that ends with a snapshot where it can passes over it.
+    """
+
+
 class StoreNotReadyError(SnapshotError):
     """Raised when the store does not have all of a snapshot's objects yet, or not all of their bytes.
 
@@ -780,6 +788,14 @@ def code_of(directory: Union[str, Path]) -> Code:
         raise SnapshotError(f"the repository at {top} has no commit yet") from None
     subdirectory = directory.relative_to(top).as_posix()
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
+
+
+def on_a_branch(directory: Union[str, Path]) -> bool:
+    """Whether a branch is checked out in a pipeline's repository, and not a commit by its hash."""
+    try:
+        return bool(_git(Path(directory).resolve(), "symbolic-ref", "--quiet", "HEAD").strip())
+    except SnapshotError:
+        return False
 
 
 def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
@@ -2653,12 +2669,12 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             record["trained_on"] = now[model_name]
 
     if not assets:
-        raise SnapshotError(
+        raise NothingToSnapshot(
             f"{pipeline} declares nothing with a path, so there is nothing to "
             f"take a snapshot of."
         )
     if len(not_built) == len(assets):
-        raise SnapshotError(
+        raise NothingToSnapshot(
             f"{pipeline} has built nothing it declares, so there is nothing to "
             f"take a snapshot of. Build it first: `chartbook run`."
         )

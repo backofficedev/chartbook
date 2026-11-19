@@ -3156,16 +3156,19 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     says "this is what that commit built", and with uncommitted changes it
     would not be true. What git ignores, such as built data, does not count.
 
-    A snapshot is made when you ask for one, not by every build. Until you
-    make another, pipelines that depend on this one keep getting this one,
-    however much you change here. When you do, they get it with
-    `chartbook update`, and not before.
+    You seldom type this: `chartbook run` ends with a snapshot whenever
+    everything is committed. This command is for a build that is already
+    on disk and was not made by `chartbook run` (doit by hand, a notebook,
+    a long job): it does not run the build, and takes your word that what
+    is on disk was built by the commit you are on.
 
-    Build first: this does not run the build. `chartbook run` does.
+    A pipeline that depends on this one keeps the snapshot it pinned,
+    however many you make after it. It gets a newer one with
+    `chartbook update`, and not before.
 
     \b
     Examples:
-        chartbook run && chartbook snapshot
+        doit && chartbook snapshot
         chartbook snapshot --project-dir ../fed_yield_curve
     """
     from chartbook import snapshot as snapshots
@@ -3284,7 +3287,7 @@ def lineage_command(project_dir, check, rehash, as_json):
     "--snapshot",
     "make_snapshot",
     is_flag=True,
-    help="After the build, declare it ready: make a snapshot (see `chartbook snapshot`)",
+    help="Refuse to build with anything uncommitted, and fail unless the build ends with a snapshot (a build of committed work ends with one anyway)",
 )
 @click.option(
     "--frozen",
@@ -3303,19 +3306,30 @@ def lineage_command(project_dir, check, rehash, as_json):
 )
 @click.option("--no-gc-reminder", is_flag=True, help="With --snapshot, do not say what `chartbook store gc` would clear")
 def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder):
-    """Run a script in this pipeline: `build`, unless another is named.
+    """Build this pipeline: pin what it reads, run its build, look for what it made, make a snapshot.
 
-    SCRIPT is a name from [scripts] in chartbook.toml.
+    \b
+    What `chartbook run` does, in order:
+      1. Pins whatever this pipeline depends on and has not pinned yet,
+         so that its code can read it.
+      2. Runs the `build` script of chartbook.toml.
+      3. Looks for what chartbook.toml declares. Something with a path
+         that the build did not write fails the run.
+      4. Makes a snapshot, which is what other pipelines read, when
+         everything in the folder is committed and a branch is checked
+         out. When not, the build is still a good one: the last line
+         says why there is no snapshot. Commit, and run again.
+
+    SCRIPT is a name from [scripts] in chartbook.toml, `build` unless you
+    name another. Another script is pinned for and run, and that is all.
 
     \b
         [scripts]
         build = "doit"
         test = "pytest"
 
-    `build` is the script that makes a pipeline's data current. Before it
-    runs, whatever this pipeline depends on and has not pinned yet is
-    pinned, so its code can read it. A pin that exists is never moved: you
-    are told what has changed, and `chartbook update` moves pins.
+    A pin that exists is never moved: you are told what has changed, and
+    `chartbook update` moves pins.
 
     It never builds in a folder this pipeline depends on, unless you say
     --upstream (below). That folder is somebody's work, and this pipeline
@@ -3327,10 +3341,10 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
 
     Run this in a pipeline. A catalog lists stored snapshots and runs no code.
 
-    --snapshot builds and then declares the build ready, in one command.
-    It is `chartbook run` followed by `chartbook snapshot`, with two
-    differences: it checks that everything is committed before it builds,
-    and the snapshot records that the build ran in the same command.
+    --snapshot is for a script that must end with a snapshot. It refuses to
+    build with anything uncommitted, where a plain run builds and tells
+    you, and it fails where no snapshot can be made. It also makes one of
+    a commit checked out by its hash, which a plain run leaves alone.
 
     \b
     Examples:
@@ -3341,12 +3355,12 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         chartbook run --frozen
         chartbook run --upstream
 
-    --frozen pins nothing and writes nothing before the build but, where
-    the store can be written, its note that this machine reads these pins:
-    not the lockfile, no object, and no git dependency is fetched or built.
-    The build runs only if the lockfile is complete and every pin is in
-    the store (`chartbook pin --check` says the same without building).
-    For CI, and for a store you may only read.
+    --frozen pins nothing, makes no snapshot, and writes nothing before
+    the build but, where the store can be written, its note that this
+    machine reads these pins: not the lockfile, no object, and no git
+    dependency is fetched or built. The build runs only if the lockfile is
+    complete and every pin is in the store (`chartbook pin --check` says
+    the same without building). For CI, and for a store you may only read.
 
     An asset chartbook.toml marks `keep = true` cost something to make. If
     one is not on disk while the store has a version of it, `build` stops
@@ -3370,11 +3384,14 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
     if not refused:
         _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
+    from chartbook import run as runner
+
     _run_script(
         project_dir,
         script,
         force=force,
-        snapshot=make_snapshot,
+        # Told nothing, a build ends with a snapshot where everything is committed, and says why where it does not
+        snapshot=True if make_snapshot else runner.WHEN_COMMITTED,
         frozen=frozen,
         remake=remake,
         upstream=upstream,
@@ -3518,6 +3535,9 @@ def _run_script(
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
+    for step, why in report.not_snapshotted:
+        # A build of work in progress is a build: said last, where it is seen, and no failure
+        click.echo(f"{step.id}: not snapshotted: {why}.")
     if report.snapshots:  # once the run is over, for the catalog that shows them
         _say_where_a_snapshot_shows()
 

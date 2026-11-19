@@ -22,13 +22,13 @@ rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy, read 
 ```
 
 ```{image} ../_static/diagrams/depending-light.svg
-:alt: their folder, a snapshot in the store, your folder: run --snapshot, then pin; never read the folder directly
+:alt: their folder, a snapshot in the store, your folder: run, then pin; never read the folder directly
 :class: only-light
 :align: center
 ```
 
 ```{image} ../_static/diagrams/depending-dark.svg
-:alt: their folder, a snapshot in the store, your folder: run --snapshot, then pin; never read the folder directly
+:alt: their folder, a snapshot in the store, your folder: run, then pin; never read the folder directly
 :class: only-dark
 :align: center
 ```
@@ -69,15 +69,20 @@ disk. When the two pipelines are in one repository, name the other by its folder
 `chartbook check` warns while a dependency is declared and not pinned. Dependencies form a directed
 acyclic graph: every command that would pin or build a cycle refuses and says who depends on whom.
 
-## They declare a build ready
+## They build, and the build is in the store
 
 In the other pipeline's folder, with everything committed:
 
 ```console
-$ chartbook run --snapshot      # build it, and copy what it built into the store, labelled with the commit
+$ chartbook run                 # build it, and copy what it built into the store, labelled with the commit
+…
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
 
-That is a snapshot, and it is what of theirs you read. Their folder is never read.
+That is a snapshot, and it is what of theirs you read. Their folder is never read. A run while
+they are still editing builds and makes none, and its last line says so (`not snapshotted: 2 files
+are not committed`): what you can read of theirs is always something a commit describes.
 
 Run it again and nothing new is written: a snapshot is the hash of every file the build made, and
 the same bytes and the same pins at the same commit are the snapshot already there (`No new
@@ -103,7 +108,7 @@ and how `data.load`, `data.sql` and `data.files` read it.
 
 | Who | Does | When |
 |---|---|---|
-| The other pipeline's owner | `chartbook run --snapshot` | When a build is ready for others |
+| The other pipeline's owner | `chartbook run`, with everything committed | Whenever they build |
 | You | `chartbook pin`, once | To start depending on it |
 | You | `chartbook update` | When you want their newer snapshot |
 
