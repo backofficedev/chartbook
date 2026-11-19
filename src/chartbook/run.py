@@ -79,7 +79,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
-from chartbook.store import Store, StoreError, default_store
+from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -420,8 +420,11 @@ def _why_no_snapshot_after(step: "Step", before: Optional[str]) -> str:
     no longer describes the folder. So does the lockfile, where this run
     wrote it: it is one more file to commit.
     """
+    code = snapshots.code_of(step.directory)
     changed = snapshots.uncommitted(step.directory)
-    others = [line for line in changed if os.path.basename(line[3:].split(" -> ")[-1]) != lock.LOCK_FILE]
+    # Lines as `git status` has them, with paths from the top of the repository: this pipeline's own lockfile, written
+    own_lockfile = f"{code.subdirectory}/{lock.LOCK_FILE}" if code.subdirectory else lock.LOCK_FILE
+    others = [line for line in changed if not (line[3:] == own_lockfile and "D" not in line[:2])]
     if others:
         new = [line[3:] for line in others if line.startswith("??")]
         touched = [line[3:] for line in others if not line.startswith("??")]
@@ -430,19 +433,39 @@ def _why_no_snapshot_after(step: "Step", before: Optional[str]) -> str:
             for word, names in (("changed", touched), ("new", new)) if names
         )
         files = "1 file that is" if len(others) == 1 else f"{len(others)} files that are"
+        # Ignoring a file git already has changes nothing: it is committed as the build leaves it, or taken out of git
+        advice = (
+            "Commit what the build wrote and `chartbook run` again, or take a file the build writes out of git "
+            "(`git rm --cached`) and add it to .gitignore"
+            if touched else "A file a build writes belongs in .gitignore"
+        )
         return (
             f"its build left {files} not committed ({shown}), so the commit it started at does not describe the folder.\n"
-            f"  A file a build writes belongs in .gitignore"
+            f"  {advice}"
         )
     if changed:
         return (
             f"{lock.LOCK_FILE} was written during this run, and is not committed.\n"
             f"  A snapshot is of a commit: commit it, and `chartbook run` again"
         )
-    now = snapshots.code_of(step.directory).commit
-    if before is not None and now != before:
-        return f"its repository moved from {before[:7]} to {now[:7]} while it was built, so no commit says which code ran"
+    if before is not None and code.commit != before:
+        return f"its repository moved from {before[:7]} to {code.commit[:7]} while it was built, so no commit says which code ran"
     return ""
+
+
+def _sent_to_a_first_store_that_is_only_read(store: Optional[Store], pipeline: str) -> bool:
+    """Whether a pipeline's snapshot was refused because the catalog sends it nowhere and its first store may only be read.
+
+    A catalog's first store is where everything goes that it sends nowhere
+    by name (a pin's copies, a lockfile's note, a snapshot), so a class's
+    read-only store listed ahead of one's own stops every snapshot until
+    the catalog says where this pipeline goes.
+    """
+    try:
+        entries = getattr(store if store is not None else default_store(), "entries", None) or []
+    except Exception:  # noqa: BLE001 - only to say more of an error already had
+        return False
+    return bool(entries) and entries[0].read_only and not any(pipeline in entry.pipelines for entry in entries)
 
 
 def _declares_what_a_snapshot_holds(directory: Path) -> bool:
@@ -485,7 +508,7 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
         if found is None or not found.files:
             missing.append((str(local), declared))
     models = _read_manifest(directory).get("models") or {}
-    for name in sorted(models):
+    for name in sorted(models) if isinstance(models, dict) else ():
         scores = models[name].get("metrics_path") if isinstance(models[name], dict) else None
         if isinstance(scores, str) and scores.strip() and not os.path.isfile(os.path.normpath(directory / scores)):
             missing.append((f"model/{name}'s scores", scores))
@@ -1537,10 +1560,19 @@ def run(
                         why = "nothing it declares is there to take" + (f": {listed}" if listed else "")
                     except snapshots.NotInEveryStore as error:
                         why = f"not in every store it goes to. {str(error).rstrip('.')}"
+                    except ReadOnlyStoreError as error:
+                        why = str(error).rstrip(".")
+                        if _sent_to_a_first_store_that_is_only_read(store, step.id):
+                            why += (
+                                f", and it is the catalog's first, where a pipeline the catalog sends nowhere is written.\n"
+                                f"  To send this one to another: `pipelines = [\"{step.id}\"]` under that store in catalog.toml"
+                            )
                     except (snapshots.SnapshotError, StoreError) as error:
                         why = str(error).rstrip(".")
                     except OSError as error:
                         why = f"the store could not be written ({error})"
+                    except Exception as error:  # noqa: BLE001 - the build went well, and a snapshot is what follows it, not what it is
+                        why = f"its snapshot could not be made ({type(error).__name__}: {error})"
                 if made is not None:
                     report.snapshots.append(made)
                     if on_snapshot is not None:
@@ -1555,7 +1587,7 @@ def run(
                 try:
                     changed = snapshots.uncommitted(step.directory, ignoring=(lock.LOCK_FILE,))
                     if changed:
-                        echo(f"{step.id}: its build changed files that are committed:")
+                        echo(f"{step.id}: its build left files that are not committed:")
                         for line in changed[:10]:
                             echo(f"  {line}")
                         raise snapshots.SnapshotError(

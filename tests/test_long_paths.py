@@ -102,7 +102,6 @@ def test_the_check_comes_before_the_folder_it_guards(windows_refuses, pipeline, 
     # A root whose snapshot folder alone crosses 248: pipelines/acme+rates/<31> adds 53
     deep = tmp_path.resolve() / ("d" * max(1, 200 - len(str(tmp_path.resolve()))))
     root = deep / "store"
-    deep.mkdir()  # a store is made only in a folder that is there
     monkeypatch.setenv("CHARTBOOK_STORE", str(root))
     with pytest.raises(PathTooLongError):
         snapshot.make(pipeline)

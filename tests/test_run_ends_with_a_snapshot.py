@@ -11,6 +11,7 @@ whatever its script exited with.
 and not whether to make a catalog.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -21,7 +22,6 @@ from click.testing import CliRunner
 
 from chartbook import config, lock, run, snapshot
 from chartbook.cli import main
-from chartbook.multi_store import Stores
 from chartbook.store import FolderStore, StoreError
 from tests.fixtures import name_no_snapshot
 from tests.test_lock_by_kind import _git
@@ -36,6 +36,8 @@ DEMO = {
 IGNORED = "/out.csv\n/build.log\n"
 MADE = "Snapshot made. A pipeline that depends on this one gets it with `chartbook update`."
 COMMIT_AND_AGAIN = "  A snapshot is of a commit: commit, and `chartbook run` again."
+
+posix = pytest.mark.skipif(os.name == "nt", reason="the build script here is POSIX shell")
 
 
 @pytest.fixture
@@ -238,6 +240,44 @@ class TestTheLockfile:
         assert MADE in result.output.splitlines()
         assert _git(demo, "status", "--porcelain") == "?? chartbook.lock"
 
+    def test_in_a_folder_of_a_larger_repository(self, work, store, monkeypatch):
+        """Its lockfile is named from the top of the repository by git, and is still its own."""
+        mono = work / "mono"
+        up = _folder(mono / "pipes" / "up", {**DEMO, "project": {"id": "acme/up"}})
+        a = _folder(mono / "pipes" / "a", {**DEMO, "dependencies": {"acme/up": {"path": "../up"}}})
+        _committed(mono)
+        _snapshot_of(up, store)
+        monkeypatch.chdir(a)
+        result = _run()
+        assert result.exit_code == 0, result.output
+        assert _after_the_run(result) == self.WRITTEN
+        assert _git(mono, "status", "--porcelain") == "?? pipes/a/chartbook.lock"
+        _committed(mono)
+        again = _run()
+        assert MADE in again.output.splitlines() and _after_the_run(again) == []
+
+    def test_a_file_of_that_name_a_build_leaves_elsewhere_is_not_it(self, work, store, monkeypatch):
+        """Found by review: "chartbook.lock was written during this run", of a file the build left in a folder below."""
+        directory = _folder(work / "below", {**DEMO, "scripts": {"build": BUILD + " && echo x > sub/chartbook.lock"}})
+        (directory / "sub").mkdir()
+        (directory / "sub" / "kept.txt").write_text("kept\n", encoding="utf-8", newline="\n")
+        monkeypatch.chdir(_committed(directory))
+        assert _after_the_run(_run())[0] == (
+            "acme/demo: not snapshotted: its build left 1 file that is not committed (new: sub/chartbook.lock), so the "
+            "commit it started at does not describe the folder."
+        )
+
+    @posix
+    def test_one_a_build_removes_was_not_written(self, demo, store, upstream):
+        _snapshot_of(upstream, store)
+        _depends_on_upstream(demo, scripts={"build": BUILD + " && rm chartbook.lock"})
+        lock.pin(demo, store=store)
+        _committed(demo)
+        assert _after_the_run(_run())[0] == (
+            "acme/demo: not snapshotted: its build left 1 file that is not committed (changed: chartbook.lock), so the "
+            "commit it started at does not describe the folder."
+        )
+
     def test_with_upstream_the_line_comes_last(self, demo, store, upstream):
         """--upstream builds and snapshots what this one depends on first, as it did; this one's lockfile is then new."""
         _depends_on_upstream(demo)
@@ -266,6 +306,7 @@ class TestWorkInProgress:
             COMMIT_AND_AGAIN,
         ]
         assert _snapshots(store) == [] and _ran(demo) == 1
+        assert "not snapshotted" in result.stdout and result.stderr == ""  # no failure, and not said as one
         # Commit, and run again: that is all
         _committed(demo)
         assert MADE in _run().output.splitlines() and len(_snapshots(store)) == 1
@@ -330,12 +371,32 @@ class TestWorkInProgress:
         assert _after_the_run(result) == [
             "acme/demo: not snapshotted: its build left 1 file that is not committed (changed: tracked.txt), so the commit "
             "it started at does not describe the folder.",
-            "  A file a build writes belongs in .gitignore.",
+            # Not "belongs in .gitignore": ignoring a file git already has changes nothing
+            "  Commit what the build wrote and `chartbook run` again, or take a file the build writes out of git "
+            "(`git rm --cached`) and add it to .gitignore.",
         ]
         assert _snapshots(store) == []
 
-    def test_a_build_that_writes_a_file_git_neither_has_nor_ignores(self, work, store, monkeypatch):
-        """Not "a file that git tracks": it is new, and the line says so."""
+    def test_a_build_that_writes_a_committed_file_the_same_each_time(self, work, store, monkeypatch):
+        """Done as the line says: what the build wrote is committed, and the next run finds the folder as its commit has it."""
+        directory = self._building(work, monkeypatch, "echo made by the build > tracked.txt", "rewrites")
+        assert "not snapshotted" in _run().output
+        _committed(directory)
+        again = _run()
+        assert again.exit_code == 0 and MADE in again.output.splitlines() and _after_the_run(again) == []
+
+    def test_a_build_that_writes_a_new_file(self, work, store, monkeypatch):
+        self._building(work, monkeypatch, "echo made > report.txt", "new")
+        result = _run()
+        assert result.exit_code == 0, result.output
+        assert _after_the_run(result) == [
+            "acme/demo: not snapshotted: its build left 1 file that is not committed (new: report.txt), so the commit it "
+            "started at does not describe the folder.",
+            "  A file a build writes belongs in .gitignore.",
+        ]
+
+    def test_a_build_that_leaves_both(self, work, store, monkeypatch):
+        """Not "a file that git tracks" of one that is new: the line says which is which."""
         self._building(work, monkeypatch, "echo made > report.txt && echo more >> tracked.txt && echo s > state.db", "leaves")
         result = _run()
         assert result.exit_code == 0, result.output
@@ -468,54 +529,35 @@ class TestAPipelineThatDeclaresNothing:
 
 
 class TestTheStore:
-    def test_one_that_is_not_there_is_made_where_its_folder_is(self, demo, store):
+    def test_one_that_is_not_there_is_made_as_by_any_first_write(self, demo, store):
         assert not store.root.exists()
         assert MADE in _run().output.splitlines() and store.root.is_dir()
 
-    def test_one_whose_folder_is_not_there_either_is_not_made(self, demo, work, monkeypatch):
-        """A share that is not mounted, a synced folder that is not running: no empty store is made in its place."""
-        away = work / "not-mounted" / "store"
-        monkeypatch.setenv(config.STORE_ENV_VAR, str(away))
+    def test_one_that_cannot_be_written_is_said_in_words(self, demo, store, monkeypatch):
+        def refused(*arguments, **more):
+            raise PermissionError(13, "Permission denied", str(store.root / "store.json"))
+
+        monkeypatch.setattr(snapshot, "make", refused)
         result = _run()
         assert result.exit_code == 0, result.output
         assert _after_the_run(result) == [
-            f"acme/demo: not snapshotted: The store at {away} is not there, nor the folder it is in (a drive that is not "
-            f"mounted, or a synced folder that is not running). Nothing is made in its place: for a new store there, make "
-            f"the folder {away.parent} first."
+            f"acme/demo: not snapshotted: the store could not be written ([Errno 13] Permission denied: '{store.root / 'store.json'}')."
         ]
-        assert not away.parent.exists() and _ran(demo) == 1
 
-    def test_nor_by_the_pin_before_the_build(self, demo, work, store, upstream, monkeypatch):
-        """Found by review: a pipeline with a dependency made the store while it pinned, and then wrote its snapshot there."""
-        _snapshot_of(upstream, store)
-        _depends_on_upstream(demo)
-        lock.pin(demo, store=store)
-        _committed(demo)
-        away = work / "not-mounted" / "store"
-        monkeypatch.setenv(config.STORE_ENV_VAR, str(away))
+    def test_whatever_else_goes_wrong_in_it_is_a_line_and_no_traceback(self, demo, store, monkeypatch):
+        """The build went well: a snapshot is what follows it, and a fault in making one is not the build's."""
+        def broken(*arguments, **more):
+            raise TypeError("list indices must be integers or slices, not dict")
+
+        monkeypatch.setattr(snapshot, "make", broken)
         result = _run()
-        assert result.exit_code == 1  # what it reads is in that store: nothing can be built
-        assert "is not there, nor the folder it is in" in result.output
-        assert not away.parent.exists() and _ran(demo) == 0
-
-    def test_nor_by_anything_else_that_writes_a_store(self, work, monkeypatch):
-        away = FolderStore(work / "not-mounted" / "store")
-        for writing in (
-            lambda: away.begin("acme/demo", "0" * 40, "2026-01-01T00:00:00.000000Z"),
-            lambda: away.add_root(work / "chartbook.lock", []),
-        ):
-            with pytest.raises(StoreError, match="is not there, nor the folder it is in"):
-                writing()
-        assert not (work / "not-mounted").exists()
-        # A store that is only read is not made, and says nothing
-        assert away.all_snapshot_files() == []
-
-    def test_the_users_own_is_always_made(self, work):
-        """Under ~/.chartbook, which no drive and no sync holds: its folders are ChartBook's to make."""
-        own = FolderStore(config.get_global_config_dir() / "deep" / "store")
-        assert own.is_users_own() and not own.root.parent.exists()
-        own.add_root(work / "chartbook.lock", [])
-        assert (own.root / "store.json").is_file()
+        assert result.exit_code == 0 and result.exception is None, result.output
+        assert _after_the_run(result) == [
+            "acme/demo: not snapshotted: its snapshot could not be made (TypeError: list indices must be integers or slices, not dict)."
+        ]
+        # The strict form is asked for a snapshot, and a fault in one is its failure, as it was
+        strict = _run("--snapshot", "--no-gc-reminder")
+        assert strict.exit_code == 1
 
 
 class TestSeveralStores:
@@ -573,20 +615,29 @@ class TestSeveralStores:
         assert len(run.run(demo, echo=lambda line: None, snapshot=True).snapshots) == 1
         assert self._in(work, "first") == ["acme/demo", "acme/demo"] and self._in(work, "second") == []
 
-    def test_a_store_that_is_only_read_is_passed_over(self, stores, demo, work):
-        """A class's store ahead of one's own: one's own work goes to one's own, and no run is stopped for it."""
+    def test_a_first_store_that_is_only_read_says_how_to_send_it_elsewhere(self, stores, demo, work):
+        """A class's store listed ahead of one's own: found by review, the line gave no way out."""
         stores(first={"url": str(work / "first"), "read_only": True}, second={"url": str(work / "second")})
-        assert [str(target) for target in Stores.configured().for_writing("acme/demo")] == [str(work / "second")]
         result = _run()
         assert result.exit_code == 0, result.output
-        assert "Stores: second" in result.output.splitlines() and "not snapshotted" not in result.output
+        assert _after_the_run(result) == [
+            "acme/demo: not snapshotted: Store 'first' is read-only, and it is the catalog's first, where a pipeline the "
+            "catalog sends nowhere is written.",
+            '  To send this one to another: `pipelines = ["acme/demo"]` under that store in catalog.toml.',
+        ]
+        # Done as it says, the next run ends with the snapshot, there
+        stores(
+            first={"url": str(work / "first"), "read_only": True},
+            second={"url": str(work / "second"), "pipelines": ["acme/demo"]},
+        )
+        again = _run()
+        assert again.exit_code == 0, again.output
+        assert "Stores: second" in again.output.splitlines() and "not snapshotted" not in again.output
         assert self._in(work, "first") == [] and self._in(work, "second") == ["acme/demo"]
 
-    def test_with_none_that_can_be_written_the_run_says_so(self, stores, demo, work):
-        stores(first={"url": str(work / "first"), "read_only": True})
-        result = _run()
-        assert result.exit_code == 0, result.output
-        assert _after_the_run(result) == ["acme/demo: not snapshotted: Store 'first' is read-only."]
+    def test_a_store_it_is_sent_to_that_is_only_read_is_not_told_to_be_sent(self, stores, demo, work):
+        stores(first={"url": str(work / "first"), "read_only": True, "pipelines": ["acme/demo"]}, second={"url": str(work / "second")})
+        assert _after_the_run(_run()) == ["acme/demo: not snapshotted: Store 'first' is read-only."]
 
     def test_one_written_and_one_not_is_not_called_no_snapshot(self, stores, demo, work, monkeypatch):
         """Found by review: "not snapshotted", of a snapshot that was in the first of its two stores."""
@@ -656,6 +707,19 @@ class TestWhatWasDeclared:
         assert run.unwritten(demo) == [("forgotten", "./forgotten.csv")]
         assert _snapshots(store) == []
 
+    @pytest.mark.parametrize("dataframes", [[{"name": "out", "path": "./out.csv"}], "out.csv"])
+    def test_a_section_that_is_not_a_table_declares_nothing(self, work, store, monkeypatch, dataframes):
+        """Found by review: `[[dataframes]]` was a traceback before the build. `chartbook check` says what is wrong with it; a run builds, as it did."""
+        directory = _folder(work / "arrays", {
+            "project": {"id": "acme/arrays"}, "scripts": {"build": BUILD}, "dataframes": dataframes, "models": "none",
+        })
+        monkeypatch.chdir(_committed(directory))
+        assert run.unwritten(directory) == []
+        result = _run()
+        assert result.exit_code == 0 and result.exception is None, result.output
+        assert result.output.splitlines() == ["acme/arrays: build", "Ran build in 1 pipeline(s)."]
+
+    @posix
     def test_a_folder_with_nothing_in_it_is_not_written(self, work, store, monkeypatch):
         """Asked as a snapshot asks it: a folder is there when it holds a file. Found by review: such a run ended with no snapshot and no word."""
         directory = _folder(work / "parts", {

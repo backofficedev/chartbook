@@ -162,14 +162,19 @@ What was left open, *proposed by Claude, 2026-11-19:*
 - **Whatever else stops a snapshot is said the same way:** a folder in no git repository, a store
   that cannot be written or is not there, a `chartbook.links.toml` in the folder, a gap in what it
   was pinned to. A pipeline that declares nothing yet is told nothing, whatever state its folder
-  is in. A store that is not there is made where the folder it goes in exists, and not where that
-  folder is missing too: a share that is not mounted must not become an empty folder. *(As built:
-  the rule is the store's, for every command that writes one, since a rule in `run` alone was
-  passed by the pin before the build. The page first said "unless it is the default one under
-  `~/.chartbook`", which refused a new store named by `CHARTBOOK_STORE` on its first use.)* And a
-  run asks no question: not which store (it follows the catalog, to the first store that can be
-  written), and, in a plain run, not whether to make a catalog. *(Found by review: a snapshot can
-  be refused for more reasons than the page named, and can ask.)*
+  is in. And a run asks no question about its snapshot: not which store (it follows the catalog,
+  to its first store where the catalog sends the pipeline nowhere), and, in a plain run, not
+  whether to make a catalog. *(Found by review: a snapshot can be refused for more reasons than
+  the page named, and can ask.)*
+- **Not built: a store that is away is still made.** The page proposed that a store that is not
+  there is not made, so that a share that is not mounted does not become an empty folder. It was
+  built twice and taken out twice. As a rule of `run`, it was passed by the pin before the build,
+  which makes the store first. As a rule of the store, it refused `chartbook store export` to a
+  new folder, and stopped `pin` and `run` where the catalog's first store was away and every pin
+  was in another, since a lockfile's note is written to the first store. So a store is made by
+  its first write as it always was, folders above it and all. Doing this rightly means looking
+  at each thing that writes a store, with several stores in mind, and is its own change. *(After
+  two reviews of the code, 2026-11-19.)*
 - **Any branch.** A run on a branch of an experiment ends with a snapshot as one on `main` does,
   and that snapshot is then the newest of its pipeline: what the next `chartbook update` of a
   pipeline that names this one takes. In a store of one's own that is what is wanted. In a store

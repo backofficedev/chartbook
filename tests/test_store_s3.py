@@ -1365,7 +1365,6 @@ class TestAnotherMachineWithoutTheUpstreamFolder:
 
     def test_a_folder_store(self, work, pipelines, monkeypatch):
         rates, forecast = pipelines
-        (work / "synced").mkdir()
         monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "synced" / "store"))
         snapshot.make(rates)
         lock.pin(forecast)

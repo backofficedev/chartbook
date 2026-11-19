@@ -627,7 +627,7 @@ class TestRunThenSnapshot:
         assert report.reason == (
             "its build left changes that are not committed, so no snapshot was made"
         )
-        assert "upstream: its build changed files that are committed:" in said
+        assert "upstream: its build left files that are not committed:" in said
         assert "   M upstream/x.parquet" in said
         assert snapshot.newest_for(directory)[0] is None
 

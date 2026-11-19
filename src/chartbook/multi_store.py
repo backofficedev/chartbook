@@ -133,11 +133,8 @@ class Stores:
         raise ValueError(f"Unknown store {name!r}; choose {', '.join(e.name for e in self.entries)}")
 
     def for_writing(self, pipeline, names=None):
-        # Sent nowhere by the catalog: the first store that may be written, as a class's read-only store
-        # ahead of one's own is never where one's own work goes
         chosen = ([self.named(name) for name in names] if names else
-                  [e for e in self.entries if pipeline in e.pipelines]
-                  or [next((e for e in self.entries if not e.read_only), self.entries[0])])
+                  [e for e in self.entries if pipeline in e.pipelines] or [self.entries[0]])
         for entry in chosen:
             if entry.read_only:
                 raise ReadOnlyStoreError(f"Store {entry.name!r} is read-only")

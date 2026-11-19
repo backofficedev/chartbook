@@ -2499,8 +2499,7 @@ def make(
         lineage (:func:`chartbook.lineage.walk`), not only this pipeline's
         pins.
     :param store_names: The catalog's stores to write to; by default,
-        those the catalog sends the pipeline to, or its first that can be
-        written.
+        those the catalog sends the pipeline to, or its first.
     :param ask: Whether, at a terminal, a pipeline the catalog sends
         nowhere may be asked about when there are several stores to write
         to. A run passes False: it asks nothing, and follows the catalog.

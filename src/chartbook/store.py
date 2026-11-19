@@ -2152,14 +2152,6 @@ class FolderStore(Store):
                 )
             # A store in too long a folder is said as such, where Windows would say only that the path is not there
             _check_length(marker)
-            if not self.root.is_dir() and not self.root.parent.is_dir() and not self.is_users_own():
-                # A share that is not mounted, a synced folder that is not running: an empty store made in its
-                # place would take what was meant for the real one, and be in its way when it comes back
-                raise StoreError(
-                    f"The store at {self} is not there, nor the folder it is in (a drive that is not mounted, or a "
-                    f"synced folder that is not running). Nothing is made in its place: for a new store there, make "
-                    f"the folder {self.root.parent} first."
-                )
             self.root.mkdir(parents=True, exist_ok=True)
             # Written whole or not at all, for another process reading it
             temporary = marker.with_name(f"{MARKER_FILE}.{uuid.uuid4().hex[:12]}.tmp")
