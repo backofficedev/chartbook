@@ -167,7 +167,7 @@ docs_path = "./docs_src/models/rate_forecaster.md"
 
 Your training code writes the model file and a small JSON file of scores; ChartBook reads the
 scores and never looks inside the model. The page shows the scores, the data it was trained on,
-and whether that data has moved since. When a build is ready, `chartbook run --snapshot` keeps the
+and whether that data has moved since. A `chartbook run` of committed work keeps the
 model as a **version**, named by the start of its hash; a label under `[models.rate_forecaster.aliases]`
 names the one in use, and `models.path("rate_forecaster@champion")` reads it.
 

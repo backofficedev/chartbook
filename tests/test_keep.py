@@ -68,7 +68,8 @@ COSTLY = {
         "embeddings": {"path": "./_data/embeddings.parquet", "docs": "d", "keep": True},
         "summary": {"path": "./_data/summary.parquet", "docs": "d"},
     },
-    "scripts": {"build": "echo built >> build.log"},
+    # A build that writes what it declares, as a run requires of one (and says so in build.log)
+    "scripts": {"build": "echo built >> build.log && echo made >> _data/embeddings.parquet && echo made >> _data/summary.parquet"},
 }
 
 
@@ -488,7 +489,7 @@ class TestAfterReview:
         monkeypatch.chdir(costly)
         result = CliRunner().invoke(main, ["run", "--remake"])
         assert "is kept, and is not on disk" not in result.output
-        assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]  # the script ran; the render then finds the file still missing
+        assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]  # the script ran, and made it again
 
     def test_a_pin_keeps_the_newest_and_the_mark_keeps_the_older_version(self, costly, work):
         first = snapshot.make(costly, made_at=OLDER).snapshot

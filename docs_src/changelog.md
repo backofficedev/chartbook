@@ -26,6 +26,8 @@ Wrote chartbook.lock.
 
 **A pin made under 0.5 is met by the same file only,** since its snapshot recorded no rows. A team that shares a store reads the same files as before and needs no more than the upgrade. For pins that a build of someone's own can meet (the reason for this release), the other pipeline is snapshotted again, which takes no new build.
 
+**`chartbook run` does more, and is stricter.** It ends with a snapshot whenever everything is committed, and it fails when its build did not write something `chartbook.toml` declares (below, "one command to know"). A manifest that declares an output its build does not make yet will stop the run: take the entry out, or make it.
+
 In order:
 
 1. Upgrade: `pip install -U chartbook`, or `uv add "chartbook>=0.6.0"` in a uv project, where everyone else then gets it at their next `uv sync`.
@@ -34,6 +36,35 @@ In order:
 4. A script that ran `chartbook pin --frozen` runs `chartbook pin --check` (below).
 
 A dataframe whose file has the column pandas makes of an index with no name is told of at step 2, and is worth mending there (`to_parquet(index=False)`): with it, no later build has the pinned rows.
+
+### Changed — one command to know: `chartbook run` looks for what it was to make, and ends with a snapshot
+
+The first step of a smaller surface ({design}`one-command`): what a person types every day is `chartbook run`, and it does what took three commands.
+
+```text
+$ chartbook run
+acme/rates: build
+Ran build in 1 pipeline(s).
+acme/rates: not snapshotted: 2 files are not committed (`git status` lists them).
+  A snapshot is of a commit: commit, and `chartbook run` again.
+
+$ git add -A && git commit -m "Yields through October" && chartbook run
+acme/rates: build
+acme/rates at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Ran build in 1 pipeline(s).
+```
+
+- **A build of committed work ends with a snapshot.** `chartbook run` makes one when everything in the pipeline's folder is committed before the build and still so after it, and a branch is checked out. Before, a snapshot was made only by `chartbook snapshot` or `chartbook run --snapshot`, and a pipeline that had been built and never snapshotted was the commonest reason another could not read it.
+- **A build of work in progress is still a good build.** Where there is no snapshot the run exits `0`, and its last line says why and what to do: files that are not committed; a folder in no git repository, or with no commit yet; a commit checked out by its hash (a snapshot of an old version would be the newest of its pipeline, so there it is made only by `--snapshot`); a file the build left that is not committed (new, or one git has that it wrote over), or a commit made while it ran; `chartbook.links.toml` in the folder; a gap in what it is pinned to; a store that cannot be written. A pipeline that declares nothing a snapshot would hold is told nothing of snapshots.
+- **`chartbook.lock` is committed first.** Whoever builds a snapshot's commit again reads what that commit's lockfile pins, so a plain run counts the lockfile with every other file: after `chartbook update` and no commit it says `1 file is not committed`, and where the run itself had to write the lockfile it says `chartbook.lock was written during this run, and is not committed`, and the next run ends with the snapshot. A lockfile git ignores holds nothing up. `--snapshot` passes over the lockfile as it did, since it refuses before it builds.
+- **Breaking: a build that did not write what `chartbook.toml` declares is a failed run.** `its build did not write 1 thing chartbook.toml declares: forecast (./_data/forecast.parquet)`, exit `1`, and no snapshot, in a plain run and with `--snapshot`, `--frozen`, `--remake` and `--upstream` alike. Before, the run said `Ran build` and exited `0`, and the gap showed up later, in another pipeline. What is looked for is whatever the manifest gives a `path` that a build writes: a dataframe, a chart, a notebook, a model and its metrics file, a files asset. A path is written when it holds a file: a folder with nothing in it is not. A dataframe that is a table or a query in a database, and a page of prose kept in git, are not asked of a build. Only `build` is asked, not another script. A pipeline whose manifest declares an output its build does not make yet must take the entry out, or make it.
+- **`chartbook run --snapshot` is the strict form,** as it was: it refuses to build with anything uncommitted, it exits `1` where no snapshot can be made, and it makes one of a commit checked out by its hash. For a script that must end with a snapshot, and for building someone's pipeline at the commit a lockfile names. `chartbook run --frozen` makes none. `chartbook snapshot` is as it was, for a build `chartbook run` did not make.
+- **A run asks nothing about its snapshot.** With several stores in the catalog, `chartbook snapshot` at a terminal may ask which to write a new pipeline to; a run, plain or with `--snapshot` or `--upstream`, writes where the catalog sends the pipeline, or to its first store. And a plain run neither makes a catalog nor asks about one, where `chartbook snapshot` and `run --snapshot` do after their snapshot as before: the catalog is made when it is looked at.
+- **A catalog whose first store may only be read** stops every snapshot of a pipeline it sends nowhere, as it did. Where the catalog has a store that can be written, a run now says how to send the pipeline to it: `Store 'class' is read-only, and it is the catalog's first, where a pipeline the catalog sends nowhere is written. To send this one to mine: pipelines = ["acme/rates"] under [stores.mine] in catalog.toml`.
+- **`Stores:` is said only where there are several.** With one store, the line `Stores: default` after every snapshot told nothing.
+- **A section of `chartbook.toml` that is not a table is said as such** (`[[dataframes]]`, `dataframes = "x"`): `acme/rates cannot have a snapshot: chartbook.toml: [dataframes] must be a table of tables, one per dataframe, e.g. [dataframes.<name>] with a path = "..." under it; it is an array.` `chartbook snapshot` ended in a traceback on one. A run builds, as it did, and says it in its last line.
+- In Python, `chartbook.run.run(...)` makes a snapshot only when told (`snapshot=True`, or `snapshot=run.WHEN_COMMITTED`, which is what the command passes); what it did not snapshot, and why, is in `RunReport.not_snapshotted`. `chartbook.run.unwritten(folder)` lists what a build was to write and did not. `snapshot.make(..., ask=False)` never asks which store, and `SnapshotReport.several` says whether there is more than one. `snapshot.NothingToSnapshot` is the `SnapshotError` of a pipeline that declares or has built nothing, and `snapshot.NotInEveryStore` of a snapshot that reached the first of its stores and not another.
 
 ### Added — the move to a new version is told by the commands
 

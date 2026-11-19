@@ -38,7 +38,7 @@ A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declar
 chartbook init            # Scaffold a new pipeline project
 chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
 chartbook docs build      # Render the HTML documentation website
-chartbook run           # Make everything current: run [scripts] build, then render the site
+chartbook run             # THE command: pin what has no pin, run [scripts] build, fail if a declared output was not written, and make a snapshot when everything is committed
 chartbook docs build -f   # Force overwrite existing docs
 chartbook docs build -f --watch  # Rebuild incrementally on every file change
 chartbook docs open          # Open the generated site
@@ -59,15 +59,15 @@ chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between
 # data.ref("df") is a dataframe's name in SQL; data.connect("source") the raw connection. [sources] in chartbook.toml.
 chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook run --snapshot     # Build, then declare the build ready for others (a snapshot); checks everything is committed first
-chartbook snapshot           # The second half alone: this pipeline's built assets into the store, labelled with the commit; refuses unless its pins account for every dependency
+chartbook run --snapshot     # The strict form of `chartbook run`, for a script that must end with a snapshot: refuses before building with anything uncommitted, exits 1 where no snapshot can be made
+chartbook snapshot           # Seldom needed (`chartbook run` ends with one): a build already on disk into the store, labelled with the commit; refuses unless its pins account for every dependency
 chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets back on disk from its snapshots; with no names, every `keep = true` asset that is missing; never over a file
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
 chartbook pin --check        # Write nothing; exit 1 unless the lockfile is complete and every pin is met: its file is in the store, or a build of your own of the pinned commit holds the same rows up to the pin's last date (no shared store: `git checkout <commit>` in the upstream, `chartbook run --snapshot`) (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3]); was `pin --frozen`
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot; says of each dataframe whether it gained rows or its earlier rows changed
-chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
+chartbook run [script]       # Run a [scripts] entry here (default: build). For build: pin what has no pin, run it, exit 1 if it did not write something chartbook.toml declares with a path, then make a snapshot when everything in the folder is committed, chartbook.lock too (else exit 0 and a last line `not snapshotted: N files are not committed`: commit, run again). Never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
 chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
 chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --repository, --list, --forget)

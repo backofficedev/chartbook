@@ -561,6 +561,8 @@ def declared_files(
     found = []
     for kind in RESOLVABLE_KINDS:
         entries = raw.get(KIND_TABLES[kind]) or {}
+        if not isinstance(entries, dict):
+            continue  # `[[dataframes]]`, `dataframes = "x"`: not a table of tables, which `chartbook check` says
         for name in sorted(entries):
             entry = entries[name]
             declared = entry.get("path") if isinstance(entry, dict) else None
@@ -585,8 +587,11 @@ def declared_in_source(manifest_dir: Union[str, Path]) -> list[tuple[AssetRef, d
     """
     raw = _read_raw_manifest(Path(manifest_dir) / MANIFEST_NAME)
     found = []
-    for name in sorted(raw.get("dataframes") or {}):
-        entry = (raw.get("dataframes") or {})[name]
+    entries = raw.get("dataframes") or {}
+    if not isinstance(entries, dict):
+        return found  # not a table of tables, which `chartbook check` says
+    for name in sorted(entries):
+        entry = entries[name]
         if not isinstance(entry, dict) or not (entry.get("table") or entry.get("query")):
             continue
         try:

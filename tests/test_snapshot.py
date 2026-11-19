@@ -1216,7 +1216,6 @@ class TestCommands:
             f"acme/maker at {commit[:7]}: 2 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
-            "Stores: default",
             # By default a store and a catalog are one unit: the first snapshot makes the catalog that shows it
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
@@ -1228,7 +1227,7 @@ class TestCommands:
         self._run("snapshot")
         result = self._run("snapshot")
         assert result.exit_code == 0
-        last = result.output.splitlines()[-2]
+        last = result.output.splitlines()[-1]  # and no line of which store, where there is one
         assert last.startswith("No new snapshot: the same bytes and the same pins as the one made 20")
         assert last.endswith(" UTC.")
 

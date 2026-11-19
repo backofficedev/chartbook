@@ -627,7 +627,7 @@ class TestRunThenSnapshot:
         assert report.reason == (
             "its build left changes that are not committed, so no snapshot was made"
         )
-        assert "upstream: its build changed files that are committed:" in said
+        assert "upstream: its build left files that are not committed:" in said
         assert "   M upstream/x.parquet" in said
         assert snapshot.newest_for(directory)[0] is None
 
@@ -661,7 +661,6 @@ class TestRunThenSnapshot:
             f"upstream at {commit[:7]}: 1 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
-            "Stores: default",
             "Ran build in 1 pipeline(s).",
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",

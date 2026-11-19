@@ -1662,6 +1662,24 @@ _OTHER_PATH_EXAMPLES = {
 }
 
 
+def section_that_is_no_table(manifest: dict, source: str) -> Optional[str]:
+    """What is wrong with the first entity table of a manifest that is not a table of tables, in a sentence; None if each is one.
+
+    ``[[dataframes]]`` and ``dataframes = "x"`` parse, and declare
+    nothing: what walks the tables (a snapshot, a run that looks for what
+    was built) asks this first, and says it, where a docs build is told by
+    :func:`_check_entity_fields`.
+    """
+    for table, kind in _ENTITY_KINDS:
+        entries = manifest.get(table)
+        if entries is not None and not isinstance(entries, dict):
+            return (
+                f"{source}: [{table}] must be a table of tables, one per {kind}, e.g. [{table}.<name>] "
+                f"with a path = \"...\" under it; it is {_toml_word(entries)}."
+            )
+    return None
+
+
 def _check_entity_fields(manifest: dict, source: str) -> None:
     """Refuse an entity table's field that is not of its type, before anything reads it.
 
@@ -1686,10 +1704,7 @@ def _check_entity_fields(manifest: dict, source: str) -> None:
         if entries is None:
             continue
         if not isinstance(entries, dict):
-            raise ValueError(
-                f"{source}: [{table}] must be a table of tables, one per {kind}, e.g. [{table}.<name>] "
-                f"with a path = \"...\" under it; it is {_toml_word(entries)}."
-            )
+            raise ValueError(section_that_is_no_table({table: entries}, source))
         for key, entry in entries.items():
             where = f"{source}: [{table}.{key}]"
             if not isinstance(entry, dict):

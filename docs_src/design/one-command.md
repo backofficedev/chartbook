@@ -146,8 +146,14 @@ What was left open, *proposed by Claude, 2026-11-19:*
 
 - **"Committed" is looked at before the build, and again after,** as `run --snapshot` looks today:
   the commit the build started at is the one a snapshot is of. A build that changes a file git
-  tracks, or a commit made while it ran, means no snapshot, and the line says which. The lockfile
-  does not count, since the run itself writes it. *(Found by review: the page did not say when.)*
+  tracks, or a commit made while it ran, means no snapshot, and the line says which. *(Found by
+  review: the page did not say when.)*
+- **The lockfile counts.** The page first said it did not, "since the run itself writes it", as
+  `run --snapshot` has it. But whoever builds a snapshot's commit again reads what that commit's
+  lockfile pins, and a snapshot is now made at every run and not on purpose. So a plain run that
+  had to write `chartbook.lock` says `chartbook.lock was written during this run, and is not
+  committed`, and the next run ends with the snapshot. *(As built, after the review of the code,
+  2026-11-19.)*
 - **And only where a branch is checked out.** A commit checked out by its hash is an old version
   being looked at or built again, and a snapshot of it would be the newest of its pipeline:
   what the next `pin --update` of anything that names the pipeline takes. There the run says
@@ -155,11 +161,25 @@ What was left open, *proposed by Claude, 2026-11-19:*
   commit`. *(Found by review: "the newest" is the one made last, on whatever branch.)*
 - **Whatever else stops a snapshot is said the same way:** a folder in no git repository, a store
   that cannot be written or is not there, a `chartbook.links.toml` in the folder, a gap in what it
-  was pinned to. A pipeline that declares nothing yet is told nothing. A store that is not there
-  is not made, unless it is the default one under `~/.chartbook`: a share that is not mounted
-  must not become an empty folder. And a run asks no question about which store: it follows the
-  catalog. *(Found by review: a snapshot can be refused for more reasons than the page named, and
-  can ask.)*
+  was pinned to. A pipeline that declares nothing yet is told nothing, whatever state its folder
+  is in. And a run asks no question about its snapshot: not which store (it follows the catalog,
+  to its first store where the catalog sends the pipeline nowhere), and, in a plain run, not
+  whether to make a catalog. *(Found by review: a snapshot can be refused for more reasons than
+  the page named, and can ask.)*
+- **Not built: a store that is away is still made.** The page proposed that a store that is not
+  there is not made, so that a share that is not mounted does not become an empty folder. It was
+  built twice and taken out twice. As a rule of `run`, it was passed by the pin before the build,
+  which makes the store first. As a rule of the store, it refused `chartbook store export` to a
+  new folder, and stopped `pin` and `run` where the catalog's first store was away and every pin
+  was in another, since a lockfile's note is written to the first store. So a store is made by
+  its first write as it always was, folders above it and all. Doing this rightly means looking
+  at each thing that writes a store, with several stores in mind, and is its own change. *(After
+  two reviews of the code, 2026-11-19.)*
+- **Any branch.** A run on a branch of an experiment ends with a snapshot as one on `main` does,
+  and that snapshot is then the newest of its pipeline: what the next `chartbook update` of a
+  pipeline that names this one takes. In a store of one's own that is what is wanted. In a store
+  a team shares it is a question for the maintainer, not yet asked when this was built: see
+  "Later", `chartbook publish`. *(Found by the review of the code, 2026-11-19.)*
 - **`chartbook run --snapshot` is the strict form,** as it is today: it refuses to build with
   anything uncommitted, on a branch or not, and fails if no snapshot can be made. For a script
   that must end with one, and for building someone's pipeline at the commit they pinned
@@ -352,8 +372,9 @@ On the {doc}`../roadmap`, with what was said of each:
 One pull request each. Each changes the reference, the skill and the assistant files for what it
 changes.
 
-1. This page.
+1. This page. *Merged 2026-11-19.*
 2. `chartbook run` looks for what was declared, and makes a snapshot when everything is committed.
+   *Built 2026-11-19.*
 3. A snapshot clears its pipeline's old snapshots; the reminder goes.
 4. `chartbook run --check`; `chartbook check` is gone.
 5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone.
