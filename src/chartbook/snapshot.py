@@ -133,8 +133,21 @@ class NothingToSnapshot(SnapshotError):
     """A pipeline with nothing to take a snapshot of: it declares nothing with a path, or has built none of what it declares.
 
     Not a fault of anything: a pipeline just begun. ``chartbook snapshot``
-    says so; a run that ends with a snapshot where it can passes over it.
+    says so, and a run that ends with a snapshot where it can says it in
+    its own words.
+
+    Attributes:
+        not_built: What it declares and has not built, each with its path
+            or with why, as :attr:`SnapshotReport.not_built` has them.
     """
+
+    def __init__(self, message: str, not_built: Optional[list] = None):
+        super().__init__(message)
+        self.not_built = list(not_built or [])
+
+
+class NotInEveryStore(SnapshotError):
+    """A snapshot that was written to the first of the stores it goes to, and whose copy to another failed: making it again finishes the copies."""
 
 
 class StoreNotReadyError(SnapshotError):
@@ -336,6 +349,10 @@ class SnapshotReport:
         documents_skipped: The documents the manifest names that were not
             kept, each with why: not a plain path inside the folder, a
             link, not a file.
+        stores: Where it was written: the names of the catalog's stores,
+            or the one store it was given.
+        several: Whether the catalog has more than one store, so that
+            saying which it went to tells something.
         not_hashed: The dataframes whose rows have no hash, each with why
             (:class:`chartbook.rowhash.NotHashed`): a pin of one is met by
             the same file and by nothing else.
@@ -373,6 +390,7 @@ class SnapshotReport:
     index_skipped: Optional[str] = None
     documents_skipped: list[tuple[str, str]] = field(default_factory=list)
     stores: list[str] = field(default_factory=list)
+    several: bool = False
     not_hashed: list[tuple[str, str]] = field(default_factory=list)
     not_hashed_now: list[tuple[str, str]] = field(default_factory=list)
     rows_said: list[tuple[str, str]] = field(default_factory=list)
@@ -2456,6 +2474,7 @@ def make(
     ignoring: tuple = (),
     deep: bool = False,
     store_names: Optional[list[str]] = None,
+    ask: bool = True,
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -2479,6 +2498,12 @@ def make(
     :param deep: Also refuse if any snapshot upstream has a gap in its own
         lineage (:func:`chartbook.lineage.walk`), not only this pipeline's
         pins.
+    :param store_names: The catalog's stores to write to; by default,
+        those the catalog sends the pipeline to, or its first that can be
+        written.
+    :param ask: Whether, at a terminal, a pipeline the catalog sends
+        nowhere may be asked about when there are several stores to write
+        to. A run passes False: it asks nothing, and follows the catalog.
     :returns: The snapshot, and whether it is new.
     :raises SnapshotError: If the folder holds no pipeline, is not in git,
         has anything uncommitted, or has built nothing.
@@ -2491,7 +2516,7 @@ def make(
     from chartbook.multi_store import Stores
     if store is None or isinstance(store, Stores):
         stores = Stores.configured() if store is None else store
-        if store_names is None and stores.catalog and not any(pipeline in e.pipelines for e in stores.entries):
+        if ask and store_names is None and stores.catalog and not any(pipeline in e.pipelines for e in stores.entries):
             writable = [e for e in stores.entries if not e.read_only]
             import sys
             if len(writable) > 1 and sys.stdin.isatty() and not os.environ.get("CI") and not os.environ.get("CHARTBOOK_BATCH"):
@@ -2515,8 +2540,9 @@ def make(
                 try:
                     copy_snapshot(report.snapshot, targets[0], target)
                 except (StoreError, OSError) as error:
-                    raise SnapshotError(f"Snapshot written to {targets[0]}, but copy to {target} failed: {error}. Rerun the snapshot to finish the remaining copies.") from error
+                    raise NotInEveryStore(f"Snapshot written to {targets[0]}, but copy to {target} failed: {error}. Rerun the snapshot to finish the remaining copies.") from error
         report.stores = [e.name for e in stores.entries if e.store in targets]
+        report.several = len(stores.entries) > 1  # with one store there is nothing to tell apart
         return report
 
     store = store if store is not None else default_store()
@@ -2676,7 +2702,8 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     if len(not_built) == len(assets):
         raise NothingToSnapshot(
             f"{pipeline} has built nothing it declares, so there is nothing to "
-            f"take a snapshot of. Build it first: `chartbook run`."
+            f"take a snapshot of. Build it first: `chartbook run`.",
+            not_built,
         )
 
     snapshot = Snapshot(

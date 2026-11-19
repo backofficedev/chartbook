@@ -489,7 +489,7 @@ class TestAfterReview:
         monkeypatch.chdir(costly)
         result = CliRunner().invoke(main, ["run", "--remake"])
         assert "is kept, and is not on disk" not in result.output
-        assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]  # the script ran; the render then finds the file still missing
+        assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]  # the script ran, and made it again
 
     def test_a_pin_keeps_the_newest_and_the_mark_keeps_the_older_version(self, costly, work):
         first = snapshot.make(costly, made_at=OLDER).snapshot

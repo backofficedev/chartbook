@@ -42,6 +42,7 @@ def drive(tmp_path, monkeypatch):
     :returns: The work folder, and a function that moves to a machine by its letter.
     """
     work = tmp_path.resolve()
+    (work / "Google Drive").mkdir()  # the synced folder is there: a store is made in a folder that is, and not in one that is not
     monkeypatch.setenv("CHARTBOOK_STORE", str(work / "Google Drive" / "chartbook-store"))
     monkeypatch.delenv("CHARTBOOK_MACHINE_ID")  # each home its own machine
     monkeypatch.delenv("CI", raising=False)  # these are people's machines, whatever runs the tests

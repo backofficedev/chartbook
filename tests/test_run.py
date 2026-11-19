@@ -661,7 +661,6 @@ class TestRunThenSnapshot:
             f"upstream at {commit[:7]}: 1 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
-            "Stores: default",
             "Ran build in 1 pipeline(s).",
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
@@ -1032,13 +1031,7 @@ class TestCommand:
         monkeypatch.chdir(_pipeline(work / "top", {"build": LOG}))
         result = self._run()
         assert result.exit_code == 0, result.output
-        assert result.output.splitlines() == [
-            "top: build",
-            "Ran build in 1 pipeline(s).",
-            # A build is followed by a snapshot where there can be one, and by why not where there cannot
-            "top: not snapshotted: this folder is in no git repository.",
-            "  A snapshot is of a commit: `git init`, commit, and `chartbook run` again.",
-        ]
+        assert result.output.splitlines() == ["top: build", "Ran build in 1 pipeline(s)."]
         assert _order(work) == ["top"]
 
     def test_run_in_a_catalog(self, chain, work, monkeypatch):

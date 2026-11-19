@@ -367,32 +367,40 @@ class RunReport:
 WHEN_COMMITTED = "when committed"
 
 
-def _why_no_snapshot_before(step: "Step", here: Path) -> tuple[Optional[str], str]:
+def _why_no_snapshot_before(step: "Step") -> tuple[Optional[str], str]:
     """Whether a pipeline's build can end with a snapshot, asked before it starts: its commit, or why not in a few words.
 
-    As ``--snapshot`` asks it (everything committed, the lockfile apart,
-    and no declared path that reaches outside the folder), and one thing
-    more: a branch is checked out. A commit checked out by its hash is an
-    old version looked at or built again, and a snapshot of it would be
-    the newest of its pipeline, which is what the next ``pin --update`` of
-    anything that names the pipeline takes. ``--snapshot`` makes that one,
-    on purpose.
+    Everything in its folder is committed, the lockfile too, and a branch
+    is checked out. The lockfile counts here, where ``--snapshot`` passes
+    over it: a snapshot is labelled with a commit, and whoever builds that
+    commit again reads what its lockfile pins. A run that has to write the
+    lockfile says so after the build, and the next run ends with the
+    snapshot. A commit checked out by its hash is an old version looked at
+    or built again, and a snapshot of it would be the newest of its
+    pipeline, which is what the next ``chartbook update`` of anything that
+    names the pipeline takes. ``--snapshot`` makes that one, on purpose.
     """
     if os.path.lexists(step.directory / "chartbook.links.toml"):
         return None, (
-            "chartbook.links.toml is in the folder, so it reads other pipelines' working files. "
-            "Remove it, and `chartbook pin --update`"
+            "chartbook.links.toml is in the folder, so its build reads other pipelines' working folders.\n"
+            "  Remove it, `chartbook update`, and `chartbook run` again"
         )
+    try:
+        snapshots._git(step.directory, "rev-parse", "--show-toplevel")
+    except snapshots.SnapshotError as error:
+        said = str(error).strip()
+        if "not a git repository" in said:
+            return None, "this folder is in no git repository.\n  A snapshot is of a commit: `git init`, commit, and `chartbook run` again"
+        # No git, or a repository git will not read here: not something `git init` mends
+        return None, f"git did not say which commit this is ({said.splitlines()[0].rstrip('.') if said else 'it failed'})"
     try:
         code = snapshots.code_of(step.directory)
     except snapshots.SnapshotError as error:
-        if "is not in a git repository" in str(error):
-            return None, "this folder is in no git repository.\n  A snapshot is of a commit: `git init`, commit, and `chartbook run` again"
         if "has no commit yet" in str(error):
             return None, "nothing is committed yet.\n  A snapshot is of a commit: commit, and `chartbook run` again"
         return None, str(error).rstrip(".")
     try:
-        changes = snapshots.uncommitted(step.directory, ignoring=(lock.LOCK_FILE,))
+        changes = snapshots.uncommitted(step.directory)
     except snapshots.SnapshotError as error:
         return None, str(error).rstrip(".")
     if changes:
@@ -400,81 +408,88 @@ def _why_no_snapshot_before(step: "Step", here: Path) -> tuple[Optional[str], st
         return None, f"{files} not committed (`git status` lists them).\n  A snapshot is of a commit: commit, and `chartbook run` again"
     if not snapshots.on_a_branch(step.directory):
         return None, f"no branch is checked out, only the commit {code.commit[:7]}. `chartbook run --snapshot` makes a snapshot of it"
-    try:
-        snapshots.check_within(step.directory, step.id)
-    except snapshots.SnapshotError as error:
-        return None, str(error).rstrip(".")
     return code.commit, ""
 
 
-def _store_not_there(store: Optional[Store], pipeline: str) -> str:
-    """Why a snapshot of a pipeline cannot be written now, for a store that is not there or may only be read; empty where it can.
+def _why_no_snapshot_after(step: "Step", before: Optional[str]) -> str:
+    """Why a build that began with everything committed cannot end with a snapshot, in a few words; empty where it can.
 
-    A folder store that is not there is made by its first snapshot, as it
-    always was, where the folder it is to be in is there. Where that is
-    missing too, it is a share that is not mounted or a synced folder that
-    is not running, and a run does not make an empty store in its place.
-    The user's own, under ``~/.chartbook``, is always made.
+    The commit the build started at is the one a snapshot is labelled
+    with: a file the build left that git neither ignores nor has, a
+    committed file it changed, or a commit made meanwhile, and that commit
+    no longer describes the folder. So does the lockfile, where this run
+    wrote it: it is one more file to commit.
     """
-    from chartbook.store import FolderStore, StoreError
-
-    try:
-        the_store = store if store is not None else default_store()
-        for_writing = getattr(the_store, "for_writing", None)
-        targets = for_writing(pipeline) if callable(for_writing) else [the_store]
-    except (StoreError, ValueError, OSError) as error:
-        return str(error).rstrip(".")
-    for target in targets:
-        if isinstance(target, FolderStore) and not target.root.is_dir() and not target.root.parent.is_dir() and not target.is_users_own():
-            return (
-                f"the store at {target.root} is not there, nor the folder it is in "
-                f"(a drive that is not mounted, or a synced folder that is not running)"
-            )
+    changed = snapshots.uncommitted(step.directory)
+    others = [line for line in changed if os.path.basename(line[3:].split(" -> ")[-1]) != lock.LOCK_FILE]
+    if others:
+        new = [line[3:] for line in others if line.startswith("??")]
+        touched = [line[3:] for line in others if not line.startswith("??")]
+        shown = "; ".join(
+            f"{word}: {', '.join(names[:3])}{', …' if len(names) > 3 else ''}"
+            for word, names in (("changed", touched), ("new", new)) if names
+        )
+        files = "1 file that is" if len(others) == 1 else f"{len(others)} files that are"
+        return (
+            f"its build left {files} not committed ({shown}), so the commit it started at does not describe the folder.\n"
+            f"  A file a build writes belongs in .gitignore"
+        )
+    if changed:
+        return (
+            f"{lock.LOCK_FILE} was written during this run, and is not committed.\n"
+            f"  A snapshot is of a commit: commit it, and `chartbook run` again"
+        )
+    now = snapshots.code_of(step.directory).commit
+    if before is not None and now != before:
+        return f"its repository moved from {before[:7]} to {now[:7]} while it was built, so no commit says which code ran"
     return ""
 
 
-def _stores_by_the_catalog(store: Optional[Store], pipeline: str) -> Optional[list]:
-    """The names of the stores a catalog sends a pipeline's snapshots to, so that a run asks no question about it; None for one store.
+def _declares_what_a_snapshot_holds(directory: Path) -> bool:
+    """Whether a pipeline declares anything a snapshot could hold: an asset with a path, or a dataframe in a source.
 
-    A snapshot made by hand, at a terminal, of a pipeline the catalog
-    routes nowhere, asks which stores to write to. A run follows the
-    catalog: the stores that list the pipeline, or the first.
+    One that does not yet is told nothing of snapshots, whatever state its
+    folder is in: there is nothing for it to commit towards.
     """
+    from chartbook.resolve import declared_files, declared_in_source
+
     try:
-        the_store = store if store is not None else default_store()
-    except Exception:  # noqa: BLE001 - said by what opens the store next
-        return None
-    entries = getattr(the_store, "entries", None)
-    if not entries or getattr(the_store, "catalog", None) is None:
-        return None
-    return [entry.name for entry in entries if pipeline in entry.pipelines] or [entries[0].name]
+        return bool(declared_files(directory)) or bool(declared_in_source(directory))
+    except (OSError, ValueError):
+        return True  # a manifest that cannot be read is said by what reads it next
 
 
 def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
-    """The outputs a pipeline's manifest declares that are not on disk: each as its name in the manifest and the path it was to be at.
+    """What a pipeline's manifest declares with a path that a build is to write, and that is not there: each as ``chartbook path`` names it, with its path as declared.
 
-    What ``chartbook check`` calls an output
-    (:data:`chartbook.conf_validation.OUTPUT_FILE_TYPES`): a dataframe's
-    file, a chart, a notebook, a model and its scores, the files of a files
-    asset. A dataframe that is a table or a query in a source has no file,
-    and is not looked for.
+    Read from the raw ``chartbook.toml``, as a snapshot reads it, and asked
+    as a snapshot asks: an asset is there when its path holds a file, so a
+    folder with nothing in it, or a pattern that matches nothing, is not.
+    A dataframe, a chart, a notebook, a model, the scores a model declares
+    (``metrics_path``) and a files asset are looked for. A dataframe that
+    is a table or a query in a source has no file of its own, and a note is
+    prose kept in git, which no build writes: neither is.
+
+    :raises OSError: If there is no ``chartbook.toml`` there to read.
+    :raises ValueError: If it is not valid TOML.
     """
-    from chartbook.conf_validation import OUTPUT_FILE_TYPES, validate_source_files
-    from chartbook.manifest import load_manifest
+    from chartbook import hashing
+    from chartbook.resolve import declared_files
 
     directory = Path(directory)
-    manifest = load_manifest(base_dir=directory)
-    found = []
-    for missing in validate_source_files(manifest, directory):
-        if missing.file_type not in OUTPUT_FILE_TYPES:
+    missing = []
+    for local, declared, absolute in declared_files(directory):
+        if local.kind == "note":
             continue
-        try:
-            shown = "./" + Path(missing.file_path).resolve().relative_to(directory.resolve()).as_posix()
-        except ValueError:
-            shown = str(missing.file_path)
-        name = f"{missing.item_id}'s scores" if missing.file_type == "model_metrics" else str(missing.item_id)
-        found.append((name, shown))
-    return found
+        found = hashing.find_files(absolute)
+        if found is None or not found.files:
+            missing.append((str(local), declared))
+    models = _read_manifest(directory).get("models") or {}
+    for name in sorted(models):
+        scores = models[name].get("metrics_path") if isinstance(models[name], dict) else None
+        if isinstance(scores, str) and scores.strip() and not os.path.isfile(os.path.normpath(directory / scores)):
+            missing.append((f"model/{name}'s scores", scores))
+    return missing
 
 
 def _read_manifest(directory: Path) -> dict:
@@ -1150,7 +1165,7 @@ def run(
     building = script == BUILD_SCRIPT
     # Where everything is committed: only a build is followed by a snapshot, and --frozen writes none
     when_committed = snapshot == WHEN_COMMITTED and building and not frozen
-    snapshot = snapshot is True
+    snapshot = bool(snapshot) and snapshot != WHEN_COMMITTED
     if snapshot and os.path.lexists(here / "chartbook.links.toml"):
         raise RunError("Cannot snapshot while chartbook.links.toml exists. Remove it, update pins, then snapshot.")
     if frozen and snapshot:
@@ -1226,7 +1241,9 @@ def run(
         for step in steps:
             if step.source != "asked" or step.snapshot_first or step.directory is None or script not in step.scripts:
                 continue
-            commit, why = _why_no_snapshot_before(step, here)
+            if not _declares_what_a_snapshot_holds(step.directory):
+                continue  # nothing to take a snapshot of yet: told nothing, whatever is committed
+            commit, why = _why_no_snapshot_before(step)
             if commit is None:
                 why_not[step.directory] = why
             else:
@@ -1368,7 +1385,7 @@ def run(
                     break
             elif step.directory in with_snapshot:
                 # Asked before the run, and maybe waited for since: no longer so is no snapshot, and the build goes on
-                commit, why = _why_no_snapshot_before(step, here)
+                commit, why = _why_no_snapshot_before(step)
                 if commit is None or commit != commits_before.get(step.directory):
                     with_snapshot.discard(step.directory)
                     why_not[step.directory] = why or (
@@ -1507,39 +1524,29 @@ def run(
             if step.directory in with_snapshot or step.directory in why_not:
                 # WHEN_COMMITTED: a snapshot where there can be one, and a line that says why where there cannot
                 why = why_not.get(step.directory, "")
-                if not why:
-                    why = _store_not_there(store, step.id)
                 made = None
                 if not why:
                     try:
-                        changed = snapshots.uncommitted(step.directory, ignoring=(lock.LOCK_FILE,))
-                        now = snapshots.code_of(step.directory).commit
-                        if changed:
-                            files = "1 file" if len(changed) == 1 else f"{len(changed)} files"
-                            why = (
-                                f"its build changed {files} that git tracks ({', '.join(line.strip() for line in changed[:3])}"
-                                f"{', …' if len(changed) > 3 else ''}), so the commit it started at does not describe what it made"
-                            )
-                        elif now != commits_before.get(step.directory, now):
-                            why = (
-                                f"its repository moved from {commits_before[step.directory][:7]} to {now[:7]} while it was "
-                                f"built, so no commit says which code ran"
-                            )
-                        else:
-                            made = snapshots.make(
-                                step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,),
-                                store_names=_stores_by_the_catalog(store, step.id),
-                            )
-                    except snapshots.NothingToSnapshot:
-                        why = None  # a pipeline that declares nothing yet is told nothing
-                    except (snapshots.SnapshotError, StoreError, OSError) as error:
+                        why = _why_no_snapshot_after(step, commits_before.get(step.directory))
+                        if not why:
+                            # A run asks nothing: it writes where the catalog sends the pipeline
+                            made = snapshots.make(step.directory, store, built_by_run=True, ask=False)
+                    except snapshots.NothingToSnapshot as error:
+                        # Only what a snapshot writes out itself is left to be missing: a table in a source
+                        listed = "; ".join(f"{name} ({reason})" for name, reason in error.not_built[:3])
+                        why = "nothing it declares is there to take" + (f": {listed}" if listed else "")
+                    except snapshots.NotInEveryStore as error:
+                        why = f"not in every store it goes to. {str(error).rstrip('.')}"
+                    except (snapshots.SnapshotError, StoreError) as error:
                         why = str(error).rstrip(".")
+                    except OSError as error:
+                        why = f"the store could not be written ({error})"
                 if made is not None:
                     report.snapshots.append(made)
                     if on_snapshot is not None:
                         on_snapshot(step, made)
-                elif why:
-                    report.not_snapshotted.append((step, why))
+                else:
+                    report.not_snapshotted.append((step, why or "it could not be made"))
 
             if (snapshot and step.source == "asked") or step.snapshot_first:
                 # A build that changes a committed file, or that commits, leaves
@@ -1563,7 +1570,7 @@ def run(
                             f"snapshot was made: the label would not say which code ran"
                         )
                     made = snapshots.make(
-                        step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,)
+                        step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,), ask=False
                     )
                 except snapshots.SnapshotError as error:
                     report.failed, report.exit_code = step, 1

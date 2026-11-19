@@ -399,7 +399,7 @@ It copies the files the manifest names, so in a folder you have not trusted it r
 
 Manage a catalog — by default the machine's, `~/.chartbook/catalog.toml` (`chartbook config` can point these commands at a different catalog). Concepts: {doc}`../guide/catalogs-and-data`.
 
-**By default a store and a catalog are one unit.** The first command that needs the catalog and finds none (`chartbook ls`, `get-docs`, `data`, `catalog build`, `catalog open`, and `chartbook snapshot` or `run --snapshot` once the snapshot is made) makes `~/.chartbook/catalog.toml` over the store this machine uses, and nothing else. At a terminal it asks first, and Enter says yes:
+**By default a store and a catalog are one unit.** The first command that needs the catalog and finds none (`chartbook ls`, `get-docs`, `data`, `catalog build`, `catalog open`, and `chartbook snapshot` or `run --snapshot` once the snapshot is made; not a plain `chartbook run`, which asks nothing) makes `~/.chartbook/catalog.toml` over the store this machine uses, and nothing else. At a terminal it asks first, and Enter says yes:
 
 ```console
 $ chartbook ls
@@ -458,7 +458,7 @@ Catalog site generated: /Users/x/.chartbook/docs/index.html
 `chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
 ```
 
-`chartbook run --snapshot` says the same after its snapshot, and takes `--no-gc-reminder` too. With several stores in the catalog, each that gc could clear is named, with the `--store NAME` that gc takes there.
+`chartbook run` says the same after a snapshot it makes, and takes `--no-gc-reminder` too. With several stores in the catalog, each that gc could clear is named, with the `--store NAME` that gc takes there.
 
 ### catalog open
 
@@ -658,12 +658,12 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook updat
 Ran build in 1 pipeline(s).
 ```
 
-1. It looks whether everything is committed **before** it builds. `chartbook.lock` does not count: the pin before the build is about to write it, and the snapshot records what it says.
+1. It looks whether everything is committed **before** it builds.
 2. It builds, and looks for what `chartbook.toml` declares.
 3. It looks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot. So does a build that makes a commit.
 4. It makes the snapshot, and records in it that the build ran in the same command.
 
-Where something is not committed, a plain run builds anyway and says why there is no snapshot ({ref}`chartbook run <run-ends-with-a-snapshot>`). **`chartbook run --snapshot` is the strict form**, for a script that must end with a snapshot: it refuses at step 1, so nothing is built for an hour and then left without one, and it exits `1` where no snapshot can be made. It also makes a snapshot of a commit checked out by its hash, which a plain run leaves alone.
+Where something is not committed, a plain run builds anyway and says why there is no snapshot ({ref}`chartbook run <run-ends-with-a-snapshot>`). **`chartbook run --snapshot` is the strict form**, for a script that must end with a snapshot: it refuses at step 1, so nothing is built for an hour and then left without one, and it exits `1` where no snapshot can be made. It also makes a snapshot of a commit checked out by its hash, which a plain run leaves alone. And `chartbook.lock` does not count for it: it refuses before it builds, the pin before the build is about to write that file, and the snapshot records what it says; commit the lockfile after.
 
 With `--force` as well, it is the weekly refresh in one line: `chartbook run --force --snapshot`.
 
@@ -688,7 +688,7 @@ Things to know:
 - **It is found by commit, or by the pipeline's ID.** A pipeline that depends on this folder, or on the same repository by URL, finds it by the commit; one that names this pipeline by its ID (`"ftsfr/fed_yield_curve" = {}`) finds it by the ID. It is in the store, so another machine that shares the store ({ref}`a store a team shares <chartbook-store>`) finds it the same ways once the store has synced, and by the ID with no folder of this pipeline there at all.
 
 (chartbook-restore)=
-`--store NAME` writes this snapshot to that catalog store; repeat it to write to several. Without it, catalog routing applies, then the first store. A read-only or unreachable destination is refused before any write. The command reports its destinations.
+`--store NAME` writes this snapshot to that catalog store; repeat it to write to several. Without it, catalog routing applies, then the first store that can be written. A read-only or unreachable destination is refused before any write. With several stores, the command says which it wrote to (`Stores: personal`).
 
 ## chartbook restore
 
@@ -1024,7 +1024,7 @@ What `chartbook run` does for `build`, in order:
 5. **Makes a snapshot, when everything in the folder is committed.** While you are still editing, the build is a good one all the same, and the last line says why there is no snapshot.
 
 (run-ends-with-a-snapshot)=
-**A build of committed work ends with a snapshot.** A snapshot is labelled with a commit, so it is made when the commit describes the folder: everything in the pipeline's folder committed before the build, and still so after it. `chartbook.lock` does not count, since the run itself writes it; nor does what git ignores, such as built data. When something is not committed, nothing is wrong: the run exits `0` and says so last, where you will see it.
+**A build of committed work ends with a snapshot.** A snapshot is labelled with a commit, so it is made when the commit describes the folder: everything in the pipeline's folder committed before the build, and still so after it. What git ignores, such as built data, does not count. `chartbook.lock` does: whoever builds that commit again reads what its lockfile pins, so a lockfile this run had to write is one more file to commit, and the run says so. When something is not committed, nothing is wrong: the run exits `0` and says so last, where you will see it.
 
 ```console
 $ chartbook run
@@ -1043,13 +1043,16 @@ The other reasons are said in the same place, each in one line, and none of them
 | `N files are not committed` | Commit, and `chartbook run` again |
 | `this folder is in no git repository`, or `nothing is committed yet` | `git init`, commit, and `chartbook run` again |
 | `no branch is checked out, only the commit 4f2a91c` | Nothing, if you are looking at an old version. A snapshot of it would be the newest of the pipeline, so it is made only when you ask: `chartbook run --snapshot` |
-| `its build changed 1 file that git tracks (M data/raw.csv)` | The commit no longer describes the folder. Have the build write to a folder git ignores, or commit what it wrote and run again |
+| `chartbook.lock was written during this run, and is not committed` | Commit it, and `chartbook run` again |
+| `its build left 1 file that is not committed (changed: data/raw.csv)`, or `(new: report.txt)` | The commit no longer describes the folder. A file a build writes belongs in `.gitignore`; then run again |
 | `its repository moved from 4f2a91c to 8d02c5e while it was built` | The build made a commit, or you did. Run again |
-| `chartbook.links.toml is in the folder` | You are working on two pipelines at once ({ref}`chartbook link <chartbook-link>`). Remove the links when you are done |
-| `the store at /Volumes/team/cbstore is not there, nor the folder it is in` | Mount the drive, or start the sync client. A store is made where its folder exists; a share that is not mounted is never replaced by an empty folder |
-| A gap in what it is pinned to, or a store that cannot be written | What the line names |
+| `chartbook.links.toml is in the folder` | You are working on two pipelines at once ({ref}`chartbook link <chartbook-link>`). When you are done: remove it, `chartbook update`, and `chartbook run` again |
+| `The store at /Volumes/team/cbstore is not there, nor the folder it is in` | Mount the drive, or start the sync client ({ref}`a store is made only in a folder that is there <chartbook-store>`) |
+| `its pins do not account for every dependency`, a store that cannot be written, a snapshot that reached one of its stores and not another | What the line names |
 
-A pipeline that declares nothing with a path yet is told nothing. A run asks no question about which store: with several, the snapshot goes where the catalog sends the pipeline, or to the first.
+A pipeline that declares nothing a snapshot would hold is told nothing of snapshots, committed or not.
+
+**A run asks nothing.** With several stores, its snapshot goes where the catalog sends the pipeline, or to the first store that can be written, and the run says which (`Stores: personal`); `chartbook snapshot`, typed at a terminal, may ask. And a plain run neither makes a catalog nor asks about one: the catalog is made when it is looked at ({ref}`chartbook catalog <chartbook-catalog>`).
 
 (run-looks-for-what-was-declared)=
 **A build that did not write what `chartbook.toml` declares is a failed run.** A script can exit `0` and have made nothing: a task that was skipped, a file written under another name, an output added to the manifest and not yet to the code.
@@ -1062,7 +1065,7 @@ $ echo $?
 1
 ```
 
-No snapshot is made of it. Only what a build writes is looked for: a dataframe that is a table or a query in a database has no file of its own, and a page of prose kept in git (a note, a write-up) is not an output. Only `build` is asked: another script may run before anything is built.
+No snapshot is made of it. What is looked for is what a snapshot would hold as a file: a path is written when it holds a file, so a folder with nothing in it, or a pattern that matches nothing, is not. A dataframe that is a table or a query in a database has no file of its own, and a page of prose kept in git (a note, a write-up) is not an output: neither is asked of a build. Only `build` is asked: another script may run before anything is built. The names are the ones `chartbook path` takes (`forecast`, `chart/curve`, `model/ar1`).
 
 `build` runs with `CHARTBOOK_BATCH=1` set; another script runs as interactively as the shell it was run from. In a batch run, `data.load` and the other readers read another pipeline only through its pin: an undeclared dependency or an unpinned dependency is refused. Explicit links are honored for development, and `--snapshot` refuses them. `--frozen` and CI ignore links. CI can set the variable too. See {doc}`../guide/depending-on-pipelines`.
 
@@ -1200,6 +1203,8 @@ url = "/a/bigger/disk/chartbook-store"
 ```
 
 `chartbook store info` says which one this machine uses, and what set it.
+
+**A store is made only in a folder that is there.** The first write makes the store's own folder (`chartbook-store` above), where the folder it goes in exists (`/a/bigger/disk`). Where that is missing too, it is a drive that is not mounted or a synced folder that is not running, and nothing is made in its place: `The store at /Volumes/team/cbstore is not there, nor the folder it is in (a drive that is not mounted, or a synced folder that is not running)`. For a new store in a new folder, make the folder first. The store under `~/.chartbook` is always made. Where a mount point stays behind as an empty folder while its drive is away, as it often does on Linux, the two cannot be told apart, and the store is made there.
 
 **A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), or at one bucket (`s3://bucket/prefix`, with `pip install chartbook[s3]`; see {doc}`configuration`), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A dependency named by its ID (`"acme/rates" = {}`) is pinned and updated from the store alone, with no folder of it on that machine. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone (for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `chartbook run --frozen` writes nothing but, where it can, this machine's note for `store gc`, and is what CI should run to build; `chartbook pin --check` checks, and writes nothing to the project or the store. Under CI with no `CHARTBOOK_MACHINE_ID`, every note names the lockfile's path alone, so each run at the same checkout path replaces the last one's. Each machine's notes are its own (they name the machine, from `~/.chartbook/machine-id`, as well as the lockfile's path, since two machines can have a project at the same path), and `store gc` keeps what another machine's lockfiles recorded at their last pin. It is best run by the store's owner, from the machine the snapshots were made on: a label another machine gave is known here only through the snapshots that recorded it.
 

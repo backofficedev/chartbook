@@ -225,7 +225,7 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
   and runs `chartbook run`: a build with everything in that folder committed
   ends with a snapshot, its built assets copied to the store and labelled with
   the commit. A build of uncommitted work makes none, and says so in its last
-  line. (`chartbook snapshot` alone makes one of a build already on disk.)
+  line; `chartbook.lock` is one of the files to commit. (`chartbook snapshot` alone makes one of a build already on disk.)
   A snapshot never contains anything from `.env`,
   so a setting that changes results (a data window, a cutoff date) lives in a
   committed file, never in `.env`: two people with different `.env` files who

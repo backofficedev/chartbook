@@ -3304,7 +3304,7 @@ def lineage_command(project_dir, check, rehash, as_json):
     is_flag=True,
     help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin, its own first; each must be trusted and committed",
 )
-@click.option("--no-gc-reminder", is_flag=True, help="With --snapshot, do not say what `chartbook store gc` would clear")
+@click.option("--no-gc-reminder", is_flag=True, help="After a snapshot, do not say what `chartbook store gc` would clear")
 def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder):
     """Build this pipeline: pin what it reads, run its build, look for what it made, make a snapshot.
 
@@ -3316,12 +3316,14 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
       3. Looks for what chartbook.toml declares. Something with a path
          that the build did not write fails the run.
       4. Makes a snapshot, which is what other pipelines read, when
-         everything in the folder is committed and a branch is checked
-         out. When not, the build is still a good one: the last line
-         says why there is no snapshot. Commit, and run again.
+         everything in the folder is committed (chartbook.lock too) and
+         a branch is checked out. When not, the build is still a good
+         one: the last line says why there is no snapshot. Commit, and
+         run again.
 
     SCRIPT is a name from [scripts] in chartbook.toml, `build` unless you
-    name another. Another script is pinned for and run, and that is all.
+    name another. Another script is only run: nothing is pinned for it,
+    looked for after it, or snapshotted.
 
     \b
         [scripts]
@@ -3477,7 +3479,7 @@ def _echo_snapshot(report, upstream=False):
             f"No new snapshot: the same bytes and the same pins as the one made {_when(taken.made_at)}."
         )
 
-    if getattr(report, "stores", None):
+    if getattr(report, "stores", None) and getattr(report, "several", False):
         click.echo("Stores: " + ", ".join(report.stores))
 
 
@@ -3535,11 +3537,13 @@ def _run_script(
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
+    if report.snapshots and (snapshot is True or upstream):
+        # Once the run is over, for the catalog that shows them. Not after a plain run, which asks nothing
+        # and makes nothing but its snapshot: the catalog is made when it is looked at
+        _say_where_a_snapshot_shows()
     for step, why in report.not_snapshotted:
         # A build of work in progress is a build: said last, where it is seen, and no failure
         click.echo(f"{step.id}: not snapshotted: {why}.")
-    if report.snapshots:  # once the run is over, for the catalog that shows them
-        _say_where_a_snapshot_shows()
 
 
 @main.command("restore")
