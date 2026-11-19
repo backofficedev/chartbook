@@ -256,6 +256,42 @@ class TestTheLockfile:
         again = _run()
         assert MADE in again.output.splitlines() and _after_the_run(again) == []
 
+    def _mono(self, work, store) -> Path:
+        mono = work / "mono"
+        up = _folder(mono / "Pipes" / "Up", {**DEMO, "project": {"id": "acme/up"}})
+        # Named by its ID, and so found in the store: a folder named by its path is found by how the path is spelled
+        _folder(mono / "Pipes" / "Alpha", {**DEMO, "dependencies": {"acme/up": {}}})
+        _committed(mono)
+        _snapshot_of(up, store)
+        return mono
+
+    def test_in_a_folder_named_in_another_letter_case(self, work, store, monkeypatch):
+        """Found by review: git names the lockfile as the disk does, and the folder was given otherwise, so the run's own lockfile was called a file its build left."""
+        mono = self._mono(work, store)
+        other = mono / "PIPES" / "ALPHA"
+        if not other.is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        monkeypatch.chdir(work)
+        result = _run("--project-dir", str(other))
+        assert result.exit_code == 0, result.output
+        assert result.output.splitlines()[-2:] == self.WRITTEN
+
+    def test_in_a_repository_named_in_another_letter_case(self, work, store, monkeypatch):
+        """Found by review: the run stopped before its build, on where the folder is in its repository. It builds, as it did, and says why it goes no further."""
+        mono = self._mono(work, store)
+        other = work / "MONO" / "Pipes" / "Alpha"
+        if not other.is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        monkeypatch.chdir(work)
+        result = _run("--project-dir", str(other))
+        assert result.exit_code == 0 and result.exception is None, result.output
+        assert result.output.splitlines()[-2:] == [
+            f"acme/demo: not snapshotted: its folder was named otherwise than the disk names it ({other}), so where it is in "
+            f"its repository cannot be told.",
+            "  `cd` into the folder, and `chartbook run` again.",
+        ]
+        assert _ran(mono / "Pipes" / "Alpha") == 1
+
     def test_a_file_of_that_name_a_build_leaves_elsewhere_is_not_it(self, work, store, monkeypatch):
         """Found by review: "chartbook.lock was written during this run", of a file the build left in a folder below."""
         directory = _folder(work / "below", {**DEMO, "scripts": {"build": BUILD + " && echo x > sub/chartbook.lock"}})
@@ -553,7 +589,8 @@ class TestTheStore:
         result = _run()
         assert result.exit_code == 0 and result.exception is None, result.output
         assert _after_the_run(result) == [
-            "acme/demo: not snapshotted: its snapshot could not be made (TypeError: list indices must be integers or slices, not dict)."
+            "acme/demo: not snapshotted: its snapshot could not be made (TypeError: list indices must be integers or "
+            "slices, not dict). `chartbook snapshot` shows the whole error."
         ]
         # The strict form is asked for a snapshot, and a fault in one is its failure, as it was
         strict = _run("--snapshot", "--no-gc-reminder")
@@ -623,7 +660,7 @@ class TestSeveralStores:
         assert _after_the_run(result) == [
             "acme/demo: not snapshotted: Store 'first' is read-only, and it is the catalog's first, where a pipeline the "
             "catalog sends nowhere is written.",
-            '  To send this one to another: `pipelines = ["acme/demo"]` under that store in catalog.toml.',
+            '  To send this one to second: `pipelines = ["acme/demo"]` under [stores.second] in catalog.toml.',
         ]
         # Done as it says, the next run ends with the snapshot, there
         stores(
@@ -637,6 +674,15 @@ class TestSeveralStores:
 
     def test_a_store_it_is_sent_to_that_is_only_read_is_not_told_to_be_sent(self, stores, demo, work):
         stores(first={"url": str(work / "first"), "read_only": True, "pipelines": ["acme/demo"]}, second={"url": str(work / "second")})
+        assert _after_the_run(_run()) == ["acme/demo: not snapshotted: Store 'first' is read-only."]
+
+    @pytest.mark.parametrize("others", [{}, {"second": True}])
+    def test_with_no_store_that_can_be_written_there_is_nowhere_to_send_it(self, stores, demo, work, others):
+        """Found by review: the way out was given where the catalog had no store to send the pipeline to."""
+        stores(
+            first={"url": str(work / "first"), "read_only": True},
+            **{name: {"url": str(work / name), "read_only": True} for name in others},
+        )
         assert _after_the_run(_run()) == ["acme/demo: not snapshotted: Store 'first' is read-only."]
 
     def test_one_written_and_one_not_is_not_called_no_snapshot(self, stores, demo, work, monkeypatch):
@@ -707,17 +753,27 @@ class TestWhatWasDeclared:
         assert run.unwritten(demo) == [("forgotten", "./forgotten.csv")]
         assert _snapshots(store) == []
 
-    @pytest.mark.parametrize("dataframes", [[{"name": "out", "path": "./out.csv"}], "out.csv"])
-    def test_a_section_that_is_not_a_table_declares_nothing(self, work, store, monkeypatch, dataframes):
-        """Found by review: `[[dataframes]]` was a traceback before the build. `chartbook check` says what is wrong with it; a run builds, as it did."""
-        directory = _folder(work / "arrays", {
-            "project": {"id": "acme/arrays"}, "scripts": {"build": BUILD}, "dataframes": dataframes, "models": "none",
-        })
+    @pytest.mark.parametrize("sections, said", [
+        ({"dataframes": [{"name": "out", "path": "./out.csv"}]}, "[dataframes] must be a table of tables, one per dataframe, e.g. [dataframes.<name>] with a path = \"...\" under it; it is an array."),
+        ({"dataframes": DEMO["dataframes"], "models": "none"}, "[models] must be a table of tables, one per model, e.g. [models.<name>] with a path = \"...\" under it; it is a string."),
+    ])
+    def test_a_section_that_is_not_a_table_is_said_and_is_no_traceback(self, work, store, monkeypatch, sections, said):
+        """Found by review: `[[dataframes]]` was a traceback, before the build in a run and in `chartbook snapshot`. A run builds, as it did, and says it."""
+        directory = _folder(work / "arrays", {"project": {"id": "acme/arrays"}, "scripts": {"build": BUILD}, **sections})
         monkeypatch.chdir(_committed(directory))
-        assert run.unwritten(directory) == []
+        why = f"acme/arrays cannot have a snapshot: chartbook.toml: {said} `chartbook check` says more."
         result = _run()
         assert result.exit_code == 0 and result.exception is None, result.output
-        assert result.output.splitlines() == ["acme/arrays: build", "Ran build in 1 pipeline(s)."]
+        assert result.output.splitlines() == [
+            "acme/arrays: build", "Ran build in 1 pipeline(s).", f"acme/arrays: not snapshotted: {why}",
+        ]
+        by_hand = CliRunner().invoke(main, ["snapshot"])
+        assert by_hand.exit_code == 1 and isinstance(by_hand.exception, SystemExit)
+        assert by_hand.output.splitlines() == [f"Error: {why}"]
+        strict = _run("--snapshot", "--no-gc-reminder")
+        assert strict.exit_code == 1 and isinstance(strict.exception, SystemExit)
+        assert f"Error: acme/arrays: {why.rstrip('.')}. Nothing after it was run." in strict.output.splitlines()
+        assert _snapshots(store) == []
 
     @posix
     def test_a_folder_with_nothing_in_it_is_not_written(self, work, store, monkeypatch):

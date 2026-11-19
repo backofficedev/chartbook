@@ -816,7 +816,7 @@ def on_a_branch(directory: Union[str, Path]) -> bool:
         return False
 
 
-def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
+def uncommitted(directory: Union[str, Path], ignoring: tuple = (), only: str = ".") -> list[str]:
     """What in a pipeline's folder is not committed, as ``git status`` lists it.
 
     A changed file, a staged one, and a new file that git does not ignore
@@ -826,6 +826,11 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
 
     :param ignoring: File names that do not count, wherever they are. The
         lockfile that ``chartbook run`` writes before a build is one.
+    :param only: A path in the pipeline's folder to ask of alone, as git
+        takes one; the whole folder by default. Git finds the file however
+        the folder was spelled to get here (another letter case, another
+        of Unicode's forms), and its lines are spelled as the whole
+        folder's are.
     :returns: One line for each, as ``git status --porcelain`` prints it,
         with paths from the top of the repository.
     """
@@ -834,7 +839,7 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     # a record of its own, which follows.
     listing = _git(
         Path(directory).resolve(),
-        "status", "--porcelain", "-z", "--untracked-files=all", "--", ".",
+        "status", "--porcelain", "-z", "--untracked-files=all", "--", only,
     )
     records = listing.split("\0")
     found = []
@@ -2511,6 +2516,12 @@ def make(
     if os.path.lexists(directory / "chartbook.links.toml"):
         raise SnapshotError("Cannot snapshot while chartbook.links.toml exists. Delete it, run `chartbook update`, then snapshot.")
     pipeline = pipeline_in(directory)
+    from chartbook.manifest import section_that_is_no_table
+
+    no_table = section_that_is_no_table(_read_manifest_file(directory), MANIFEST_NAME)
+    if no_table:
+        # What walks the tables would stop on it, each in its own way: said once, in the manifest's words
+        raise SnapshotError(f"{pipeline} cannot have a snapshot: {no_table} `chartbook check` says more.")
     code = require_committed(directory, pipeline, ignoring)
     from chartbook.multi_store import Stores
     if store is None or isinstance(store, Stores):

@@ -399,6 +399,13 @@ def _why_no_snapshot_before(step: "Step") -> tuple[Optional[str], str]:
         if "has no commit yet" in str(error):
             return None, "nothing is committed yet.\n  A snapshot is of a commit: commit, and `chartbook run` again"
         return None, str(error).rstrip(".")
+    except ValueError:
+        # A folder reached by another spelling than the disk's own (--project-dir in another letter case, on a
+        # disk that takes either): the build is as good, and where it is in its repository cannot be told
+        return None, (
+            f"its folder was named otherwise than the disk names it ({step.directory}), so where it is in its "
+            f"repository cannot be told.\n  `cd` into the folder, and `chartbook run` again"
+        )
     try:
         changes = snapshots.uncommitted(step.directory)
     except snapshots.SnapshotError as error:
@@ -422,9 +429,10 @@ def _why_no_snapshot_after(step: "Step", before: Optional[str]) -> str:
     """
     code = snapshots.code_of(step.directory)
     changed = snapshots.uncommitted(step.directory)
-    # Lines as `git status` has them, with paths from the top of the repository: this pipeline's own lockfile, written
-    own_lockfile = f"{code.subdirectory}/{lock.LOCK_FILE}" if code.subdirectory else lock.LOCK_FILE
-    others = [line for line in changed if not (line[3:] == own_lockfile and "D" not in line[:2])]
+    # This pipeline's own lockfile, written: asked of git by its path here, which finds it however the folder was
+    # spelled to get here, and not a file of that name in a folder below
+    written = [line for line in snapshots.uncommitted(step.directory, only=lock.LOCK_FILE) if "D" not in line[:2]]
+    others = [line for line in changed if line not in written]
     if others:
         new = [line[3:] for line in others if line.startswith("??")]
         touched = [line[3:] for line in others if not line.startswith("??")]
@@ -453,19 +461,22 @@ def _why_no_snapshot_after(step: "Step", before: Optional[str]) -> str:
     return ""
 
 
-def _sent_to_a_first_store_that_is_only_read(store: Optional[Store], pipeline: str) -> bool:
-    """Whether a pipeline's snapshot was refused because the catalog sends it nowhere and its first store may only be read.
+def _a_store_to_send_it_to(store: Optional[Store], pipeline: str) -> Optional[str]:
+    """For a snapshot refused because the catalog sends its pipeline nowhere and its first store may only be read: the name of the first store that may be written; None otherwise.
 
     A catalog's first store is where everything goes that it sends nowhere
     by name (a pin's copies, a lockfile's note, a snapshot), so a class's
     read-only store listed ahead of one's own stops every snapshot until
-    the catalog says where this pipeline goes.
+    the catalog says where this pipeline goes. Where no store of the
+    catalog may be written, there is nowhere to send it, and nothing to say.
     """
     try:
         entries = getattr(store if store is not None else default_store(), "entries", None) or []
     except Exception:  # noqa: BLE001 - only to say more of an error already had
-        return False
-    return bool(entries) and entries[0].read_only and not any(pipeline in entry.pipelines for entry in entries)
+        return None
+    if not entries or not entries[0].read_only or any(pipeline in entry.pipelines for entry in entries):
+        return None
+    return next((entry.name for entry in entries if not entry.read_only), None)
 
 
 def _declares_what_a_snapshot_holds(directory: Path) -> bool:
@@ -474,9 +485,12 @@ def _declares_what_a_snapshot_holds(directory: Path) -> bool:
     One that does not yet is told nothing of snapshots, whatever state its
     folder is in: there is nothing for it to commit towards.
     """
+    from chartbook.manifest import section_that_is_no_table
     from chartbook.resolve import declared_files, declared_in_source
 
     try:
+        if section_that_is_no_table(_read_manifest(directory), MANIFEST_NAME):
+            return True  # it means to declare something: the snapshot says what is wrong with how
         return bool(declared_files(directory)) or bool(declared_in_source(directory))
     except (OSError, ValueError):
         return True  # a manifest that cannot be read is said by what reads it next
@@ -1562,17 +1576,21 @@ def run(
                         why = f"not in every store it goes to. {str(error).rstrip('.')}"
                     except ReadOnlyStoreError as error:
                         why = str(error).rstrip(".")
-                        if _sent_to_a_first_store_that_is_only_read(store, step.id):
+                        other = _a_store_to_send_it_to(store, step.id)
+                        if other:
                             why += (
                                 f", and it is the catalog's first, where a pipeline the catalog sends nowhere is written.\n"
-                                f"  To send this one to another: `pipelines = [\"{step.id}\"]` under that store in catalog.toml"
+                                f"  To send this one to {other}: `pipelines = [\"{step.id}\"]` under [stores.{other}] in catalog.toml"
                             )
                     except (snapshots.SnapshotError, StoreError) as error:
                         why = str(error).rstrip(".")
                     except OSError as error:
                         why = f"the store could not be written ({error})"
                     except Exception as error:  # noqa: BLE001 - the build went well, and a snapshot is what follows it, not what it is
-                        why = f"its snapshot could not be made ({type(error).__name__}: {error})"
+                        why = (
+                            f"its snapshot could not be made ({type(error).__name__}: {error}). "
+                            f"`chartbook snapshot` shows the whole error"
+                        )
                 if made is not None:
                     report.snapshots.append(made)
                     if on_snapshot is not None:

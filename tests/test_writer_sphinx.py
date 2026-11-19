@@ -820,8 +820,9 @@ class TestWhatANewUserFound:
         assert f'title="{changed[:10]} {changed[11:16]} UTC"' in front
         html = (first_pipeline / "docs" / "index.html").read_text(encoding="utf-8")
         # UTC from Sphinx 8. Sphinx 7 says the machine's own zone, by its offset or by its letters, as the
-        # zone has it: -0600 in Chicago, EST in New York, HST in Honolulu, where this test first failed
-        assert re.search(r"Last updated: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (UTC|[+-]\d{4}|[A-Z]{2,5})", html)
+        # zone has it: -0600 in Chicago, -03 in São Paulo, EST in New York, ChST in Guam, and HST in
+        # Honolulu, where this test first failed
+        assert re.search(r"Last updated: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (UTC|[+-]\d{2,4}|[A-Za-z]{2,5})", html)
 
 
 class TestTheDataframePage:

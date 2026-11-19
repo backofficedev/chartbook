@@ -1045,7 +1045,9 @@ The other reasons are said in the same place, each in one line, and none of them
 | `its build left 1 file that is not committed (changed: data/raw.csv)` | The build wrote over a file git has, and ignoring it would change nothing. Commit what it wrote and run again, which settles it where the build writes the same thing each time; or take the file out of git (`git rm --cached`) and ignore it |
 | `its repository moved from 4f2a91c to 8d02c5e while it was built` | The build made a commit, or you did. Run again |
 | `chartbook.links.toml is in the folder` | You are working on two pipelines at once ({ref}`chartbook link <chartbook-link>`). When you are done: remove it, `chartbook update`, and `chartbook run` again |
-| `Store 'class' is read-only, and it is the catalog's first` | A pipeline the catalog sends nowhere is written to its first store. Send this one to a store you can write: `pipelines = ["acme/rates"]` under that store in `catalog.toml` |
+| `Store 'class' is read-only, and it is the catalog's first` | A pipeline the catalog sends nowhere is written to its first store. Send this one to a store you can write, which the line names: `pipelines = ["acme/rates"]` under `[stores.mine]` in `catalog.toml` |
+| `its folder was named otherwise than the disk names it` | `--project-dir` spelled the folder in another letter case than the disk has. `cd` into the folder, and `chartbook run` again |
+| `acme/rates cannot have a snapshot: chartbook.toml: [dataframes] must be a table of tables` | The manifest is not what it means to be: `chartbook check` says more |
 | `its pins do not account for every dependency`, a store that cannot be written, a snapshot that reached one of its stores and not another | What the line names |
 
 A pipeline that declares nothing a snapshot would hold is told nothing of snapshots, committed or not.
