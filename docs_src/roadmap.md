@@ -55,6 +55,15 @@ lists the files for a build tool. The store says in plain words which snapshot f
 alone and which share files, and `store gc` is the one way to remove them. The guide is
 rewritten around what a person is trying to do.
 
+## 0.6.0: pins a rebuild can meet, and one command to know
+
+Two things, both being built. Where no store is shared, each person builds the pipelines they
+depend on themselves, and what they build now meets a pin: a lockfile holds dataframes and models
+only, and a dataframe is pinned by its rows as well as its file ({design}`pins-and-rebuilds`). And
+the commands are fewer to learn: `chartbook run` builds, checks what it built and makes a snapshot
+of committed work; `chartbook pin --update` takes newer data; `chartbook catalog open` shows it all
+({design}`one-command`).
+
 ## Experimental: Databricks
 
 A dataframe can be a table or a query in a Databricks SQL warehouse
@@ -68,6 +77,27 @@ Reading works: `data.load()`, `data.sql()`, `data.ref()`, and the site's pages f
 What another pipeline cannot do yet is pin a Databricks table.
 
 ## Next, to research
+
+**`chartbook run` builds what is not in your store.** From 0.6.0 a run that reads a pipeline your
+store does not have says which pipelines to build, in order, with the commands. The next step is
+to do it: clone each one into a folder of ChartBook's own and run it there, after asking whether
+you trust it and showing its repository. A pipeline's secrets would be kept in one place,
+`~/.chartbook/envs/<pipeline>/`, and not scattered across clones: one file holding every variable
+any version needs, checked against the `.env.example` of the version being built so that what is
+missing is named, with a folder for one version only where the same name needs another value.
+What is not settled: whether one file can serve every version of a pipeline, which renames its
+variables over time, or the secrets have to follow the version; and each pipeline needs its own
+packages, which works where its build command brings its own environment (`uv run doit`) and not
+where it assumes yours
+({design}`one-command`, "Later").
+
+**`chartbook publish`:** move a pipeline's snapshots from your own store to one you share, and
+keep sending them there, asked for and chosen at a prompt. Today that is `chartbook store move
+PIPELINE --to NAME --keep`. A snapshot is not "published" by being made: it is in your store, and
+nobody else's.
+
+**`chartbook run --clean`:** build this commit in a clean copy, as someone who depends on it
+would, to be sure a snapshot came from the commit alone.
 
 **Pinning a Delta table by its version.** Delta tables keep a history of versions, so a pin could
 name a version, `VERSION AS OF 42`, rather than copy the rows out of the warehouse. This is built,
