@@ -922,7 +922,7 @@ What `chartbook run` does for `build`, in order:
 1. **Builds a `git` dependency that is not built yet**, in ChartBook's own clean copy of the commit.
 2. **Pins what has no pin yet**, so this pipeline's code can read it: a folder you depend on from its newest {ref}`snapshot <chartbook-snapshot>`, a repository from that clean copy. A dependency named by its ID that the store has no snapshot of is built and pinned from its repository on the default host, as a `git` dependency is ({doc}`configuration`, `[resolve] default_host`).
 3. **Runs this pipeline's `build`**, in its own directory. What the script prints is shown as it runs. If it fails, the command exits with the script's exit code.
-4. **Looks for what `chartbook.toml` declares.** Whatever the manifest gives a `path` that a build is to write (a dataframe, a chart, a notebook, a model and its metrics file, a file) must be there now. One that is not fails the run, whatever the script exited with.
+4. **Looks for what `chartbook.toml` declares.** Whatever the manifest gives a `path` that a build is to write (a dataframe, a chart, a notebook, a model and its metrics file, a file), and the file of a DuckDB source, must be there now. One that is not fails the run, whatever the script exited with.
 5. **Makes a snapshot, when everything in the folder is committed.** While you are still editing, the build is a good one all the same, and the last line says why there is no snapshot.
 
 (run-ends-with-a-snapshot)=

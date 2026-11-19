@@ -514,7 +514,8 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
     from chartbook import hashing
     from chartbook.resolve import declared_files
 
-    directory = Path(directory)
+    # Whole, so that a source's file is not looked for under the folder's own name a second time
+    directory = Path(os.path.abspath(directory))
     missing = []
     for local, declared, absolute in declared_files(directory):
         if local.kind == "note":
@@ -531,17 +532,17 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
     from chartbook.backends import MEMORY_URL, duckdb_path
     from chartbook.manifest import validate_sources
 
-    try:
-        sources = validate_sources(_read_manifest(directory).get("sources"), directory)
-    except ValueError:
-        sources = {}  # sources that do not read: said by a snapshot, and by `chartbook run --check`
-    for name in sorted(sources):
-        url = sources[name].get("_resolved_url")
-        if sources[name].get("backend") != "duckdb" or not url or url == MEMORY_URL:
-            continue
+    declared_sources = _read_manifest(directory).get("sources")
+    for name in sorted(declared_sources) if isinstance(declared_sources, dict) else ():
         try:
+            # One at a time: a source that does not read (`chartbook run --check` says which, and why)
+            # is passed over, and does not take the look at the others with it
+            source = validate_sources({name: declared_sources[name]}, directory)[name]
+            url = source.get("_resolved_url")
+            if source.get("backend") != "duckdb" or not url or url == MEMORY_URL:
+                continue
             path = Path(duckdb_path(url, directory))
-        except ValueError:
+        except (ValueError, KeyError, TypeError):
             continue
         if not path.is_file():
             try:

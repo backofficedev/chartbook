@@ -566,6 +566,28 @@ class TestAPipelineThatDeclaresNothing:
         ) in result.output.splitlines()
         assert _snapshots(store) == []
 
+    def test_which_sources_files_a_build_is_asked_for(self, work, store, monkeypatch):
+        """A DuckDB file, wherever it is said to be; not a database in memory, not a warehouse, and not a source that does not read, which takes no other with it."""
+        directory = _folder(work / "sources", {
+            "project": {"id": "acme/sources"},
+            "scripts": {"build": "echo ran >> build.log"},
+            "sources": {
+                "here": {"backend": "duckdb", "url": "duckdb:///_data/here.duckdb"},
+                "elsewhere": {"backend": "duckdb", "url": f"duckdb:///{(work / 'elsewhere.duckdb').as_posix()}"},
+                "memory": {"backend": "duckdb", "url": "duckdb:///:memory:"},
+                "refused": {"backend": "duckdb", "url": "duckdb:///_data/x.duckdb?access_mode=read_only"},
+            },
+        })
+        expected = [("source elsewhere", str(work / "elsewhere.duckdb")), ("source here", "./_data/here.duckdb")]
+        assert run.unwritten(directory) == expected
+        # Found by review: named by a relative folder, the file was looked for under the folder's name twice
+        monkeypatch.chdir(work)
+        assert run.unwritten("sources") == expected
+        (directory / "_data").mkdir()
+        (directory / "_data" / "here.duckdb").write_bytes(b"")
+        (work / "elsewhere.duckdb").write_bytes(b"")
+        assert run.unwritten("sources") == [] and run.unwritten(directory) == []
+
     def test_one_whose_tables_cannot_be_written_out_is_told_what_is_missing(self, work, store, monkeypatch):
         """Its source's file is there, and holds no such table: it declares something a snapshot holds, and none of it is there to take. Said, and not passed over in silence."""
         import duckdb

@@ -1284,7 +1284,8 @@ def _say_trust_level(manifest, project_dir):
             ", and `chartbook docs build` renders the site as one from a store is (no query run, no file from "
             "outside the folder)"
         )
-    click.echo(f"{standing}: {refused}. {command}; `chartbook trust --list` shows what is trusted.")
+    # Beside the warnings: what the check puts on stdout is a problem to mend, or the line that says there is none
+    click.echo(f"{standing}: {refused}. {command}; `chartbook trust --list` shows what is trusted.", err=True)
 
 
 @main.command("path")
@@ -3322,7 +3323,8 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
          so that its code can read it.
       2. Runs the `build` script of chartbook.toml.
       3. Looks for what chartbook.toml declares. Something with a path
-         that the build did not write fails the run.
+         that the build did not write, or the file of a DuckDB source,
+         fails the run.
       4. Makes a snapshot, which is what other pipelines read, when
          everything in the folder is committed (chartbook.lock too) and
          a branch is checked out. When not, the build is still a good

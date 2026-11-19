@@ -136,6 +136,8 @@ class TestItRunsNothing:
         result = _check("--policy", policy)
         assert result.exit_code == 0, result.output
         assert result.output.splitlines()[-1].startswith("This pipeline is not trusted: `chartbook run` refuses to run the build script")
+        # Beside the warnings: stdout ends with the line that says there is no problem
+        assert "not trusted" not in result.stdout and result.stdout.splitlines()[-1].startswith("chartbook.toml: OK (")
 
     @pytest.mark.parametrize("with_it, named", [
         (["test"], "a script (test)"), (["--force"], "--force"), (["--snapshot"], "--snapshot"), (["--frozen"], "--frozen"),
@@ -245,6 +247,12 @@ class TestNothingIsBuilt:
         (project / "_data").mkdir()
         duckdb.connect(str(project / "_data" / "local.duckdb")).close()
         assert not self._said(project, policy)
+
+    def test_a_database_in_memory_is_no_file_to_build(self, project, policy):
+        _edit(project, lambda table: table.update(sources={"scratch": {"backend": "duckdb", "url": "duckdb:///:memory:"}}))
+        result = _check("--policy", policy)
+        assert result.exit_code == 0, result.output
+        assert "sources.scratch" not in result.output and "not built yet" not in result.output
 
     def test_a_pipeline_of_a_source_alone(self, project, policy):
         _edit(project, lambda table: (
