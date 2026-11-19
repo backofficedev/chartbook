@@ -586,7 +586,7 @@ Each version keeps, from the snapshot that made it: the commit (which code), wha
 
 Not yet:
 
-- **Versions that travel.** A version is in the store of the machine that made its snapshot, or in a store a team shares (see {doc}`cli`, "A store a team shares"). A label pinned across pipelines needs the version's bytes in the store; one whose version is not there is pinned without them, and `--frozen` reports it.
+- **Versions that travel.** A version is in the store of the machine that made its snapshot, or in a store a team shares (see {doc}`cli`, "A store a team shares"). A label pinned across pipelines needs the version's bytes in the store; one whose version is not there is pinned without them, and `chartbook pin --check` reports it.
 - **Versions of anything but a model.** A dataframe has snapshots, and no version names.
 - One file inside a directory model (`model/x#weights.pt`).
 

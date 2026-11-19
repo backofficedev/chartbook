@@ -52,7 +52,7 @@ chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>
 chartbook path file/<name> --files  # the asset's files, one per line, sorted: a folder's files, a glob's matches
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store (a first read pins it)
 chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
-chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
+chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; pin --update moves them)
 chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between two builds, from their index.json: data, pins, versions, labels, staleness
 # A model is out of date when what it was trained on has moved: its page says so, index.json has stale_inputs, `chartbook run --check` warns; `chartbook run` retrains
 # In Python: data.sql("select * from {df_a} join {df_b} using (date)") runs SQL with dataframes named in braces (DuckDB, or the warehouse of a databricks source);
@@ -65,7 +65,7 @@ chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets ba
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
-chartbook pin --check        # Write nothing; exit 1 unless the lockfile is complete and every pin is met: its file is in the store, or a build of your own of the pinned commit holds the same rows up to the pin's last date (no shared store: `git checkout <commit>` in the upstream, `chartbook run --snapshot`) (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3]); was `pin --frozen`
+chartbook pin --check        # Write nothing; exit 1 unless the lockfile is complete and every pin is met: its file is in the store, or a build of your own of the pinned commit holds the same rows up to the pin's last date (no shared store: `git checkout <commit>` in the upstream, `chartbook run --snapshot`) (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
 chartbook pin --update [dep...]    # Move pins forward to each dependency's newest snapshot; says of each dataframe whether it gained rows or its earlier rows changed
 chartbook run [script]       # Run a [scripts] entry here (default: build). For build: pin what has no pin, run it, exit 1 if it did not write something chartbook.toml declares with a path (or the file of a DuckDB source), then make a snapshot when everything in the folder is committed, chartbook.lock too (else exit 0 and a last line `not snapshotted: N files are not committed`: commit, run again). Never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store

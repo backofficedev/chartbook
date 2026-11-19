@@ -601,7 +601,7 @@ class Floor:
         now: What it says now, or is to say.
         written: Whether the manifest was written.
         asked: Whether the command is one that writes it: ``chartbook pin``,
-            ``update`` and ``add``, which a person runs to change what the
+            ``pin --update`` and ``add``, which a person runs to change what the
             project pins. A build and a read never write a manifest, and
             say which command does.
         why_not: Where it was to be written and was not, or could not be
@@ -725,7 +725,7 @@ def see_to_the_floor(project_dir: Union[str, Path], write: bool = False) -> Opti
     :param write: Whether to write it: in the manifest's own text, with
         every other character of the file as it was
         (:func:`chartbook.manifest.with_requires_chartbook`). For
-        ``chartbook pin``, ``update`` and ``add``. A build (``chartbook
+        ``chartbook pin``, ``pin --update`` and ``add``. A build (``chartbook
         run``) and a read never write a manifest: a run that snapshots
         must leave the folder as its commit has it, and a dependency built
         in ChartBook's own copy has a manifest that is nobody's to commit.
@@ -4010,7 +4010,7 @@ def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optio
 
     Dependencies between pipelines must form a directed acyclic graph
     (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook
-    pin``, ``update`` and ``add``, and the first read of a dependency. The
+    pin``, ``pin --update`` and ``add``, and the first read of a dependency. The
     walk goes from the dependencies whose entry the pin makes, or whose
     location or snapshot it changes (all the walk reads of an entry),
     with the lockfile as it would be written: one that leads back to this
@@ -4147,8 +4147,8 @@ def update(
     :param store: The store to pin into; this user's by default.
     :param raise_floor: Whether to raise the manifest's
         ``requires_chartbook`` where it admits a ChartBook that cannot
-        read the lockfile (:func:`see_to_the_floor`), as ``chartbook
-        update`` does.
+        read the lockfile (:func:`see_to_the_floor`), as ``chartbook pin
+        --update`` does.
     :returns: What was done. An asset whose pin changed has the status
         ``moved``.
     :raises LockError: If *project_dir* is not a pipeline, its lockfile

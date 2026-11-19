@@ -375,13 +375,13 @@ chartbook catalog open
 
 ## chartbook ls
 
-List cataloged objects. Without a subcommand, prints a tree of every pipeline with its dataframes and charts; subcommands print flat lists.
+List cataloged objects. Without a subcommand, prints a tree of every pipeline with its dataframes and charts; `chartbook ls pipelines`, `chartbook ls dataframes` and `chartbook ls charts` print flat lists. `--catalog PATH` is an option of `ls` itself, and goes before the subcommand.
 
 ```console
-chartbook ls [OPTIONS] [--catalog PATH]              # the tree
-chartbook ls pipelines [OPTIONS] [--catalog PATH]    # flat lists
-chartbook ls dataframes [OPTIONS] [--catalog PATH]
-chartbook ls charts [OPTIONS] [--catalog PATH]
+chartbook ls [--catalog PATH] [--json]               # the tree
+chartbook ls [--catalog PATH] pipelines [--json]     # flat lists
+chartbook ls [--catalog PATH] dataframes [--json]
+chartbook ls [--catalog PATH] charts [--json]
 ```
 
 ```console
@@ -616,7 +616,7 @@ The snapshots are found through the commits the clone has: a shallow clone (`fet
 
 Whether the build tool then skips the step that makes the asset is its own rule: doit skips a task whose target exists only if it has no `file_dep` or has seen them before. The guide gives the recipe.
 
-(chartbook-pin)=
+(chartbook-add)=
 ## chartbook add
 
 ```console
@@ -642,6 +642,7 @@ Wrote chartbook.lock.
 
 A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. An entry under a bare name that no store has a snapshot of, as `chartbook add` before 0.5.0 wrote and left when it could not pin it, can never be pinned, and code that names the bare name reads it rather than the full ID: `chartbook add` says so, of the name you give or of the full ID's last part, and that the way out is to delete its line in `chartbook.toml`. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook pin --update` moves the pin to a newer snapshot once its owner makes one.
 
+(chartbook-pin)=
 ## chartbook pin
 
 ```console
@@ -723,7 +724,7 @@ An asset that the pinned snapshot had not built and the newer one has is still l
 
 **A dependency is pinned to one snapshot, whole.** `pin` does not take one asset from a newer snapshot and leave the rest. What a second `pin` does do is pin a dependency that has no pin yet.
 
-**Its labels are pinned too.** A snapshot records the labels the pipeline's `[models.x.aliases]` gave when it was made, and `pin` writes each as a record of its own, `ftsfr/fed_yield_curve:model/term_premium_ar1@champion`, with the hash of the version it names. `forecasting:model/x@champion` then resolves to those bytes until `chartbook pin --update`, which follows the owner's labels: a label moved shows as `moved`, one taken away as `dropped`, and one the owner has moved since you pinned is reported by `pin` as changed upstream. A label whose version the store cannot supply (no snapshot names it, or its bytes are gone) is pinned without bytes, as a `not built` asset is, with the reason, and `--frozen` reports it. Labels come only from snapshots. A `git` dependency has no versions and no labels pinned, and a dependency that becomes one lets its labels go (`let go`).
+**Its labels are pinned too.** A snapshot records the labels the pipeline's `[models.x.aliases]` gave when it was made, and `pin` writes each as a record of its own, `ftsfr/fed_yield_curve:model/term_premium_ar1@champion`, with the hash of the version it names. `forecasting:model/x@champion` then resolves to those bytes until `chartbook pin --update`, which follows the owner's labels: a label moved shows as `moved`, one taken away as `dropped`, and one the owner has moved since you pinned is reported by `pin` as changed upstream. A label whose version the store cannot supply (no snapshot names it, or its bytes are gone) is pinned without bytes, as a `not built` asset is, with the reason, and `chartbook pin --check` reports it. Labels come only from snapshots. A `git` dependency has no versions and no labels pinned, and a dependency that becomes one lets its labels go (`let go`).
 
 `pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store, or not all there yet. The size on disk of each file a pin reads is compared with the size its record gives (no byte is read), so a file that a sync service has only half delivered is said, not read:
 
@@ -817,11 +818,7 @@ Dependencies between pipelines must form a graph with no cycles. A pin whose new
 (chartbook-update)=
 ### pin --update
 
-```text
-chartbook pin --update [NAMES...] [--project-dir PATH]
-```
-
-(Until 0.6.0 this was `chartbook update`, which now says where it went.)
+`chartbook pin --update` moves every pin, and `chartbook pin --update NAMES...` those of the dependencies named. (Until 0.6.0 this was `chartbook update`, which now says where it went.)
 
 Move pins forward, and rewrite `chartbook.lock`. A folder you depend on moves to its newest snapshot. A repository is fetched again, and moves to what its `rev` means now. With no argument every dependency is updated. Name some to update only those, as they are written in `[dependencies]`; the scope may be left off when only one has that name.
 
@@ -906,7 +903,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [OPTIONS] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [--check [--within DAYS] [--policy PATH]] [--project-dir PATH]
 ```
 
 Build this pipeline. It is the one command of a working day: it pins what the pipeline reads, runs its build, looks for what the build was to make, and ends with a {ref}`snapshot <chartbook-snapshot>`, which is what your other pipelines read.
@@ -1088,9 +1085,7 @@ Ran build in 1 pipeline(s).
 (chartbook-check)=
 ### run --check
 
-```text
-chartbook run --check [--within DAYS] [--policy PATH] [--project-dir PATH]
-```
+`chartbook run --check` goes with `--within DAYS`, `--policy PATH` and `--project-dir PATH`, and with nothing else of `chartbook run`.
 
 The CI gate: {ref}`chartbook run <chartbook-run>` told to run nothing. It checks the manifest and the folder in seconds, builds and pins nothing, and asks for more than a run does of its own build: a policy's fields, a license's date. (Until 0.6.0 this was `chartbook check`, which now says where it went.) It exits `0` on a healthy project and `1` when it finds any of:
 
@@ -1136,7 +1131,7 @@ A missing build script is named `[scripts] build`. `[project] build`, the old pl
 
 **License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
 
-**An output that is not built is no problem.** Data files, rendered charts, executed notebooks, models and a source's DuckDB file are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline, which is every job for a pipeline whose data needs a subscription, has none of them. Each is listed as `not built yet` and counted as nothing, and everything that lives in the repository is still checked: required fields, license dates, write-ups, notes, the README, the logo. (`chartbook check --skip-outputs` left them out; there is no such option now, since it is how the check always is.) A build that did not write what it declares is caught where a build is: `chartbook run` fails on it, on each of these kinds. The lines are on stderr, as a warning is: what is on stdout is a problem to mend, or the line that says there is none.
+**An output that is not built is no problem.** Data files, rendered charts, executed notebooks, models and a source's DuckDB file are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline, which is every job for a pipeline whose data needs a subscription, has none of them. Each is listed as `not built yet` and counted as nothing, and everything that lives in the repository is still checked: required fields, license dates, write-ups, notes, the README, the logo. (Until 0.6.0 this was `chartbook check --skip-outputs`, which left them out; the option is gone, since it is how the check always is.) A build that did not write what it declares is caught where a build is: `chartbook run` fails on it, on each of these kinds. The lines are on stderr, as a warning is: what is on stdout is a problem to mend, or the line that says there is none.
 
 ```console
 $ chartbook run --check

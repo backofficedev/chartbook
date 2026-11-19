@@ -60,7 +60,7 @@ that is no snapshot, and ``store gc`` clears it a day after anything in
 it last changed. A record whose files are not all there (some removed
 since, or a copy of a folder store into the bucket that has not finished)
 is said by :meth:`S3Store.incomplete`, which compares the sizes in a
-listing with the record's, so ``pin``, ``update``, ``pin --check`` and a
+listing with the record's, so ``pin``, ``pin --update``, ``pin --check`` and a
 read all say the snapshot is not fully uploaded yet. Making the snapshot
 again puts back what is missing.
 """

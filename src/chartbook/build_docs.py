@@ -461,7 +461,7 @@ def generate_docs(
         The output directory is updated in place. Defaults to False, a clean build.
     :type incremental: bool
     :param after_build: True when the pipeline's build script has just run,
-        as in ``chartbook build``. An output still missing then is one the
+        as in ``chartbook run``. An output still missing then is one the
         build did not make, and is an error even when it is all of them.
     :type after_build: bool
     :returns: For an incremental build, a summary of what was redone. None otherwise.

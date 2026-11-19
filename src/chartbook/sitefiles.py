@@ -219,7 +219,7 @@ def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ())
         slug, name = _slug(record["pipeline"]), record["ref"]["name"]
         if kind == "Chart":
             text = not_built_text(
-                path=f"<code>{html.escape(location['path'])}</code>", command="<code>chartbook build</code>"
+                path=f"<code>{html.escape(location['path'])}</code>", command="<code>chartbook run</code>"
             )
             page = f'<!DOCTYPE html>\n<html><head><meta charset="utf-8"></head><body><p>{text}</p></body></html>\n'
             # Both places copy_plan would put the chart: the full-screen link, and what the page embeds
@@ -241,7 +241,7 @@ def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ())
                         "source": [
                             f"# {title}\n",
                             "\n",
-                            not_built_text(path=f"`{path}`", command="`chartbook build`") + "\n",
+                            not_built_text(path=f"`{path}`", command="`chartbook run`") + "\n",
                         ],
                     }
                 ],

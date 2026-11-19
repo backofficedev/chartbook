@@ -853,7 +853,7 @@ class TestAMachineThatOnlyReads:
 
     @pytest.mark.parametrize("words", [["pin", "--frozen"], ["pin", "--check", "--frozen"]])
     def test_the_old_name_is_refused_and_leaves_no_note(self, reader, words):
-        """`pin --frozen` was `pin --check` that also left the note. It said for a release that it would go, and is gone: `run --frozen` and a read leave the note."""
+        """`pin --frozen` was this check through 0.5.1, and also left the note. It is gone: `pin --check` checks, and `run --frozen` and a read leave the note."""
         work, machine, rates, old, project, clone = reader
         roots = default_store().root / "roots"
         before = sorted(p.name for p in roots.iterdir())

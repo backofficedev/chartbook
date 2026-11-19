@@ -212,7 +212,7 @@ def documents(p):
     bh = card_height("x", ("x", "x", "x"))
     items = [
         ("manifest", "chartbook.toml", ["asks: which assets,", "where, and what it", "depends on"], ("people",), "in git"),
-        ("lockfile", "chartbook.lock", ["records what was got:", "the snapshot each", "dependency is pinned to"], ("chartbook pin, update",), "in git, no timestamp"),
+        ("lockfile", "chartbook.lock", ["records what was got:", "the snapshot each", "dependency is pinned to"], ("chartbook pin",), "in git, no timestamp"),
         ("snapshot", "_chartbook/snapshot.json", ["records what was made:", "every asset built at", "one commit, by hash"], ("chartbook snapshot",), "in the store, not git"),
         ("index", "index.json", ["records what a site", "shows: every record,", "pins reported"], ("chartbook docs build",), "beside the site"),
     ]

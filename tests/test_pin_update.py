@@ -4,8 +4,8 @@
 pin yet, ``chartbook pin --update [NAME…]`` moves pins to the newest
 snapshot, and ``chartbook pin --check`` says whether everything pinned can
 be read here. ``chartbook update`` read as "update ChartBook". The flag
-``pin --frozen``, which had said for a release that it would go, is gone
-with it.
+``pin --frozen``, the name ``pin --check`` had through 0.5.1, is gone with
+it, and is not kept beside the new one.
 
 What a pin and an update do to a lockfile is in ``tests/test_lock.py``;
 this is the command.
@@ -111,21 +111,58 @@ class TestPinUpdate:
         result = CliRunner().invoke(main, ["pin", "rates"])
         assert result.exit_code == 2
         assert (
-            "Error: A name goes with --update: `chartbook pin --update rates` moves its pins. `chartbook pin` pins what "
-            "has no pin yet, of every dependency."
+            "Error: A name goes with --update: `chartbook pin --update rates` moves the pins of what it names. "
+            "`chartbook pin` pins what has no pin yet, of every dependency."
         ) in result.output.splitlines()
         assert _pinned(consumer) == before
+
+    def test_what_it_says_to_type_can_be_pasted(self, consumer, work, monkeypatch):
+        """With the folder it was given, and each word quoted as a shell takes it."""
+        monkeypatch.chdir(work)
+        result = CliRunner().invoke(main, ["pin", "rates", "a b", "--project-dir", "consumer"])
+        assert result.exit_code == 2
+        assert "`chartbook pin --update rates 'a b' --project-dir consumer` moves the pins of what it names." in result.output
+
+    def test_a_folder_where_a_name_goes_is_taken_for_the_pipeline_meant(self, consumer, work, monkeypatch):
+        """Found by review: `chartbook pin ../prices` was answered with `pin --update ../prices`, which names no dependency."""
+        monkeypatch.chdir(work)
+        result = CliRunner().invoke(main, ["pin", "consumer"])
+        assert result.exit_code == 2
+        assert (
+            "Error: consumer is a folder, and a pipeline is named with --project-dir: `chartbook pin --project-dir consumer`."
+        ) in result.output.splitlines()
+
+    def test_the_check_takes_no_name(self, consumer):
+        """Found by review: asked for the check that writes nothing, it answered with a command that moves a pin."""
+        before = _pinned(consumer)
+        result = CliRunner().invoke(main, ["pin", "--check", "rates"])
+        assert result.exit_code == 2
+        assert (
+            "Error: --check takes no name: it says whether every pin of the pipeline can be read here, and writes nothing."
+        ) in result.output.splitlines()
+        assert "--update" not in result.output and _pinned(consumer) == before
 
     def test_it_does_not_go_with_the_check(self, consumer):
         result = CliRunner().invoke(main, ["pin", "--update", "--check"])
         assert result.exit_code == 2
         assert "Error: --update moves pins and --check writes nothing. One or the other." in result.output.splitlines()
 
-    def test_the_check_writes_nothing_as_before(self, consumer):
-        lockfile = (consumer / lock.LOCK_FILE).read_bytes()
+    def test_the_check_writes_nothing_as_before(self, consumer, store):
+        def written() -> dict:
+            """Every file of the lockfile's folder and of the store's notes, by its bytes."""
+            return {
+                str(path): path.read_bytes()
+                for top in (consumer, store.root / "roots") for path in sorted(top.rglob("*"))
+                if path.is_file() and ".git" not in path.parts
+            }
+
+        # A note of this lockfile from a pin before, which a check that left one would write again
+        (note,) = (store.root / "roots").iterdir()
+        note.unlink()
+        before = written()
         result = CliRunner().invoke(main, ["pin", "--check"])
         assert result.exit_code == 0, result.output
-        assert "Nothing written." in result.output and (consumer / lock.LOCK_FILE).read_bytes() == lockfile
+        assert "Nothing written." in result.output and written() == before
 
 
 class TestTheOldCommand:
@@ -133,7 +170,11 @@ class TestTheOldCommand:
         (["update"], "chartbook pin --update"),
         (["update", "rates"], "chartbook pin --update rates"),
         (["update", "rates", "prices", "--project-dir", "x"], "chartbook pin --update rates prices --project-dir x"),
-        (["update", "--help"], "chartbook pin --update"),
+        # Quoted as a shell takes it, so that the line can be pasted
+        (["update", "--project-dir", "../my dir", "it's"], """chartbook pin --update --project-dir '../my dir' 'it'"'"'s'"""),
+        # Its help was asked for: that of the command it became, not a line that moves every pin
+        (["update", "--help"], "chartbook pin --help"),
+        (["update", "rates", "-h"], "chartbook pin --help"),
     ])
     def test_says_where_it_went_with_what_to_type(self, consumer, work, store, words, tried):
         before = _pinned(consumer)
@@ -161,7 +202,7 @@ class TestTheOldCommand:
 
 
 class TestTheOldFlag:
-    """`pin --frozen` was `pin --check` that also left the store's note; it said for a release that it would go."""
+    """`pin --frozen` was this check through 0.5.1, and also left the store's note. It is `pin --check` now, and the old name is not kept."""
 
     @pytest.mark.parametrize("words", [["pin", "--frozen"], ["pin", "--check", "--frozen"], ["pin", "--frozen", "--project-dir", "."]])
     def test_says_what_does_each_half_of_it(self, consumer, store, words):

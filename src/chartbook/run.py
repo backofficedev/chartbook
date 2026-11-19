@@ -1228,7 +1228,7 @@ def run(
     when_committed = snapshot == WHEN_COMMITTED and building and not frozen
     snapshot = bool(snapshot) and snapshot != WHEN_COMMITTED
     if snapshot and os.path.lexists(here / "chartbook.links.toml"):
-        raise RunError("Cannot snapshot while chartbook.links.toml exists. Remove it, update pins, then snapshot.")
+        raise RunError("Cannot snapshot while chartbook.links.toml exists. Delete it, run `chartbook pin --update`, then snapshot.")
     if frozen and snapshot:
         raise RunError(
             "--frozen pins nothing and writes no object, and --snapshot writes a snapshot. One or the other."

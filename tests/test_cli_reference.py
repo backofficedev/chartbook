@@ -179,6 +179,25 @@ def test_the_page_names_no_command_that_is_gone(page):
             assert sub in group.commands, f"`chartbook {group_name} {sub}` names a subcommand the CLI does not have"
 
 
+def test_no_console_line_runs_a_command_that_is_gone(page):
+    """Found by a reviewer: `$ chartbook update fed_yield_curve` in an example passed every test here."""
+    for line in _console_lines(page):
+        match = re.match(r"^\$? ?chartbook ([a-z][a-z-]*)", line)
+        if match:
+            assert match.group(1) in main.commands, f"the console line {line!r} runs a command the CLI does not have"
+
+
+@pytest.mark.parametrize("words,command", COMMANDS, ids=IDS)
+def test_a_usage_line_shows_no_option_the_command_lacks(words, command, page):
+    """Found by a reviewer: a usage line rewritten to `[--frozen] [--from-folder]` passed, since only missing options were looked for."""
+    section = _own_subsection(page, words)
+    has = {opt for parameter in command.params if isinstance(parameter, click.Option) for opt in (*parameter.opts, *parameter.secondary_opts)}
+    for line in _console_lines(section):
+        if re.match(rf"^chartbook {' '.join(map(re.escape, words))}( |$)", line) and "[" in line:
+            for option in re.findall(r"(?<![\w-])--[a-z][a-z-]*", line):
+                assert option in has or option in IMPLIED, f"the usage line {line!r} of `chartbook {' '.join(words)}` shows {option}, which it does not take"
+
+
 @pytest.mark.parametrize("words,command", COMMANDS, ids=IDS)
 def test_no_help_shows_docstring_markup(words, command):
     """`--help` prints a command's docstring: a `:param` field list there is noise to a reader."""

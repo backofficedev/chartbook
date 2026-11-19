@@ -93,7 +93,7 @@ new one, holding only the files that changed.
 
 ```console
 $ chartbook pin                 # once, to start depending on it
-$ chartbook pin --update              # later, when you want their newer snapshot; the lockfile diff shows the move
+$ chartbook pin --update        # later, when you want their newer snapshot; the lockfile diff shows the move
 ```
 
 ```python

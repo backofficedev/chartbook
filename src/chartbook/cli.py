@@ -80,10 +80,14 @@ class _Main(_Group):
         if args and args[0] == "build" and not ctx.resilient_parsing:
             raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
         if args and args[0] == "update" and not ctx.resilient_parsing:
-            named = [word for word in args[1:] if word not in ("--help", "-h")]
+            import shlex
+
+            # Its help was asked for: that of the command it became, and not a command that moves every pin
+            asked_for_help = any(word in ("--help", "-h") for word in args[1:])
+            tried = ["chartbook", "pin", "--help"] if asked_for_help else ["chartbook", "pin", "--update", *args[1:]]
             raise click.UsageError(
                 "`chartbook update` is gone: `chartbook pin --update`. It moves pins to the newest snapshot, all of "
-                f"them or those of the dependencies named. Try: {' '.join(['chartbook', 'pin', '--update', *named])}",
+                f"them or those of the dependencies named. Try: {shlex.join(tried)}",
                 ctx,
             )
         if args and args[0] == "check" and not ctx.resilient_parsing:
@@ -2769,7 +2773,7 @@ def _echo_frozen_report(step, report):
 
 
 def _pin_frozen_is_gone(ctx, param, value):
-    """Refuse `chartbook pin --frozen`, which said for a release that it would go, and say what does each half of it."""
+    """Refuse `chartbook pin --frozen`, the name `chartbook pin --check` had through 0.5.1, and say what does each half of what it did."""
     if value:
         raise click.UsageError(
             "`chartbook pin --frozen` is gone. `chartbook pin --check` says whether everything pinned can be read "
@@ -2800,7 +2804,7 @@ def pin(names, project_dir, moving, check_only):
 
     \b
     chartbook pin                     pin what has no pin yet
-    chartbook pin --update [NAME...]  move pins to the newest snapshot
+    chartbook pin --update [NAMES...] move pins to the newest snapshot
     chartbook pin --check             can everything pinned be read here?
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
@@ -2825,7 +2829,7 @@ def pin(names, project_dir, moving, check_only):
     has no pin yet, which `chartbook run` does itself before a build.
 
     --update moves pins forward to the newest snapshot of each dependency.
-    With no NAME, every dependency is updated. Name some to update only
+    With no NAMES, every dependency is updated. Name some to update only
     those, as they are written in [dependencies]; the scope may be left
     off when only one has that name. Each pin that changes is printed with
     its old and new hash, and chartbook.lock is rewritten. Nothing is
@@ -2851,9 +2855,23 @@ def pin(names, project_dir, moving, check_only):
     """
     if moving and check_only:
         raise click.UsageError("--update moves pins and --check writes nothing. One or the other.")
+    if names and check_only:
+        # Not answered with a command that writes: the check is of every pin, and takes no name
+        raise click.UsageError("--check takes no name: it says whether every pin of the pipeline can be read here, and writes nothing.")
     if names and not moving:
+        import os
+        import shlex
+
+        folder = next((name for name in names if os.path.isdir(name)), None)
+        if folder is not None and project_dir is None:
+            # A folder where a dependency's name goes: the pipeline to pin was meant
+            raise click.UsageError(
+                f"{folder} is a folder, and a pipeline is named with --project-dir: "
+                f"`{shlex.join(['chartbook', 'pin', '--project-dir', folder])}`."
+            )
+        meant = ["chartbook", "pin", "--update", *names, *(["--project-dir", project_dir] if project_dir else [])]
         raise click.UsageError(
-            f"A name goes with --update: `chartbook pin --update {' '.join(names)}` moves its pins. "
+            f"A name goes with --update: `{shlex.join(meant)}` moves the pins of what it names. "
             f"`chartbook pin` pins what has no pin yet, of every dependency."
         )
     if check_only:

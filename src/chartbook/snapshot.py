@@ -341,8 +341,8 @@ class SnapshotReport:
             (:func:`version_name`). A snapshot is what makes a version.
         skipped_labels: Labels of the manifest the snapshot did not record,
             by model: a name a reference cannot carry, or one that reads as
-            a version, or one whose value is not a version. ``chartbook
-            check`` refuses the same ones.
+            a version, or one whose value is not a version. ``chartbook run
+            --check`` refuses the same ones.
         index_skipped: Why the version's index could not be built and is
             not in the snapshot, in one line; None when it is (or when no
             new snapshot was made).
