@@ -848,7 +848,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     return (
         f"there is no folder at {directory} on this machine (another machine's folder, or one that has "
         f"moved). It is pinned from there, with its pins in the store, so this pipeline builds here "
-        f"(`chartbook run --frozen`), and only `chartbook update` needs the folder. {advice}",
+        f"(`chartbook run --frozen`), and only `chartbook pin --update` needs the folder. {advice}",
         True,
     )
 
@@ -1164,7 +1164,7 @@ def check_ids(manifest: dict, base_dir: Path) -> list[Problem]:
                 f"{pipeline_dir / 'chartbook.toml'}: [{_dependency_table(key)}] {named} is the pipeline in "
                 f"{folder}, which calls itself {current} now: its new snapshots are made under that ID, and "
                 f"this dependency stays at the last one made as {named}. Write {line} to follow it, then "
-                f"`chartbook update {key}`.",
+                f"`chartbook pin --update {key}`.",
                 UserWarning,
                 stacklevel=2,
             )
@@ -1486,7 +1486,7 @@ def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
     The model file's bytes are a version; the snapshot that first held them
     recorded what each ``trained_on`` input was then. An input that is
     something else now, a local dataframe rebuilt or another pipeline's
-    pinned elsewhere by ``chartbook update``, makes the model out of date.
+    pinned elsewhere by ``chartbook pin --update``, makes the model out of date.
     That is a warning and not a problem: a model may be kept on purpose,
     and retraining is the pipeline's build to run.
     """

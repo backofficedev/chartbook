@@ -84,7 +84,7 @@ yields = data.load("treasury_curve:zero_coupon_yields", format="pandas")
 ```
 
 `chartbook add` pins the newest snapshot in `chartbook.lock`, so the agent's code reads the same
-bytes on every run until someone runs `chartbook update`. From another language,
+bytes on every run until someone runs `chartbook pin --update`. From another language,
 `chartbook path treasury_curve:zero_coupon_yields` prints the pinned file's path. Outside any
 pipeline, in a notebook, `data.load(pipeline="treasury_curve", dataframe="zero_coupon_yields")`
 reads the newest snapshot through the catalog.
@@ -121,5 +121,5 @@ right is still a person's call; the catalog says whose, and at which commit.
 ## Next
 
 - {doc}`../tutorials/explore-a-catalog`: the catalog these examples use, built from three pipelines you clone
-- {doc}`depending-on-pipelines`: pins, the lockfile and `chartbook update`
+- {doc}`depending-on-pipelines`: pins, the lockfile and `chartbook pin --update`
 - {doc}`../reference/cli`: every command, and every option of these

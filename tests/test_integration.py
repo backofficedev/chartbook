@@ -423,7 +423,7 @@ class TestExampleProjects:
         This is the "Done when" of step 3 in docs_src/design/overview.md: it
         builds with no catalog configured, its model's index record names
         the exact bytes it was trained on, and editing the upstream's data
-        does not change what it reads until `chartbook update`.
+        does not change what it reads until `chartbook pin --update`.
 
         And of the snapshot model of step 4: what it pins is the build
         yield_curve's owner declared ready. A rebuild of yield_curve is not
@@ -469,7 +469,7 @@ class TestExampleProjects:
             # has not declared the new data ready. Not even an update moves.
             pin = run("chartbook", "pin")
             assert "changed upstream" not in pin.stdout, pin.stdout + pin.stderr
-            assert "chartbook.lock is unchanged." in run("chartbook", "update").stdout
+            assert "chartbook.lock is unchanged." in run("chartbook", "pin", "--update").stdout
 
             # Its owner makes a snapshot. Now this pipeline is told, and stays put.
             assert "Snapshot made." in self._snapshot(yield_curve_path, env).stdout
@@ -477,8 +477,8 @@ class TestExampleProjects:
             assert "changed upstream" in pin.stdout, pin.stdout + pin.stderr
             assert Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()) == pinned_path
 
-            # Until `chartbook update`
-            update = run("chartbook", "update")
+            # Until `chartbook pin --update`
+            update = run("chartbook", "pin", "--update")
             assert update.returncode == 0, update.stdout + update.stderr
             moved = Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip())
             assert moved != pinned_path

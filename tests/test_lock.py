@@ -1,5 +1,5 @@
 """Tests for pinning: ``chartbook.lock``, ``chartbook.lock`` the file,
-``chartbook pin``, ``chartbook update`` and ``chartbook store gc``.
+``chartbook pin``, ``chartbook pin --update`` and ``chartbook store gc``.
 
 Pinning is the third part of step 3 of ``docs_src/design/overview.md``. A
 pipeline freezes what its dependencies have: their files go in the store
@@ -270,7 +270,7 @@ class TestFrozen:
         commit = lock.read_lock(downstream).dependencies[0]["location"]["commit"][:7]
         assert problem.kind == "not_in_store"
         assert (
-            "`chartbook update acme/rates` moves to a snapshot the store has, or `chartbook snapshot` "
+            "`chartbook pin --update acme/rates` moves to a snapshot the store has, or `chartbook snapshot` "
             "in its folder at that commit makes it again" in problem.message
         )
         assert "build it yourself" not in problem.message
@@ -288,7 +288,7 @@ class TestFrozen:
         name_no_snapshot(downstream, "acme/rates")
         (problem,) = lock.verify(downstream, store).problems
         assert (
-            "or its owner's `chartbook snapshot` puts it back, then `chartbook update acme/rates` pins it."
+            "or its owner's `chartbook snapshot` puts it back, then `chartbook pin --update acme/rates` pins it."
             in problem.message
         )
         # ...which is what puts it back
@@ -452,7 +452,7 @@ class TestPin:
         assert [e.detail for e in lock.pin(downstream, store).events if e.status == "not_built"] == ["./_models/ar1"]
         _train(rates)  # an asset that was declared and not built
         (event,) = [e for e in pin_from_snapshots(downstream, store).events if e.asset == "acme/rates:model/ar1"]
-        assert (event.status, event.detail) == ("not_built", "a newer snapshot has it: `chartbook update` pins it")
+        assert (event.status, event.detail) == ("not_built", "a newer snapshot has it: `chartbook pin --update` pins it")
         report = update_from_snapshots(downstream, store=store)
         assert _statuses(report) == {
             "treasury": "kept",
@@ -505,7 +505,7 @@ class TestPin:
         assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
         assert "it is not in the store at " in problem.detail and "a sync that has not finished" in problem.detail
-        assert "Otherwise a snapshot puts it there: `chartbook update`" in problem.detail
+        assert "Otherwise a snapshot puts it there: `chartbook pin --update`" in problem.detail
         assert "build it yourself" not in problem.detail
         # The pin is not quietly moved to what the newest snapshot has
         assert (downstream / LOCK_FILE).read_bytes() == before
@@ -1051,7 +1051,7 @@ class TestCommands:
         return FolderStore(work / "store")
 
     def _run(self, *args, **kwargs):
-        if args and args[0] in ("pin", "update"):
+        if args and args[0] == "pin":
             # What the other pipeline's owner does first
             project = Path(args[args.index("--project-dir") + 1]) if "--project-dir" in args else Path.cwd()
             snapshot_dependencies(project)
@@ -1081,7 +1081,7 @@ class TestCommands:
         )
         assert "  changed upstream: acme/rates:treasury" in result.output
         assert "chartbook.lock is unchanged." in result.output
-        assert "1 pinned asset(s) have changed upstream. `chartbook update` moves the pins." in (
+        assert "1 pinned asset(s) have changed upstream. `chartbook pin --update` moves the pins." in (
             result.output
         )
 
@@ -1089,7 +1089,7 @@ class TestCommands:
         self._run("pin")
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         now = hashing.hash_file(rates / "_data" / "treasury.parquet").content_hash
-        result = self._run("update", "rates")
+        result = self._run("pin", "--update", "rates")
         assert result.exit_code == 0, result.output
         assert "acme/rates: 1 moved, 2 already pinned, 1 not built" in result.output
         # Found by a new user: 64 digits a line, where the docs show the start of each
@@ -1100,7 +1100,7 @@ class TestCommands:
         assert now in (downstream / LOCK_FILE).read_text(encoding="utf-8")
 
     def test_update_of_something_that_is_not_a_dependency(self, here):
-        result = self._run("update", "nope")
+        result = self._run("pin", "--update", "nope")
         assert result.exit_code == 1
         assert result.output.startswith("Error: Pipeline 'nope' not found.")
 
@@ -1134,7 +1134,7 @@ class TestCommands:
     @pytest.fixture
     def garbage(self, here, downstream, rates, monkeypatch):
         """A store with one object that an update left behind, an hour old."""
-        _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("update"))
+        _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("pin", "--update"))
         _age(here, monkeypatch)
         return here
 
@@ -1175,7 +1175,7 @@ class TestCommands:
         assert "Nothing to remove." in self._run("store", "gc").output
 
     def test_gc_says_what_it_spared_for_being_new(self, here, downstream, rates):
-        _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("update"))
+        _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("pin", "--update"))
         result = self._run("store", "gc", "--yes")
         assert "Kept: 1 object(s) nothing names, stored in the last hour" in result.output
         assert "Nothing to remove." in result.output
@@ -1202,8 +1202,8 @@ class TestCommands:
 
     def test_there_is_no_pinning_from_a_folder(self, here, downstream):
         """Decided 2026-10-16: a lockfile never records a read of another pipeline's working folder."""
-        for command in ("pin", "update"):
-            result = CliRunner().invoke(main, [command, "--from-folder"])
+        for command in (["pin"], ["pin", "--update"]):
+            result = CliRunner().invoke(main, [*command, "--from-folder"])
             # Click words it "No such option: --from-folder" or "No such option '--from-folder'", by version
             assert result.exit_code == 2 and re.search(r"No such option:? '?--from-folder", result.output)
         with pytest.raises(TypeError, match="from_folder"):

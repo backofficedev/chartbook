@@ -5,7 +5,7 @@ store has the pinned file, it is read. Where a build of yours stands in,
 it holds the pinned rows and whatever has come since: ``data.load`` and
 ``data.sql`` leave out the rows after the pin's last date, ``data.path``
 and ``data.files`` hand over the file as it is and say so once, and
-``data.as_of`` says where the pinned rows end. Only ``chartbook update``
+``data.as_of`` says where the pinned rows end. Only ``chartbook pin --update``
 brings later rows.
 """
 

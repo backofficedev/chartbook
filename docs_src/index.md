@@ -46,7 +46,7 @@ made from, with the hash of that data in this build. This one is the Quickstart'
 :link-type: doc
 Build on another pipeline's exact output, the way you depend on a package.
 `chartbook add acme/rates` pins its newest snapshot in `chartbook.lock`, and what you read
-changes only when you run `chartbook update`.
+changes only when you run `chartbook pin --update`.
 :::
 
 :::{grid-item-card} {octicon}`git-commit;1.5em` Trace

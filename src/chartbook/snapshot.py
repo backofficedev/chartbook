@@ -10,7 +10,7 @@ build is ready for others::
 
     $ chartbook snapshot
     ftsfr/fed_yield_curve at 4f2a91c: 3 assets in the store
-    Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+    Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
 
 Three rules, decided by the maintainer on 2026-10-13
 (``docs_src/design/overview.md``, "The snapshot model"):
@@ -341,8 +341,8 @@ class SnapshotReport:
             (:func:`version_name`). A snapshot is what makes a version.
         skipped_labels: Labels of the manifest the snapshot did not record,
             by model: a name a reference cannot carry, or one that reads as
-            a version, or one whose value is not a version. ``chartbook
-            check`` refuses the same ones.
+            a version, or one whose value is not a version. ``chartbook run
+            --check`` refuses the same ones.
         index_skipped: Why the version's index could not be built and is
             not in the snapshot, in one line; None when it is (or when no
             new snapshot was made).
@@ -1432,7 +1432,7 @@ def label_records(
     with the content hash of the version the label names, so that a
     pipeline that depends on this one gets the labelled version through
     its lockfile and the store, as it gets anything else, and a build
-    stays repeatable until ``chartbook update`` moves the label.
+    stays repeatable until ``chartbook pin --update`` moves the label.
 
     :param newest: The snapshot being pinned from, whose ``labels`` say
         what the owner's manifest said when it was made.
@@ -2184,7 +2184,7 @@ def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None)
         if not (commit and made_at):
             gaps.append(
                 f"{key}: its pin names no snapshot, so nothing says which commit its bytes "
-                f"came from. `chartbook update {key}` pins its newest snapshot "
+                f"came from. `chartbook pin --update {key}` pins its newest snapshot "
                 f"(its owner makes one with `chartbook snapshot`)."
             )
             continue
@@ -2211,7 +2211,7 @@ def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None)
             gaps.append(
                 f"{key}: the lockfile pins its snapshot at {commit[:7]}, made {made_at}, and the store at "
                 f"{store} has no such snapshot{unread}, so nothing says what it was made from. "
-                f"`chartbook update {key}` pins one the store has."
+                f"`chartbook pin --update {key}` pins one the store has."
             )
             continue
         if not held:
@@ -2221,12 +2221,12 @@ def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None)
                     gaps.append(
                         f"{asset_id}: is pinned at {record['content_hash'][:19]}…, which its snapshot at "
                         f"{commit[:7]} does not hold as {local_name(record)}: the lockfile was changed by hand, "
-                        f"or came from another store. `chartbook update {key}` pins it again."
+                        f"or came from another store. `chartbook pin --update {key}` pins it again."
                     )
             if len(gaps) == before:
                 gaps.append(
                     f"{key}: what is pinned from it is not all from one snapshot at {commit[:7]}: the lockfile "
-                    f"was changed by hand. `chartbook update {key}` pins it again."
+                    f"was changed by hand. `chartbook pin --update {key}` pins it again."
                 )
             continue
         # What the lockfile says of each table's rows is what that snapshot says
@@ -2236,7 +2236,7 @@ def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None)
                 gaps.append(
                     f"{asset_id}: what the lockfile records of its rows is not what its snapshot at {commit[:7]} "
                     f"records: the lockfile was changed by hand, or merged from two. Restore it from git, or "
-                    f"`chartbook update {key}` pins it again."
+                    f"`chartbook pin --update {key}` pins it again."
                 )
         # A label names a version: some snapshot of that pipeline must hold it
         pipelines = {t.pipeline for t in held}
@@ -2246,7 +2246,7 @@ def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None)
                 gaps.append(
                     f"{asset_id}: is pinned at {record['content_hash'][:19]}…, a version of {name} that no "
                     f"snapshot of it in the store holds: the lockfile was changed by hand, or came from "
-                    f"another store. `chartbook update {key}` pins it again."
+                    f"another store. `chartbook pin --update {key}` pins it again."
                 )
     return gaps, stood_in
 
@@ -2514,7 +2514,7 @@ def make(
     """
     directory = Path(project_dir).resolve()
     if os.path.lexists(directory / "chartbook.links.toml"):
-        raise SnapshotError("Cannot snapshot while chartbook.links.toml exists. Delete it, run `chartbook update`, then snapshot.")
+        raise SnapshotError("Cannot snapshot while chartbook.links.toml exists. Delete it, run `chartbook pin --update`, then snapshot.")
     pipeline = pipeline_in(directory)
     from chartbook.manifest import section_that_is_no_table
 

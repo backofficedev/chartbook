@@ -48,7 +48,7 @@ An asset of another pipeline has that pipeline's name in front::
 The pipeline must be one that ``[dependencies]`` declares, and the path is
 that of the copy ``chartbook.lock`` pins, in the store. It is not the other
 pipeline's working directory, so what it holds does not change until you
-run ``chartbook update``. Read it; do not write to it.
+run ``chartbook pin --update``. Read it; do not write to it.
 
 The full grammar, ``[registry/][scope/]pipeline:[kind/]name[#part][@rev]``,
 is specified in ``docs_src/design/references.md``. A part, a revision and a
@@ -211,7 +211,7 @@ def path(
     >>> assets.path("fed_yield_curve:treasury_rates")  # doctest: +SKIP
 
     So it does not change while the other pipeline is being worked on, and
-    moves only when you run ``chartbook update``. It must have been pinned
+    moves only when you run ``chartbook pin --update``. It must have been pinned
     (``chartbook pin``), and is for reading: never write to it.
 
     **Another pipeline's folder or glob of files has no one path.** The

@@ -84,7 +84,7 @@ class Unmet:
             the very file the pin does, which the store does not have; or
             the store has the pinned file in part, as a sync leaves it.
         label: Whether the pin is of a version named by a label, which no
-            build of this commit gives, and ``chartbook update`` does not
+            build of this commit gives, and ``chartbook pin --update`` does not
             find in yours.
     """
 
@@ -300,8 +300,8 @@ def since(before: Mapping, after: Mapping, taken, store, read: bool = True) -> O
 
     ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
     ``earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 24
-    new rows, through 2026-11-11``. For a pin that moves (``chartbook
-    update``), beside the pin it had; and for a snapshot (``chartbook
+    new rows, through 2026-11-11``. For a pin that moves (``chartbook pin
+    --update``), beside the pin it had; and for a snapshot (``chartbook
     snapshot``), beside the snapshot before it. The earlier record's
     periods are what is compared, up to its last date, as a check
     compares them (:func:`rows_compared`): what the two records already

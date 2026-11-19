@@ -106,8 +106,8 @@ def lockfiles():
     """What each pipeline has pinned, as its lockfile says.
 
     A lockfile is written by the pipeline's own build (so it is no
-    file_dep: there is none before the first build) and moved by `chartbook
-    update`, which rebuilds nothing.
+    file_dep: there is none before the first build) and moved by `chartbook pin
+    --update`, which rebuilds nothing.
     """
     digests = []
     for pipeline_dir in PIPELINE_DIRS:
@@ -202,7 +202,7 @@ def task_build_rate_forecast():
     return {
         # Its own first task is `chartbook pin`, which pins yield_curve's
         # snapshot the first time and leaves the pin alone after that; a pin
-        # `chartbook update` moved is what its model is trained on next
+        # `chartbook pin --update` moved is what its model is trained on next
         "actions": [f"doit -f {RATE_FORECAST_DIR / 'dodo.py'}"],
         "file_dep": [*git_files(RATE_FORECAST_DIR), YIELD_CURVE_DIR / "docs" / "index.html"],
         "targets": [*made_by(RATE_FORECAST_DIR), RATE_FORECAST_DIR / "chartbook.lock"],

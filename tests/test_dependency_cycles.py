@@ -801,7 +801,7 @@ class TestEveryPinRefusesACycle:
         assert "these pipelines depend on each other" in report.refused
         assert (_lockfile(fred), _store_state()) == before
         monkeypatch.chdir(fred)
-        result = CliRunner().invoke(main, ["update"])
+        result = CliRunner().invoke(main, ["pin", "--update"])
         assert result.exit_code == 1 and "Error: acme/fred: these pipelines depend on each other" in result.output
         assert _lockfile(fred) == before[0]
 

@@ -67,7 +67,7 @@ tutorial/treasury_curve: build
 .  charts
 .  docs
 tutorial/treasury_curve at e686c8f: 3 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
 Stores: default
 Ran build in 1 pipeline(s).
 No catalog yet, to show it in.
@@ -120,8 +120,8 @@ chartbook run --snapshot
 
 ```text
 Error: tutorial/rate_outlook: its pins do not account for every dependency, so it could not have a snapshot, and it was not built:
-  tutorial/macro_basics: the lockfile pins its snapshot at 7ff8718, made 2026-11-04T06:07:44.181732Z, and the store at default: /Users/you/.chartbook/store has no such snapshot, so nothing says what it was made from. `chartbook update tutorial/macro_basics` pins one the store has.
-  tutorial/treasury_curve: the lockfile pins its snapshot at e686c8f, made 2026-11-04T06:07:38.226894Z, and the store at default: /Users/you/.chartbook/store has no such snapshot, so nothing says what it was made from. `chartbook update tutorial/treasury_curve` pins one the store has. Nothing after it was run.
+  tutorial/macro_basics: the lockfile pins its snapshot at 7ff8718, made 2026-11-04T06:07:44.181732Z, and the store at default: /Users/you/.chartbook/store has no such snapshot, so nothing says what it was made from. `chartbook pin --update tutorial/macro_basics` pins one the store has.
+  tutorial/treasury_curve: the lockfile pins its snapshot at e686c8f, made 2026-11-04T06:07:38.226894Z, and the store at default: /Users/you/.chartbook/store has no such snapshot, so nothing says what it was made from. `chartbook pin --update tutorial/treasury_curve` pins one the store has. Nothing after it was run.
 ```
 
 Nothing was built, and that is the point. The lockfile names the snapshots the author built, on
@@ -130,7 +130,7 @@ from the same commits, at another time. **A pin never moves by itself.** Moving 
 act, and yours:
 
 ```console
-chartbook update
+chartbook pin --update
 ```
 
 ```text
@@ -159,7 +159,7 @@ tutorial/rate_outlook: build
 .  docs
 tutorial/rate_outlook at a11b7b7: 3 asset(s) in the store
   model/spread_ar1: new version 741ac0897fa6
-Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
 Stores: default
 Ran build in 1 pipeline(s).
 ```
@@ -308,7 +308,7 @@ yields = data.load("treasury_curve:zero_coupon_yields", format="pandas")   # the
 ```
 
 It reads the same bytes on every run, on every machine with the store, until you run
-`chartbook update`. And `chartbook lineage` walks what your pipeline is built on, checking each
+`chartbook pin --update`. And `chartbook lineage` walks what your pipeline is built on, checking each
 hash on the way:
 
 ```text
@@ -343,7 +343,7 @@ pipeline of your own needs no more.
 :::{grid-item-card} Depend on another pipeline
 :link: ../guide/depending-on-pipelines
 :link-type: doc
-Pins, the lockfile, `chartbook update`, and what CI checks.
+Pins, the lockfile, `chartbook pin --update`, and what CI checks.
 :::
 
 :::{grid-item-card} Let your agent use the catalog

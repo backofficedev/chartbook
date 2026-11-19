@@ -23,9 +23,9 @@ is written.
 
 :func:`cycle` walks the same graph for another reason: dependencies between
 pipelines must form a directed acyclic graph, and a pipeline that depends,
-through what it depends on, on itself is refused by ``chartbook run``,
-``chartbook build`` and ``chartbook snapshot``, and reported by ``chartbook
-check``. That walk reads a folder on this machine before the store, so a
+through what it depends on, on itself is refused by ``chartbook run``
+and ``chartbook snapshot``, and reported by ``chartbook run --check``.
+That walk reads a folder on this machine before the store, so a
 cycle is found as soon as it is declared.
 """
 
@@ -731,7 +731,7 @@ def explain_cycle(found: Cycle) -> str:
     lines.append(
         "Dependencies between pipelines must form a graph with no cycles. Take one of these out of its "
         "[dependencies]; where a snapshot records it, that pipeline makes a new snapshot, and what pins "
-        "it runs `chartbook update`."
+        "it runs `chartbook pin --update`."
     )
     return "\n".join(lines)
 

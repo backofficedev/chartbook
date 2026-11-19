@@ -45,7 +45,7 @@ chartbook path <name>       # Print the path chartbook.toml declares for a dataf
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>, file/<name>)
 chartbook path file/<name> --files  # the asset's files, one per line, sorted: a folder's files, a glob's matches
 chartbook path model/<name>@<version>  # a version of a model, in the store: by the start of its hash (@7f3a9c2e41b0) or by a label (@champion)
-chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version: the label as pinned in chartbook.lock; `chartbook update` moves it
+chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version: the label as pinned in chartbook.lock; `chartbook pin --update` moves it
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
@@ -55,9 +55,9 @@ chartbook restore           # The mirror of snapshot: puts this pipeline's asset
 chartbook lineage           # Every snapshot upstream of this pipeline, walked through the pins and checked by hash; --check for CI, --rehash to re-hash the bytes. `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates    # Declare a dependency by its ID ("acme/rates" = {} under [dependencies]) and pin its newest snapshot from the store: no folder of it, no clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
-chartbook pin --check       # Writes nothing. Exit 1 unless chartbook.lock is complete and every pin is met: its file is in the store, or (the store does not have the pinned snapshot: no shared store) a build of YOUR OWN of the pinned commit meets every pin of that dependency, a dataframe by the same rows up to the pin's last date ("read from your own build of 0db8051, made 2026-11-17 09:22 UTC"). When it says a pin is not in the store, it says how to build that dependency yourself: `git checkout <commit>` in its folder, then `chartbook run --snapshot`. For CI and a read-only shared store (`run --frozen` builds from the lockfile and leaves the store's note that keeps these pins from gc elsewhere; `pin --frozen` is the deprecated name)
+chartbook pin --check       # Writes nothing. Exit 1 unless chartbook.lock is complete and every pin is met: its file is in the store, or (the store does not have the pinned snapshot: no shared store) a build of YOUR OWN of the pinned commit meets every pin of that dependency, a dataframe by the same rows up to the pin's last date ("read from your own build of 0db8051, made 2026-11-17 09:22 UTC"). When it says a pin is not in the store, it says how to build that dependency yourself: `git checkout <commit>` in its folder, then `chartbook run --snapshot`. For CI and a read-only shared store (`run --frozen` builds from the lockfile and leaves the store's note that keeps these pins from gc elsewhere)
 chartbook index diff BEFORE AFTER  # What changed between two builds from their index.json (or site folders): data, pins, versions, labels, staleness. --json, --exit-code
-chartbook update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin). Says of each dataframe "24 new rows, through 2026-11-11; earlier rows unchanged" or "earlier rows changed: the rows of … differ"; `chartbook snapshot` says the same beside the snapshot before it
+chartbook pin --update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin). Says of each dataframe "24 new rows, through 2026-11-11; earlier rows unchanged" or "earlier rows changed: the rows of … differ"; `chartbook snapshot` says the same beside the snapshot before it
 chartbook run               # THE command. Pin what has no pin, run this pipeline's [scripts] build, FAIL (exit 1) if the build did not write something chartbook.toml declares with a path, or the file of a DuckDB source in [sources], then make a SNAPSHOT (what other pipelines read) when everything in the folder is committed (chartbook.lock too) and a branch is checked out. With uncommitted work it still exits 0 and its last line says `not snapshotted: N files are not committed`, or `chartbook.lock was written during this run, and is not committed`: commit, run again. Asks nothing about where its snapshot goes. Never moves a pin. NEVER builds in a folder it depends on
 chartbook run --frozen      # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store (CI). Not with --snapshot
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
@@ -230,7 +230,7 @@ table = assets.index("file/filings")          # LazyFrame: path, size_bytes, sha
 # Explicit links override pins for development, warn, and prevent snapshots. CI and --frozen ignore them.
 # In a build under `chartbook run` (CHARTBOOK_BATCH=1), unrecorded reads are refused. After that,
 # "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
-# not its working directory. It changes only on `chartbook update`. Read-only.
+# not its working directory. It changes only on `chartbook pin --update`. Read-only.
 rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy
 path = data.path("fed_yield_curve:treasury_rates")            # its path in the store (one file)
 last = data.as_of("fed_yield_curve:treasury_rates")           # the pin's last date (a date or datetime; None if it has none)
@@ -241,7 +241,7 @@ last = data.as_of("fed_yield_curve:treasury_rates")           # the pin's last d
 # (`git checkout <commit>`, `chartbook run --snapshot` there). That build STANDS IN, for the
 # dependency whole, when it holds the pinned rows of every dataframe (and the same file of every
 # model); new rows after the pin's last date are fine, a revised old value is not
-# ("the rows of 2024-01-02 to 2024-12-31 differ"; `chartbook update <dep>` pins your build).
+# ("the rows of 2024-01-02 to 2024-12-31 differ"; `chartbook pin --update <dep>` pins your build).
 # Then data.load()/data.sql() give the PINNED rows (nothing after data.as_of); data.path() is
 # the file as it is, newer rows and all. A store that HAS the pinned snapshot (a shared store)
 # has the pin itself: a missing file of it is lost or still syncing, and nothing stands in. For this the upstream declares date_col on each

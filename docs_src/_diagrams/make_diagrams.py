@@ -212,7 +212,7 @@ def documents(p):
     bh = card_height("x", ("x", "x", "x"))
     items = [
         ("manifest", "chartbook.toml", ["asks: which assets,", "where, and what it", "depends on"], ("people",), "in git"),
-        ("lockfile", "chartbook.lock", ["records what was got:", "the snapshot each", "dependency is pinned to"], ("chartbook pin, update",), "in git, no timestamp"),
+        ("lockfile", "chartbook.lock", ["records what was got:", "the snapshot each", "dependency is pinned to"], ("chartbook pin",), "in git, no timestamp"),
         ("snapshot", "_chartbook/snapshot.json", ["records what was made:", "every asset built at", "one commit, by hash"], ("chartbook snapshot",), "in the store, not git"),
         ("index", "index.json", ["records what a site", "shows: every record,", "pins reported"], ("chartbook docs build",), "beside the site"),
     ]
@@ -240,7 +240,7 @@ def depending(p):
     s += arrow(20 + bw + 4, y + bh / 2, 350 - 6, y + bh / 2, p, "chartbook run")
     s += arrow(350 + bw + 4, y + bh / 2, 680 - 6, y + bh / 2, p, "chartbook pin")
     s += arrow(120, y + bh + 6, 780, y + bh + 6, p, "never: one pipeline reads another's folder", warn=True, dashed=True, curve=(450, 262))
-    s += caption(w, h - 12, ["A newer snapshot moves nothing until you run ", "chartbook update",
+    s += caption(w, h - 12, ["A newer snapshot moves nothing until you run ", "chartbook pin --update",
                              "; a ", "git diff", " of the lockfile shows the move."], p)
     return s + "</svg>\n"
 

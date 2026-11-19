@@ -65,7 +65,7 @@ class TestWhereNothingCanAsk:
         result = CliRunner().invoke(main, ["snapshot"])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
-        assert lines.index("Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.") < lines.index(_made_line())
+        assert lines.index("Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.") < lines.index(_made_line())
         assert "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it." in lines
         assert config.get_global_catalog_path().is_file()
 

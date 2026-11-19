@@ -288,7 +288,7 @@ class TestWhatIsMissing:
         assert "had no dataframe named 'treasuri' when it was pinned" in message
         assert "Did you mean 'treasury'?" in message
         assert "are: by_year, not_built, treasury." in message
-        assert "If it has declared one since, `chartbook update` pins it." in message
+        assert "If it has declared one since, `chartbook pin --update` pins it." in message
 
     def test_it_looks_among_assets_of_the_kind_asked_for(self, pinned):
         with pytest.raises(AssetNotPinnedError, match="had no chart named 'treasury'") as e:

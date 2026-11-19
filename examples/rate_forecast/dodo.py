@@ -23,7 +23,7 @@ def task_pin():
         # is cheap and safe: `pin` never moves a pin. The first time, it pins
         # yield_curve's newest snapshot, which is made in yield_curve with
         # `chartbook snapshot`; it never reads yield_curve's folder. To pick
-        # up a newer snapshot, run `chartbook update` by hand.
+        # up a newer snapshot, run `chartbook pin --update` by hand.
         "actions": ["chartbook pin"],
         "targets": [LOCK_FILE],
     }
