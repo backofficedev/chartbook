@@ -76,7 +76,8 @@ makes it, delete the file, then run with `--remake`: with the file on disk nothi
 build tool set up as below does not run the step either. The flag covers every kept asset at
 once; to remake one and keep another, restore the other first. The stop covers the pipelines the
 command was given, and a catalog's members; a `git` dependency built in ChartBook's own copy is
-not stopped. `chartbook run --check` says the same of a kept asset that is missing.
+not stopped. `chartbook run --check` lists a kept asset that is missing with the same way back, and
+fails nothing for it: it runs no build.
 
 ## Make your build tool skip it
 

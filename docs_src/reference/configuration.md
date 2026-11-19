@@ -196,7 +196,7 @@ Without a `[policy]` section, chartbook's default recommended-field lists apply,
 
 A pipeline may have a `[policy]` section of its own. It says what that pipeline holds itself to when it is checked or built by itself. Inside a catalog, the catalog's policy applies and the pipeline's is ignored: whoever gathers the pipelines together decides what they must say.
 
-To enforce a pipeline's policy in CI, run {doc}`chartbook run --check <cli>`. `check --policy FILE` replaces its own policy; otherwise the machine catalog's policy supplies a fallback. Catalogs compare stored metadata with their `[policy]` on the Diagnostics page. A catalog never checks working folders.
+To enforce a pipeline's policy in CI, run {doc}`chartbook run --check <cli>`. `chartbook run --check --policy FILE` replaces its own policy; otherwise the machine catalog's policy supplies a fallback. Catalogs compare stored metadata with their `[policy]` on the Diagnostics page. A catalog never checks working folders.
 
 ## `[charts]` — Chart Definitions
 
@@ -529,7 +529,7 @@ The model's record in `index.json` then says which bytes that was, under `pinned
 
 `pinned_inputs` says what `chartbook.lock` pins, which is what your training code is handed. It is not yet a record of what one particular training run read; that comes with build records.
 
-**What you get.** A page for the model with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A `Model` record in `index.json` with its content hash. And `chartbook run --check` reports a missing model file, metrics file or write-up, a metrics file that is not a flat object, and (by default) a model with no `name`, `description`, `trained_on` or write-up. A model file or a metrics file that is not built is listed as `not built yet` and is no problem there: training produces them, and `chartbook run` fails where its build did not.
+**What you get.** A page for the model with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A `Model` record in `index.json` with its content hash. And `chartbook run --check` reports a missing write-up, a metrics file that is not a flat object, and (by default) a model with no `name`, `description`, `trained_on` or write-up. A model file or a metrics file that is not built is listed as `not built yet` and is no problem there: training produces them, and `chartbook run` fails where its build did not.
 
 A model in another pipeline is read the same way as its data: `models.path("forecasting:rate_forecaster")` is the pinned copy of a declared dependency's model.
 
@@ -856,4 +856,4 @@ chartbook validates the manifest when running commands. Common errors:
 - Explicit `type` contradicting the file's structure
 - Referenced files that don't exist (run `chartbook run --check`, or `chartbook docs build`)
 
-Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook docs build` and on the catalog's diagnostics page. `chartbook run --check` turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.
+Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook docs build` and on the catalog's diagnostics page. `chartbook run --check` turns missing required fields, missing files that are kept in the repository (a write-up, a note, the README) and expiring licenses into a nonzero exit code for CI.

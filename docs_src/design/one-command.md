@@ -189,7 +189,8 @@ What was left open, *proposed by Claude, 2026-11-19:*
   out.
 - **What counts as declared (item 5):** whatever `chartbook.toml` gives a `path` that the build is
   to write, which is what `chartbook check` calls an output today. A dataframe that is a table or
-  a query in a source has no file, and is not looked for. `chartbook snapshot` stays as it is: it
+  a query in a source has no file, and is not looked for; the file of its DuckDB source is, since
+  the check that failed for one is gone *(found by the review of step 4)*. `chartbook snapshot` stays as it is: it
   takes what is built, and lists what is not. *(Found by review.)*
 - **The catalog's site is not built by a run.** It takes a Sphinx build for each new version, and
   can fail for reasons that are not the build's. It is built when it is looked at (scenario 6).

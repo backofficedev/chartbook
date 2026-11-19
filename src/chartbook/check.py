@@ -295,7 +295,7 @@ def check_paths(
             message = f"file not found: {missing.file_path}"
         if field == "path" and missing.file_type in _FILE_TYPE_FIELDS and _kept(manifest, missing):
             # A costly output: the store may have it (docs_src/design/keep.md)
-            message += "; it is marked keep = true, and `chartbook restore` puts it back from the store"
+            message += "; it is marked keep = true, and `chartbook restore` puts it back where the store has a version of it"
         (not_built if output and gathered else problems).append(Problem(toml_file, table, field, message))
 
     # A series' write-up. The build does not render these yet, so nothing
@@ -1424,31 +1424,60 @@ def check_sources(
     to resolve, and whether a table or query in it runs is found out when
     it is read.
     """
-    from chartbook.backends import duckdb_path
-
     if skip_outputs and not_built is None:
         return []
     problems = []
+    for toml_file, name, path in duckdb_files(manifest):
+        if Path(path).is_file():
+            continue
+        if not_built is not None:
+            not_built.append(Problem(toml_file, f"sources.{name}", "url", f"{NOT_BUILT_YET}: {path}"))
+            continue
+        problems.append(
+            Problem(
+                toml_file,
+                f"sources.{name}",
+                "url",
+                f"the DuckDB file is not there: {path}. The pipeline builds it.",
+            )
+        )
+    return problems
+
+
+def duckdb_files(manifest: dict) -> list[tuple[Path, str, str]]:
+    """Each DuckDB source of a manifest that is a file: the chartbook.toml that declares it, its name, and the file's path."""
+    from chartbook.backends import duckdb_path
+
+    found = []
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
-        toml_file = Path(pipeline_dir) / "chartbook.toml"
         for name, source in (pipeline_manifest.get("sources") or {}).items():
             if source.get("backend") != "duckdb":
                 continue
             path = duckdb_path(source["_resolved_url"], pipeline_dir)
-            if path != ":memory:" and not Path(path).is_file():
-                if not_built is not None:
-                    not_built.append(Problem(toml_file, f"sources.{name}", "url", f"{NOT_BUILT_YET}: {path}"))
-                    continue
-                problems.append(
-                    Problem(
-                        toml_file,
-                        f"sources.{name}",
-                        "url",
-                        f"the DuckDB file is not there: {path}. The pipeline builds it.",
-                    )
-                )
-    return problems
+            if path != ":memory:":
+                found.append((Path(pipeline_dir) / "chartbook.toml", name, path))
+    return found
+
+
+def nothing_is_built(manifest: dict, base_dir: Path) -> bool:
+    """Whether a lone pipeline has built none of what a build of it writes: no output with a path, and no DuckDB source's file.
+
+    A project just made, a fresh clone. One that declares no such thing
+    has nothing to build, and is not this.
+    """
+    from chartbook.conf_validation import declared_outputs
+
+    if manifest["project"].get("type") != "pipeline":
+        return False
+    sources = duckdb_files(manifest)
+    if any(Path(path).is_file() for _, _, path in sources):
+        return False
+    declared = sum(declared_outputs(get_pipeline_manifest(manifest, pid)) for pid in _working_pipeline_ids(manifest))
+    if not declared:
+        return bool(sources)
+    missing = [found for found in validate_source_files(manifest, base_dir) if found.file_type in OUTPUT_FILE_TYPES]
+    return built_nothing(manifest, missing)
 
 
 def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:

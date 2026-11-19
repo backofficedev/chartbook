@@ -477,8 +477,11 @@ def built_nothing(manifest: dict, missing_files: list) -> bool:
     pipelines = {missing.pipeline_id for missing in missing_files}
     if len(pipelines) != 1 or any(m.file_type not in OUTPUT_FILE_TYPES for m in missing_files):
         return False
-    pipeline_manifest = get_pipeline_manifest(manifest, pipelines.pop())
-    # Every path a build makes, as validate_source_files counts them
+    return len(missing_files) == declared_outputs(get_pipeline_manifest(manifest, pipelines.pop()))
+
+
+def declared_outputs(pipeline_manifest: dict) -> int:
+    """How many paths a pipeline's manifest declares that a build makes, as :func:`validate_source_files` counts them."""
     declared = 0
     for section, keys in (
         ("dataframes", ("path",)),
@@ -489,4 +492,4 @@ def built_nothing(manifest: dict, missing_files: list) -> bool:
     ):
         for entry in (pipeline_manifest.get(section) or {}).values():
             declared += sum(1 for key in keys if (entry.get(key) or "").strip())
-    return len(missing_files) == declared
+    return declared

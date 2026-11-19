@@ -649,9 +649,7 @@ class TestCheckCommand:
         assert result.exit_code == 1
         assert "[project] readme: file not found" in result.output
         assert "[charts.chart_0_0] path: not built yet: " in result.output
-        assert (
-            "1 problem(s) found in 1 manifest(s). 1 output is not built yet, which is no problem: `chartbook run` builds it."
-        ) in result.output
+        assert "1 problem(s) found in 1 manifest(s). 1 output is not built yet, which is no problem." in result.output
 
     def test_expired_license_exits_nonzero(self, pipeline_project, lenient_policy):
         expired = date.today() - timedelta(days=3)

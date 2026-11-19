@@ -547,8 +547,8 @@ class TestAPipelineThatDeclaresNothing:
         _git(empty, "checkout", "--quiet", "--detach")
         assert _run().output.splitlines() == self.QUIET
 
-    def test_one_whose_tables_are_all_in_a_source_is_told_what_is_missing(self, work, store, monkeypatch):
-        """It declares something a snapshot holds, and its build made none of it: said, and not passed over in silence."""
+    def test_one_whose_tables_are_all_in_a_source_fails_for_the_file_its_build_did_not_write(self, work, store, monkeypatch):
+        """Found by review: once the check stopped failing for a DuckDB file that is not there, nothing did. It is what the build writes, and a run looks for it."""
         directory = _folder(work / "tables", {
             "project": {"id": "acme/tables"},
             "scripts": {"build": "echo ran >> build.log"},
@@ -556,12 +556,34 @@ class TestAPipelineThatDeclaresNothing:
             "dataframes": {"curve": {"source": "local", "table": "curve", "docs": "d"}},
         })
         monkeypatch.chdir(_committed(directory))
-        assert run.unwritten(directory) == []  # a table in a source has no file of its own for a build to write
+        # The table has no file of its own; the file of its source is the build's to write
+        assert run.unwritten(directory) == [("source local", "./_data/never.duckdb")]
+        result = _run()
+        assert result.exit_code == 1
+        assert (
+            "Error: acme/tables: its build did not write 1 thing chartbook.toml declares: source local (./_data/never.duckdb). "
+            "Nothing after it was run."
+        ) in result.output.splitlines()
+        assert _snapshots(store) == []
+
+    def test_one_whose_tables_cannot_be_written_out_is_told_what_is_missing(self, work, store, monkeypatch):
+        """Its source's file is there, and holds no such table: it declares something a snapshot holds, and none of it is there to take. Said, and not passed over in silence."""
+        import duckdb
+
+        directory = _folder(work / "tables", {
+            "project": {"id": "acme/tables"},
+            "scripts": {"build": "echo ran >> build.log"},
+            "sources": {"local": {"backend": "duckdb", "url": "duckdb:///local.duckdb"}},
+            "dataframes": {"curve": {"source": "local", "table": "curve", "docs": "d"}},
+        }, ignored=IGNORED + "/local.duckdb\n")
+        duckdb.connect(str(directory / "local.duckdb")).close()  # a database with no table in it
+        monkeypatch.chdir(_committed(directory))
+        assert run.unwritten(directory) == []
         result = _run()
         assert result.exit_code == 0, result.output
-        (line,) = _after_the_run(result)
+        (line,) = _after_the_run(result)  # one line, whatever the engine's own message runs to
         assert line.startswith("acme/tables: not snapshotted: nothing it declares is there to take: acme/tables:curve (table curve in source 'local'")
-        assert _snapshots(store) == []
+        assert line.endswith(").") and _snapshots(store) == []
 
 
 class TestTheStore:
@@ -823,9 +845,10 @@ class TestWhatWasDeclared:
         assert run.unwritten(directory) == [
             ("table", "./_data/t.csv"), ("chart/curve", "./_output/curve.html"), ("notebook/analysis", "./_output/analysis.html"),
             ("model/ar1", "./_models/ar1.joblib"), ("file/raw", "./_data/raw.txt"), ("model/ar1's scores", "./_models/ar1.json"),
+            ("source local", "./_data/never.duckdb"),
         ]
         result = _run()
-        assert result.exit_code == 1 and "its build did not write 6 things chartbook.toml declares" in result.output
+        assert result.exit_code == 1 and "its build did not write 7 things chartbook.toml declares" in result.output
 
     @pytest.mark.parametrize("flags", [["--snapshot", "--no-gc-reminder"], ["--frozen"], ["--remake"]])
     def test_every_form_of_a_build_fails_for_it(self, demo, store, flags):

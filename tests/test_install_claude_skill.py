@@ -334,6 +334,15 @@ class TestSayingIt:
         result = CliRunner().invoke(main, ["install", "claude-skill"])
         assert "Note:" not in result.output and "Updated the skill" in result.output
 
+    @pytest.mark.parametrize("words", [["pin", "--check"], ["lineage", "--check"], ["run", "test"]])
+    def test_another_commands_check_and_a_run_say_it_as_any_command_does(self, stale_user_copy, pipeline_project, monkeypatch, words):
+        """Only `run --check` says it as a warning of its own: found by review, a mutant that took the note from every `--check` passed."""
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+        monkeypatch.chdir(pipeline_project)
+        result = CliRunner().invoke(main, words)
+        notes = [line for line in result.output.splitlines() if "Claude Code skill" in line]
+        assert len(notes) == 1 and notes[0].startswith("Note: your Claude Code skill"), result.output
+
     @pytest.mark.parametrize("terminal", [True, False])
     def test_check_warns_whether_or_not_a_terminal(self, stale_user_copy, pipeline_project, monkeypatch, terminal):
         monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: terminal)

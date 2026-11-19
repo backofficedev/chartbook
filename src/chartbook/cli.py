@@ -86,8 +86,6 @@ class _Main(_Group):
                 "is gone too. `chartbook run` checks what it builds.",
                 ctx,
             )
-        # Kept for the group's own callback, which runs before the command reads its options
-        ctx.meta["chartbook.words"] = list(args)
         return super().parse_args(ctx, args)
 
 
@@ -126,9 +124,9 @@ def main(ctx):
     _trust_answers.clear()
     from chartbook.multi_store import settings_warnings
     settings_warnings.clear()
-    # `install` is what mends it, and the check (`run --check`) says it as a warning of its own
-    checking = ctx.invoked_subcommand == "run" and "--check" in ctx.meta.get("chartbook.words", ())
-    if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install") and not checking:
+    # `install` is what mends it. `run` says it for itself once it has read its options: `run --check`
+    # says it as a warning of its own, whether or not at a terminal
+    if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install", "run"):
         _say_if_the_skill_is_stale()
     if not ctx.resilient_parsing:
         _remove_old_views()
@@ -1148,8 +1146,7 @@ def _check_pipeline(project_dir, within_days, policy_path):
     """
     import warnings
 
-    from chartbook.check import display_path, not_built_hint, read_policy, run_checks
-    from chartbook.conf_validation import OUTPUT_FILE_TYPES, built_nothing, validate_source_files
+    from chartbook.check import display_path, not_built_hint, nothing_is_built, read_policy, run_checks
     from chartbook.manifest import (
         _read_manifest_file,
         _working_pipeline_ids,
@@ -1212,7 +1209,6 @@ def _check_pipeline(project_dir, within_days, policy_path):
             project_dir,
             within_days=within_days,
             policy_label=policy_label,
-            skip_outputs=True,
             policy_given=policy_given,
             not_built=not_built,
         )
@@ -1222,9 +1218,10 @@ def _check_pipeline(project_dir, within_days, policy_path):
 
     for problem in problems:
         click.echo(problem.format(relative_to=Path.cwd()))
-    # What a build is to write and has not: listed, and no problem. A checkout that has not been built is no mistake
+    # What a build is to write and has not: listed, and no problem. A checkout that has not been built is no
+    # mistake. On stderr, as a warning is: what is on stdout is a problem to mend, or the line that says there is none
     for output in sorted(not_built, key=lambda found: (str(found.file), found.table, found.field)):
-        click.echo(output.format(relative_to=Path.cwd()))
+        click.echo(output.format(relative_to=Path.cwd()), err=True)
     outputs = (
         "" if not not_built
         else "1 output is not built yet" if len(not_built) == 1
@@ -1235,7 +1232,7 @@ def _check_pipeline(project_dir, within_days, policy_path):
         files = len({p.file for p in problems})
         click.echo(
             f"\n{len(problems)} problem(s) found in {files} manifest(s)."
-            + (f" {outputs}, which is no problem: `chartbook run` builds {'it' if len(not_built) == 1 else 'them'}." if outputs else ""),
+            + (f" {outputs}, which is no problem." if outputs else ""),
             err=True,
         )
         _say_trust_level(manifest, project_dir)
@@ -1257,9 +1254,7 @@ def _check_pipeline(project_dir, within_days, policy_path):
     shown = display_path(manifest_path, relative_to=Path.cwd())
     note = f"; {outputs}" if outputs else ""
     click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts}{note})")
-    if outputs and built_nothing(
-        manifest, [missing for missing in validate_source_files(manifest, project_dir) if missing.file_type in OUTPUT_FILE_TYPES]
-    ):
+    if outputs and nothing_is_built(manifest, project_dir):
         # A project just made, a fresh clone: one line on what builds it
         click.echo(not_built_hint(manifest), err=True)
     _say_trust_level(manifest, project_dir)
@@ -3402,11 +3397,13 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     have everything committed, and its build must leave it so. The first
     that fails stops the run.
     """
+    if not check_only:
+        _say_if_the_skill_is_stale()
     if check_only:
         with_it = [
             name for name, given in (
                 (f"a script ({script})", script != "build"), ("--force", force), ("--snapshot", make_snapshot),
-                ("--frozen", frozen), ("--remake", remake), ("--upstream", upstream),
+                ("--frozen", frozen), ("--remake", remake), ("--upstream", upstream), ("--no-gc-reminder", no_gc_reminder),
             ) if given
         ]
         if with_it:

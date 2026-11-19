@@ -503,9 +503,10 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
     as a snapshot asks: an asset is there when its path holds a file, so a
     folder with nothing in it, or a pattern that matches nothing, is not.
     A dataframe, a chart, a notebook, a model, the scores a model declares
-    (``metrics_path``) and a files asset are looked for. A dataframe that
-    is a table or a query in a source has no file of its own, and a note is
-    prose kept in git, which no build writes: neither is.
+    (``metrics_path``), a files asset and the file of a DuckDB source are
+    looked for. A dataframe that is a table or a query in a source has no
+    file of its own (its source's file is what the build writes), and a
+    note is prose kept in git, which no build writes: neither is.
 
     :raises OSError: If there is no ``chartbook.toml`` there to read.
     :raises ValueError: If it is not valid TOML.
@@ -526,6 +527,28 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
         scores = models[name].get("metrics_path") if isinstance(models[name], dict) else None
         if isinstance(scores, str) and scores.strip() and not os.path.isfile(os.path.normpath(directory / scores)):
             missing.append((f"model/{name}'s scores", scores))
+    # The file of a DuckDB source: what its tables and queries are read from, and what a snapshot writes them out of
+    from chartbook.backends import MEMORY_URL, duckdb_path
+    from chartbook.manifest import validate_sources
+
+    try:
+        sources = validate_sources(_read_manifest(directory).get("sources"), directory)
+    except ValueError:
+        sources = {}  # sources that do not read: said by a snapshot, and by `chartbook run --check`
+    for name in sorted(sources):
+        url = sources[name].get("_resolved_url")
+        if sources[name].get("backend") != "duckdb" or not url or url == MEMORY_URL:
+            continue
+        try:
+            path = Path(duckdb_path(url, directory))
+        except ValueError:
+            continue
+        if not path.is_file():
+            try:
+                shown = "./" + path.resolve().relative_to(directory.resolve()).as_posix()
+            except ValueError:
+                shown = str(path)
+            missing.append((f"source {name}", shown))
     return missing
 
 
@@ -1570,7 +1593,10 @@ def run(
                             made = snapshots.make(step.directory, store, built_by_run=True, ask=False)
                     except snapshots.NothingToSnapshot as error:
                         # Only what a snapshot writes out itself is left to be missing: a table in a source
-                        listed = "; ".join(f"{name} ({reason})" for name, reason in error.not_built[:3])
+                        # An engine's message may run to several lines (`Did you mean …?`): its first says it
+                        listed = "; ".join(
+                            f"{name} ({(str(reason).splitlines() or [''])[0]})" for name, reason in error.not_built[:3]
+                        )
                         why = "nothing it declares is there to take" + (f": {listed}" if listed else "")
                     except snapshots.NotInEveryStore as error:
                         why = f"not in every store it goes to. {str(error).rstrip('.')}"
