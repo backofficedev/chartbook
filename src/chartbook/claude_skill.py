@@ -8,7 +8,7 @@ describes in its front matter::
 
 A release keeps that equal to the package's version (a test does). An
 installed copy is then compared with the ChartBook that is running:
-``chartbook install claude-skill`` says what it replaced, ``chartbook check``
+``chartbook install claude-skill`` says what it replaced, ``chartbook run --check``
 warns, and any other command, run by a person at a terminal, says so in one
 line (:func:`chartbook.cli._say_if_the_skill_is_stale`). Nothing here ever
 stops a command.

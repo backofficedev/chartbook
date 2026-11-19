@@ -87,7 +87,7 @@ You can render the documentation site, without running anything, with:
 ```
 chartbook docs build -f
 ```
-`chartbook run` runs `doit`, including its final documentation task, and `chartbook check`
+`chartbook run` runs `doit`, including its final documentation task, and `chartbook run --check`
 says what `chartbook.toml` is missing.
 {% endif %}
 

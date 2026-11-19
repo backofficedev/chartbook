@@ -488,7 +488,7 @@ class TestSeriesTables:
     def test_check_reports_a_missing_write_up(self, project, monkeypatch):
         self._load_with(project, {"amount": {"docs_path": "docs_src/series/amount.md"}})
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["check"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         assert result.exit_code == 1
         assert "[dataframes.dataframe_0.series.amount] docs_path: file not found" in (
             result.output

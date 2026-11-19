@@ -82,7 +82,7 @@ def kept_out_of_home(scratch: Path):
         monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "a-test-machine")
         # The user-level Claude Code skill, which commands compare with the
         # package: this machine's own copy, perhaps an old one, must not reach a
-        # test's output (`chartbook check` warns of it)
+        # test's output (`chartbook run --check` warns of it)
         monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(scratch / "claude"))
         # No git housekeeping in the background: `git commit` may start `gc
         # --auto` or maintenance detached, which goes on writing under

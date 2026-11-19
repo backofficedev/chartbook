@@ -66,7 +66,7 @@ disk. When the two pipelines are in one repository, name the other by its folder
 "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
 ```
 
-`chartbook check` warns while a dependency is declared and not pinned. Dependencies form a directed
+`chartbook run --check` warns while a dependency is declared and not pinned. Dependencies form a directed
 acyclic graph: every command that would pin or build a cycle refuses and says who depends on whom.
 
 ## They build, and the build is in the store
@@ -241,7 +241,7 @@ Three things on the other pipeline's side make this work:
   from old ones.
 - **Write parquet without the pandas index:** `df.to_parquet(path, index=False)`. An index with no
   name is written as a column of row positions, which shift when a pull has more rows, so no later
-  build has the pinned rows. `chartbook snapshot` and `chartbook check` say when a file has one.
+  build has the pinned rows. `chartbook snapshot` and `chartbook run --check` say when a file has one.
 - **Snapshot and pin with ChartBook 0.6.0 or later.** A pin made from a snapshot of an earlier
   ChartBook records no rows, and is met by the same file only. `chartbook pin` says when a pin is
   of that kind. To pin its rows, nothing has to be built again: `chartbook snapshot` in the other

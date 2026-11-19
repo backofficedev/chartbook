@@ -171,7 +171,7 @@ def _docs(entry: dict, base_dir: Optional[Path] = None, cache: Optional[hashing.
             try:
                 docs["content_hash"] = hashing.hash_file(Path(base_dir) / entry["docs_path"], cache).content_hash
             except OSError:
-                pass  # a write-up that is not there: `chartbook check` reports it
+                pass  # a write-up that is not there: `chartbook run --check` reports it
         return docs
     if entry.get("docs"):
         import hashlib
@@ -392,7 +392,7 @@ def _describe_in_source(entry: dict, where: str) -> Optional[tuple[list[dict], i
     """A table or query's columns and row count, asked of its engine.
 
     None, with a warning, when the engine cannot answer: the DuckDB file is
-    not built yet (which ``chartbook check`` also reports), the table is
+    not built yet (which ``chartbook run --check`` also reports), the table is
     not there, or the query does not bind.
     """
     from chartbook.backends import BackendError, open_backend
@@ -1408,7 +1408,7 @@ def build_index(
 
     A declared asset whose file does not exist still has a record; it has
     no ``content_hash``. The index says what the manifest declares, and
-    ``chartbook check`` is what complains about missing files.
+    ``chartbook run --check`` is what complains about missing files.
 
     :param manifest: The manifest, from :func:`chartbook.manifest.load_manifest`.
     :param cache: A hash cache, so unchanged files are not read again.

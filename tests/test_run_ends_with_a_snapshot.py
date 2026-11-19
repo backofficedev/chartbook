@@ -547,8 +547,8 @@ class TestAPipelineThatDeclaresNothing:
         _git(empty, "checkout", "--quiet", "--detach")
         assert _run().output.splitlines() == self.QUIET
 
-    def test_one_whose_tables_are_all_in_a_source_is_told_what_is_missing(self, work, store, monkeypatch):
-        """It declares something a snapshot holds, and its build made none of it: said, and not passed over in silence."""
+    def test_one_whose_tables_are_all_in_a_source_fails_for_the_file_its_build_did_not_write(self, work, store, monkeypatch):
+        """Found by review: once the check stopped failing for a DuckDB file that is not there, nothing did. It is what the build writes, and a run looks for it."""
         directory = _folder(work / "tables", {
             "project": {"id": "acme/tables"},
             "scripts": {"build": "echo ran >> build.log"},
@@ -556,12 +556,56 @@ class TestAPipelineThatDeclaresNothing:
             "dataframes": {"curve": {"source": "local", "table": "curve", "docs": "d"}},
         })
         monkeypatch.chdir(_committed(directory))
-        assert run.unwritten(directory) == []  # a table in a source has no file of its own for a build to write
+        # The table has no file of its own; the file of its source is the build's to write
+        assert run.unwritten(directory) == [("source local", "./_data/never.duckdb")]
+        result = _run()
+        assert result.exit_code == 1
+        assert (
+            "Error: acme/tables: its build did not write 1 thing chartbook.toml declares: source local (./_data/never.duckdb). "
+            "Nothing after it was run."
+        ) in result.output.splitlines()
+        assert _snapshots(store) == []
+
+    def test_which_sources_files_a_build_is_asked_for(self, work, store, monkeypatch):
+        """A DuckDB file, wherever it is said to be; not a database in memory, not a warehouse, and not a source that does not read, which takes no other with it."""
+        directory = _folder(work / "sources", {
+            "project": {"id": "acme/sources"},
+            "scripts": {"build": "echo ran >> build.log"},
+            "sources": {
+                "here": {"backend": "duckdb", "url": "duckdb:///_data/here.duckdb"},
+                "elsewhere": {"backend": "duckdb", "url": f"duckdb:///{(work / 'elsewhere.duckdb').as_posix()}"},
+                "memory": {"backend": "duckdb", "url": "duckdb:///:memory:"},
+                "refused": {"backend": "duckdb", "url": "duckdb:///_data/x.duckdb?access_mode=read_only"},
+            },
+        })
+        expected = [("source elsewhere", str(work / "elsewhere.duckdb")), ("source here", "./_data/here.duckdb")]
+        assert run.unwritten(directory) == expected
+        # Found by review: named by a relative folder, the file was looked for under the folder's name twice
+        monkeypatch.chdir(work)
+        assert run.unwritten("sources") == expected
+        (directory / "_data").mkdir()
+        (directory / "_data" / "here.duckdb").write_bytes(b"")
+        (work / "elsewhere.duckdb").write_bytes(b"")
+        assert run.unwritten("sources") == [] and run.unwritten(directory) == []
+
+    def test_one_whose_tables_cannot_be_written_out_is_told_what_is_missing(self, work, store, monkeypatch):
+        """Its source's file is there, and holds no such table: it declares something a snapshot holds, and none of it is there to take. Said, and not passed over in silence."""
+        import duckdb
+
+        directory = _folder(work / "tables", {
+            "project": {"id": "acme/tables"},
+            "scripts": {"build": "echo ran >> build.log"},
+            "sources": {"local": {"backend": "duckdb", "url": "duckdb:///local.duckdb"}},
+            "dataframes": {"curve": {"source": "local", "table": "curve", "docs": "d"}},
+        }, ignored=IGNORED + "/local.duckdb\n")
+        duckdb.connect(str(directory / "local.duckdb")).close()  # a database with no table in it
+        monkeypatch.chdir(_committed(directory))
+        assert run.unwritten(directory) == []
         result = _run()
         assert result.exit_code == 0, result.output
-        (line,) = _after_the_run(result)
+        (line,) = _after_the_run(result)  # one line, whatever the engine's own message runs to
         assert line.startswith("acme/tables: not snapshotted: nothing it declares is there to take: acme/tables:curve (table curve in source 'local'")
-        assert _snapshots(store) == []
+        assert line.endswith(").") and _snapshots(store) == []
 
 
 class TestTheStore:
@@ -761,7 +805,7 @@ class TestWhatWasDeclared:
         """Found by review: `[[dataframes]]` was a traceback, before the build in a run and in `chartbook snapshot`. A run builds, as it did, and says it."""
         directory = _folder(work / "arrays", {"project": {"id": "acme/arrays"}, "scripts": {"build": BUILD}, **sections})
         monkeypatch.chdir(_committed(directory))
-        why = f"acme/arrays cannot have a snapshot: chartbook.toml: {said} `chartbook check` says more."
+        why = f"acme/arrays cannot have a snapshot: chartbook.toml: {said} `chartbook run --check` says more."
         result = _run()
         assert result.exit_code == 0 and result.exception is None, result.output
         assert result.output.splitlines() == [
@@ -823,9 +867,10 @@ class TestWhatWasDeclared:
         assert run.unwritten(directory) == [
             ("table", "./_data/t.csv"), ("chart/curve", "./_output/curve.html"), ("notebook/analysis", "./_output/analysis.html"),
             ("model/ar1", "./_models/ar1.joblib"), ("file/raw", "./_data/raw.txt"), ("model/ar1's scores", "./_models/ar1.json"),
+            ("source local", "./_data/never.duckdb"),
         ]
         result = _run()
-        assert result.exit_code == 1 and "its build did not write 6 things chartbook.toml declares" in result.output
+        assert result.exit_code == 1 and "its build did not write 7 things chartbook.toml declares" in result.output
 
     @pytest.mark.parametrize("flags", [["--snapshot", "--no-gc-reminder"], ["--frozen"], ["--remake"]])
     def test_every_form_of_a_build_fails_for_it(self, demo, store, flags):

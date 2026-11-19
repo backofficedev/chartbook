@@ -41,7 +41,7 @@ recognized and refused as not yet supported. See
 
 Finding *a pipeline* by name is here too, in :func:`locate_pipeline`: the
 one resolution chain, which asks the ``[dependencies]`` of the pipeline
-that wants to know, then the catalog. ``chartbook check``, the index, the
+that wants to know, then the catalog. ``chartbook run --check``, the index, the
 catalog lookups and cross-pipeline references all go through it.
 """
 
@@ -562,7 +562,7 @@ def declared_files(
     for kind in RESOLVABLE_KINDS:
         entries = raw.get(KIND_TABLES[kind]) or {}
         if not isinstance(entries, dict):
-            continue  # `[[dataframes]]`, `dataframes = "x"`: not a table of tables, which `chartbook check` says
+            continue  # `[[dataframes]]`, `dataframes = "x"`: not a table of tables, which `chartbook run --check` says
         for name in sorted(entries):
             entry = entries[name]
             declared = entry.get("path") if isinstance(entry, dict) else None
@@ -589,7 +589,7 @@ def declared_in_source(manifest_dir: Union[str, Path]) -> list[tuple[AssetRef, d
     found = []
     entries = raw.get("dataframes") or {}
     if not isinstance(entries, dict):
-        return found  # not a table of tables, which `chartbook check` says
+        return found  # not a table of tables, which `chartbook run --check` says
     for name in sorted(entries):
         entry = entries[name]
         if not isinstance(entry, dict) or not (entry.get("table") or entry.get("query")):
@@ -2366,7 +2366,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     if (dependency.kind == "store" and real_id == _own_id(manifest_dir)) or (
         dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir)
     ):
-        # As `chartbook pin` refuses a store one and `chartbook check` a folder one
+        # As `chartbook pin` refuses a store one and `chartbook run --check` a folder one
         raise AssetNotPinnedError(
             not_pinned.asset, "no_snapshot", f"{dependency.id!r} is this pipeline itself: a pipeline cannot depend on itself."
         )

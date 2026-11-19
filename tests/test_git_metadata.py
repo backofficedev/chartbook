@@ -151,13 +151,13 @@ class TestRepoUrlDefault:
         self, pipeline_project, git_env
     ):
         runner = CliRunner()
-        before = runner.invoke(main, ["check", "--project-dir", str(pipeline_project)])
+        before = runner.invoke(main, ["run", "--check", "--project-dir", str(pipeline_project)])
         assert "[project] repo_url" in before.output
 
         _commit_all(pipeline_project)
         _git(pipeline_project, "remote", "add", "origin", "git@github.com:octo/rates.git")
         clear_git_remote_cache()
-        after = runner.invoke(main, ["check", "--project-dir", str(pipeline_project)])
+        after = runner.invoke(main, ["run", "--check", "--project-dir", str(pipeline_project)])
         assert "[project] repo_url" not in after.output
 
 

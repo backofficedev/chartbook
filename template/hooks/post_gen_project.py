@@ -228,6 +228,6 @@ elif environment_manager == "pixi":
 if include_chartbook:
     print("  chartbook run        # runs doit, whose final task renders the site")
     print("  chartbook docs open       # opens the site")
-    print("  chartbook check           # what chartbook.toml still needs")
+    print("  chartbook run --check     # what chartbook.toml still needs")
 else:
     print("  doit")

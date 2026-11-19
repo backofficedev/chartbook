@@ -48,7 +48,7 @@ chartbook docs open
 `chartbook run` runs the build script that `chartbook.toml` names, `[scripts] build = "doit"`. `doit` runs every task in `dodo.py` but the tests (`doit run_pytest` runs those): here it executes the notebook into `_output/`. The final documentation task runs `chartbook docs build -f`, replacing the site with one that includes the executed notebook. Your build script owns that documentation step; `chartbook run` only runs the script.
 
 ```console
-chartbook check
+chartbook run --check
 ```
 
 This checks `chartbook.toml` and the files it names against the default policy. Once built, a new project has one thing to fix: its `repo_url`, which a git remote fills in.

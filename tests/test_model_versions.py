@@ -454,7 +454,7 @@ class TestStaleness:
 
     def test_check_on_a_store_of_0_2_says_so_and_does_not_crash(self, trained, monkeypatch):
         """Found trying 0.3.0 on a real store before migrating it: every other command
-        said what to do, and `chartbook check` raised the StoreError as a traceback."""
+        said what to do, and `chartbook run --check` raised the StoreError as a traceback."""
         import os
 
         rates, forecast = trained
@@ -472,7 +472,7 @@ class TestStaleness:
         with pytest.warns(UserWarning, match=r"\[models.m.aliases\] not checked. The store at .* has the layout of ChartBook 0.2"):
             check.check_model_labels(load_manifest(forecast), forecast)
         monkeypatch.chdir(forecast)
-        result = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         assert result.exception is None or isinstance(result.exception, SystemExit), result.output
         assert "trained_on: not checked" in result.output
         # A site of a pipeline with a model needs the store: it stops, saying what to do

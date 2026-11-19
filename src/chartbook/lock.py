@@ -668,7 +668,7 @@ def cannot_be_raised(manifest_file: Union[str, Path], text: str, now: str) -> st
     """Why ``chartbook pin`` could not write a manifest's ``requires_chartbook``; empty where it can.
 
     Asked before anything is written, and by what only tells (a build, a
-    read, ``chartbook check``), so that none of them names a command that
+    read, ``chartbook run --check``), so that none of them names a command that
     would then say it could not. The manifest is written by moving a new
     file over it (:func:`_write_in_its_place`), which needs its folder to
     be writable, and which a file with a second name (a hard link) is not
@@ -4016,7 +4016,7 @@ def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optio
     with the lockfile as it would be written: one that leads back to this
     pipeline, or into pipelines that depend on each other, is refused. A
     cycle reached only through pins made before is not this pin's doing:
-    ``chartbook run`` and ``chartbook check`` say it, and the pin, a read of
+    ``chartbook run`` and ``chartbook run --check`` say it, and the pin, a read of
     another dependency say, is not refused for it. A pin that changes no
     entry walks nothing.
     """

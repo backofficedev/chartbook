@@ -990,7 +990,7 @@ class TestOneSourceForTheSkill:
 
 
 class TestTheWorkflow:
-    """The GitHub Actions workflow a project gets runs its tests, then `chartbook check`."""
+    """The GitHub Actions workflow a project gets runs its tests, then `chartbook run --check`."""
 
     WORKFLOW = Path(".github") / "workflows" / "python_tests.yml"
 
@@ -1083,7 +1083,7 @@ class TestTheWorkflow:
         names = [step.get("name") for step in steps]
         (check,) = [step for step in steps if "chartbook" in step.get("run", "")]
         assert names.index(check["name"]) > names.index("Install Python environment")
-        assert check["run"].splitlines() == ["source .venv/bin/activate", "chartbook check --skip-outputs"]
+        assert check["run"].splitlines() == ["source .venv/bin/activate", "chartbook run --check"]
         # A project made without ChartBook has no manifest, and no chartbook installed
         assert check["if"] == "hashFiles('chartbook.toml') != ''"
 
@@ -1211,7 +1211,7 @@ class TestARenderedProjectBuilds:
         from chartbook.cli import main
 
         result = CliRunner().invoke(
-            main, ["check", "--skip-outputs", "--project-dir", str(project)]
+            main, ["run", "--check", "--project-dir", str(project)]
         )
         # With no [policy], a recommended field is a warning, not a failure
         assert result.exit_code == 0, result.output
@@ -1328,7 +1328,7 @@ class TestTheQuestions:
         generate_project(template_dir, temp_dir, WITH_CHARTBOOK)
         said = capfd.readouterr().out
         steps = said[said.index("Next steps:"):]
-        for command in ("chartbook docs build", "chartbook run", "chartbook docs open", "chartbook check"):
+        for command in ("chartbook docs build", "chartbook run", "chartbook docs open", "chartbook run --check"):
             assert f"  {command}" in steps
         # The site comes first, before anything is installed
         assert steps.index("chartbook docs build") < steps.index("pip install -r requirements.txt")

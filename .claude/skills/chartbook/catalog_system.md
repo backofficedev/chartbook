@@ -62,7 +62,7 @@ Outside a consumer pipeline, this reads the catalog's newest snapshot. Inside a 
 
 The catalog's pipeline and asset pages are hubs over snapshot versions. A version's own site is rendered from its stored documents and built files in a sandbox; notebooks are never executed again. Asset hubs compare consecutive indexes, including column and row changes. The Stores page shows locations, reachability, routing, and snapshot counts. Published indexes keep store names while omitting local folder locations. `chartbook ls stores` and `chartbook ls versions` expose those facts on the command line.
 
-The catalog does not run build scripts or check working members. Use `chartbook run` and `chartbook check` inside a pipeline. Its own site is built with `chartbook docs build`; a task runner can make that the final step of the build script.
+The catalog does not run build scripts or check working members. Use `chartbook run` and `chartbook run --check` inside a pipeline. Its own site is built with `chartbook docs build`; a task runner can make that the final step of the build script.
 
 ## Upgrading a folder catalog
 

@@ -596,7 +596,7 @@ class TestCheck:
 
         _edit_toml(pipeline_project, complete)
         monkeypatch.chdir(pipeline_project)
-        without = CliRunner().invoke(main, ["check"])
+        without = CliRunner().invoke(main, ["run", "--check"])
         assert without.exit_code == 0, without.output
         assert "models" not in without.output
 
@@ -607,7 +607,7 @@ class TestCheck:
                 name="Encoder", description="d", trained_on=["dataframe_0"], docs="An encoder."
             ),
         )
-        with_models = CliRunner().invoke(main, ["check"])
+        with_models = CliRunner().invoke(main, ["run", "--check"])
         assert with_models.exit_code == 0, with_models.output
         assert "1 notebooks, 2 models)" in with_models.output or (
             "0 notebooks, 2 models)" in with_models.output

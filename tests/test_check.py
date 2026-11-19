@@ -1,4 +1,4 @@
-"""Tests for ``chartbook check`` and the checks behind it."""
+"""Tests for ``chartbook run --check`` and the checks behind it."""
 
 import warnings
 from datetime import date, datetime, timedelta
@@ -64,7 +64,7 @@ def lenient_policy(tmp_path):
 
 
 def _invoke(*args):
-    return CliRunner().invoke(main, ["check", *map(str, args)])
+    return CliRunner().invoke(main, ["run", "--check", *map(str, args)])
 
 
 class TestParseExpiration:
@@ -633,12 +633,23 @@ class TestCheckCommand:
         ) in result.output
         assert "problem(s) found in 1 manifest(s)" in result.output
 
-    def test_broken_path_exits_nonzero(self, pipeline_project, lenient_policy):
+    def test_an_output_that_is_not_built_is_listed_and_is_no_problem(self, pipeline_project, lenient_policy):
+        """What a build writes: a checkout that has not been built is no mistake, and `chartbook run` fails where its build did not write one."""
         (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
         result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
+        assert result.exit_code == 0, result.output
+        assert "[charts.chart_0_0] path: not built yet: " in result.output
+        assert "file not found" not in result.output and "problem(s) found" not in result.output
+        assert result.output.splitlines()[-1].endswith("; 1 output is not built yet)")
+
+    def test_a_problem_and_an_output_not_built_are_told_apart(self, pipeline_project, lenient_policy):
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        (pipeline_project / "README.md").unlink()
+        result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
         assert result.exit_code == 1
-        assert "[charts.chart_0_0] path: file not found" in result.output
-        assert "1 problem(s) found" in result.output
+        assert "[project] readme: file not found" in result.output
+        assert "[charts.chart_0_0] path: not built yet: " in result.output
+        assert "1 problem(s) found in 1 manifest(s). 1 output is not built yet, which is no problem." in result.output
 
     def test_expired_license_exits_nonzero(self, pipeline_project, lenient_policy):
         expired = date.today() - timedelta(days=3)
@@ -743,30 +754,23 @@ class TestCheckCommand:
         assert "warning: " in result.output
         assert "unknown key 'maintaner'" in result.output
 
-    def test_skip_outputs_passes_a_project_that_has_not_been_built(
+    def test_a_project_that_has_not_been_built_passes(
         self, pipeline_project_with_notes, lenient_policy
     ):
         """A fresh checkout in CI: sources are there, nothing has been built."""
-        import shutil
-
         project = pipeline_project_with_notes
         remove_tree(project / "_data")
         remove_tree(project / "_output")
-        args = ("--project-dir", project, "--policy", lenient_policy)
-
-        without = _invoke(*args)
-        assert without.exit_code == 1
-        # Nothing built is not a mistake in the manifest, and the way on is named
-        assert "[dataframes.dataframe_0] path: not built yet:" in without.output
-        assert "[charts.chart_0_0] path: not built yet:" in without.output
-        assert "file not found" not in without.output
-        # It has no build script, so `chartbook run` would build nothing
-        assert "Nothing is built yet: build its outputs (it has no build script" in without.output
-        assert "the same check with --skip-outputs checks the rest" in without.output
-
-        result = _invoke(*args, "--skip-outputs")
+        result = _invoke("--project-dir", project, "--policy", lenient_policy)
+        # Nothing built is not a mistake in the manifest: each output is listed, and none is a problem
         assert result.exit_code == 0, result.output
-        assert "built outputs not checked" in result.output
+        assert "[dataframes.dataframe_0] path: not built yet:" in result.output
+        assert "[charts.chart_0_0] path: not built yet:" in result.output
+        assert "file not found" not in result.output
+        assert " outputs are not built yet)" in result.output
+        # It has no build script, so `chartbook run` would build nothing, and the way on says so
+        assert "Nothing is built yet: build its outputs (it has no build script for `chartbook run` to run)." in result.output
+        assert "--skip-outputs" not in result.output
 
     def test_a_pipeline_with_a_build_script_that_has_built_nothing_is_told_to_run_it(
         self, pipeline_project_with_notes, lenient_policy
@@ -782,8 +786,8 @@ class TestCheckCommand:
         remove_tree(project / "_data")
         remove_tree(project / "_output")
         result = _invoke("--project-dir", project, "--policy", lenient_policy)
-        assert result.exit_code == 1
-        assert "Nothing is built yet: `chartbook run` builds it" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Nothing is built yet: `chartbook run` builds it." in result.output
 
     def test_a_catalog_is_told_a_file_is_not_found(self, catalog_project, lenient_policy):
         result = _invoke("--project-dir", catalog_project)
@@ -792,15 +796,14 @@ class TestCheckCommand:
         assert "Diagnostics" in result.output
 
     def test_a_pipeline_built_in_part_lacks_a_file(self, pipeline_project, lenient_policy):
-        """Built, and one output missing: that is a mistake, and no "nothing is built" hint."""
+        """Built, and one output missing: listed, and no "nothing is built" line. That it is a mistake is `chartbook run`'s to say, of its own build."""
         (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
         result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
-        assert result.exit_code == 1
-        assert "[dataframes.dataframe_0] path: file not found" in result.output
-        assert "not built yet" not in result.output
+        assert result.exit_code == 0, result.output
+        assert "[dataframes.dataframe_0] path: not built yet: " in result.output
         assert "Nothing is built yet" not in result.output
 
-    def test_skip_outputs_still_checks_files_kept_in_the_repository(
+    def test_files_kept_in_the_repository_are_checked_built_or_not(
         self, pipeline_project_with_notes, lenient_policy
     ):
         project = pipeline_project_with_notes
@@ -808,26 +811,26 @@ class TestCheckCommand:
         (project / "docs_src" / "note1.md").unlink()
         (project / "README.md").unlink()
         result = _invoke(
-            "--project-dir", project, "--policy", lenient_policy, "--skip-outputs"
+            "--project-dir", project, "--policy", lenient_policy
         )
         assert result.exit_code == 1
         assert "[charts.chart_0_0] docs_path: file not found" in result.output
         assert "[notes.note1] path: file not found" in result.output
         assert "[project] readme: file not found" in result.output
 
-    def test_skip_outputs_still_checks_fields_and_licenses(self, pipeline_project):
+    def test_fields_and_licenses_are_checked_built_or_not(self, pipeline_project):
         expired = date.today() - timedelta(days=3)
         _set_license_expiration(pipeline_project, expired.isoformat())
         policy = pipeline_project.parent / "policy.toml"
         policy.write_text('[policy.required]\nproject = ["repo_url"]\n', encoding="utf-8", newline="\n")
         result = _invoke(
-            "--project-dir", pipeline_project, "--policy", policy, "--skip-outputs"
+            "--project-dir", pipeline_project, "--policy", policy
         )
         assert result.exit_code == 1
         assert f"[project] repo_url: required by the policy in {policy}" in result.output
         assert "license expired on" in result.output
 
-    def test_skip_outputs_covers_notebooks_and_globs(self, tmp_path, lenient_policy):
+    def test_notebooks_and_globs_are_outputs_too(self, tmp_path, lenient_policy):
         from tests.fixtures import create_pipeline_project
 
         project = create_pipeline_project(tmp_path / "glob", use_glob_paths=True)
@@ -838,9 +841,10 @@ class TestCheckCommand:
             config["notebooks"]["analysis"] = {"path": "_output/analysis.ipynb"}
 
         _edit_toml(project, edit)
-        args = ("--project-dir", project, "--policy", lenient_policy)
-        assert _invoke(*args).exit_code == 1
-        assert _invoke(*args, "--skip-outputs").exit_code == 0
+        result = _invoke("--project-dir", project, "--policy", lenient_policy)
+        assert result.exit_code == 0, result.output
+        assert "[notebooks.analysis] path: not built yet: " in result.output
+        assert sum("] path: not built yet: " in line and "*" in line for line in result.output.splitlines()) >= 1
 
     def test_negative_window_is_a_usage_error(self, pipeline_project):
         result = _invoke("--project-dir", pipeline_project, "--within", "-1")

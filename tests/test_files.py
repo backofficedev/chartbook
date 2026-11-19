@@ -422,7 +422,7 @@ class TestCheck:
 
     def test_summary_counts_files_assets(self, project, monkeypatch):
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         assert "3 files assets" in result.output
 
     def test_diagnostics_have_a_row_per_files_asset(self, project):

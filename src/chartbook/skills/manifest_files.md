@@ -212,7 +212,7 @@ says which repository when more than one claims the ID). `path` is a directory
 holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
 `git` is a repository URL, optionally with `rev`. Never `path` and `git` both.
 
-- `chartbook check` reports a `path` that is missing, has no `chartbook.toml`, is
+- `chartbook run --check` reports a `path` that is missing, has no `chartbook.toml`, is
   a catalog, or is the pipeline itself, and a model whose `trained_on` names a
   dataframe the dependency does not declare.
 - `index.json` lists them under `dependencies` in the pipeline's record.
@@ -296,13 +296,13 @@ and spaces, however the remote is written (`https://`, `ssh://`,
 `user@host:path`); write references in lowercase too (`acme/rates`, not
 `Acme/rates`). A clone of a folder on disk (a path remote) takes its own
 folder's name. An SSH host alias (`git@github.com-work:acme/rates.git`) gives
-the same ID and counts as another repository's address. `repo_url` comes before the remote, and `chartbook check` warns
+the same ID and counts as another repository's address. `repo_url` comes before the remote, and `chartbook run --check` warns
 when the two name different repositories. Adding a remote to a pipeline that
 had none changes its ID (`first_pipeline` becomes `testorg/first_pipeline`),
 and its snapshots are made under the new one; `chartbook pin`/`update` say
 when a dependency named by the old ID has newer snapshots of the same
 repository under another, and name the entry to write
-(`"first_pipeline" = { id = "testorg/first_pipeline" }`); `chartbook check`
+(`"first_pipeline" = { id = "testorg/first_pipeline" }`); `chartbook run --check`
 warns when a catalog key or such a dependency no longer matches what the
 folder calls itself. Two checkouts of one repository (a worktree, a second
 clone) are one pipeline: a catalog lists it once. Set `[project] id` to pin
@@ -495,8 +495,8 @@ Its address is `file/<name>` (another pipeline's: `<dep>:file/<name>`).
 files, sorted; `assets.index("file/x")` a LazyFrame of them (`path`,
 `size_bytes`, `sha256`, and a column per `key=value` folder). Both work for a
 dataframe of many parts too. `chartbook path file/x --files` prints the
-files. `chartbook check` fails when the path matches no file (not with
-`--skip-outputs`).
+files. `chartbook run` fails when its build leaves the path matching no file;
+`chartbook run --check` lists it as `not built yet`, which is no problem there.
 
 ## Site Directory (Custom Pages)
 

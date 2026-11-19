@@ -944,7 +944,7 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
     location" in ``docs_src/design/asset-graph.md``.
 
     Only the table's shape is checked. Whether a ``path`` holds a pipeline
-    is ``chartbook check``'s business: a manifest has to load on a machine
+    is ``chartbook run --check``'s business: a manifest has to load on a machine
     where a dependency is not there yet.
 
     Each ``path`` entry gains ``_resolved_path``, the directory made
@@ -1164,7 +1164,7 @@ def validate_aliases(aliases, where: str) -> dict:
 
     A version is named by the start of its content hash, which is the same
     on every machine and every branch. Whether the version a label points
-    at is on this machine is for ``chartbook check`` to say.
+    at is on this machine is for ``chartbook run --check`` to say.
 
     :param aliases: The table as parsed.
     :param where: The model's table, for messages: ``[models.x]``.
@@ -1211,7 +1211,7 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
     (``"treasury_rates"``) or to another (``"ftsfr/rates:treasury_rates"``).
     One of this pipeline's must be declared here. Another pipeline's must be
     in a pipeline that ``[dependencies]`` declares. Whether that pipeline
-    has such a dataframe is for ``chartbook check`` to say.
+    has such a dataframe is for ``chartbook run --check`` to say.
 
     Each entry gains ``_resolved_path`` and ``_trained_on``, the parsed
     references to the dataframes it was trained on.

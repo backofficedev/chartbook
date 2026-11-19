@@ -258,7 +258,7 @@ def _check(folder: Path) -> str:
 
     from chartbook.cli import main
 
-    return CliRunner().invoke(main, ["check", "--project-dir", str(folder), "--skip-outputs"]).output
+    return CliRunner().invoke(main, ["run", "--check", "--project-dir", str(folder)]).output
 
 
 class TestCheckSaysTheIdChanged:
@@ -349,7 +349,7 @@ class TestAForkIsNotTheSamePipeline:
 
 
 class TestWhatCheckSaysOfIds:
-    """Found by a review of `chartbook check`'s warnings about IDs."""
+    """Found by a review of `chartbook run --check`'s warnings about IDs."""
 
     def test_a_fork_at_the_same_commit_is_not_taken_for_the_dependency(self, tmp_path):
         """A fork's clone snapshotted at upstream's commit is noted as a folder of that commit too."""

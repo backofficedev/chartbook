@@ -601,13 +601,13 @@ class TestIndexAndSite:
         assert (pipeline / "docs" / "index.html").exists()
 
     def test_check_passes_and_reports_a_missing_duckdb_file(self, pipeline):
-        result = CliRunner().invoke(main, ["check", "--project-dir", str(pipeline)])
+        result = CliRunner().invoke(main, ["run", "--check", "--project-dir", str(pipeline)])
         assert "path: required" not in result.output  # a table has no path, and need none
         (pipeline / "_data" / "local.duckdb").unlink()
-        result = CliRunner().invoke(main, ["check", "--project-dir", str(pipeline)])
-        assert "[sources.local] url: the DuckDB file is not there" in result.output
-        skipped = CliRunner().invoke(main, ["check", "--skip-outputs", "--project-dir", str(pipeline)])
-        assert "DuckDB file is not there" not in skipped.output
+        result = CliRunner().invoke(main, ["run", "--check", "--project-dir", str(pipeline)])
+        # What the pipeline builds: listed, and no problem of a checkout that has not been built
+        assert "[sources.local] url: not built yet: " in result.output and "DuckDB file is not there" not in result.output
+        assert result.exit_code == 0, result.output
 
 
 class TestNotPinnedAcrossPipelines:

@@ -370,7 +370,17 @@ class TestCheck:
         (problem,) = check_paths(load_manifest(costly), costly)
         assert (problem.table, problem.field) == ("dataframes.embeddings", "path")
         assert problem.message.startswith("file not found: ")
-        assert problem.message.endswith("; it is marked keep = true, and `chartbook restore` puts it back from the store")
+        # "Where the store has a version": said to a fresh checkout too, whose store may have none
+        assert problem.message.endswith("; it is marked keep = true, and `chartbook restore` puts it back where the store has a version of it")
+
+    def test_the_command_lists_it_with_the_way_back_and_fails_nothing(self, costly, monkeypatch):
+        """Found by review: the suffix was tested of a problem the command can no longer give."""
+        (costly / "_data" / "embeddings.parquet").unlink()
+        monkeypatch.chdir(costly)
+        result = CliRunner().invoke(main, ["run", "--check"])
+        assert result.exit_code == 0, result.output
+        (line,) = [line for line in result.stderr.splitlines() if "[dataframes.embeddings] path: not built yet: " in line]
+        assert line.endswith("; it is marked keep = true, and `chartbook restore` puts it back where the store has a version of it")
 
     def test_a_cheap_asset_gets_no_such_hint(self, costly):
         (costly / "_data" / "summary.parquet").unlink()
