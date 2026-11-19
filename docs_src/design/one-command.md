@@ -23,7 +23,7 @@ version, and shows all of them in one catalog.
 | You want to | You type |
 |---|---|
 | Start a pipeline | `chartbook init` |
-| Build it, and make the build available to your other pipelines | `chartbook run` |
+| Build it, make the build available to your other pipelines, and clear out its old versions | `chartbook run` |
 | Take newer data from a pipeline you depend on | `chartbook pin --update` |
 | Look at everything | `chartbook catalog open` |
 | Teach your coding agent ChartBook | `chartbook install agents` |
@@ -56,6 +56,7 @@ $ git commit -am "Yields through October" && chartbook run
 acme/rates: build
 acme/rates at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+acme/rates: 2 older snapshots cleared from the store (nothing pins them; made before 2026-11-12).
 ```
 
 **3. Use another pipeline's table.** You write the read, and run. Nothing was declared, so the run
@@ -133,13 +134,33 @@ The catalog's site is behind your stores: 3 versions are not in it yet. Build th
    did not write 1 thing chartbook.toml declares: forgotten (./_data/forgotten.csv)`. Today the
    run says `Ran build` and exits 0.
 6. **Makes a snapshot, when everything is committed** (scenarios 1 and 2).
+7. **Clears this pipeline's old snapshots from the store.** A run makes a snapshot every time, so
+   it also takes away the ones nothing needs any more. Only this pipeline's.
 
-*Decided 2026-11-18 (items 4, 5 and 6, as proposed by Claude and taken up by the maintainer).*
-What was left open, *proposed by Claude, 2026-11-19:*
+*Decided 2026-11-18 (items 4, 5 and 6, as proposed by Claude and taken up by the maintainer) and
+2026-11-19 (item 7, the maintainer's).*
 
 - **When there is no snapshot, the run still succeeds.** Uncommitted files, a folder that is in no
   git repository, a store that cannot be written: each is one line that says why, and exit 0. A
-  build is not a failure for being unfinished work.
+  build is not a failure for being unfinished work. *Decided 2026-11-19.*
+
+What was left open, *proposed by Claude, 2026-11-19:*
+
+- **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
+  same rules and no others: a snapshot that no lockfile the store knows of pins, that is not the
+  newest, that no tag, branch or label names, that holds no version of an asset marked `keep =
+  true`, and that was made more than 7 days ago. So a pipeline that pulls new data at every run
+  keeps a week of snapshots, and what anything reads is never touched.
+- **It asks nothing, and says what it did in one line.** `chartbook store gc` asks before it
+  removes, because it looks at the whole store; this looks at one pipeline, after its owner has
+  just made a newer snapshot of it. `chartbook store gc --dry-run` still says what is kept, and
+  why.
+- **In the store the snapshot went to,** and only after a run that ended with a snapshot. Not
+  under `--frozen`, which writes nothing, and not in a store that cannot be written.
+- **`chartbook snapshot` clears the same way.** A snapshot made by hand is a newer snapshot too.
+- **The reminder goes.** Since 0.5.0 a snapshot has ended by saying how much `chartbook store gc`
+  could remove; that is now done for the pipeline at hand, so the line and `--no-gc-reminder` are
+  removed. The rest of the store is still `chartbook store gc`'s.
 - **`chartbook run --snapshot` is the strict form,** as it is today: it refuses to build with
   anything uncommitted, and fails if no snapshot can be made. For a script that must end with one.
 - **`chartbook run --frozen` makes none.** It is the form that writes nothing.
@@ -159,11 +180,13 @@ found") and nothing calls it after one. So:
 - What CI needs from it, an answer in seconds with nothing built, is **`chartbook run --check`**:
   everything `chartbook check` and `chartbook pin --check` report today, in one run, with a
   declared output that is not built listed as *not built yet* and counted as no problem.
-- `chartbook check` is still taken, says once that it is `chartbook run --check` now, and will be
-  removed. `chartbook pin --check` stays as it is: it is about the lockfile, which is `pin`'s.
+- **`chartbook check` is gone.** Typed, it says `chartbook check is gone: chartbook run --check`,
+  as `chartbook build` does of itself, and does nothing. *Decided 2026-11-19: removed now, not
+  kept for a while. The package is hardly used yet, and the house is cleaned quickly.*
+- `chartbook pin --check` stays as it is: it is about the lockfile, which is `pin`'s.
 
-*Decided 2026-11-18: `check` is not something people learn. The rest proposed by Claude,
-2026-11-19.*
+*Decided 2026-11-18: `check` is not something people learn. `run --check` and what it counts,
+proposed by Claude, 2026-11-19.*
 
 ## `pin` is the word for the lockfile
 
@@ -175,9 +198,10 @@ found") and nothing calls it after one. So:
 | `chartbook pin --update [NAME …]` | Move pins to the newest snapshot: all of them, or the dependencies named |
 | `chartbook pin --check` | Whether everything pinned can be read here. Writes nothing |
 
-`chartbook update` is still taken, says once that it is `chartbook pin --update` now, and will be
-removed. Every message and page says `pin --update`. *(The "still taken" proposed by Claude,
-2026-11-19: as `pin --frozen` was when it became `pin --check`.)*
+**`chartbook update` is gone.** Typed, it says `chartbook update is gone: chartbook pin --update`,
+and does nothing. Every message and page says `pin --update`. *Decided 2026-11-19: removed now.*
+And `chartbook pin --frozen`, which has printed since it became `pin --check` that it would be
+removed, is removed with it. *(Proposed by Claude, in the same spirit.)*
 
 ## `add` is asked for by `run`
 
@@ -246,7 +270,9 @@ On the {doc}`../roadmap`, with what was said of each:
   maintainer's worry is that a pipeline renames its variables over time, so one file cannot serve
   every version. Proposed: one file that holds every variable any version needs, checked against
   the `.env.example` of the version being built, so that what is missing is named; and a folder
-  for one version only where the same name needs another value. *Decided 2026-11-19: not now.*
+  for one version only where the same name needs another value. *Decided 2026-11-19: not now.
+  Not settled: the maintainer is not sold on one file for every version, and wants the secrets
+  to follow the version.*
 - **`chartbook publish`:** move a pipeline's snapshots from your own store to one you share, and
   keep sending them there. The name is kept for that. *Decided 2026-11-18: `snapshot` is not
   renamed `publish`, which reads as "to the web".*
@@ -260,10 +286,11 @@ One pull request each.
 
 1. This page.
 2. `chartbook run` looks for what was declared, and makes a snapshot when everything is committed.
-3. `chartbook run --check`; `chartbook check` says it is that now.
-4. `chartbook pin --update`; `chartbook update` says it is that now.
-5. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
-6. What is not in your store: the list, in order.
-7. `chartbook catalog open` asks before opening a site that is behind.
-8. `chartbook install agents`.
-9. The first screen: `--help`, the Quickstart, the README, the skill.
+3. A snapshot clears its pipeline's old snapshots; the reminder goes.
+4. `chartbook run --check`; `chartbook check` is gone.
+5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone.
+6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
+7. What is not in your store: the list, in order.
+8. `chartbook catalog open` asks before opening a site that is behind.
+9. `chartbook install agents`.
+10. The first screen: `--help`, the Quickstart, the README, the skill.

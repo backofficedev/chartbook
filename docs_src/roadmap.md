@@ -85,8 +85,10 @@ you trust it and showing its repository. A pipeline's secrets would be kept in o
 `~/.chartbook/envs/<pipeline>/`, and not scattered across clones: one file holding every variable
 any version needs, checked against the `.env.example` of the version being built so that what is
 missing is named, with a folder for one version only where the same name needs another value.
-What is not settled: each pipeline needs its own packages, which works where its build command
-brings its own environment (`uv run doit`) and not where it assumes yours
+What is not settled: whether one file can serve every version of a pipeline, which renames its
+variables over time, or the secrets have to follow the version; and each pipeline needs its own
+packages, which works where its build command brings its own environment (`uv run doit`) and not
+where it assumes yours
 ({design}`one-command`, "Later").
 
 **`chartbook publish`:** move a pipeline's snapshots from your own store to one you share, and
