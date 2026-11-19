@@ -92,8 +92,9 @@ where it assumes yours
 ({design}`one-command`, "Later").
 
 **`chartbook publish`:** move a pipeline's snapshots from your own store to one you share, and
-keep sending them there, asked for and chosen at a prompt. A snapshot is not "published" by being
-made: it is in your store, and nobody else's.
+keep sending them there, asked for and chosen at a prompt. Today that is `chartbook store move
+PIPELINE --to NAME --keep`. A snapshot is not "published" by being made: it is in your store, and
+nobody else's.
 
 **`chartbook run --clean`:** build this commit in a clean copy, as someone who depends on it
 would, to be sure a snapshot came from the commit alone.
