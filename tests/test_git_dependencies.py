@@ -908,7 +908,7 @@ class TestCommands:
         monkeypatch.chdir(downstream)
         self._run("pin")
         second = _change(upstream)
-        result = self._run("update")
+        result = self._run("pin", "--update")
         assert result.exit_code == 0, result.output
         assert f"acme/upstream: fetched ../upstream at {second[:7]}" in result.output
         assert "acme/upstream: 1 moved, 1 not built" in result.output
@@ -922,7 +922,7 @@ class TestCommands:
         assert result.exit_code == 0, result.output
         assert (
             "  [dependencies] now says ../upstream at main. It stays pinned where "
-            "it was: `chartbook update acme/upstream` follows it."
+            "it was: `chartbook pin --update acme/upstream` follows it."
         ) in result.output
 
     def test_a_repository_that_cannot_be_reached_fails_without_its_token(

@@ -1453,7 +1453,7 @@ class TestASnapshotHalfUploaded:
         assert {e.status for e in lock.pin(forecast).problems} == {"unsynced"}
         frozen = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(forecast)])
         assert frozen.exit_code == 1 and "not fully uploaded yet" in frozen.output
-        updated = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
+        updated = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(forecast)])
         assert updated.exit_code == 1 and "not fully synced: rates:parts" in updated.output
         monkeypatch.chdir(forecast)
         with pytest.raises((AssetNotPinnedError, StoreError), match="not fully uploaded yet"):

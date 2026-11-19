@@ -391,7 +391,7 @@ def load(
     runs it and the frame is fetched whole when it is collected. A
     dataframe of another pipeline is loaded from the copy that
     ``chartbook.lock`` pins, so it does not change until you run
-    ``chartbook update``:
+    ``chartbook pin --update``:
 
     >>> from chartbook import data
     >>> mine = data.load("term_premium")  # doctest: +SKIP
@@ -583,7 +583,7 @@ def _cut(location) -> Optional[tuple]:
     A build that stands in holds the pinned rows and whatever has come
     since (``docs_src/design/pins-and-rebuilds.md``, "Reads"). A read
     through a pin gives the pinned rows, on every machine, so the rows
-    after the pin's last date are left out; only ``chartbook update``
+    after the pin's last date are left out; only ``chartbook pin --update``
     brings later rows. The pinned file itself is read as it is.
     """
     if not getattr(location, "stands_in", False) or not getattr(location, "date_col", None):

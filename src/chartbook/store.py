@@ -814,14 +814,14 @@ def _unreadable_note_remedy(name: str, error: Optional[Exception] = None) -> str
     if is_root_name(name) and error is not None and not isinstance(error, (OSError, json.JSONDecodeError)):
         return (
             f" It is not a note this version of ChartBook reads: remove roots/{name}; the next `chartbook pin`, "
-            f"`chartbook update`, `chartbook run --frozen` or read through its lockfile writes it again. Nothing is removed "
+            f"`chartbook pin --update`, `chartbook run --frozen` or read through its lockfile writes it again. Nothing is removed "
             f"from the store until it is read or gone"
         )
     if is_root_name(name):
         return (
             f" A sync that has not finished is the likeliest cause (a file there before its bytes): run this "
             f"again once it has finished. If it stays unreadable, remove roots/{name}; the next `chartbook pin`, "
-            f"`chartbook update`, `chartbook run --frozen` or read through its lockfile writes it again. Nothing is removed "
+            f"`chartbook pin --update`, `chartbook run --frozen` or read through its lockfile writes it again. Nothing is removed "
             f"from the store until it is read or gone"
         )
     return (

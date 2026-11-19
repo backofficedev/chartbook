@@ -272,7 +272,7 @@ class TestTheSourceChangedItsPast:
         assert (
             f"acme/rates: your build of {_said(built)}, does not match the pin\n"
             f"  treasury: the rows of 2025-12-01 to 2025-12-31 differ\n"
-            f"  To read your build instead: chartbook update acme/rates\n" in result.output
+            f"  To read your build instead: chartbook pin --update acme/rates\n" in result.output
         )
         assert "1 problem(s)" in result.output and "does not have it" not in result.output
 
@@ -283,13 +283,13 @@ class TestTheSourceChangedItsPast:
         assert "  differs: acme/rates:treasury: the rows of 2025-12-01 to 2025-12-31 differ" in result.output
         assert (
             f"  Your build of {_said(built)}, does not match the pin. To read your build instead: "
-            f"chartbook update acme/rates" in result.output
+            f"chartbook pin --update acme/rates" in result.output
         )
 
     def test_lineage_says_it_in_one_gap(self, report, built, student):
         (gap,) = snapshot.lineage_gaps(report, student)
         assert gap.startswith(f"acme/rates: your build of {_said(built)}, does not match the pin; treasury: the rows of ")
-        assert gap.endswith("To read your build instead: chartbook update acme/rates") and "\n" not in gap
+        assert gap.endswith("To read your build instead: chartbook pin --update acme/rates") and "\n" not in gap
 
     def test_a_read_stops_with_the_period(self, report, built, student):
         with pytest.raises(AssetNotPinnedError) as raised:
@@ -297,7 +297,7 @@ class TestTheSourceChangedItsPast:
         assert raised.value.reason == "differs"
         said = str(raised.value)
         assert f"Your build of 'acme/rates' at {_said(built)}, does not match the pin: the rows of 2025-12-01 to 2025-12-31 differ" in said
-        assert "`chartbook update acme/rates`" in said
+        assert "`chartbook pin --update acme/rates`" in said
 
     def test_update_reads_your_build(self, report, built, student):
         assert not lock.update(report, store=student).problems
@@ -418,8 +418,8 @@ class TestWithNoBuildOfYours:
             "for the sync to finish, here and on the machine that made the pin.",
             "3 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.",
         ]
-        # With no snapshot of it in the store, `chartbook update` has nothing to move to, and is not offered
-        assert "chartbook update" not in result.output
+        # With no snapshot of it in the store, `chartbook pin --update` has nothing to move to, and is not offered
+        assert "chartbook pin --update" not in result.output
 
     def test_pin_says_them_together_and_how_to_build_it(self, report, student):
         commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
@@ -428,8 +428,8 @@ class TestWithNoBuildOfYours:
         (lost,) = [line for line in result.output.splitlines() if line.startswith("  lost")]
         assert lost.startswith("  lost, each of codes, model/ar1, treasury: it is not in the store at ")
         assert f"Otherwise build it yourself, in ../rates, `git checkout {commit}` and `chartbook run --snapshot`" in lost
-        # The store has no snapshot of it: `chartbook update` would find none, and is not offered
-        assert "chartbook update" not in result.output
+        # The store has no snapshot of it: `chartbook pin --update` would find none, and is not offered
+        assert "chartbook pin --update" not in result.output
 
     def test_a_read_says_how_to_build_it(self, report, student):
         commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
@@ -457,8 +457,8 @@ class TestWithNoBuildOfYours:
         # The table of codes and the model are there by their bytes; the yields are not, and nothing stands in
         (problem,) = checked.problems
         assert problem.asset == "acme/rates:treasury" and "does not have it" in problem.message
-        # The store has a snapshot of it, of that other commit: `chartbook update` has one to move to
-        assert checked.not_in_store["acme/rates"][-1] == "  To move the pin to a snapshot the store has: chartbook update acme/rates"
+        # The store has a snapshot of it, of that other commit: `chartbook pin --update` has one to move to
+        assert checked.not_in_store["acme/rates"][-1] == "  To move the pin to a snapshot the store has: chartbook pin --update acme/rates"
 
     def test_where_the_store_is_shared_nothing_is_looked_for(self, report, work, monkeypatch):
         """The same file: the cheapest check, and a team with a shared store stops there every time."""
@@ -498,7 +498,7 @@ class TestAStandInIsWholeOrNotAtAll:
         assert raised.value.reason == "differs"
         assert (
             f"Your build of 'acme/rates' at {_said(built)}, does not match the pin: treasury: the rows of "
-            f"2025-12-01 to 2025-12-31 differ. To read your build instead: `chartbook update acme/rates`" in str(raised.value)
+            f"2025-12-01 to 2025-12-31 differ. To read your build instead: `chartbook pin --update acme/rates`" in str(raised.value)
         )
         assert "read from your own build" not in capsys.readouterr().err
 
@@ -762,7 +762,7 @@ class TestWhereTheStoreHasThePinnedSnapshot:
         assert lock.verify(report, author).problems == []  # every pinned file is in the store
         (gap,) = snapshot.lineage_gaps(report, author)
         assert gap.startswith("acme/rates:treasury: what the lockfile records of its rows is not what its snapshot at ")
-        assert "`chartbook update acme/rates` pins it again" in gap
+        assert "`chartbook pin --update acme/rates` pins it again" in gap
         assert not lock.update(report, ["acme/rates"], store=author).problems
         assert snapshot.lineage_gaps(report, author) == []
 
@@ -877,13 +877,13 @@ class TestAVersionPinnedByItsLabel:
             "  model/ar1@champion: a version pinned by its label is met by the same file only, and the store does "
             "not have it. It was made at an earlier commit, most likely" in result.output
         )
-        assert "chartbook update" not in result.output
+        assert "chartbook pin --update" not in result.output
         # `chartbook pin` says the same, and does not say the build is read
         result = CliRunner().invoke(main, ["pin", "--project-dir", str(labelled)])
         assert result.exit_code == 1, result.output
         assert "1 not met by your own build" in result.output and "  differs: acme/rates:model/ar1@champion" in result.output
         assert f"  Your build of {_said(built)}, does not match the pin." in result.output
-        assert "Read from your own build" not in result.output and "chartbook update" not in result.output
+        assert "Read from your own build" not in result.output and "chartbook pin --update" not in result.output
         # Nor is it read
         with pytest.raises(AssetNotPinnedError) as raised:
             assets.path("acme/rates:treasury", project_dir=labelled)
@@ -937,7 +937,7 @@ class TestWhatTheSecondReviewFound:
         assert "'acme/rates:chart/curve' is not in " in said and "a chart is drawn anew by every build" in said
         assert (
             f"Your build of 'acme/rates' at {_said(built)}, does not match the pin: treasury: the rows of "
-            f"2025-12-01 to 2025-12-31 differ. To read your build instead: `chartbook update acme/rates`" in said
+            f"2025-12-01 to 2025-12-31 differ. To read your build instead: `chartbook pin --update acme/rates`" in said
         )
         result = CliRunner().invoke(main, ["path", "acme/rates:chart/curve", "--project-dir", str(report)])
         assert result.exit_code == 1
@@ -980,20 +980,20 @@ class TestWhatTheSecondReviewFound:
 
     def test_pin_offers_update_only_where_it_would_find_a_snapshot(self, report, rates, student, work):
         result = CliRunner().invoke(main, ["pin", "--project-dir", str(report)])
-        assert result.exit_code == 1 and "chartbook update" not in result.output
+        assert result.exit_code == 1 and "chartbook pin --update" not in result.output
         # And where the store has the pinned snapshot, with a file lost and no newer one: the snapshot made again
         author = FolderStore(work / "author")
         author.delete(lock.read_lock(report).assets["acme/rates:treasury"]["content_hash"])
         (lost,) = lock.pin(report, author).problems
-        assert lost.status == "lost" and "chartbook update" not in lost.detail
+        assert lost.status == "lost" and "chartbook pin --update" not in lost.detail
         assert "Otherwise a snapshot puts it there: `chartbook snapshot` in its folder at that commit makes it again" in lost.detail
         # With a newer one of it in the store, `update` has one to move to
         _rebuild(rates, author, _yields(48))
         (lost,) = lock.pin(report, author).problems
-        assert "Otherwise a snapshot puts it there: `chartbook update` moves to the newest one, or `chartbook snapshot`" in lost.detail
+        assert "Otherwise a snapshot puts it there: `chartbook pin --update` moves to the newest one, or `chartbook snapshot`" in lost.detail
 
     def test_update_is_offered_as_update_looks(self, report, rates, student):
-        """A snapshot of a later commit than the folder is on is none `chartbook update` takes."""
+        """A snapshot of a later commit than the folder is on is none `chartbook pin --update` takes."""
         entry = lock.read_lock(report).dependencies[0]
         pinned_commit = entry["location"]["commit"]
         (rates / "chartbook.toml").write_text(

@@ -194,7 +194,7 @@ class TestPinSaysTheIdChanged:
         (event,) = [e for e in report.events if e.status == "id_changed"]
         assert "testorg/first_pipeline" in event.detail
         assert '"first_pipeline" = { id = "testorg/first_pipeline" }' in event.detail
-        assert "`chartbook update first_pipeline`" in event.detail
+        assert "`chartbook pin --update first_pipeline`" in event.detail
         assert not report.problems and report.count("kept") == 1
 
     def test_pin_says_so_too(self, renamed):
@@ -209,7 +209,7 @@ class TestPinSaysTheIdChanged:
         from chartbook.cli import main
 
         first, second, old, new = renamed
-        result = CliRunner().invoke(main, ["update", "--project-dir", str(second)])
+        result = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(second)])
         assert result.exit_code == 0, result.output
         assert "first_pipeline: 1 already pinned" in result.output
         assert 'write "first_pipeline" = { id = "testorg/first_pipeline" } under [dependencies]' in result.output

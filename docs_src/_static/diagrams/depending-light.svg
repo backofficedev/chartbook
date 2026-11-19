@@ -28,5 +28,5 @@
 <path d='M 120 169 Q 450 262 780 169' fill='none' stroke='#c2410c' stroke-width='1.6' stroke-dasharray='6 5' marker-end='url(#w)'/>
 <rect x='286.6' y='204.5' width='326.8' height='22' rx='11' fill='#fff1e6'/>
 <text x='450.0' y='219.5' text-anchor='middle' fill='#c2410c' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>never: one pipeline reads another's folder</text>
-<text x='450.0' y='268' text-anchor='middle' fill='#526077' font-size='13'>A newer snapshot moves nothing until you run <tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#1f6feb'>chartbook update</tspan>; a <tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#1f6feb'>git diff</tspan> of the lockfile shows the move.</text>
+<text x='450.0' y='268' text-anchor='middle' fill='#526077' font-size='13'>A newer snapshot moves nothing until you run <tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#1f6feb'>chartbook pin --update</tspan>; a <tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#1f6feb'>git diff</tspan> of the lockfile shows the move.</text>
 </svg>

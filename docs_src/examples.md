@@ -19,7 +19,7 @@ doit
 
 Individual pipelines have their own inputs (`fred_charts` and `yield_curve` pull from FRED), so the `chartbook.toml` files are also worth reading on their own as complete, real-world manifests.
 
-`rate_forecast` is built after `yield_curve`, because it reads what that pipeline produces. It never reads `yield_curve`'s folder. Between the two builds, `examples/dodo.py` runs `chartbook snapshot` in `yield_curve`, which copies what it built into the store at `~/.chartbook/store/`, labelled with the commit. `rate_forecast`'s first build step is `chartbook pin`, which pins that snapshot and writes `chartbook.lock`. Its README walks through what happens when `yield_curve` is rebuilt afterwards: nothing, until `yield_curve` makes a new snapshot and `rate_forecast` runs `chartbook update`.
+`rate_forecast` is built after `yield_curve`, because it reads what that pipeline produces. It never reads `yield_curve`'s folder. Between the two builds, `examples/dodo.py` runs `chartbook snapshot` in `yield_curve`, which copies what it built into the store at `~/.chartbook/store/`, labelled with the commit. `rate_forecast`'s first build step is `chartbook pin`, which pins that snapshot and writes `chartbook.lock`. Its README walks through what happens when `yield_curve` is rebuilt afterwards: nothing, until `yield_curve` makes a new snapshot and `rate_forecast` runs `chartbook pin --update`.
 
 A snapshot needs everything in the pipeline's folder to be committed, so if you edit `examples/yield_curve`, commit before running `doit` in `examples/`.
 

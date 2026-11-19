@@ -450,7 +450,7 @@ def test_unchanged_compares_with_what_the_task_left():
         saved.update(saver())
     assert saved == {"lock": "written by the build"}
     assert check(task, saved) is True
-    state["lock"] = "moved by chartbook update"
+    state["lock"] = "moved by chartbook pin --update"
     assert check(task, saved) is False
 
 

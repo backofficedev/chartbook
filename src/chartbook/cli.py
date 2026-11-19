@@ -79,6 +79,13 @@ class _Main(_Group):
     def parse_args(self, ctx, args):
         if args and args[0] == "build" and not ctx.resilient_parsing:
             raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
+        if args and args[0] == "update" and not ctx.resilient_parsing:
+            named = [word for word in args[1:] if word not in ("--help", "-h")]
+            raise click.UsageError(
+                "`chartbook update` is gone: `chartbook pin --update`. It moves pins to the newest snapshot, all of "
+                f"them or those of the dependencies named. Try: {' '.join(['chartbook', 'pin', '--update', *named])}",
+                ctx,
+            )
         if args and args[0] == "check" and not ctx.resilient_parsing:
             raise click.UsageError(
                 "`chartbook check` is gone: `chartbook run --check`. It checks a pipeline without building it, with the "
@@ -1342,7 +1349,7 @@ def path_command(ref, kind, project_dir, list_files):
     The pipeline must be in [dependencies], and what is printed is the path
     of the copy that chartbook.lock pins, in the store: not the other
     pipeline's own directory. Run `chartbook pin` first. That copy stays as
-    it is until `chartbook update`. Another pipeline's folder or glob of
+    it is until `chartbook pin --update`. Another pipeline's folder or glob of
     files has no one path, since the store keeps each file once and a
     snapshot's files may sit in other snapshots' folders: print them with
     --files.
@@ -2508,7 +2515,7 @@ def _echo_pin_report(report):
             if event.status == "relocated":
                 click.echo(
                     f"  [dependencies] now says {event.detail}. It stays pinned "
-                    f"where it was: `chartbook update {dependency}` follows it."
+                    f"where it was: `chartbook pin --update {dependency}` follows it."
                 )
             elif event.status in ("passed_over", "unchecked", "id_changed"):
                 click.echo(f"  {event.detail}.")
@@ -2609,7 +2616,7 @@ def _echo_pin_report(report):
     stale = report.count("stale")
     if stale:
         click.echo(
-            f"{stale} pinned asset(s) have changed upstream. `chartbook update` "
+            f"{stale} pinned asset(s) have changed upstream. `chartbook pin --update` "
             f"moves the pins."
         )
 
@@ -2761,28 +2768,45 @@ def _echo_frozen_report(step, report):
     )
 
 
+def _pin_frozen_is_gone(ctx, param, value):
+    """Refuse `chartbook pin --frozen`, which said for a release that it would go, and say what does each half of it."""
+    if value:
+        raise click.UsageError(
+            "`chartbook pin --frozen` is gone. `chartbook pin --check` says whether everything pinned can be read "
+            "here, and writes nothing; `chartbook run --frozen` builds from the lockfile, and leaves the store's "
+            "note that this machine reads these pins.",
+            ctx=ctx,
+        )
+
+
 @main.command()
+@click.argument("names", nargs=-1)
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+@click.option(
+    "--update",
+    "moving",
+    is_flag=True,
+    help="Move pins to the newest snapshot: every dependency's, or those of the dependencies named",
+)
 @click.option(
     "--check",
     "check_only",
     is_flag=True,
     help="Write nothing: say whether the lockfile is complete and every pin is in the store; exit 1 if not",
 )
-@click.option(
-    "--frozen",
-    is_flag=True,
-    hidden=True,
-    help="Deprecated name of --check that also writes the store's note for gc, as it did before",
-)
-def pin(project_dir, check_only, frozen):
-    """Freeze what this pipeline depends on.
+@click.option("--frozen", is_flag=True, hidden=True, expose_value=False, callback=_pin_frozen_is_gone)
+def pin(names, project_dir, moving, check_only):
+    """Freeze what this pipeline depends on, in chartbook.lock.
+
+    \b
+    chartbook pin                     pin what has no pin yet
+    chartbook pin --update [NAME...]  move pins to the newest snapshot
+    chartbook pin --check             can everything pinned be read here?
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
-    owner declared ready, at a commit (`chartbook snapshot`). The content
-    hash of each of its dataframes and models is written to chartbook.lock.
-    Commit that file: a change to what the project depends on then shows in
-    a diff.
+    owner built at a commit (`chartbook run`). The content hash of each of
+    its dataframes and models is written to chartbook.lock. Commit that
+    file: a change to what the project depends on then shows in a diff.
 
     A chart, a notebook, a note or a plain file is not pinned unless its
     owner's chartbook.toml says lock = true on it: every build draws one
@@ -2791,14 +2815,21 @@ def pin(project_dir, check_only, frozen):
 
     None of the other pipeline's data in its folder is read. It can be
     half-way through a change, and what you pin is still the build that
-    was declared ready. Its chartbook.toml and chartbook.lock are read, to
+    was snapshotted. Its chartbook.toml and chartbook.lock are read, to
     see that the pin makes no cycle: a pin whose new or moved entries would
     lead back to this pipeline, or into pipelines that depend on each
     other, is not written.
 
-    A pin that already exists is never moved, whatever the other pipeline
-    has done since; `chartbook update` moves pins. What `pin` does do again
-    is pin a dependency that has no pin yet.
+    A pin that already exists is never moved by a plain `chartbook pin`,
+    whatever the other pipeline has done since: it pins a dependency that
+    has no pin yet, which `chartbook run` does itself before a build.
+
+    --update moves pins forward to the newest snapshot of each dependency.
+    With no NAME, every dependency is updated. Name some to update only
+    those, as they are written in [dependencies]; the scope may be left
+    off when only one has that name. Each pin that changes is printed with
+    its old and new hash, and chartbook.lock is rewritten. Nothing is
+    rebuilt: this pipeline's own outputs are as they were.
 
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
@@ -2813,24 +2844,22 @@ def pin(project_dir, check_only, frozen):
     \b
     Examples:
         chartbook pin
+        chartbook pin --update
+        chartbook pin --update fed_yield_curve
         chartbook pin --project-dir ../rate_forecast
         chartbook pin --check
     """
-    if check_only and frozen:
-        # One is the other's old name, and they differ in what they write: not guessed
-        raise click.UsageError("--frozen is the old name of --check. Give --check alone: it writes nothing.")
-    if frozen:
-        click.echo(
-            "warning: `chartbook pin --frozen` is now `chartbook pin --check`, which writes nothing. "
-            "--frozen is still taken for now and, as before, leaves the store's note that this machine "
-            "reads these pins. The flag will be removed: `chartbook run --frozen` and a read through the "
-            "lockfile leave that note.",
-            err=True,
+    if moving and check_only:
+        raise click.UsageError("--update moves pins and --check writes nothing. One or the other.")
+    if names and not moving:
+        raise click.UsageError(
+            f"A name goes with --update: `chartbook pin --update {' '.join(names)}` moves its pins. "
+            f"`chartbook pin` pins what has no pin yet, of every dependency."
         )
-    if check_only or frozen:
-        _run_check(project_dir, note=frozen)
+    if check_only:
+        _run_check(project_dir)
         return
-    _run_pin(project_dir)
+    _run_pin(project_dir, dependencies=list(names) if moving else None)
 
 
 def _said(error) -> str:
@@ -2868,18 +2897,13 @@ def _explain_os_error(error):
     return _said(error)
 
 
-def _run_check(project_dir, note=False):
-    """Say whether a pipeline can be built from its lockfile alone; exit 1 if not.
-
-    :param note: Whether to leave the store's note that this machine reads
-        these pins, as the deprecated ``pin --frozen`` did. ``pin --check``
-        writes nothing.
-    """
+def _run_check(project_dir):
+    """Say whether a pipeline can be built from its lockfile alone, and write nothing; exit 1 if not."""
     from chartbook import lock
     from chartbook.store import StoreError
 
     try:
-        report = lock.verify(resolve_project_dir(project_dir), note=note)
+        report = lock.verify(resolve_project_dir(project_dir), note=False)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -2905,27 +2929,6 @@ def _run_check(project_dir, note=False):
             err=True,
         )
         raise SystemExit(1)
-
-
-@main.command()
-@click.argument("dependencies", nargs=-1)
-@click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
-def update(dependencies, project_dir):
-    """Move pins forward to the newest snapshot of each dependency.
-
-    With no argument, every dependency is updated. Name some to update only
-    those, as they are written in [dependencies]; the scope may be left off
-    when only one has that name. Each pin that changes is printed with its
-    old and new hash, and chartbook.lock is rewritten.
-
-    Nothing is rebuilt: this pipeline's own outputs are as they were.
-
-    \b
-    Examples:
-        chartbook update
-        chartbook update fed_yield_curve
-    """
-    _run_pin(project_dir, dependencies=list(dependencies))
 
 
 class _StoredIds:
@@ -3028,7 +3031,7 @@ def add_command(pipeline, key, commit, project_dir):
     Writes `"PIPELINE" = {}` under [dependencies] in this pipeline's
     chartbook.toml, leaving the rest of the file as it is, then runs
     `chartbook pin`. The pipeline is read from its snapshots in the store
-    alone: no folder of it here, and no clone. `chartbook update` moves the
+    alone: no folder of it here, and no clone. `chartbook pin --update` moves the
     pin to a newer snapshot.
 
     A bare name (`rates`) is the one pipeline in the stores whose ID ends in
@@ -3152,7 +3155,7 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
 
     A pipeline that depends on this one keeps the snapshot it pinned,
     however many you make after it. It gets a newer one with
-    `chartbook update`, and not before.
+    `chartbook pin --update`, and not before.
 
     \b
     Examples:
@@ -3341,7 +3344,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         test = "pytest"
 
     A pin that exists is never moved: you are told what has changed, and
-    `chartbook update` moves pins.
+    `chartbook pin --update` moves pins.
 
     It never builds in a folder this pipeline depends on, unless you say
     --upstream (below). That folder is somebody's work, and this pipeline
@@ -3510,7 +3513,7 @@ def _echo_snapshot(report, upstream=False):
     elif report.made:
         click.echo(
             "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook update`."
+            "`chartbook pin --update`."
         )
     else:
         click.echo(
@@ -4141,7 +4144,7 @@ def store_import(folder):
     not copied again, a snapshot it has already is left as it is, and
     nothing in the store is written over. A pipeline in this store then
     pins the snapshots by the pipeline's ID, with `chartbook pin` and
-    `chartbook update`.
+    `chartbook pin --update`.
 
     \b
     Examples:
@@ -4249,7 +4252,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     """Remove from the store what nothing needs any more.
 
     The store is shared by every project of yours. Two things keep what is
-    in it. A lockfile: each `chartbook pin` and `chartbook update` notes
+    in it. A lockfile: each `chartbook pin` and `chartbook pin --update` notes
     its lockfile here, and every object one of them names is kept. And a
     snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
 

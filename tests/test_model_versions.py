@@ -516,7 +516,7 @@ class TestStaleness:
 
 class TestAnotherPipelinesVersion:
     """``other:model/m@champion``: the label is looked up when pinning and frozen
-    in the lockfile, so a build is repeatable; ``chartbook update`` moves it."""
+    in the lockfile, so a build is repeatable; ``chartbook pin --update`` moves it."""
 
     def test_a_label_is_pinned_from_the_snapshot_and_resolves(self, forecast):
         from chartbook import lock
@@ -547,7 +547,7 @@ class TestAnotherPipelinesVersion:
         lock.pin(serve)
         with pytest.raises(AssetNotPinnedError, match="'champion' was not a label of forecast:model/m when") as e:
             models.path("forecast:m@champion", project_dir=serve)
-        assert "Its labels then: (none)" in str(e.value) and "`chartbook update forecast`" in str(e.value)
+        assert "Its labels then: (none)" in str(e.value) and "`chartbook pin --update forecast`" in str(e.value)
         with pytest.raises(AssetNotPinnedError, match="No snapshot of .acme/forecast. in the store names a version deadbeef of forecast:model/m"):
             models.path("forecast:m@deadbeef", project_dir=serve)
 
@@ -679,7 +679,7 @@ class TestAnotherPipelinesVersion:
         name_no_snapshot(serve, "forecast")
         with pytest.raises(AssetNotPinnedError, match="the pin of 'forecast' in the lockfile names no snapshot") as e:
             models.path(f"forecast:m@{first}", project_dir=serve)
-        assert "`chartbook update forecast` pins it from a snapshot" in str(e.value)
+        assert "`chartbook pin --update forecast` pins it from a snapshot" in str(e.value)
 
     def test_a_labelled_version_pinned_keeps_the_snapshot_that_holds_it(self, forecast):
         """The lockfile pins the version by label, so gc keeps a snapshot holding it, as it keeps

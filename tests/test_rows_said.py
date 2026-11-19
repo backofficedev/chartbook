@@ -1,4 +1,4 @@
-"""Tests for what ``chartbook update`` and ``chartbook snapshot`` say of a dataframe's rows, and the warning for the pandas index column (``docs_src/design/pins-and-rebuilds.md``, step 7).
+"""Tests for what ``chartbook pin --update`` and ``chartbook snapshot`` say of a dataframe's rows, and the warning for the pandas index column (``docs_src/design/pins-and-rebuilds.md``, step 7).
 
 A pin that moves says, for each dataframe, whether it gained rows or its
 earlier rows changed, beside the pin it had. A snapshot says the same
@@ -107,7 +107,7 @@ class TestUpdate:
 
     def test_the_command_prints_it_under_the_two_hashes(self, rates, report, store):
         _again(rates, store, _yields(48))
-        result = CliRunner().invoke(main, ["update", "--project-dir", str(report)])
+        result = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(report)])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
         at = lines.index("  acme/rates:treasury")
@@ -267,7 +267,7 @@ class _Panic(BaseException):
 
 
 class TestNothingSaidStopsACommand:
-    """Found by review: `chartbook update` stopped when it could not fetch or hash a table for a line of output."""
+    """Found by review: `chartbook pin --update` stopped when it could not fetch or hash a table for a line of output."""
 
     @pytest.mark.parametrize(
         "error",

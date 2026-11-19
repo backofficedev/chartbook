@@ -403,7 +403,7 @@ changes.
 3. A snapshot clears its pipeline's old snapshots; the reminder goes. *Built 2026-11-19 and not
    merged: see "Clearing old snapshots".*
 4. `chartbook run --check`; `chartbook check` is gone. *Built 2026-11-19.*
-5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone.
+5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone. *Built 2026-11-19.*
 6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
 7. What is not in your store: the list, in order.
 8. `chartbook catalog open` asks before opening a site that is behind.

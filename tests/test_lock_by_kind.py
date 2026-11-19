@@ -225,7 +225,7 @@ class TestWhatAPinHolds:
         found = pin_from_snapshots(report, store)
         statuses = {event.asset.split(":", 1)[1]: event.status for event in found.events if event.asset}
         assert statuses["chart/curve"] == "not_built" and statuses["notebook/analysis"] == "unlocked"
-        result = CliRunner().invoke(main, ["update", "--project-dir", str(report)])
+        result = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(report)])
         assert "  not built: acme/rates:chart/curve (./_output/curve.html)" in result.output
 
     def test_update_says_what_its_owner_no_longer_declares(self, rates, pinned, store):
@@ -411,7 +411,7 @@ class TestReadingWhatIsNotInIt:
         assert assets.path("rates:chart/curve", project_dir=reader).read_bytes() == b"rates"
         # With no folder of it here to say which pipeline it is, the read stops and says so
         shutil.rmtree(work / "repo" / "rates")
-        with pytest.raises(AssetNotPinnedError, match="does not say which pipeline that is: `chartbook update rates`"):
+        with pytest.raises(AssetNotPinnedError, match="does not say which pipeline that is: `chartbook pin --update rates`"):
             assets.path("rates:chart/curve", project_dir=reader)
 
     def test_a_name_that_is_no_asset_of_it(self, pinned):
@@ -965,7 +965,7 @@ class TestAnOldLockfileThatDoesNotSayWhichPipeline:
 
 
 class TestTheSnapshotALockfileNamesIsTakenWhole:
-    """Where the store has the snapshot a lockfile names, an asset is read from it and from no other: a later build of that commit is another snapshot, and `chartbook update` moves to it."""
+    """Where the store has the snapshot a lockfile names, an asset is read from it and from no other: a later build of that commit is another snapshot, and `chartbook pin --update` moves to it."""
 
     def test_an_asset_it_did_not_build_is_not_read_from_a_later_build_of_that_commit(self, rates, report, store):
         (rates / "_output" / "curve.html").unlink()
@@ -977,7 +977,7 @@ class TestTheSnapshotALockfileNamesIsTakenWhole:
             assets.path("acme/rates:chart/curve", project_dir=report)
         assert raised.value.reason == "not_built"
         assert "It is read from the snapshot the lockfile names" in str(raised.value)
-        assert "then `chartbook update acme/rates` in " in str(raised.value)
+        assert "then `chartbook pin --update acme/rates` in " in str(raised.value)
         # So gc, which keeps the named snapshot and not the later build for this lockfile, takes no read away
         lock.verify(report, store, note=True)
         lock.run_gc(lock.plan_gc(store, keep_days=0, recent_seconds=0), store)

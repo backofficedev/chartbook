@@ -84,7 +84,7 @@ class Unmet:
             the very file the pin does, which the store does not have; or
             the store has the pinned file in part, as a sync leaves it.
         label: Whether the pin is of a version named by a label, which no
-            build of this commit gives, and ``chartbook update`` does not
+            build of this commit gives, and ``chartbook pin --update`` does not
             find in yours.
     """
 

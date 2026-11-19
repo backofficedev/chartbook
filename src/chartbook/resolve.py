@@ -26,7 +26,7 @@ Three forms of reference resolve today:
 - a **cross-pipeline** reference — ``pipeline:name`` — to an asset of a
   pipeline that ``[dependencies]`` declares. It resolves *pinned*: through
   ``chartbook.lock`` to the copy in the store. So what a pipeline reads
-  from another one does not change until it runs ``chartbook update``.
+  from another one does not change until it runs ``chartbook pin --update``.
   Before a pin, interactively, a read pins on first use, reads the newest
   snapshot of a pipeline not declared, or reads a working folder when there
   is no snapshot, each with what it did said; a batch run refuses all but
@@ -856,7 +856,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
                 UserWarning(
                     f"{dependency.id!r} is pinned as {pinned_as}, and [dependencies] now names "
                     f"{dependency.pipeline}: reading {pinned_as}'s pinned copy until "
-                    f"`chartbook update {dependency.id}` follows it."
+                    f"`chartbook pin --update {dependency.id}` follows it."
                 )
             )
     if not of_dependency and not by_its_entry:
@@ -895,7 +895,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
                 f"{dependency.id!r}, and the snapshot that is pinned was made before "
                 f"it was declared, or before tables were written out as parquet. "
                 f"`chartbook snapshot` in that pipeline's folder writes it out; then "
-                f"`chartbook update` in {manifest_dir} pins it.",
+                f"`chartbook pin --update` in {manifest_dir} pins it.",
             )
         same_kind = sorted(
             AssetRef.from_dict(other["ref"]).name
@@ -911,7 +911,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{f' Did you mean {close[0]!r}?' if close else ''} Its "
             f"{KIND_TABLES[pinned.kind]} in {manifest_dir / 'chartbook.lock'} "
             f"are: {', '.join(same_kind) or '(none)'}. If it has declared "
-            f"one since, `chartbook update` pins it.",
+            f"one since, `chartbook pin --update` pins it.",
         )
     content_hash = record.get("content_hash")
     if not content_hash and record.get("label"):
@@ -933,7 +933,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{dependency.id!r} and has no pinned copy: a pin from a repository takes no table, "
             f"and a snapshot writes one out only from a DuckDB file (`chartbook snapshot` "
             f"there says what it could not). `chartbook snapshot` in that pipeline's folder, "
-            f"then `chartbook update` in {manifest_dir}, pins it.",
+            f"then `chartbook pin --update` in {manifest_dir}, pins it.",
         )
     if not content_hash:
         raise AssetNotPinnedError(
@@ -943,7 +943,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"declares it, and had not built it when it was pinned. Build it "
             f"there and declare the build ready (`chartbook snapshot` in its "
             f"folder; for a git repository, `chartbook run` here). Then "
-            f"`chartbook update` in {manifest_dir} pins it.",
+            f"`chartbook pin --update` in {manifest_dir} pins it.",
         )
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(manifest_dir)
@@ -1025,7 +1025,7 @@ def _your_build_differs(asset_id: str, dependency: str, stood, manifest_dir: Pat
     with_index = [unmet.asset.split(":", 1)[-1] for unmet in stood.unmet if unmet.index_column]
     index = f". {locks.index_column_said(with_index)}" if with_index else ""
     yours = (
-        f" To read your build instead: `chartbook update {dependency}` in {manifest_dir}."
+        f" To read your build instead: `chartbook pin --update {dependency}` in {manifest_dir}."
         if locks.read_yours_said(dependency, stood) else ""
     )
     return (
@@ -1099,7 +1099,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
         raise AssetNotPinnedError(
             asset_id, "not_in_lockfile",
             f"{not_pinned}. It is read at the commit the lockfile names, and the lockfile names none of "
-            f"{dependency.id!r}: `chartbook update {dependency.id}` in {manifest_dir} pins one.",
+            f"{dependency.id!r}: `chartbook pin --update {dependency.id}` in {manifest_dir} pins one.",
         )
     # The pipeline whose snapshots these are, by its own ID: never another's of the same commit
     folder = _folder_of(dependency)
@@ -1111,7 +1111,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
         raise AssetNotPinnedError(
             asset_id, "not_in_lockfile",
             f"{not_pinned}. It is read from a snapshot of {dependency.id!r}, and the lockfile, written by an "
-            f"earlier ChartBook, does not say which pipeline that is: `chartbook update {dependency.id}` in "
+            f"earlier ChartBook, does not say which pipeline that is: `chartbook pin --update {dependency.id}` in "
             f"{manifest_dir} pins it again.",
         )
     # The one the lockfile names, whatever its date, and no other where the store has
@@ -1174,7 +1174,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
             f"The pipeline {dependency.id!r} had no {pinned.kind} named {pinned.name!r} when it was pinned."
             f"{f' Did you mean {close[0]!r}?' if close else ''} Its {KIND_TABLES[pinned.kind]} in its "
             f"snapshot at {commit[:7]} are: {', '.join(same_kind) or '(none)'}. If it has declared one "
-            f"since, `chartbook update` pins it.",
+            f"since, `chartbook pin --update` pins it.",
         )
     where = location.get("repository") or (location.get("path") if location.get("kind") == "path" else None) or "its repository"
     build_it = f"in {'its folder, ' if location.get('kind') == 'path' else 'a clone of '}{where}, at {commit[:7]}, `chartbook run --snapshot`"
@@ -1195,7 +1195,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
         raise AssetNotPinnedError(
             asset_id, "not_built",
             f"{not_pinned}. It is read from the snapshot the lockfile names, of {pipeline} at {commit[:7]}, and "
-            f"{not_built}. Build it there and make a snapshot again ({build_it}); then `chartbook update "
+            f"{not_built}. Build it there and make a snapshot again ({build_it}); then `chartbook pin --update "
             f"{dependency.id}` in {manifest_dir} moves the pin to it.",
         )
     raise AssetNotPinnedError(
@@ -1447,7 +1447,7 @@ def _resolve_pinned_version(
     by the name the dependency gives itself, which the pinned snapshot
     says. Nothing of the other pipeline's folder is read. A label the
     lockfile does not have is a label the owner had not given when this
-    pipeline pinned; ``chartbook update`` pins it.
+    pipeline pinned; ``chartbook pin --update`` pins it.
     """
     from chartbook import snapshot
     from chartbook.store import default_store
@@ -1477,7 +1477,7 @@ def _resolve_pinned_version(
             f"{pinned.rev!r} was not a label of {without} when the pipeline "
             f"{dependency.id!r} was pinned. Its labels then: "
             f"{', '.join(labels) or '(none)'}. If its owner has given the label "
-            f"since, and made a snapshot, `chartbook update {dependency.id}` pins it.",
+            f"since, and made a snapshot, `chartbook pin --update {dependency.id}` pins it.",
         )
     store = default_store()
     local = str(AssetRef(kind=pinned.kind, name=pinned.name))
@@ -1501,7 +1501,7 @@ def _resolve_pinned_version(
             "not_in_store",
             f"{asset_id!r} names a version by its hash, and the pin of "
             f"{dependency.id!r} in the lockfile names no snapshot, so its "
-            f"versions cannot be looked up in the store. `chartbook update "
+            f"versions cannot be looked up in the store. `chartbook pin --update "
             f"{dependency.id}` pins it from a snapshot.",
         )
     pinned_snapshot = next(
@@ -1513,7 +1513,7 @@ def _resolve_pinned_version(
             "not_in_store",
             f"{asset_id!r} names a version by its hash, and the snapshot that "
             f"{dependency.id!r} is pinned to is not in the store, so its versions "
-            f"cannot be looked up there. `chartbook update {dependency.id}` pins "
+            f"cannot be looked up there. `chartbook pin --update {dependency.id}` pins "
             f"one that is.",
         )
     versions = snapshot.versions_of_pipeline(
@@ -2256,7 +2256,7 @@ def _pinned_now(report, key: str) -> None:
         sys.stderr.write(
             f"{key}: pinned to its newest snapshot, {taken.commit[:7]}, made "
             f"{taken.made_at[:16].replace('T', ' ')} UTC ({report.lockfile.name}). "
-            f"`chartbook update {key}` moves it.\n"
+            f"`chartbook pin --update {key}` moves it.\n"
         )
     from chartbook import lock
 
@@ -2266,7 +2266,7 @@ def _pinned_now(report, key: str) -> None:
     if report.written:
         # And what `chartbook pin` says of the rows of what it pins, when it writes a lockfile: a read
         # that writes one says it too, since the pin after it finds nothing changed and says nothing
-        # (A read moves no pin, so none of them gains its rows here: that is `chartbook update`'s to say)
+        # (A read moves no pin, so none of them gains its rows here: that is `chartbook pin --update`'s to say)
         if getattr(report, "without_rows", None):
             sys.stderr.write(lock.without_rows_said(report.without_rows) + "\n")
     if getattr(report, "floor", None) is not None:

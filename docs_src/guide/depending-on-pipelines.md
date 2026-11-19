@@ -77,7 +77,7 @@ In the other pipeline's folder, with everything committed:
 $ chartbook run                 # build it, and copy what it built into the store, labelled with the commit
 …
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 That is a snapshot, and it is what of theirs you read. Their folder is never read. A run while
@@ -93,7 +93,7 @@ new one, holding only the files that changed.
 
 ```console
 $ chartbook pin                 # once, to start depending on it
-$ chartbook update              # later, when you want their newer snapshot; the lockfile diff shows the move
+$ chartbook pin --update              # later, when you want their newer snapshot; the lockfile diff shows the move
 ```
 
 ```python
@@ -110,7 +110,7 @@ and how `data.load`, `data.sql` and `data.files` read it.
 |---|---|---|
 | The other pipeline's owner | `chartbook run`, with everything committed | Whenever they build |
 | You | `chartbook pin`, once | To start depending on it |
-| You | `chartbook update` | When you want their newer snapshot |
+| You | `chartbook pin --update` | When you want their newer snapshot |
 
 ## Reading before you pin
 
@@ -126,7 +126,7 @@ In a notebook, a read does what you most likely meant and says what it did. In a
 
 ```python
 >>> data.load("acme/rates:treasury")
-acme/rates: pinned to its newest snapshot, 3f2a9c1, made 2026-10-16 22:06 UTC (chartbook.lock). `chartbook update acme/rates` moves it.
+acme/rates: pinned to its newest snapshot, 3f2a9c1, made 2026-10-16 22:06 UTC (chartbook.lock). `chartbook pin --update acme/rates` moves it.
 ```
 
 To work on both pipelines at once, `chartbook link acme/rates ../rates` makes reads follow that
@@ -145,7 +145,7 @@ $ chartbook run                 # pins what has no pin yet, then runs the build 
 
 `chartbook run` never builds in a `path` dependency's folder and never reads it: its owner makes the
 snapshot. When the folder is yours, `chartbook run --upstream` builds and snapshots one that has no
-snapshot yet. It never moves a pin; `chartbook update` does that. A dependency can also be a git
+snapshot yet. It never moves a pin; `chartbook pin --update` does that. A dependency can also be a git
 repository, `{ git = "https://…", rev = "v1.2" }`: `chartbook pin` pins the files it commits, and
 `chartbook run` builds the rest once, in ChartBook's own clean copy of that commit.
 
@@ -226,13 +226,13 @@ last  = data.as_of("fed_yield_curve:treasury_yields")    # datetime.date(2026, 1
 path  = data.path("fed_yield_curve:treasury_yields")     # your build's file as it is, newer rows and all
 ```
 
-`data.load` and `data.sql` leave out the rows after the pin's last date; only `chartbook update`
+`data.load` and `data.sql` leave out the rows after the pin's last date; only `chartbook pin --update`
 brings later rows. `data.path` hands over the file as it is and says so once, and `data.as_of` is
 where the pinned rows end, for a reader of your own (which has then to keep the rows with no date
 itself: `data.load` does). When the source has changed its past, the
 check exits 1 and a read stops, each naming the periods that differ. Nothing brings revised data
 back: a shared store does, by keeping the bytes. To go on with what you built,
-`chartbook update ftsfr/fed_yield_curve` pins your build, and the lockfile's diff shows which
+`chartbook pin --update ftsfr/fed_yield_curve` pins your build, and the lockfile's diff shows which
 periods changed.
 
 Three things on the other pipeline's side make this work:
@@ -245,10 +245,10 @@ Three things on the other pipeline's side make this work:
 - **Snapshot and pin with ChartBook 0.6.0 or later.** A pin made from a snapshot of an earlier
   ChartBook records no rows, and is met by the same file only. `chartbook pin` says when a pin is
   of that kind. To pin its rows, nothing has to be built again: `chartbook snapshot` in the other
-  pipeline makes a new snapshot of the same files, which records them, and `chartbook update` in
+  pipeline makes a new snapshot of the same files, which records them, and `chartbook pin --update` in
   yours moves to it.
 
-`chartbook update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
+`chartbook pin --update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
 2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of … differ`. A few tables
 have no rows hash, and `chartbook snapshot` says which and why: a column of lists, a single day
 whose rows count for more than 128 MB, more than 256 columns, a large CSV, a parquet file written
@@ -276,7 +276,7 @@ cannot read it. What tells an earlier ChartBook to upgrade, and how, is the line
 requires_chartbook = ">=0.6.0"
 ```
 
-`chartbook init` writes that line, and `chartbook pin` and `chartbook update` raise it when they
+`chartbook init` writes that line, and `chartbook pin` and `chartbook pin --update` raise it when they
 leave a lockfile that needs more than it says: commit the two files together. (`chartbook run`
 writes no manifest, and says that `chartbook pin` does.) Everyone else is then told what to
 install by the first command they run, and in a uv project, where `uv add "chartbook>=0.6.0"`
@@ -287,7 +287,7 @@ has the steps for each release that changes a file.
 
 A model's bytes become a **version** when a snapshot first holds them, named by the start of their
 hash. `[models.x.aliases]` gives a version a label such as `champion`, and another pipeline reads it
-as `fed_yield_curve:model/x@champion`; `chartbook update` moves the pin when the label does.
+as `fed_yield_curve:model/x@champion`; `chartbook pin --update` moves the pin when the label does.
 
 Every asset page shows a **provenance panel**: what the asset was made from, at which hashes, and
 for a model whether its training data has moved since. {ref}`[dependencies] <dependencies>` in the

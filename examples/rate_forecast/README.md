@@ -75,7 +75,7 @@ $ chartbook pin
 backofficedev/yield_curve: 12 already pinned, 1 changed upstream since it was pinned
   changed upstream: backofficedev/yield_curve:fed_yield_curve
 chartbook.lock is unchanged.
-1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
+1 pinned asset(s) have changed upstream. `chartbook pin --update` moves the pins.
 ```
 
 `chartbook run` says the same: it never moves a pin.
@@ -83,7 +83,7 @@ chartbook.lock is unchanged.
 To train on the newer snapshot, move the pin and build again:
 
 ```bash
-chartbook update
+chartbook pin --update
 doit
 ```
 

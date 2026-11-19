@@ -2,7 +2,7 @@
 
 **What it is for.** It is here to show a model in one pipeline trained on data from another, not to forecast. A daily yield is so persistent that "tomorrow equals today" is nearly unbeatable, and this model learns almost exactly that.
 
-**What it was trained on.** The `fed_yield_curve` dataframe of the Yield Curve pipeline, which this pipeline declares as a dependency and pins. The copy it read is named by its hash in `chartbook.lock`, and in this model's record in `index.json` under `pinned_inputs`. It stays the same until someone runs `chartbook update`.
+**What it was trained on.** The `fed_yield_curve` dataframe of the Yield Curve pipeline, which this pipeline declares as a dependency and pins. The copy it read is named by its hash in `chartbook.lock`, and in this model's record in `index.json` under `pinned_inputs`. It stays the same until someone runs `chartbook pin --update`.
 
 **How it was trained.** The first 80% of the sample fits the line; the last 20% is held out to compute the scores above.
 

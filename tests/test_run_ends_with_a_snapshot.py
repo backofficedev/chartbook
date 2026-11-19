@@ -34,7 +34,7 @@ DEMO = {
     "dataframes": {"out": {"path": "./out.csv", "docs": "d"}},
 }
 IGNORED = "/out.csv\n/build.log\n"
-MADE = "Snapshot made. A pipeline that depends on this one gets it with `chartbook update`."
+MADE = "Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`."
 COMMIT_AND_AGAIN = "  A snapshot is of a commit: commit, and `chartbook run` again."
 
 posix = pytest.mark.skipif(os.name == "nt", reason="the build script here is POSIX shell")
@@ -211,7 +211,7 @@ class TestTheLockfile:
         (upstream / "out.csv").write_text("a,b\n1,2\n", encoding="utf-8", newline="\n")
         _committed(upstream)
         snapshot.make(upstream, store=store)
-        assert CliRunner().invoke(main, ["update"]).exit_code == 0
+        assert CliRunner().invoke(main, ["pin", "--update"]).exit_code == 0
         assert _git(demo, "status", "--porcelain") == "M chartbook.lock"
         result = _run()
         assert result.exit_code == 0, result.output
@@ -464,7 +464,7 @@ class TestWorkInProgress:
         assert _after_the_run(result) == [
             "acme/demo: not snapshotted: chartbook.links.toml is in the folder, so its build reads other pipelines' working folders.",
             # Each command it names is one that exists
-            "  Remove it, `chartbook update`, and `chartbook run` again.",
+            "  Remove it, `chartbook pin --update`, and `chartbook run` again.",
         ]
         assert _snapshots(store) == []
 

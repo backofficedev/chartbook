@@ -21,7 +21,7 @@ One install has everything: the command line, data loading, plotting and the sit
 
 - **Depend.** Build on another pipeline's exact output, the way you depend on a package.
   `chartbook add acme/rates` pins its newest snapshot in `chartbook.lock`, and what you read
-  changes only when you run `chartbook update`.
+  changes only when you run `chartbook pin --update`.
 - **Trace.** Every dataframe, chart and model records what it was made from, by content hash.
   `chartbook lineage` walks the chain back to the first source and checks every hash on the way.
 - **Rebuild.** A snapshot keeps the exact bytes a pipeline made, labelled with its commit.

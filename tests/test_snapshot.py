@@ -955,7 +955,7 @@ class TestClearingOldSnapshots:
         store.delete(content_hash)
         (problem,) = lock.verify(user, store).problems
         # The store has the snapshot it was pinned from: that one is the pin, and no other build stands in for it
-        assert "`chartbook update acme/maker` moves to a snapshot the store has, or `chartbook snapshot`" in problem.message
+        assert "`chartbook pin --update acme/maker` moves to a snapshot the store has, or `chartbook snapshot`" in problem.message
         assert "build it yourself" not in problem.message
 
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
@@ -1215,7 +1215,7 @@ class TestCommands:
         assert result.output.splitlines() == [
             f"acme/maker at {commit[:7]}: 2 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook update`.",
+            "`chartbook pin --update`.",
             # By default a store and a catalog are one unit: the first snapshot makes the catalog that shows it
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
@@ -1282,9 +1282,9 @@ class TestCommands:
             stays.output
         )
         assert "chartbook.lock is unchanged." in stays.output
-        assert "`chartbook update` moves the pins." in stays.output
+        assert "`chartbook pin --update` moves the pins." in stays.output
 
-        moves = self._run("update")
+        moves = self._run("pin", "--update")
         assert moves.exit_code == 0, moves.output
         assert "acme/maker: 1 moved, 1 already pinned" in moves.output
         assert "Wrote chartbook.lock." in moves.output
@@ -1296,7 +1296,7 @@ class TestCommands:
         (maker / "_output" / "curve.html").unlink()
         (maker / "_data" / "rates.parquet").write_bytes(b"rates-2")
         snapshot.make(maker)
-        result = self._run("update")
+        result = self._run("pin", "--update")
         assert "  let go: acme/maker:chart/curve (./_output/curve.html)" in result.output
         assert "  What was let go is not built in the snapshot this moved to." in result.output
 

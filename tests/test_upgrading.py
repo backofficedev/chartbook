@@ -12,7 +12,7 @@ command does; and ``chartbook run --check`` fails on one that was not raised.
 And the pins themselves: one made from a snapshot of an earlier ChartBook
 records no rows, so no rebuild meets it. The commands say so when such
 pins are made, and say what gives pins a rebuild can meet: ``chartbook
-snapshot`` again in the upstream, then ``chartbook update``.
+snapshot`` again in the upstream, then ``chartbook pin --update``.
 """
 
 import errno
@@ -221,7 +221,7 @@ class TestPinUpdateAndAddRaiseTheLine:
 
     def test_update_says_it_too(self, report, rates, store):
         snapshot.make(rates, store=store)
-        result = _run("update")
+        result = _run("pin", "--update")
         assert result.exit_code == 0, result.output
         assert RAISED in result.output and _asked_for(report) == ">=0.6.0"
 
@@ -531,7 +531,7 @@ class TestABuildAndAReadNeverWriteAManifest:
         assert result.exit_code == 0, result.output
         said = result.output.splitlines()
         assert TOLD in said and any(line.startswith("chartbook.lock was in an earlier form") for line in said)
-        assert "Snapshot made. A pipeline that depends on this one gets it with `chartbook update`." in said
+        assert "Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`." in said
         # The manifest is as its commit has it; the lockfile is the one file a run may write
         assert _git(report, "status", "--porcelain") == "M chartbook.lock"
         # And the run after it is not refused for a manifest that changed
@@ -707,13 +707,13 @@ class TestPinsFromBeforeRowsWereRecorded:
         assert _earlier(1) == (
             "1 dataframe is pinned by its file alone: its snapshot is from before ChartBook 0.6.0, which recorded no rows, "
             "and no rebuild meets such a pin. To pin its rows: `chartbook snapshot` again in its pipeline, with this version, "
-            "then `chartbook update` here. Nothing has to be built again: where a table's rows can be recorded, the same "
+            "then `chartbook pin --update` here. Nothing has to be built again: where a table's rows can be recorded, the same "
             "commit and the same files make a new snapshot, once."
         )
         assert _earlier(2) == (
             "2 dataframes are pinned by their files alone: their snapshots are from before ChartBook 0.6.0, which recorded no "
             "rows, and no rebuild meets such a pin. To pin their rows: `chartbook snapshot` again in each of their pipelines, "
-            "with this version, then `chartbook update` here. Nothing has to be built again: where a table's rows can be "
+            "with this version, then `chartbook pin --update` here. Nothing has to be built again: where a table's rows can be "
             "recorded, the same commit and the same files make a new snapshot, once."
         )
         assert lock.rows_now_said(["a"]) == (
@@ -750,7 +750,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         ]
         # And once only: the next pin finds nothing to write, and says nothing of any of it; nor does an update with nothing to move to
         assert _run("pin").output.splitlines() == ["acme/rates: 3 already pinned", "chartbook.lock is unchanged."]
-        unmoved = _run("update").output
+        unmoved = _run("pin", "--update").output
         assert "pinned by" not in unmoved and "rows pinned now" not in unmoved and unmoved.rstrip().endswith("chartbook.lock is unchanged.")
 
     def test_nothing_is_said_of_a_snapshot_this_version_made(self, report, rates, store):
@@ -774,7 +774,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         # Once: a third finds a snapshot that says its rows, and makes none
         assert "No new snapshot" in _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).output
 
-        moved = _run("update")
+        moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         # The pin has not moved, and the lockfile is written: the command says what changed in it
         assert moved.output.splitlines() == [
@@ -786,7 +786,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         ]
         assert moved.output.splitlines()[1].startswith("  From its snapshot at ")
         # Once: an update with nothing to move says nothing of it
-        assert "rows pinned now" not in _run("update").output
+        assert "rows pinned now" not in _run("pin", "--update").output
         pinned = lock.read_lock(report).assets
         assert set(pinned["acme/rates:treasury"]["rows"]) and pinned["acme/rates:treasury"]["as_of"] == "2026-01-09"
         assert pinned["acme/rates:codes"]["rows"].keys() == {"all"}
@@ -797,7 +797,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         assert _run("pin").exit_code == 0
         _yields(41).write_parquet(rates / "_data" / "treasury.parquet")
         assert _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
-        moved = _run("update")
+        moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         # The table of codes is the same file, pinned with its rows now; the yields moved
         assert lock.rows_now_said(["acme/rates:codes"]) in moved.output.splitlines()
@@ -819,12 +819,12 @@ class TestPinsFromBeforeRowsWereRecorded:
         assert first.exit_code == 0 and _earlier(3) in first.output.splitlines()
         # The rates' owner snapshots again; the reader updates, twice
         assert _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
-        moved = _run("update")
+        moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         assert "pinned by" not in moved.output and lock.rows_now_said(["a", "b"]) in moved.output.splitlines()
         _yields(41).write_parquet(rates / "_data" / "treasury.parquet")
         assert _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
-        again = _run("update")
+        again = _run("pin", "--update")
         assert again.exit_code == 0 and "Wrote chartbook.lock." in again.output and "pinned by" not in again.output
         assert "rows" not in lock.read_lock(report).assets["acme/other:t"]
 
@@ -844,7 +844,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         assert "  rows not hashed: acme/rates:nested (column 'l' is List" in again.output
         assert "The same files" not in again.output and "Snapshot made." in again.output
 
-        moved = _run("update")
+        moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         (said,) = [line for line in moved.output.splitlines() if line.startswith("acme/rates:nested: its rows are not hashed")]
         assert said.startswith("acme/rates:nested: its rows are not hashed (column 'l' is List") and said.endswith(
@@ -853,7 +853,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         assert "rows pinned now" not in moved.output and "pinned by its file alone: its snapshot" not in moved.output
         assert "Wrote chartbook.lock." in moved.output
         # Once
-        assert "not hashed" not in _run("update").output
+        assert "not hashed" not in _run("pin", "--update").output
 
     def test_a_file_that_is_no_table_is_promised_no_snapshot(self, report, work, store):
         """Whoever pins cannot tell it from a table an earlier ChartBook did not hash, so the advice promises a new snapshot only where rows can be recorded."""

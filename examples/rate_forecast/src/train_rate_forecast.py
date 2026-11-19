@@ -11,7 +11,7 @@ pipeline:
 
 and asks for the dataframe by name. What comes back is the copy that
 `chartbook pin` froze, so this script reads the same bytes on every run
-until `chartbook update` moves the pin, whatever yield_curve does meanwhile.
+until `chartbook pin --update` moves the pin, whatever yield_curve does meanwhile.
 
 The model itself is as simple as a model gets: tomorrow's 10-year yield is
 predicted from today's by a straight line fitted with NumPy. It is an

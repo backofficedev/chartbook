@@ -21,7 +21,7 @@ opening any. Both work for every asset with files, a dataframe's too.
 :func:`path` here is :func:`chartbook.assets.path` with the kind fixed, as
 :func:`chartbook.models.path` is for models.
 
-A snapshot, a pin, ``chartbook update``, ``restore``, ``lineage`` and
+A snapshot, a pin, ``chartbook pin --update``, ``restore``, ``lineage`` and
 ``store gc`` treat a files asset as any other: its hash is the hash of
 its file, or of the listing of its files (:mod:`chartbook.hashing`).
 """

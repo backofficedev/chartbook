@@ -137,7 +137,7 @@ class TestTheAuthor:
         _yields(48).write_parquet(rates / "_data" / "treasury.parquet")
         made = _snapshot(rates)
         assert "    acme/rates:treasury: 16 new rows, through 2026-01-17; earlier rows unchanged" in made.output.splitlines()
-        moved = _run("update")
+        moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         assert "    16 new rows, through 2026-01-17; earlier rows unchanged" in moved.output.splitlines()
 
@@ -145,7 +145,7 @@ class TestTheAuthor:
         _yields(48, revised=date(2025, 12, 14)).write_parquet(rates / "_data" / "treasury.parquet")
         told = "earlier rows changed: the rows of 2025-12-01 to 2025-12-31 differ; 16 new rows, through 2026-01-17"
         assert f"    acme/rates:treasury: {told}" in _snapshot(rates).output.splitlines()
-        assert f"    {told}" in _run("update").output.splitlines()
+        assert f"    {told}" in _run("pin", "--update").output.splitlines()
 
 
 class TestAStudentWithACatalogOfTheirOwn:
@@ -196,7 +196,7 @@ class TestAStudentWithACatalogOfTheirOwn:
         result = _run("pin", "--check")
         assert result.exit_code == 1, result.output
         assert "  treasury: the rows of 2025-12-01 to 2025-12-31 differ" in result.output.splitlines()
-        assert "  To read your build instead: chartbook update acme/rates" in result.output.splitlines()
+        assert "  To read your build instead: chartbook pin --update acme/rates" in result.output.splitlines()
 
     def test_the_build_is_found_in_whichever_store_holds_it(self, pinned, sit_at, rates, work):
         """Their catalog lists the upstream under no store, so their build goes to the first: a read finds it there."""

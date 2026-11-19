@@ -82,7 +82,7 @@ frame = data.load("repo_public", format="pandas")       # or "polars_eager"
 
 Your own dataset is read from your folder, because it is built there and may not be snapshotted
 yet. Another pipeline's is read from the **store**, at the snapshot your lockfile pins, so it does
-not change under you until you run `chartbook update` ({doc}`depending-on-pipelines`). Nothing is
+not change under you until you run `chartbook pin --update` ({doc}`depending-on-pipelines`). Nothing is
 copied: the files are read where the store keeps them.
 
 Where you built the other pipeline yourself, because no store is shared, what is read is your own

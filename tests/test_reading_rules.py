@@ -52,7 +52,7 @@ class TestADeclaredDependencyNotPinned:
             assert _value("acme/rates:treasury") == [4.0]
         said = capsys.readouterr().err
         assert f"acme/rates: pinned to its newest snapshot, {taken.commit[:7]}" in said
-        assert "`chartbook update acme/rates` moves it" in said
+        assert "`chartbook pin --update acme/rates` moves it" in said
         (entry,) = lock.read_lock(forecast / lock.LOCK_FILE).dependencies
         assert entry["location"]["commit"] == taken.commit
         # The working file changes; the pin does not

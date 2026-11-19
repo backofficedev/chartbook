@@ -515,7 +515,7 @@ class TestPinning:
         assert (reader / lock.LOCK_FILE).read_bytes() == before
         assert pinned[0].count("stale") == 1
 
-        # `chartbook update` is what moves it
+        # `chartbook pin --update` is what moves it
         lock.update(reader)
         run.run(reader, echo=_quiet)
         assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") != first
@@ -660,7 +660,7 @@ class TestRunThenSnapshot:
             "upstream: build",
             f"upstream at {commit[:7]}: 1 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook update`.",
+            "`chartbook pin --update`.",
             "Ran build in 1 pipeline(s).",
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
@@ -935,7 +935,7 @@ class TestGitDependencies:
         assert cache.find_work(str(repository), second) is None
         assert (downstream / "_output" / "read.txt").read_text(encoding="utf-8") == "built-by-its-build\n"
 
-        # `chartbook update` moves to the new commit. What was built at the
+        # `chartbook pin --update` moves to the new commit. What was built at the
         # old one is let go: it did not come from the commit now named.
         moved = lock.update(downstream)
         statuses = {e.asset.split(":")[1]: e.status for e in moved.events if e.asset}
@@ -963,7 +963,7 @@ class TestGitDependencies:
         (repository / "data" / "committed.parquet").write_bytes(b"hello again")
         _git(repository, "commit", "--quiet", "-am", "New data")
         monkeypatch.chdir(downstream)
-        result = CliRunner().invoke(main, ["update"])
+        result = CliRunner().invoke(main, ["pin", "--update"])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
         assert "acme/upstream: 1 moved, 1 let go" in lines
@@ -1081,7 +1081,7 @@ class TestCommand:
         second = self._run()
         assert "upstream: 1 changed upstream since it was pinned" in second.output
         assert "chartbook.lock is unchanged." in second.output
-        assert "1 pinned asset(s) have changed upstream. `chartbook update` moves the pins." in (
+        assert "1 pinned asset(s) have changed upstream. `chartbook pin --update` moves the pins." in (
             second.output
         )
         assert (work / "upstream_runs.log").read_text(encoding="utf-8").split() == ["ran", "ran"]

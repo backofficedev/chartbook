@@ -731,7 +731,7 @@ def explain_cycle(found: Cycle) -> str:
     lines.append(
         "Dependencies between pipelines must form a graph with no cycles. Take one of these out of its "
         "[dependencies]; where a snapshot records it, that pipeline makes a new snapshot, and what pins "
-        "it runs `chartbook update`."
+        "it runs `chartbook pin --update`."
     )
     return "\n".join(lines)
 

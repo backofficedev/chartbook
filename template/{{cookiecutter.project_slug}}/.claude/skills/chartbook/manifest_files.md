@@ -56,7 +56,7 @@ All keys are optional:
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.5.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write. `chartbook pin` and `update` raise it in place (`">=0.5.0"` to `">=0.6.0"`) when they leave a `chartbook.lock` an earlier ChartBook cannot read, and say so: commit both files (`chartbook run` writes no manifest, and says that `chartbook pin` does) | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.5.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write. `chartbook pin` and `pin --update` raise it in place (`">=0.5.0"` to `">=0.6.0"`) when they leave a `chartbook.lock` an earlier ChartBook cannot read, and say so: commit both files (`chartbook run` writes no manifest, and says that `chartbook pin` does) | `""` (any) |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
@@ -234,10 +234,10 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
   commit its folder is on, else at the nearest earlier commit that has one) and
   writes the content hashes and the commit to `chartbook.lock`, which is
   committed. With no snapshot it fails and says so. It never moves an existing
-  pin; `chartbook update [dep...]` does, to the newest snapshot. A rebuild with
+  pin; `chartbook pin --update [dep...]` does, to the newest snapshot. A rebuild with
   no new snapshot is not seen at all.
 - To see a change in a pipeline you are changing too: commit it, run
-  `chartbook snapshot` there, then `chartbook update` here. A lockfile never
+  `chartbook snapshot` there, then `chartbook pin --update` here. A lockfile never
   records a read of a working folder. For local development, `chartbook link ID FOLDER` makes
   reads follow an explicit working copy and warn that pins are not in use.
   Snapshots refuse links; CI and `--frozen` ignore them.
@@ -252,15 +252,15 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
 - A `git` dependency (`{ git = "https://…", rev = "v1.2" }`; `rev` optional) is
   cloned by `chartbook pin` into `~/.chartbook/git/` and pinned like a directory.
   It has ONLY what its repository commits: git-ignored, built data is "not built".
-  The lockfile records the commit; `chartbook update` re-fetches and follows a branch.
+  The lockfile records the commit; `chartbook pin --update` re-fetches and follows a branch.
   A catalog cannot have this table.
 - `chartbook run` pins whatever has no pin yet and then runs THIS pipeline's
-  `build`. It never moves a pin (`chartbook update` does). It NEVER builds in a
+  `build`. It never moves a pin (`chartbook pin --update` does). It NEVER builds in a
   `path` dependency's folder: that folder is somebody's work, and is its owner's
   to build (run `chartbook run` there). It builds a `git` dependency once per
   commit, in a clean writable copy of its checkout (`~/.chartbook/git/work/`),
   so its built data can be pinned; `chartbook run --force` builds it again.
-  To move a git dependency to a newer commit: `chartbook update`, then
+  To move a git dependency to a newer commit: `chartbook pin --update`, then
   `chartbook run` (update lets go of data built at the old commit).
 
 A minimal — but complete and valid — pipeline manifest:
@@ -299,7 +299,7 @@ folder's name. An SSH host alias (`git@github.com-work:acme/rates.git`) gives
 the same ID and counts as another repository's address. `repo_url` comes before the remote, and `chartbook run --check` warns
 when the two name different repositories. Adding a remote to a pipeline that
 had none changes its ID (`first_pipeline` becomes `testorg/first_pipeline`),
-and its snapshots are made under the new one; `chartbook pin`/`update` say
+and its snapshots are made under the new one; `chartbook pin`/`pin --update` say
 when a dependency named by the old ID has newer snapshots of the same
 repository under another, and name the entry to write
 (`"first_pipeline" = { id = "testorg/first_pipeline" }`); `chartbook run --check`

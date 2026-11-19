@@ -30,7 +30,7 @@ touching another pipeline's working directory:
   that is pulled from outside is refreshed on purpose.
 - **What has no pin yet is pinned**, just before the build, so the
   pipeline's code can read it. **A pin that exists is never moved.**
-  ``chartbook update`` is the only thing that moves one.
+  ``chartbook pin --update`` is the only thing that moves one.
 
 In a catalog, the script is run in each of the catalog's pipelines, one
 that another of them depends on first.
@@ -377,13 +377,13 @@ def _why_no_snapshot_before(step: "Step") -> tuple[Optional[str], str]:
     lockfile says so after the build, and the next run ends with the
     snapshot. A commit checked out by its hash is an old version looked at
     or built again, and a snapshot of it would be the newest of its
-    pipeline, which is what the next ``chartbook update`` of anything that
+    pipeline, which is what the next ``chartbook pin --update`` of anything that
     names the pipeline takes. ``--snapshot`` makes that one, on purpose.
     """
     if os.path.lexists(step.directory / "chartbook.links.toml"):
         return None, (
             "chartbook.links.toml is in the folder, so its build reads other pipelines' working folders.\n"
-            "  Remove it, `chartbook update`, and `chartbook run` again"
+            "  Remove it, `chartbook pin --update`, and `chartbook run` again"
         )
     try:
         snapshots._git(step.directory, "rev-parse", "--show-toplevel")

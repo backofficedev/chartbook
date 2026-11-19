@@ -168,7 +168,7 @@ class TestAFileThereBeforeAllOfItsBytes:
 
     def test_the_commands_say_it(self, half):
         forecast, first, second, held, whole = half
-        updated = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
+        updated = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(forecast)])
         assert updated.exit_code == 1
         assert "not fully synced: acme/rates:treasury: nothing was moved" in updated.output
         frozen = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(forecast)])
@@ -198,7 +198,7 @@ class TestAFileThereBeforeAllOfItsBytes:
         _cut(held, whole[:10])
         (problem,) = lock.update(forecast).problems
         assert problem.status == "unsynced" and "nothing was moved" not in problem.detail
-        result = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
+        result = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(forecast)])
         assert "acme/rates: 1 not fully synced\n" in result.output and "1 thing(s) could not be pinned" in result.output
 
 
@@ -295,7 +295,7 @@ class TestAnObjectNotThereYet:
         second = _snapshot_again(rates, 4.2)
         machine("b")
         default_store().delete(second.assets["treasury"]["content_hash"])  # not synced to B at all
-        result = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
+        result = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(forecast)])
         assert result.exit_code == 1
         assert "lost: acme/rates:treasury: the snapshot at" in result.output
         assert "(None)" not in result.output
@@ -851,36 +851,21 @@ class TestAMachineThatOnlyReads:
         result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(clone)])
         assert result.exit_code == 0 and listing() == before
 
-    def test_check_and_its_old_name_together_are_refused(self, reader):
-        """One writes the note and the other nothing: which was meant is not guessed."""
+    @pytest.mark.parametrize("words", [["pin", "--frozen"], ["pin", "--check", "--frozen"]])
+    def test_the_old_name_is_refused_and_leaves_no_note(self, reader, words):
+        """`pin --frozen` was `pin --check` that also left the note. It said for a release that it would go, and is gone: `run --frozen` and a read leave the note."""
         work, machine, rates, old, project, clone = reader
         roots = default_store().root / "roots"
         before = sorted(p.name for p in roots.iterdir())
-        result = CliRunner().invoke(main, ["pin", "--check", "--frozen", "--project-dir", str(clone)])
+        result = CliRunner().invoke(main, [*words, "--project-dir", str(clone)])
         assert result.exit_code == 2
-        assert "--frozen is the old name of --check. Give --check alone" in result.output
+        assert "`chartbook pin --frozen` is gone. `chartbook pin --check` says whether everything pinned can be read here" in result.output
         assert sorted(p.name for p in roots.iterdir()) == before
 
     def test_the_old_name_is_not_in_help(self):
         result = CliRunner().invoke(main, ["pin", "--help"])
         options = [line.split()[0] for line in result.output.split("Options:", 1)[1].splitlines() if line.strip()]
         assert result.exit_code == 0 and "--check" in options and "--frozen" not in options
-
-    def test_the_old_frozen_still_keeps_its_pins(self, reader):
-        """`pin --frozen`, deprecated, still leaves the note it left before, and says to use --check."""
-        work, machine, rates, old, project, clone = reader
-        result = _runner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
-        assert result.exit_code == 0
-        # The warning on stderr, where a script that reads the result does not meet it
-        assert "`chartbook pin --frozen` is now `chartbook pin --check`" in result.stderr
-        assert "`chartbook run --frozen` and a read through the lockfile leave that note" in result.stderr
-        assert "is now" not in result.stdout
-        assert "Nothing written but the store's note that this machine reads these pins." in result.stdout
-        again = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
-        assert "all in the store. Nothing written." in again.output  # the note names it all already
-        self._a_moves_on_and_clears(machine, rates, project)
-        machine("b")
-        assert lock.verify(clone).problems == []
 
     def test_run_frozen_keeps_its_pins(self, reader):
         """`run --frozen` builds from the lockfile, and is what leaves the note now that `pin --check` does not."""
@@ -916,18 +901,6 @@ class TestAMachineThatOnlyReads:
         self._a_moves_on_and_clears(machine, rates, project)
         machine("b")
         assert lock.verify(clone).problems == []
-
-    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
-    def test_frozen_says_when_the_note_cannot_be_written(self, reader):
-        work, machine, rates, old, project, clone = reader
-        roots = default_store().root / "roots"
-        roots.chmod(0o555)  # a store this machine may only read
-        try:
-            result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(clone)])
-        finally:
-            roots.chmod(0o755)
-        assert result.exit_code == 0
-        assert "the store's note that this machine reads these pins could not be written" in result.output
 
 
 class TestACloneThatKeptItsIdentity:
@@ -1546,7 +1519,7 @@ class TestAStoreAtAPathWithAPassword:
         for args in (
             ["pin", "--project-dir", str(project)],
             ["pin", "--check", "--project-dir", str(project)],
-            ["update", "--project-dir", str(project)],
+            ["pin", "--update", "--project-dir", str(project)],
             ["snapshot", "--project-dir", str(rates)],
             ["store", "info"],
             ["store", "gc", "--dry-run"],
