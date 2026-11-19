@@ -38,8 +38,7 @@ chartbook docs open         # Open project docs in default browser (was `chartbo
 # and docs/llms.txt: one line per pipeline, dataframe, chart, model and files asset with its ID and a
 # link to its page (a catalog's also links every version's own llms.txt). To find your way
 # around a built site or catalog, read its llms.txt first
-chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
-chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
+chartbook run --check       # CI gate, runs NOTHING: missing metadata, broken paths, dependencies that cannot be found, expiring licenses (--within DAYS, --policy CATALOG). An output that is not built is listed (`not built yet`) and is no problem. Was `chartbook check`, which is gone
 chartbook trust             # Say this folder's pipeline is yours to build (at a terminal, the first build/run/docs build asks instead: y trusts, r renders without its code, Enter stops). Until then `docs` renders it as a store build (no query run, nothing read from outside the folder, a warning) and `run` REFUSES to run its script. A project `chartbook init` made is trusted already; CI trusts its checkout; CHARTBOOK_TRUST=all trusts every folder
 chartbook trust --render    # ...to render only: queries run and files it names are read, no build script
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
@@ -73,7 +72,7 @@ chartbook store export ID --to DIR  # Write one pipeline's snapshots into DIR/pi
 chartbook store import DIR  # Copy the snapshots DIR holds (an export, or a pipeline's folder copied by hand) into this store, every file checked; nothing is copied twice or written over
 chartbook config            # Configure default catalog path (interactive)
 chartbook install claude-skill            # Install THIS skill user-level (~/.claude/skills/chartbook, or $CLAUDE_CONFIG_DIR); the front matter above names the ChartBook it is for
-chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for an older ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
+chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for an older ChartBook is replaced and said; any command at a terminal, and `chartbook run --check`, say when a copy is stale
 chartbook catalog init      # Make ~/.chartbook/catalog.toml ahead of time; the first command that needs the catalog (ls, get-docs, catalog build, a snapshot) makes it over the machine's store, asking at a terminal
 chartbook catalog migrate   # Upgrade an old folder catalog, keeping a backup
 chartbook store add team /path/to/shared/store --pipelines acme/rates
@@ -247,7 +246,7 @@ last = data.as_of("fed_yield_curve:treasury_rates")           # the pin's last d
 # the file as it is, newer rows and all. A store that HAS the pinned snapshot (a shared store)
 # has the pin itself: a missing file of it is lost or still syncing, and nothing stands in. For this the upstream declares date_col on each
 # dataframe and writes parquet with index=False (a pandas index of row positions breaks it;
-# `chartbook snapshot` and `chartbook check` say when a file has one).
+# `chartbook snapshot` and `chartbook run --check` say when a file has one).
 files = data.files("news_headlines:articles")                 # a Hive folder or glob: its files, wherever kept
 chart = assets.path("fed_yield_curve:chart/curve_today")      # any kind of asset
 mine = data.load("my_data")                                   # this pipeline's own, live
@@ -272,7 +271,7 @@ data.connect("local")      # the raw connection to [sources.local]: read-only du
 #   (or backend = "databricks", url = "databricks://<host>?http_path=...", with DATABRICKS_HOST + DATABRICKS_TOKEN set)
 #   [dataframes.slopes]        source = "local"     query = "select ... from t"   # or table = "t"
 # A model's trained_on = ["fed_yield_curve:treasury_rates"] must name a declared
-# dependency; `chartbook check` verifies the dataframe exists there.
+# dependency; `chartbook run --check` verifies the dataframe exists there.
 
 # An output that cost money or compute to make (a paid API run over a corpus, a trained
 # PyTorch or language model, a vendor pull under a quota, a scrape that cannot be redone):

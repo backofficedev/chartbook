@@ -718,7 +718,7 @@ class TestCheck:
         downstream, _ = two_pipelines
         _depend(downstream, crsp={"git": "https://user:s3cret@example.org/acme/crsp.git"})
         monkeypatch.chdir(downstream)
-        result = CliRunner().invoke(main, ["check"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         assert "https://example.org/acme/crsp.git has not been fetched here" in result.output
         assert "s3cret" not in result.output
 
@@ -762,12 +762,12 @@ class TestCheck:
 
 class TestCheckCommand:
     def _check(self, project, monkeypatch):
-        """Run ``chartbook check`` in a project, against a policy that asks for nothing."""
+        """Run ``chartbook run --check`` in a project, against a policy that asks for nothing."""
         policy = project.parent / "policy.toml"
         required = {"required": {table: [] for table in DEFAULT_REQUIRED_FIELDS}}
         policy.write_text(tomli_w.dumps({"policy": required}), encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
-        return CliRunner().invoke(main, ["check", "--policy", str(policy)])
+        return CliRunner().invoke(main, ["run", "--check", "--policy", str(policy)])
 
     def test_ok_counts_the_dependencies(self, two_pipelines, monkeypatch):
         downstream, _ = two_pipelines

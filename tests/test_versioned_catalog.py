@@ -716,7 +716,7 @@ class TestAPipelineFromTheStoreAlone:
     def test_the_catalogs_other_commands_pass_it_by(self, catalog, monkeypatch):
         root, first, second = catalog
         monkeypatch.chdir(root)
-        before = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        before = CliRunner().invoke(main, ["run", "--check"])
         manifest = tomli.loads((root / ("catalog.toml" if (root / "catalog.toml").is_file() else "chartbook.toml")).read_text(encoding="utf-8"))
         manifest.setdefault("pipelines", {})["acme/nowhere"] = {}
         (root / ("catalog.toml" if (root / "catalog.toml").is_file() else "chartbook.toml")).write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
@@ -724,7 +724,7 @@ class TestAPipelineFromTheStoreAlone:
 
         loaded = load_manifest(root)
         assert "acme/nowhere" not in get_pipeline_ids(loaded)
-        after = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        after = CliRunner().invoke(main, ["run", "--check"])
         # The fixture's own missing fields are said as before; the entry adds nothing to check
         assert after.exit_code == before.exit_code == 1 and "acme/nowhere" not in after.output
         assert after.output.count("required by") == before.output.count("required by")

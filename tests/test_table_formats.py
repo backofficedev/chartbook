@@ -163,7 +163,7 @@ class TestTheManifest:
 
     def test_chartbook_check_says_it(self, tmp_path):
         directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/x.xlsx", "format": "excel"}})
-        result = CliRunner().invoke(main, ["check", "--project-dir", str(directory)])
+        result = CliRunner().invoke(main, ["run", "--check", "--project-dir", str(directory)])
         assert result.exit_code != 0
         assert "format = 'excel' is not a format a dataframe is read in" in result.output
         assert "[files]" in result.output

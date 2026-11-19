@@ -9,7 +9,7 @@ of 68 pipelines rendering their site from a ``dodo.py`` task that says
   (:func:`chartbook.manifest.require_chartbook`);
 - a build tool's task that says ``chartbook build`` makes the build run inside
   itself now that ``chartbook build`` runs the build command, and
-  ``chartbook build`` and ``chartbook check`` say so
+  ``chartbook build`` and ``chartbook run --check`` say so
   (:func:`chartbook.run.build_tool_runs_chartbook_build`).
 """
 
@@ -102,7 +102,7 @@ class TestEveryCommandStops:
 
     @pytest.mark.parametrize(
         "words",
-        [["docs", "build", "./site", "-f"], ["run"], ["check"], ["snapshot"], ["pin"]],
+        [["docs", "build", "./site", "-f"], ["run"], ["run", "--check"], ["snapshot"], ["pin"]],
         ids=lambda w: " ".join(w),
     )
     def test_before_acting(self, newer, monkeypatch, words):

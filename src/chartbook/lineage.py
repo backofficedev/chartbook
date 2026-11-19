@@ -606,7 +606,7 @@ def cycle(
     Nothing is said of what cannot be read here: a dependency with no pin
     and no folder, a ``git`` one not fetched, a folder whose manifest or
     lockfile cannot be read, or a record in the store that is not one
-    ChartBook wrote. ``chartbook check`` and ``chartbook pin`` say what is
+    ChartBook wrote. ``chartbook run --check`` and ``chartbook pin`` say what is
     wrong with those.
 
     :param project_dir: The pipeline's folder.
@@ -863,7 +863,7 @@ class _Finder:
         if there is not None and (there / MANIFEST_NAME).is_file():
             theirs = snapshot._read_manifest_file(there)
             if resolve_project_type(theirs, source=str(there / MANIFEST_NAME)) != "pipeline":
-                return []  # a catalog: `chartbook check` says so
+                return []  # a catalog: `chartbook run --check` says so
             project = theirs.get("project")
             named = derive_pipeline_id(project if isinstance(project, dict) else {}, there)
             children.append((Edge(pipeline, named, key, where), there, str(there)))

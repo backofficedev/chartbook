@@ -48,4 +48,4 @@ jobs:
       if: hashFiles('chartbook.toml') != ''
       run: |
         source .venv/bin/activate
-        chartbook check --skip-outputs
+        chartbook run --check

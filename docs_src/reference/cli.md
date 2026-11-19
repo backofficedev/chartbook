@@ -8,7 +8,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook docs build` | Render the documentation site |
 | `chartbook docs open` | Open the rendered site in a browser |
 | `chartbook run` | Make everything current: run the build script, then render the site |
-| `chartbook check` | Fail CI on missing metadata, broken paths, or expiring licenses |
+| `chartbook run --check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
@@ -40,7 +40,7 @@ Scaffold a new pipeline from the [cookiecutter template](https://github.com/back
 
 **The template comes with the package**, as `chartbook/template` in the wheel (the files git tracks in the repository's `template/`; in a source checkout, those same files of `template/` beside `src/`), so a project is always made with the template of the ChartBook that makes it, and making it needs no network. It is rendered with cookiecutter, and the project's `.cruft.json` is written as [cruft](https://cruft.github.io/cruft/) writes it: the template's repository on GitHub, its `template` folder, and the commit the template is at (recorded in the package when it is built; asked of git in a source checkout). So `cruft update` and `cruft check` in the project follow the template on GitHub from there. The command says when that commit is in no tag and on no branch of a remote that is the template's repository, in the checkout it runs from, so may not be on GitHub, where `cruft update` looks for it. When the commit is not known (the package recorded none, or the checkout's `template/` has changes git has not committed to tracked files), there is no `.cruft.json`, and the command says why and prints the command that makes one once the commit is known, with the answers you gave: `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '{…}'`. A source checkout that git cannot read, or a copy of one with no `.git`, is not rendered from, since which files git tracks cannot be told; the command says what to do. Everything rendered can be written by its owner, even from a template installed read-only. A folder of the project's name that is there already stops it, with nothing changed. The project's environment files ask for `chartbook>=` the template's version, which is your ChartBook's; `cruft update` moves it to the template's version then.
 
-The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook run` builds it and renders its site, and before that `chartbook docs build` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs build`, the commands that install its dependencies, then `chartbook run`, `chartbook docs open` and `chartbook check`. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (`Trusted: this folder`); a folder you cloned is not, until {ref}`chartbook trust <chartbook-trust>` says it is. When the record cannot be written (no home folder), the command says so and goes on.
+The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook run` builds it and renders its site, and before that `chartbook docs build` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs build`, the commands that install its dependencies, then `chartbook run`, `chartbook docs open` and `chartbook run --check`. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (`Trusted: this folder`); a folder you cloned is not, until {ref}`chartbook trust <chartbook-trust>` says it is. When the record cannot be written (no home folder), the command says so and goes on.
 
 ```console
 chartbook init [--git] [--github [OPTIONS] [--public | --private]]
@@ -144,101 +144,6 @@ chartbook docs open [OUTPUT_DIR] [OPTIONS] [--project-dir PATH]
 
 Open the rendered site, `OUTPUT_DIR/index.html` (default `./docs/index.html`), in your default browser. There is no server: the file is opened as it is, and after a rebuild you refresh the page. If there is no site yet, it says to run `chartbook docs build` first.
 
-(chartbook-check)=
-## chartbook check
-
-```console
-chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [OPTIONS] [--skip-outputs]
-```
-
-The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
-
-- **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
-- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing), or an asset's `path` that names a file or folder with `[`, `?` or `*` in its name (`./_data/[raw]`), which a reader would take for a pattern: rename it;
-- **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
-- **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days;
-- **a build tool's task that says `chartbook run`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook run` would run the build command, which runs that task again (see {ref}`chartbook run <chartbook-run>`).
-
-A project whose `[project] requires_chartbook` this ChartBook does not meet is not checked: the command stops first, as every command that acts on the manifest does, and says how to install one that meets it.
-
-Each finding is one line naming the manifest, the table and the field, so a CI log is enough to fix it:
-
-```console
-$ chartbook check --policy ../catalog
-chartbook.toml: [charts.repo_rates] units: required by the policy in ../catalog, but missing or empty
-chartbook.toml: [dataframes.crsp_bonds] license_expiration: license expires on 2026-11-02 (in 22 days, inside the 30-day window)
-chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/repo_public.parquet
-
-3 problem(s) found in 1 manifest(s).
-```
-
-| Option | Default | Effect |
-|--------|---------|--------|
-| `--project-dir PATH` | `.` | Pipeline to check |
-| `--within DAYS` | `30` | How far ahead a license expiration counts as a failure. `0` fails only on licenses already expired or expiring today |
-| `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `catalog.toml`, its directory, or any TOML file with a `[policy]` table) |
-| `--skip-outputs` | off | Do not require data files, charts and notebooks to exist |
-
-**Which fields are required.** A pipeline uses its own `[policy]`, with the machine catalog's policy as a fallback. `--policy FILE` explicitly replaces it. A missing required field fails the check. Catalogs compare snapshot metadata with their policy on the Diagnostics page; `chartbook check` is a pipeline command.
-
-When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, no `--policy`, or a `--policy` file with no `[policy]` table, as a catalog that sets none), `check` uses the built-in recommended-field lists, the same ones that drive the diagnostics page, as advice only: each missing field is a `warning:` line, and none of them makes the check fail. The one exception is a write-up: a dataframe or chart whose `docs_path` or `docs` is empty fails the check whatever the policy, since the format itself requires one.
-
-```console
-$ chartbook check
-warning: chartbook.toml: [project] repo_url: recommended by the default policy, but missing or empty
-warning: chartbook.toml: [charts.repo_rates] units: recommended by the default policy, but missing or empty
-chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
-```
-
-A missing build script is named `[scripts] build`. `[project] build`, the old place, is still read and counts as well, here and for a policy's `project = ["build"]`.
-
-`policy.mode` is not consulted. It decides what a *build* does about missing metadata; `check` always reports it.
-
-**License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
-
-**In CI, on a project that has not been built.** Data files, rendered charts and executed notebooks are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline — which is every job for a pipeline whose data needs a subscription — would see all of them as broken paths. `--skip-outputs` leaves those three out and still checks everything that lives in the repository: required fields, license dates, write-ups, notes, the README, the logo. Without it, a lone pipeline that has built none of its outputs (a project `chartbook init` just made, a fresh clone) has each reported as "not built yet" rather than "file not found", with one line on what builds them; the check still fails.
-
-```yaml
-# .github/workflows/check.yml
-- run: pip install chartbook
-- run: chartbook check --skip-outputs
-```
-
-**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A dependency named by its ID, or a `path` dependency that is there, with no pin in `chartbook.lock` yet draws a `warning:` line too: `chartbook pin` pins its newest snapshot, as the first read of it does, and so does `chartbook run` (the build). A fresh clone is in that state on purpose, and {ref}`pin --check <chartbook-pin>` and `run --frozen` are the gates that fail on it. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
-
-**IDs that changed.** A pipeline's ID can change, when it gets a git remote or a `[project] id` ({ref}`Pipeline Identity <pipeline-identity>`), and its snapshots are then made under the new one. `check` warns, naming what to write, when a catalog's `[pipelines]` key is not what the pipeline in that folder calls itself now (the catalog shows only the snapshots made under the key), and when a dependency named by its ID, with no `commit`, is a pipeline whose folders on this machine all call themselves something else now (the dependency stays at the last snapshot made under the old ID). Its folders are the catalog's own under that ID and those a store on this disk notes its newest snapshots were made in, each only if it is a checkout of the repository those snapshots record; a store at a URL is not read, since `check` uses no network, and then nothing is said. It also warns when a pipeline's `[project] repo_url` and its git remote name two repositories, since its ID is then `repo_url`'s, and says what it would be without it.
-
-```console
-$ chartbook check
-chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found: /work/fed_yield_curve
-chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns
-```
-
-**One file of a set.** A dataframe whose `path` names one file, beside files named the same but for a number or a date, draws a warning that gives the glob that names them all:
-
-```console
-$ chartbook check
-warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = "_data/transcripts_*.parquet".
-chartbook.toml: OK (1 pipeline(s), 1 dataframes, 0 charts, 0 notebooks)
-```
-
-It is meant to say nothing where nothing is wrong, so it asks a lot before it speaks:
-
-- Only the file's own folder is looked at.
-- A sibling's name differs from the file's only in its runs of digits (`2026`, `20261027`) or dates with `-` or `_` between their parts (`2026-10`, `2026_10`), each with as many digits in each part: `2026-10` stands beside `2025-12`, not beside `2025` or `2026-9`, and `yields_10y` beside `yields_30y`, not beside `yields_2y`.
-- At least one run that differs is a date or a number of two digits or more. `results_v2` beside `results_v1`, or `data.h5` beside `data.h4`, is more often a version or a format than a part, and is passed by; so is `part_1` beside `part_2`.
-- A file that a path of the manifest names already, a dataframe's, a model's or a glob's, is not counted, and there must be two or more that no path names.
-
-Where more than one run differs (`transcripts_2026_q4` beside the other quarters of 2024 to 2026), each is a `*` in the glob (`transcripts_*_q*.parquet`). Where a `*` would take in a file that is not one of them, such as `transcripts_sample.parquet`, the glob has a `[0-9]` for each digit instead (`transcripts_[0-9][0-9][0-9][0-9].parquet`). Models are not looked at: a model's path is a file or a folder, never a glob.
-
-`check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
-
-**A lockfile the manifest does not ask enough for** is a problem. `chartbook.lock` in the version this ChartBook writes cannot be read by one from before 0.6.0, which says only which version it reads; given a `requires_chartbook` it does not meet, it says what to install. `chartbook pin` raises that line when it writes such a lockfile. A manifest that was put back, or merged from a branch that had not moved, or left by a `chartbook run` (which writes no manifest), is caught here: `[project] requires_chartbook: ">=0.5.0" admits a ChartBook that cannot read chartbook.lock …. Write ">=0.6.0" (\`chartbook pin\` does)`, where the command is named only if it can rewrite the line. A manifest without the key is not held to any version, nor is one whose lockfile git ignores and whose manifest it does not.
-
-**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook run` in a pipeline with no build command (where `chartbook run` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), a dataframe's path that names one file of a set (above), and a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin of it names (`to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name).
-
-**Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
-
 (chartbook-trust)=
 ## chartbook trust
 
@@ -246,7 +151,7 @@ Where more than one run differs (`transcripts_2026_q4` beside the other quarters
 chartbook trust [PATH] [--render] [--repository] [--list] [OPTIONS] [--forget]
 ```
 
-Say that a pipeline's folder is yours to build. Usually you need not: the first build of a folder asks you, at a terminal (below). A build of a folder you have not trusted, where no one is asked (a script, CI), runs as a build of files from a store does: `chartbook docs build` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook run` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
+Say that a pipeline's folder is yours to build. Usually you need not: the first build of a folder asks you, at a terminal (below). A build of a folder you have not trusted, where no one is asked (a script, CI), runs as a build of files from a store does: `chartbook docs build` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook run` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook run --check` is not gated, and its last line says the level when it is not `run`.
 
 **Asked at a terminal.** The first `chartbook run`, `chartbook run` or `chartbook docs build` of a folder you have not trusted asks, when you are at a terminal:
 
@@ -288,7 +193,7 @@ Pipelines (each covers the folders inside it):
 
 **Without a record.** Under `CI` (the environment variable, set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none; a runner builds its own checkout. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code (the test suite runs so); it is the one value the variable takes, and another is said once and ignored. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. A `git` dependency is built in ChartBook's own copy of its commit: naming it in `[dependencies]` is the trust for that, and the pipeline that names it must itself be trusted to run.
 
-`chartbook docs build`, `chartbook run`, `chartbook create-data-glimpses` and `chartbook publish` use the pipeline trust gate; `chartbook check` reports the trust level without requiring trust. `chartbook catalog build` renders stored snapshots without member trust.
+`chartbook docs build`, `chartbook run`, `chartbook create-data-glimpses` and `chartbook publish` use the pipeline trust gate; `chartbook run --check` reports the trust level without requiring trust. `chartbook catalog build` renders stored snapshots without member trust.
 
 No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {design}`trust`.
 
@@ -632,7 +537,7 @@ or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new row
 
 - `rows not hashed: … (why). A pin of it is met by the same file, and by no rebuild.` A column of lists or structs; a single day, the rows with no date, or a table with no `date_col`, whose rows count for more than 128 MB (eight bytes a value, and sixteen and its own bytes for one of text); more than 256 columns; a CSV or JSON lines table of more than 32 MB of text; an Arrow IPC file; a date outside the years 1 to 9999, or dates in more than 1,024 calendar years; a parquet file written so that it cannot be read a little at a time (very large pages or dictionaries, or a footer of more than 16 MB: the line says which, and that the same rows written with fewer values a page can be hashed; pandas with fastparquet and DuckDB write large or wide tables so, one page to a column chunk).
 - `rows not hashed this time: … (why).` No room for the scratch files, say. The snapshot is made all the same, and the next `chartbook snapshot` hashes them.
-- `…: its file has the column pandas makes of an index with no name (__index_level_0__).` Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names: `to_parquet(index=False)` drops it, and `reset_index()` keeps it as a column with a name. {ref}`chartbook check <chartbook-check>` warns of the same, of a parquet file, and not with `--skip-outputs`.
+- `…: its file has the column pandas makes of an index with no name (__index_level_0__).` Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin names: `to_parquet(index=False)` drops it, and `reset_index()` keeps it as a column with a name. {ref}`chartbook run --check <chartbook-check>` warns of the same, of a parquet file that is built.
 
 **A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`). A commit is often tagged after it is built: run `chartbook snapshot` again after tagging, and since the tags are new it records them, with the same bytes; and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
 
@@ -641,7 +546,7 @@ or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new row
 ```console
 $ chartbook snapshot
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-  index not recorded: Chart 'curve' has no 'dataframe' key linking it to a dataframe in the [dataframes] section. The bytes and the documents are in the store; `chartbook check` says what a docs build would refuse.
+  index not recorded: Chart 'curve' has no 'dataframe' key linking it to a dataframe in the [dataframes] section. The bytes and the documents are in the store; `chartbook run --check` says what a docs build would refuse.
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
 
@@ -763,7 +668,7 @@ Wrote chartbook.lock.
 chartbook.toml: requires_chartbook is now ">=0.6.0" (it was ">=0.5.0"). chartbook.lock is of a version that began with ChartBook 0.6.0, and an earlier one cannot read it: with this line it is told to upgrade, and how. Commit the manifest with the lockfile.
 ```
 
-The line is rewritten in place: comments, order, quotes and line endings stay, and the file is whole or as it was (its new text is written beside it and moved over it). A manifest without the key says nothing of versions, and is left without it. So is one whose lockfile git ignores while it does not ignore the manifest: the project is shared through git with its lockfile left out, and that lockfile reaches no one else. What cannot be written so (an inline `project = { … }`, a string over several lines, a file made read-only, or one with a second name) is left, and the command says what to write there and why it did not. `pin --check` writes nothing, this included, and `chartbook check` fails on a version 2 lockfile under a line that admits an earlier ChartBook.
+The line is rewritten in place: comments, order, quotes and line endings stay, and the file is whole or as it was (its new text is written beside it and moved over it). A manifest without the key says nothing of versions, and is left without it. So is one whose lockfile git ignores while it does not ignore the manifest: the project is shared through git with its lockfile left out, and that lockfile reaches no one else. What cannot be written so (an inline `project = { … }`, a string over several lines, a file made read-only, or one with a second name) is left, and the command says what to write there and why it did not. `pin --check` writes nothing, this included, and `chartbook run --check` fails on a version 2 lockfile under a line that admits an earlier ChartBook.
 
 A build and a read never write a manifest. `chartbook run`, and a first read that pins, say which command does (`chartbook pin --project-dir FOLDER`, where the manifest is in another folder than the command), each time, until it has been run; where that command could not write the line either, they say what to write:
 
@@ -901,7 +806,7 @@ ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/store, and no bui
 
 A store that has the snapshot the lockfile names has the pin itself, and no build stands in for it there: a pinned file such a store lacks is lost from it, or not synced yet, and the check says so and how to wait or put it back. That is the case of a team that shares a store, where another build of the same commit may be anyone's.
 
-Dependencies between pipelines must form a graph with no cycles. A pin whose new or moved entries would lead back to this pipeline, or into pipelines that depend on each other, is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. `chartbook update` and `chartbook add` do the same, and the first read of a dependency, which pins it, raises `AssetNotPinnedError` with reason `cycle`. A cycle reached only through pins made before is not the new pin's doing and does not stop it: `chartbook run` and `chartbook check` say it, and `chartbook pin --check` exits 1. An ID names one pipeline: a copy that kept another's ID and reads it depends on itself. Where the cycle closes on the ID in another folder, the message names both and says what to do either way: two checkouts of one repository are one pipeline, and one of the dependencies comes out; two pipelines that share the ID give one of them an ID of its own with `[project] id`.
+Dependencies between pipelines must form a graph with no cycles. A pin whose new or moved entries would lead back to this pipeline, or into pipelines that depend on each other, is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. `chartbook update` and `chartbook add` do the same, and the first read of a dependency, which pins it, raises `AssetNotPinnedError` with reason `cycle`. A cycle reached only through pins made before is not the new pin's doing and does not stop it: `chartbook run` and `chartbook run --check` say it, and `chartbook pin --check` exits 1. An ID names one pipeline: a copy that kept another's ID and reads it depends on itself. Where the cycle closes on the ID in another folder, the message names both and says what to do either way: two checkouts of one repository are one pipeline, and one of the dependencies comes out; two pipelines that share the ID give one of them an ID of its own with `[project] id`.
 
 ## chartbook update
 
@@ -1047,7 +952,7 @@ The other reasons are said in the same place, each in one line, and none of them
 | `chartbook.links.toml is in the folder` | You are working on two pipelines at once ({ref}`chartbook link <chartbook-link>`). When you are done: remove it, `chartbook update`, and `chartbook run` again |
 | `Store 'class' is read-only, and it is the catalog's first` | A pipeline the catalog sends nowhere is written to its first store. Send this one to a store you can write, which the line names: `pipelines = ["acme/rates"]` under `[stores.mine]` in `catalog.toml` |
 | `its folder was named otherwise than the disk names it` | `--project-dir` spelled the folder in another letter case than the disk has. `cd` into the folder, and `chartbook run` again |
-| `acme/rates cannot have a snapshot: chartbook.toml: [dataframes] must be a table of tables` | The manifest is not what it means to be: `chartbook check` says more |
+| `acme/rates cannot have a snapshot: chartbook.toml: [dataframes] must be a table of tables` | The manifest is not what it means to be: `chartbook run --check` says more |
 | `its pins do not account for every dependency`, a store that cannot be written, a snapshot that reached one of its stores and not another | What the line names |
 
 A pipeline that declares nothing a snapshot would hold is told nothing of snapshots, committed or not.
@@ -1141,6 +1046,8 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 **A script that must end with a snapshot: `--snapshot`.** `chartbook run --snapshot` is the strict form of the same thing ({ref}`more <run-then-snapshot>`): it refuses to build with anything uncommitted, where a plain run builds and tells you, and it fails where no snapshot can be made. It makes one of a commit checked out by its hash too. For a nightly job, and for building somebody's pipeline at the commit a lockfile names ({ref}`a build of your own <a-build-of-your-own>`). After any snapshot a run makes, one line says what `chartbook store gc` would clear, as `chartbook snapshot` says it (`--no-gc-reminder` silences it).
 
+**Check without building: `--check`.** `chartbook run --check` runs nothing: it checks the manifest and the folder, for CI, and has {ref}`a section of its own <chartbook-check>`. It goes with `--within`, `--policy` and `--project-dir`, and with no script and none of the options above.
+
 **Another script.** `chartbook run test` runs `test` in this pipeline, and that is all it does. Only `build` pins, only `build` reaches what the pipeline depends on, and only `build` is followed by the look for what was declared and by a snapshot.
 
 **Run it in a pipeline.** A catalog lists stored snapshots and runs no code: in a catalog's folder, `chartbook run` says so and stops.
@@ -1168,6 +1075,108 @@ ftsfr/rate_forecast: 4 pin(s) of 1 dependency, all in the store. Nothing written
 ftsfr/rate_forecast: build
 Ran build in 1 pipeline(s).
 ```
+
+(chartbook-check)=
+### run --check
+
+```text
+chartbook run --check [--within DAYS] [--policy PATH] [--project-dir PATH]
+```
+
+The CI gate: {ref}`chartbook run <chartbook-run>` told to run nothing. It checks the manifest and the folder in seconds, builds and pins nothing, and asks for more than a run does of its own build: a policy's fields, a license's date. (Until 0.6.0 this was `chartbook check`, which now says where it went.) It exits `0` on a healthy project and `1` when it finds any of:
+
+- **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
+- **a broken path** — a `docs_path`, a note's `path`, `readme`, `logo` or `favicon` pointing at a file that does not exist: what is kept in the repository. (An output that is not built is listed, and is no problem: below.) Or an asset's `path` that names a file or folder with `[`, `?` or `*` in its name (`./_data/[raw]`), which a reader would take for a pattern: rename it;
+- **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
+- **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days;
+- **a build tool's task that says `chartbook run`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook run` would run the build command, which runs that task again (see {ref}`chartbook run <chartbook-run>`).
+
+A project whose `[project] requires_chartbook` this ChartBook does not meet is not checked: the command stops first, as every command that acts on the manifest does, and says how to install one that meets it.
+
+Each finding is one line naming the manifest, the table and the field, so a CI log is enough to fix it:
+
+```console
+$ chartbook run --check --policy ../catalog
+chartbook.toml: [charts.repo_rates] units: required by the policy in ../catalog, but missing or empty
+chartbook.toml: [dataframes.crsp_bonds] license_expiration: license expires on 2026-11-02 (in 22 days, inside the 30-day window)
+chartbook.toml: [dataframes.repo_public] path: not built yet: /work/repo/_data/repo_public.parquet
+
+2 problem(s) found in 1 manifest(s). 1 output is not built yet, which is no problem: `chartbook run` builds it.
+```
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `--project-dir PATH` | `.` | Pipeline to check |
+| `--within DAYS` | `30` | How far ahead a license expiration counts as a failure. `0` fails only on licenses already expired or expiring today |
+| `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `catalog.toml`, its directory, or any TOML file with a `[policy]` table) |
+
+**Which fields are required.** A pipeline uses its own `[policy]`, with the machine catalog's policy as a fallback. `--policy FILE` explicitly replaces it. A missing required field fails the check. Catalogs compare snapshot metadata with their policy on the Diagnostics page; `chartbook run --check` is a pipeline command.
+
+When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, no `--policy`, or a `--policy` file with no `[policy]` table, as a catalog that sets none), the check uses the built-in recommended-field lists, the same ones that drive the diagnostics page, as advice only: each missing field is a `warning:` line, and none of them makes the check fail. The one exception is a write-up: a dataframe or chart whose `docs_path` or `docs` is empty fails the check whatever the policy, since the format itself requires one.
+
+```console
+$ chartbook run --check
+warning: chartbook.toml: [project] repo_url: recommended by the default policy, but missing or empty
+warning: chartbook.toml: [charts.repo_rates] units: recommended by the default policy, but missing or empty
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
+```
+
+A missing build script is named `[scripts] build`. `[project] build`, the old place, is still read and counts as well, here and for a policy's `project = ["build"]`.
+
+`policy.mode` is not consulted. It decides what a *build* does about missing metadata; the check always reports it.
+
+**License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
+
+**An output that is not built is no problem.** Data files, rendered charts, executed notebooks, models and a source's DuckDB file are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline, which is every job for a pipeline whose data needs a subscription, has none of them. Each is listed as `not built yet` and counted as nothing, and everything that lives in the repository is still checked: required fields, license dates, write-ups, notes, the README, the logo. (`chartbook check --skip-outputs` left them out; there is no such option now, since it is how the check always is.) A build that did not write what it declares is caught where a build is: `chartbook run` fails on it.
+
+```console
+$ chartbook run --check
+chartbook.toml: [charts.repo_rates] path: not built yet: /work/repo/_output/repo_rates.html
+chartbook.toml: [dataframes.repo_public] path: not built yet: /work/repo/_data/repo_public.parquet
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks; 2 outputs are not built yet)
+Nothing is built yet: `chartbook run` builds it.
+```
+
+```yaml
+# .github/workflows/check.yml
+- run: pip install chartbook
+- run: chartbook run --check
+```
+
+**Dependencies.** For each `path` in `[dependencies]`, the check looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever the check runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. The check never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A dependency named by its ID, or a `path` dependency that is there, with no pin in `chartbook.lock` yet draws a `warning:` line too: `chartbook pin` pins its newest snapshot, as the first read of it does, and so does `chartbook run` (the build). A fresh clone is in that state on purpose, and {ref}`pin --check <chartbook-pin>` and `run --frozen` are the gates that fail on it. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
+
+**IDs that changed.** A pipeline's ID can change, when it gets a git remote or a `[project] id` ({ref}`Pipeline Identity <pipeline-identity>`), and its snapshots are then made under the new one. The check warns, naming what to write, when a catalog's `[pipelines]` key is not what the pipeline in that folder calls itself now (the catalog shows only the snapshots made under the key), and when a dependency named by its ID, with no `commit`, is a pipeline whose folders on this machine all call themselves something else now (the dependency stays at the last snapshot made under the old ID). Its folders are the catalog's own under that ID and those a store on this disk notes its newest snapshots were made in, each only if it is a checkout of the repository those snapshots record; a store at a URL is not read, since the check uses no network, and then nothing is said. It also warns when a pipeline's `[project] repo_url` and its git remote name two repositories, since its ID is then `repo_url`'s, and says what it would be without it.
+
+```console
+$ chartbook run --check
+chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found: /work/fed_yield_curve
+chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns
+```
+
+**One file of a set.** A dataframe whose `path` names one file, beside files named the same but for a number or a date, draws a warning that gives the glob that names them all:
+
+```console
+$ chartbook run --check
+warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = "_data/transcripts_*.parquet".
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 0 charts, 0 notebooks)
+```
+
+It is meant to say nothing where nothing is wrong, so it asks a lot before it speaks:
+
+- Only the file's own folder is looked at.
+- A sibling's name differs from the file's only in its runs of digits (`2026`, `20261027`) or dates with `-` or `_` between their parts (`2026-10`, `2026_10`), each with as many digits in each part: `2026-10` stands beside `2025-12`, not beside `2025` or `2026-9`, and `yields_10y` beside `yields_30y`, not beside `yields_2y`.
+- At least one run that differs is a date or a number of two digits or more. `results_v2` beside `results_v1`, or `data.h5` beside `data.h4`, is more often a version or a format than a part, and is passed by; so is `part_1` beside `part_2`.
+- A file that a path of the manifest names already, a dataframe's, a model's or a glob's, is not counted, and there must be two or more that no path names.
+
+Where more than one run differs (`transcripts_2026_q4` beside the other quarters of 2024 to 2026), each is a `*` in the glob (`transcripts_*_q*.parquet`). Where a `*` would take in a file that is not one of them, such as `transcripts_sample.parquet`, the glob has a `[0-9]` for each digit instead (`transcripts_[0-9][0-9][0-9][0-9].parquet`). Models are not looked at: a model's path is a file or a folder, never a glob.
+
+The check reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
+
+**A lockfile the manifest does not ask enough for** is a problem. `chartbook.lock` in the version this ChartBook writes cannot be read by one from before 0.6.0, which says only which version it reads; given a `requires_chartbook` it does not meet, it says what to install. `chartbook pin` raises that line when it writes such a lockfile. A manifest that was put back, or merged from a branch that had not moved, or left by a `chartbook run` (which writes no manifest), is caught here: `[project] requires_chartbook: ">=0.5.0" admits a ChartBook that cannot read chartbook.lock …. Write ">=0.6.0" (\`chartbook pin\` does)`, where the command is named only if it can rewrite the line. A manifest without the key is not held to any version, nor is one whose lockfile git ignores and whose manifest it does not.
+
+**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook run` in a pipeline with no build command (where `chartbook run` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), a dataframe's path that names one file of a set (above), and a dataframe whose file has the column pandas makes of an index with no name, `__index_level_0__`: where it holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a pin of it names (`to_parquet(index=False)` drops it; `reset_index()` keeps it as a column with a name).
+
+**Trust.** The check reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
 
 ## chartbook index
 
@@ -1480,7 +1489,7 @@ metadata:
 
 A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.5.1 to 0.6.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
 
-**Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
+**Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook run --check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
 
 (chartbook-link)=
 ## chartbook link

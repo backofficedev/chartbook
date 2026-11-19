@@ -7,7 +7,7 @@ says only which version it reads. Told by the manifest's
 ``requires_chartbook`` that it is too old, it says what to install. So
 ``chartbook pin``, ``update`` and ``add`` raise that line when they leave
 such a lockfile; a build and a read never write a manifest, and say which
-command does; and ``chartbook check`` fails on one that was not raised.
+command does; and ``chartbook run --check`` fails on one that was not raised.
 
 And the pins themselves: one made from a snapshot of an earlier ChartBook
 records no rows, so no rebuild meets it. The commands say so when such
@@ -243,7 +243,7 @@ class TestPinUpdateAndAddRaiseTheLine:
         snapshot.make(rates, store=store)
         result = _run("pin")
         assert result.exit_code == 0, result.output
-        checked = _run("check", "--skip-outputs").output
+        checked = _run("run", "--check").output
         if ignored:
             assert "requires_chartbook" not in result.output and _asked_for(report) == ">=0.5.0"
             assert "requires_chartbook" not in checked and _git(report, "status", "--porcelain") == ""
@@ -329,7 +329,7 @@ class TestPinUpdateAndAddRaiseTheLine:
         result = _run("pin")
         assert result.exit_code == 0 and "requires_chartbook" not in result.output
         assert (report / "chartbook.toml").read_text(encoding="utf-8") == text
-        assert _run("check", "--skip-outputs").output.count("requires_chartbook") == 0
+        assert _run("run", "--check").output.count("requires_chartbook") == 0
 
     @pytest.mark.parametrize(
         "line",
@@ -399,7 +399,7 @@ class TestPinUpdateAndAddRaiseTheLine:
         assert NOT_IN_PLACE in result.output.splitlines()
         assert (report / "chartbook.toml").read_text(encoding="utf-8") == text and (report / "chartbook.lock").is_file()
         # And the check does not name a command that cannot do it
-        checked = _run("check", "--skip-outputs")
+        checked = _run("run", "--check")
         assert checked.exit_code == 1 and 'Write ">=0.6.0", and it is told to upgrade, and how' in checked.output
         assert "`chartbook pin` does" not in checked.output
 
@@ -424,7 +424,7 @@ class TestPinUpdateAndAddRaiseTheLine:
         (report / "chartbook.toml").write_text(REPORT + '\n[scripts]\nbuild = "echo built"\n', encoding="utf-8", newline="\n")
         os.chmod(report / "chartbook.toml", stat.S_IREAD)
         try:
-            ran, checked = _run("run"), _run("check", "--skip-outputs")
+            ran, checked = _run("run"), _run("run", "--check")
         finally:
             os.chmod(report / "chartbook.toml", stat.S_IREAD | stat.S_IWRITE)
         assert ran.exit_code == 0, ran.output
@@ -606,7 +606,7 @@ class TestABuildAndAReadNeverWriteAManifest:
 
 
 class TestCheckHoldsTheManifestToItsLockfile:
-    """``chartbook check`` fails on a lockfile an earlier ChartBook cannot read, under a manifest that admits one."""
+    """``chartbook run --check`` fails on a lockfile an earlier ChartBook cannot read, under a manifest that admits one."""
 
     PROBLEM = (
         'chartbook.toml: [project] requires_chartbook: ">=0.5.0" admits a ChartBook that cannot read chartbook.lock, which is '
@@ -617,7 +617,7 @@ class TestCheckHoldsTheManifestToItsLockfile:
     def test_it_is_a_problem(self, report, rates, store):
         snapshot.make(rates, store=store)
         assert not lock.pin(report, store).problems
-        result = _run("check", "--skip-outputs")
+        result = _run("run", "--check")
         assert result.exit_code == 1, result.output
         assert self.PROBLEM in result.output.splitlines()
 
@@ -625,16 +625,16 @@ class TestCheckHoldsTheManifestToItsLockfile:
         snapshot.make(rates, store=store)
         assert not lock.pin(report, store).problems
         assert _run("pin").exit_code == 0
-        assert "requires_chartbook" not in _run("check", "--skip-outputs").output
+        assert "requires_chartbook" not in _run("run", "--check").output
 
     def test_an_earlier_lockfile_asks_for_no_more(self, report, rates, store):
         snapshot.make(rates, store=store)
         assert not lock.pin(report, store).problems
         _as_version_1(report, store)
-        assert "requires_chartbook" not in _run("check", "--skip-outputs").output
+        assert "requires_chartbook" not in _run("run", "--check").output
 
     def test_with_no_lockfile_there_is_nothing_to_ask_for(self, report):
-        assert "requires_chartbook" not in _run("check", "--skip-outputs").output
+        assert "requires_chartbook" not in _run("run", "--check").output
 
 
 class TestAFileOfALaterVersion:
@@ -1020,7 +1020,7 @@ class TestWhatTheSecondReviewFound:
         assert (RAISED not in result.output.splitlines()) == left and _asked_for(report) == (">=0.5.0" if left else ">=0.6.0")
         # And the check asks the same question, and gets the same answer
         (report / "chartbook.toml").write_text(REPORT, encoding="utf-8", newline="\n")
-        assert ("requires_chartbook" not in _run("check", "--skip-outputs").output) == left
+        assert ("requires_chartbook" not in _run("run", "--check").output) == left
 
     @pytest.mark.skipif(sys.platform == "win32", reason="a second name for a file is made another way there")
     def test_a_manifest_with_a_second_name_is_the_users_to_write(self, report, rates, store, work):
@@ -1035,7 +1035,7 @@ class TestWhatTheSecondReviewFound:
         ) in result.output
         assert (report / "chartbook.toml").read_text(encoding="utf-8") == REPORT == (work / "the-same-file.toml").read_text(encoding="utf-8")
         assert (work / "the-same-file.toml").stat().st_ino == (report / "chartbook.toml").stat().st_ino
-        assert "`chartbook pin` does" not in _run("check", "--skip-outputs").output
+        assert "`chartbook pin` does" not in _run("run", "--check").output
 
     @pytest.mark.skipif(sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="a folder's mode stops no write here")
     def test_a_folder_that_cannot_be_written_is_asked_of_too(self, report, rates, store):
@@ -1045,7 +1045,7 @@ class TestWhatTheSecondReviewFound:
         assert not lock.pin(report, store).problems  # the lockfile, while the folder takes one
         os.chmod(report, stat.S_IREAD | stat.S_IEXEC)
         try:
-            pinned, ran, checked = _run("pin"), _run("run"), _run("check", "--skip-outputs")
+            pinned, ran, checked = _run("pin"), _run("run"), _run("run", "--check")
         finally:
             os.chmod(report, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
         for told in (pinned, ran):

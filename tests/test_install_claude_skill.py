@@ -2,7 +2,7 @@
 
 The skill's ``SKILL.md`` names the ChartBook version it was written for in
 its front matter (``chartbook.claude_skill``). The install replaces a copy
-for another version and says which; ``chartbook check`` warns of a stale
+for another version and says which; ``chartbook run --check`` warns of a stale
 copy; any other command says so in one line when a person is at a terminal.
 """
 
@@ -271,7 +271,7 @@ class TestFindingAStaleCopy:
 
     @pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0, reason="POSIX permissions, not as root")
     def test_a_folder_that_cannot_be_read_is_passed_by(self, tmp_path, pipeline_project, monkeypatch):
-        """Found by a reviewer: `chartbook check` below a `.claude` this user may not open was a traceback."""
+        """Found by a reviewer: `chartbook run --check` below a `.claude` this user may not open was a traceback."""
         locked = tmp_path / "locked"
         (locked / ".claude").mkdir(parents=True)
         os.chmod(locked / ".claude", 0)
@@ -279,7 +279,7 @@ class TestFindingAStaleCopy:
             (locked / "pipe").mkdir()
             assert claude_skill.project_dir(locked / "pipe") is None
             monkeypatch.setattr(claude_skill, "project_dir", lambda start=None: (_ for _ in ()).throw(PermissionError("denied")))
-            result = CliRunner().invoke(main, ["check", "--project-dir", str(pipeline_project)])
+            result = CliRunner().invoke(main, ["run", "--check", "--project-dir", str(pipeline_project)])
             assert result.exception is None or isinstance(result.exception, SystemExit), result.output
         finally:
             os.chmod(locked / ".claude", 0o755)
@@ -319,10 +319,10 @@ class TestSayingIt:
         monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
         monkeypatch.chdir(pipeline_project)
         assert claude_skill.stale(pipeline_project) == []
-        for words in (["docs", "--help"], ["check"]):
+        for words in (["docs", "--help"], ["run", "--check"]):
             result = CliRunner().invoke(main, words)
             assert "Claude Code skill" not in result.output, words
-        assert CliRunner().invoke(main, ["check"]).exit_code == 0
+        assert CliRunner().invoke(main, ["run", "--check"]).exit_code == 0
 
     def test_a_script_never_sees_it(self, stale_user_copy):
         """CliRunner's stderr, like a pipe's or CI's, is not a terminal."""
@@ -337,14 +337,14 @@ class TestSayingIt:
     @pytest.mark.parametrize("terminal", [True, False])
     def test_check_warns_whether_or_not_a_terminal(self, stale_user_copy, pipeline_project, monkeypatch, terminal):
         monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: terminal)
-        result = CliRunner().invoke(main, ["check", "--project-dir", str(pipeline_project)])
+        result = CliRunner().invoke(main, ["run", "--check", "--project-dir", str(pipeline_project)])
         lines = [line for line in result.output.splitlines() if "Claude Code skill" in line]
         assert len(lines) == 1 and lines[0].startswith("warning: your Claude Code skill")
         assert result.exit_code == 0, result.output  # it fails nothing
 
     def test_check_warns_before_a_manifest_that_stops_it(self, stale_user_copy, tmp_path):
         (tmp_path / "chartbook.toml").write_text("this = [not toml\n", encoding="utf-8", newline="\n")
-        result = CliRunner().invoke(main, ["check", "--project-dir", str(tmp_path)])
+        result = CliRunner().invoke(main, ["run", "--check", "--project-dir", str(tmp_path)])
         assert result.exit_code != 0 and "warning: your Claude Code skill" in result.output
 
     @pytest.mark.parametrize("words", [["--version"], ["--help"], []])

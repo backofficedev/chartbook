@@ -79,6 +79,15 @@ class _Main(_Group):
     def parse_args(self, ctx, args):
         if args and args[0] == "build" and not ctx.resilient_parsing:
             raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
+        if args and args[0] == "check" and not ctx.resilient_parsing:
+            raise click.UsageError(
+                "`chartbook check` is gone: `chartbook run --check`. It checks a pipeline without building it, with the "
+                "same --within and --policy; an output that is not built is listed and is no problem, so --skip-outputs "
+                "is gone too. `chartbook run` checks what it builds.",
+                ctx,
+            )
+        # Kept for the group's own callback, which runs before the command reads its options
+        ctx.meta["chartbook.words"] = list(args)
         return super().parse_args(ctx, args)
 
 
@@ -117,8 +126,9 @@ def main(ctx):
     _trust_answers.clear()
     from chartbook.multi_store import settings_warnings
     settings_warnings.clear()
-    # `install` is what mends it, and `check` says it as a warning of its own
-    if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install", "check"):
+    # `install` is what mends it, and the check (`run --check`) says it as a warning of its own
+    checking = ctx.invoked_subcommand == "run" and "--check" in ctx.meta.get("chartbook.words", ())
+    if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install") and not checking:
         _say_if_the_skill_is_stale()
     if not ctx.resilient_parsing:
         _remove_old_views()
@@ -1114,65 +1124,32 @@ def _as_named(path=None) -> Path:
     return here
 
 
-@main.command()
-@click.option("--project-dir", type=click.Path(), help="Path to project directory")
-@click.option(
-    "--within",
-    "within_days",
-    type=click.IntRange(min=0),
-    default=30,
-    show_default=True,
-    metavar="DAYS",
-    help="Fail on licenses that expire within this many days",
-)
-@click.option(
-    "--policy",
-    "policy_path",
-    type=click.Path(),
-    default=None,
-    help="Check required fields against the [policy] of this catalog "
-    "chartbook.toml (or its directory) instead of the project's own",
-)
-@click.option(
-    "--skip-outputs",
-    is_flag=True,
-    default=False,
-    help="Do not require data files, charts and notebooks to exist. For CI "
-    "that checks a project without building it",
-)
-def check(project_dir, within_days, policy_path, skip_outputs):
-    """Check a project's metadata and paths; exit nonzero on any problem.
+def _check_pipeline(project_dir, within_days, policy_path):
+    """What `chartbook run --check` does: check a pipeline's manifest and folder, and exit nonzero on any problem.
 
-    Meant for CI. Works on a pipeline or a catalog and reports four things,
-    each naming the chartbook.toml and field to edit:
+    Nothing is run, pinned or built, and no data file is opened but to read
+    a parquet file's own description of its columns. Four things are
+    reported, each naming the chartbook.toml and field to edit: fields the
+    policy requires that are missing or empty; declared paths kept in the
+    repository (a write-up, a note, the README) that point at no file;
+    pipelines in [dependencies] that cannot be found where they are said
+    to be, and training data they do not declare; and dataframe licenses
+    that are expired, or expire within *within_days* days.
 
-    \b
-    - fields the policy requires that are missing or empty
-    - declared paths that point at files that do not exist
-    - pipelines in [dependencies] that cannot be found where they are said
-      to be, and training data they do not declare
-    - dataframe licenses that are expired, or expire within --within days
+    An output that is not built is listed as "not built yet" and counted
+    as no problem: a checkout that has not been built, as in CI, is no
+    mistake, and `chartbook run` itself fails where its build did not
+    write one.
 
-    Required fields come from the [policy] of the catalog or pipeline
-    checked, or from --policy, which checks a pipeline against the catalog
-    it is published to. With no policy anywhere, the default recommended
-    fields are reported as warnings and do not fail the check.
-
-    Only metadata and paths are checked; no data file is opened.
-
-    Data files, charts and notebooks are things a pipeline builds, and are
-    usually not in git. A CI job that has not run the pipeline will find
-    them all missing; --skip-outputs leaves them out and checks the rest.
-
-    Examples:
-        chartbook check
-        chartbook check --within 90
-        chartbook check --policy ../catalog
-        chartbook check --skip-outputs
+    Required fields come from the [policy] of the pipeline, or from
+    *policy_path*, which checks it against the catalog it is published to.
+    With no policy anywhere, the default recommended fields are reported
+    as warnings and do not fail the check.
     """
     import warnings
 
-    from chartbook.check import NOT_BUILT_YET, display_path, not_built_hint, read_policy, run_checks
+    from chartbook.check import display_path, not_built_hint, read_policy, run_checks
+    from chartbook.conf_validation import OUTPUT_FILE_TYPES, built_nothing, validate_source_files
     from chartbook.manifest import (
         _read_manifest_file,
         _working_pipeline_ids,
@@ -1201,7 +1178,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
             warnings.simplefilter("always")
             manifest = load_manifest(base_dir=named_dir)
             if manifest["project"]["type"] == "catalog":
-                raise ValueError("Catalog member checks are gone. `chartbook check` checks a pipeline; the catalog Diagnostics page checks snapshot metadata.")
+                raise ValueError("Catalog member checks are gone. `chartbook run --check` checks a pipeline; the catalog Diagnostics page checks snapshot metadata.")
         # A catalog's manifest always carries a resolved policy, so whether
         # one was written down is read from the file itself
         policy_given = "policy" in _read_manifest_file(project_dir)
@@ -1227,6 +1204,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         raise SystemExit(1)
 
     # The checks warn about what they could not look at
+    not_built: list = []
     with warnings.catch_warnings(record=True) as unchecked:
         warnings.simplefilter("always")
         problems = run_checks(
@@ -1234,8 +1212,9 @@ def check(project_dir, within_days, policy_path, skip_outputs):
             project_dir,
             within_days=within_days,
             policy_label=policy_label,
-            skip_outputs=skip_outputs,
+            skip_outputs=True,
             policy_given=policy_given,
+            not_built=not_built,
         )
 
     for warning in [*caught, *unchecked]:
@@ -1243,14 +1222,22 @@ def check(project_dir, within_days, policy_path, skip_outputs):
 
     for problem in problems:
         click.echo(problem.format(relative_to=Path.cwd()))
+    # What a build is to write and has not: listed, and no problem. A checkout that has not been built is no mistake
+    for output in sorted(not_built, key=lambda found: (str(found.file), found.table, found.field)):
+        click.echo(output.format(relative_to=Path.cwd()))
+    outputs = (
+        "" if not not_built
+        else "1 output is not built yet" if len(not_built) == 1
+        else f"{len(not_built)} outputs are not built yet"
+    )
 
     if problems:
         files = len({p.file for p in problems})
         click.echo(
-            f"\n{len(problems)} problem(s) found in {files} manifest(s).", err=True
+            f"\n{len(problems)} problem(s) found in {files} manifest(s)."
+            + (f" {outputs}, which is no problem: `chartbook run` builds {'it' if len(not_built) == 1 else 'them'}." if outputs else ""),
+            err=True,
         )
-        if any(p.message.startswith(f"{NOT_BUILT_YET}:") for p in problems):
-            click.echo(not_built_hint(manifest), err=True)
         _say_trust_level(manifest, project_dir)
         raise SystemExit(1)
 
@@ -1268,18 +1255,23 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         for section in sections
     )
     shown = display_path(manifest_path, relative_to=Path.cwd())
-    note = "; built outputs not checked" if skip_outputs else ""
+    note = f"; {outputs}" if outputs else ""
     click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts}{note})")
+    if outputs and built_nothing(
+        manifest, [missing for missing in validate_source_files(manifest, project_dir) if missing.file_type in OUTPUT_FILE_TYPES]
+    ):
+        # A project just made, a fresh clone: one line on what builds it
+        click.echo(not_built_hint(manifest), err=True)
     _say_trust_level(manifest, project_dir)
 
 
 def _say_trust_level(manifest, project_dir):
-    """One last line of `chartbook check`, when a build here would not run as the user's own.
+    """One last line of `chartbook run --check`, when a build here would not run as the user's own.
 
-    `check` reads and runs nothing, so it is not gated; it says the level
+    The check reads and runs nothing, so it is not gated; it says the level
     the folder is trusted at (``docs_src/design/trust.md``) when that is
     not `run`, and the command that trusts it. A catalog never gets here:
-    `check` refuses one before, and a catalog's stores need no trust.
+    the check refuses one before, and a catalog's stores need no trust.
     """
     from chartbook.config import trust_of
 
@@ -3305,7 +3297,28 @@ def lineage_command(project_dir, check, rehash, as_json):
     help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin, its own first; each must be trusted and committed",
 )
 @click.option("--no-gc-reminder", is_flag=True, help="After a snapshot, do not say what `chartbook store gc` would clear")
-def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder):
+@click.option(
+    "--check",
+    "check_only",
+    is_flag=True,
+    help="Run nothing: check the manifest and the folder, and exit 1 on any problem. For CI. An output that is not built is listed, and is no problem",
+)
+@click.option(
+    "--within",
+    "within_days",
+    type=click.IntRange(min=0),
+    default=None,
+    metavar="DAYS",
+    help="With --check: fail on licenses that expire within this many days (default: 30)",
+)
+@click.option(
+    "--policy",
+    "policy_path",
+    type=click.Path(),
+    default=None,
+    help="With --check: check required fields against the [policy] of this catalog (its catalog.toml, or its folder) instead of the pipeline's own",
+)
+def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder, check_only, within_days, policy_path):
     """Build this pipeline: pin what it reads, run its build, look for what it made, make a snapshot.
 
     \b
@@ -3356,6 +3369,18 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         chartbook run --snapshot
         chartbook run --frozen
         chartbook run --upstream
+        chartbook run --check
+        chartbook run --check --within 90 --policy ../catalog
+
+    --check runs nothing. It checks the manifest and the folder, in
+    seconds, and exits 1 on any problem: a field the policy requires that
+    is missing, a write-up or a note that is not there, a dependency that
+    cannot be found, a license that has expired or will within --within
+    days. An output that is not built is listed and is no problem, since a
+    checkout that has not been built is no mistake. For CI: what a run
+    checks of its own build, a run checks; this asks for more (a policy,
+    a license's date) and builds nothing. Whether what is pinned is in the
+    store is `chartbook pin --check`.
 
     --frozen pins nothing, makes no snapshot, and writes nothing before
     the build but, where the store can be written, its note that this
@@ -3377,6 +3402,20 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     have everything committed, and its build must leave it so. The first
     that fails stops the run.
     """
+    if check_only:
+        with_it = [
+            name for name, given in (
+                (f"a script ({script})", script != "build"), ("--force", force), ("--snapshot", make_snapshot),
+                ("--frozen", frozen), ("--remake", remake), ("--upstream", upstream),
+            ) if given
+        ]
+        if with_it:
+            raise click.UsageError(
+                f"--check runs nothing, so it does not go with {', '.join(with_it)}. It takes --within, --policy and --project-dir."
+            )
+        return _check_pipeline(project_dir, 30 if within_days is None else within_days, policy_path)
+    if within_days is not None or policy_path is not None:
+        raise click.UsageError("--within and --policy go with --check: `chartbook run --check --within 90`.")
     project_dir = resolve_project_dir(project_dir)
     if _is_catalog_folder(project_dir):
         raise click.ClickException("A catalog lists stored snapshots. Run `chartbook run` in a pipeline, or orchestrate pipelines with doit.")
@@ -3456,7 +3495,7 @@ def _echo_snapshot(report, upstream=False):
     if report.index_skipped:
         click.echo(
             f"  index not recorded: {report.index_skipped}. The bytes and the documents are in the "
-            f"store; `chartbook check` says what a docs build would refuse."
+            f"store; `chartbook run --check` says what a docs build would refuse."
         )
     for path, why in report.documents_skipped:
         shown = path if path.isprintable() else ascii(path)  # a name may carry what a terminal would act on
@@ -3465,7 +3504,7 @@ def _echo_snapshot(report, upstream=False):
         click.echo(
             f"  label not recorded: {model} {label!r}. A label is letters, digits, '.', "
             f"'_' and '-', does not read as a hash, and names a version by twelve or more "
-            f"of its digits; `chartbook check` says the same."
+            f"of its digits; `chartbook run --check` says the same."
         )
     if report.made and upstream:
         click.echo("Snapshot made, for what depends on it in this run to pin.")
@@ -4876,7 +4915,7 @@ def install_claude_skill(force, project):
     older layouts are removed, so the copy mirrors the bundled skill.
 
     Any other command, run at a terminal, says in one line when your copy or
-    the project's is for an older ChartBook, and `chartbook check` warns.
+    the project's is for an older ChartBook, and `chartbook run --check` warns.
 
     \b
     Examples:

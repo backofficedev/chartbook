@@ -2,7 +2,7 @@
 
 A pipeline that depends, through what it depends on, on itself has no order to be built in, and
 its snapshot would carry itself in its lineage. ``chartbook run``, ``chartbook build`` and
-``chartbook snapshot`` refuse one, and ``chartbook check`` reports it
+``chartbook snapshot`` refuse one, and ``chartbook run --check`` reports it
 (:func:`chartbook.lineage.cycle`).
 """
 

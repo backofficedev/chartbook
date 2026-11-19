@@ -135,7 +135,7 @@ class TestScratch:
         with pytest.raises(ValueError, match="scratch = .* is not a plain path inside the pipeline"):
             data.scratch(project_dir=folder)
         with pytest.raises(ValueError, match="scratch = .* is not a plain path inside the pipeline"):
-            load_manifest(folder)  # and the manifest refuses it, so `chartbook check` says so too
+            load_manifest(folder)  # and the manifest refuses it, so `chartbook run --check` says so too
 
     @pytest.mark.parametrize("declared, asset", [
         ("./_data/articles/_tmp", "dataframes.articles"),

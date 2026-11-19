@@ -629,7 +629,7 @@ class TestWhatTheReleaseReviewFound:
         return folder
 
     def test_a_docs_path_that_is_not_a_string_is_named(self, tmp_path):
-        """`chartbook check` and `chartbook docs build` died on `.strip()` of the integer."""
+        """`chartbook run --check` and `chartbook docs build` died on `.strip()` of the integer."""
         folder = self._pipeline(tmp_path, dataframes={"x": {"path": "./x.parquet", "docs_path": 5}})
         with pytest.raises(ValueError) as e:
             load_manifest(folder)

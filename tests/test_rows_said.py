@@ -4,7 +4,7 @@ A pin that moves says, for each dataframe, whether it gained rows or its
 earlier rows changed, beside the pin it had. A snapshot says the same
 beside the snapshot before it. Both only report: there the change is what
 was asked for. And the author of a dataframe whose file has the column
-pandas makes of an index with no name is told, by ``chartbook check`` and
+pandas makes of an index with no name is told, by ``chartbook run --check`` and
 by ``chartbook snapshot``, with the two ways out.
 """
 

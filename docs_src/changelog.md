@@ -34,6 +34,7 @@ In order:
 2. In each pipeline that others pin: `chartbook snapshot`. The same commit and the same files make one new snapshot, which records each dataframe's rows, and the command says that is why it was made.
 3. In each pipeline that pins them: `chartbook update`, which says `already pinned`, since no file changed, and then what did: `1 dataframe has its rows pinned now, as well as its file: a build of someone's own that holds the same rows meets the pin.` Commit `chartbook.lock` and `chartbook.toml` together.
 4. A script that ran `chartbook pin --frozen` runs `chartbook pin --check` (below).
+5. A CI file, a `dodo.py` or a Makefile that ran `chartbook check` runs `chartbook run --check`, without `--skip-outputs` (below).
 
 A dataframe whose file has the column pandas makes of an index with no name is told of at step 2, and is worth mending there (`to_parquet(index=False)`): with it, no later build has the pinned rows.
 
@@ -65,6 +66,23 @@ Ran build in 1 pipeline(s).
 - **`Stores:` is said only where there are several.** With one store, the line `Stores: default` after every snapshot told nothing.
 - **A section of `chartbook.toml` that is not a table is said as such** (`[[dataframes]]`, `dataframes = "x"`): `acme/rates cannot have a snapshot: chartbook.toml: [dataframes] must be a table of tables, one per dataframe, e.g. [dataframes.<name>] with a path = "..." under it; it is an array.` `chartbook snapshot` ended in a traceback on one. A run builds, as it did, and says it in its last line.
 - In Python, `chartbook.run.run(...)` makes a snapshot only when told (`snapshot=True`, or `snapshot=run.WHEN_COMMITTED`, which is what the command passes); what it did not snapshot, and why, is in `RunReport.not_snapshotted`. `chartbook.run.unwritten(folder)` lists what a build was to write and did not. `snapshot.make(..., ask=False)` never asks which store, and `SnapshotReport.several` says whether there is more than one. `snapshot.NothingToSnapshot` is the `SnapshotError` of a pipeline that declares or has built nothing, and `snapshot.NotInEveryStore` of a snapshot that reached the first of its stores and not another.
+
+### Changed — `chartbook check` is `chartbook run --check`, and an output that is not built is no problem
+
+Nobody knew when to type `chartbook check`: before a build its findings were of files not there yet, and `chartbook run` did not call it after one. A run now looks for what its build was to write (above), and what is left of the check is what CI wants, an answer in seconds with nothing built ({design}`one-command`):
+
+```text
+$ chartbook run --check
+chartbook.toml: [charts.repo_rates] path: not built yet: /work/repo/_output/repo_rates.html
+chartbook.toml: [dataframes.repo_public] path: not built yet: /work/repo/_data/repo_public.parquet
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks; 2 outputs are not built yet)
+Nothing is built yet: `chartbook run` builds it.
+```
+
+- **Breaking: `chartbook check` is gone.** Typed, it says `chartbook check is gone: chartbook run --check` and exits `2`. `chartbook run --check` runs nothing, pins nothing and asks for no trust, and takes the same `--within DAYS`, `--policy PATH` and `--project-dir PATH`. It goes with no script and none of `--force`, `--snapshot`, `--frozen`, `--remake`, `--upstream`.
+- **Breaking: `--skip-outputs` is gone, since it is how the check always is.** A data file, a chart, a notebook, a model, its metrics file or a source's DuckDB file that is not there is listed as `not built yet` and counted as nothing: a checkout that has not been built is no mistake. Before, without `--skip-outputs`, each was a problem and the check exited `1`. What is kept in the repository is checked as before: a write-up, a note, the README, the logo, the fields a policy requires, a license's date. That a build left an output unwritten is `chartbook run`'s to say, which fails on it.
+- The template's CI file, its README and the line `chartbook init` ends with say `chartbook run --check`, and so do this repository's examples. A project made from an earlier template has `chartbook check --skip-outputs` in `.github/workflows/python_tests.yml`: change the line.
+- In Python, `chartbook.check.run_checks(..., not_built=[])` gathers the outputs that are not built into the list and does not report them; `skip_outputs` is as it was.
 
 ### Added — the move to a new version is told by the commands
 

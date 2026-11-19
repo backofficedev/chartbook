@@ -1,6 +1,6 @@
 """The CI gate: metadata and path checks over a loaded manifest.
 
-``chartbook check`` runs everything here and exits nonzero when any problem
+``chartbook run --check`` runs everything here and exits nonzero when any problem
 is found. It looks at *metadata and paths* only — required fields under the
 active policy, the files a manifest points at, the pipelines it depends on,
 and license expiration dates. It never opens a data file; data-quality
@@ -90,7 +90,7 @@ def not_built_hint(manifest: dict) -> str:
         if manifest["project"].get("build")
         else "build its outputs (it has no build script for `chartbook run` to run)"
     )
-    return f"Nothing is built yet: {build}, and the same check with --skip-outputs checks the rest without it."
+    return f"Nothing is built yet: {build}."
 
 
 @dataclass(frozen=True)
@@ -157,7 +157,7 @@ def read_policy(path: Union[str, Path]) -> tuple[dict, bool]:
 
     A file with no ``[policy]`` table resolves to the default lists, as
     :func:`load_policy` gives them; the second value says it had none, so
-    that ``chartbook check --policy`` on a catalog that sets no policy
+    that ``chartbook run --check --policy`` on a catalog that sets no policy
     gives none.
 
     :param path: A catalog ``catalog.toml`` or the directory holding one.
@@ -245,7 +245,7 @@ def check_required_fields(
 
 
 def check_paths(
-    manifest: dict, base_dir: Path, skip_outputs: bool = False
+    manifest: dict, base_dir: Path, skip_outputs: bool = False, not_built: Optional[list] = None
 ) -> list[Problem]:
     """Report every declared file that does not exist on disk.
 
@@ -253,19 +253,26 @@ def check_paths(
         or notebooks. These are what a pipeline builds, so a checkout that
         has not run it has none of them. Files kept in the repository are
         still checked: write-ups, notes, the README, the logo and favicon.
+    :param not_built: A list that each output that is not there is added
+        to, as a :class:`Problem` whose message begins :data:`NOT_BUILT_YET`,
+        and not reported: what ``chartbook run --check`` lists, and does not
+        count. The files kept in the repository are checked as ever.
     """
     problems = []
     missing_files = validate_source_files(manifest, base_dir)
+    gathered = not_built is not None
     # A lone pipeline that has built nothing yet (a project just made, a
     # fresh clone) lacks every output, which is not a mistake in its
     # manifest; told as `chartbook docs build` tells it
     unbuilt = (
         not skip_outputs
+        and not gathered
         and manifest["project"].get("type") == "pipeline"
         and built_nothing(manifest, missing_files)
     )
     for missing in missing_files:
-        if skip_outputs and missing.file_type in OUTPUT_FILE_TYPES:
+        output = missing.file_type in OUTPUT_FILE_TYPES
+        if output and skip_outputs and not gathered:
             continue
         if missing.file_type in ("logo", "favicon"):
             toml_file = Path(base_dir) / "chartbook.toml"
@@ -278,7 +285,7 @@ def check_paths(
             toml_file = _manifest_file(manifest, missing.pipeline_id, base_dir)
             table = f"{section}.{missing.item_id}"
 
-        if unbuilt:
+        if unbuilt or (output and gathered):
             message = f"{NOT_BUILT_YET}: {missing.file_path}"
         elif is_glob_pattern(str(missing.file_path)):
             message = f"no files match {missing.file_path}"
@@ -289,7 +296,7 @@ def check_paths(
         if field == "path" and missing.file_type in _FILE_TYPE_FIELDS and _kept(manifest, missing):
             # A costly output: the store may have it (docs_src/design/keep.md)
             message += "; it is marked keep = true, and `chartbook restore` puts it back from the store"
-        problems.append(Problem(toml_file, table, field, message))
+        (not_built if output and gathered else problems).append(Problem(toml_file, table, field, message))
 
     # A series' write-up. The build does not render these yet, so nothing
     # else notices when one is missing.
@@ -1405,17 +1412,21 @@ def check_licenses(
     return problems
 
 
-def check_sources(manifest: dict, base_dir: Path, skip_outputs: bool = False) -> list[Problem]:
+def check_sources(
+    manifest: dict, base_dir: Path, skip_outputs: bool = False, not_built: Optional[list] = None
+) -> list[Problem]:
     """Report a source that is not there: a DuckDB file that does not exist.
 
     A source's file is something the pipeline builds, so with
-    *skip_outputs* it is not reported. Whether the engine *connects* is not
-    checked, as the data-access design says: a source has to resolve, and
-    whether a table or query in it runs is found out when it is read.
+    *skip_outputs* it is not reported, and with *not_built* it is added to
+    that list and not reported (:func:`check_paths`). Whether the engine
+    *connects* is not checked, as the data-access design says: a source has
+    to resolve, and whether a table or query in it runs is found out when
+    it is read.
     """
     from chartbook.backends import duckdb_path
 
-    if skip_outputs:
+    if skip_outputs and not_built is None:
         return []
     problems = []
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
@@ -1426,6 +1437,9 @@ def check_sources(manifest: dict, base_dir: Path, skip_outputs: bool = False) ->
                 continue
             path = duckdb_path(source["_resolved_url"], pipeline_dir)
             if path != ":memory:" and not Path(path).is_file():
+                if not_built is not None:
+                    not_built.append(Problem(toml_file, f"sources.{name}", "url", f"{NOT_BUILT_YET}: {path}"))
+                    continue
                 problems.append(
                     Problem(
                         toml_file,
@@ -1549,6 +1563,7 @@ def run_checks(
     policy_label: str = "the active policy",
     skip_outputs: bool = False,
     policy_given: bool = True,
+    not_built: Optional[list] = None,
 ) -> list[Problem]:
     """Run every check over a loaded manifest.
 
@@ -1563,6 +1578,10 @@ def run_checks(
     :param policy_given: False when no ``[policy]`` was given anywhere: the
         default recommended fields are then warned about, not problems; see
         :func:`check_required_fields`.
+    :param not_built: A list that each output that is not built is added
+        to, and not reported: what ``chartbook run --check`` lists and
+        does not count, since a checkout that has not been built is no
+        mistake. A file that is built is looked at as ever.
     :returns: Every problem found, sorted by file then table; empty for a
         healthy project.
     """
@@ -1574,9 +1593,9 @@ def run_checks(
         *check_required_fields(
             manifest, base_dir, policy_label=policy_label, warn_only=not policy_given
         ),
-        *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_paths(manifest, base_dir, skip_outputs=skip_outputs, not_built=not_built),
         *check_glob_names(manifest, base_dir),
-        *check_index_columns(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_index_columns(manifest, base_dir, skip_outputs=skip_outputs and not_built is None),
         *check_siblings(manifest, base_dir),
         *check_dependencies(manifest, base_dir),
         *check_dependency_cycles(manifest, base_dir),
@@ -1586,7 +1605,7 @@ def run_checks(
         *check_model_lineage(manifest, base_dir),
         *check_model_labels(manifest, base_dir),
         *check_model_staleness(manifest, base_dir),
-        *check_sources(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_sources(manifest, base_dir, skip_outputs=skip_outputs, not_built=not_built),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]
     return sorted(problems, key=lambda p: (str(p.file), p.table, p.field))

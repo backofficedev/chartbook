@@ -761,7 +761,7 @@ class TestWhatWasDeclared:
         """Found by review: `[[dataframes]]` was a traceback, before the build in a run and in `chartbook snapshot`. A run builds, as it did, and says it."""
         directory = _folder(work / "arrays", {"project": {"id": "acme/arrays"}, "scripts": {"build": BUILD}, **sections})
         monkeypatch.chdir(_committed(directory))
-        why = f"acme/arrays cannot have a snapshot: chartbook.toml: {said} `chartbook check` says more."
+        why = f"acme/arrays cannot have a snapshot: chartbook.toml: {said} `chartbook run --check` says more."
         result = _run()
         assert result.exit_code == 0 and result.exception is None, result.output
         assert result.output.splitlines() == [

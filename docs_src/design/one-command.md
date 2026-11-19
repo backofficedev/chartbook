@@ -202,6 +202,30 @@ What was left open, *proposed by Claude, 2026-11-19:*
 
 *Decided 2026-11-19: a run clears the old snapshots of its own pipeline.* *Proposed by Claude:*
 
+```{admonition} Built, and held back
+:class: warning
+
+This was built as written below, and a review of it reproduced four ways in which gc's rules,
+applied at every run with no list and no question, remove something that is still needed. It is
+not merged, and waits for the maintainer.
+
+1. **A pin the store has no note of.** A consumer's `paper` branch commits a lockfile that pins
+   January's snapshot, and its `main` moves on to February's. The upstream's next run removes
+   January's and says nothing pins it. So too for a reader whose store is read-only to them,
+   as a class's is: their pin leaves no note.
+2. **A run in a checkout that lacks a mark.** `keep = true`, a label, a tag and a branch are read
+   from the folder the run is in, and from the newest snapshot, which that run has just made. A
+   run at a commit from before `keep = true` was written removed two of three kept versions.
+3. **A commit checked out by its hash.** `chartbook run --snapshot` says `No new snapshot: the
+   same bytes … as the one made 2026-01-01`, and then removes that one.
+4. **Lineage.** An upstream's run removes what `chartbook snapshot --deep` downstream walks to.
+
+`chartbook store gc` has the same rules, and lists and asks first. Put to the maintainer on
+2026-11-19: a run removes nothing, says in a line what could go, and `chartbook store gc
+PIPELINE` lists it and asks (proposed); or a run removes with what can be closed closed, a
+longer window, and the first case accepted; or as written.
+```
+
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
   same rules and no others: a snapshot that no lockfile the store knows of pins, that is not the
   newest, that no tag, branch or label names, that holds no version of an asset marked `keep =
@@ -375,8 +399,9 @@ changes.
 1. This page. *Merged 2026-11-19.*
 2. `chartbook run` looks for what was declared, and makes a snapshot when everything is committed.
    *Built 2026-11-19.*
-3. A snapshot clears its pipeline's old snapshots; the reminder goes.
-4. `chartbook run --check`; `chartbook check` is gone.
+3. A snapshot clears its pipeline's old snapshots; the reminder goes. *Built 2026-11-19 and not
+   merged: see "Clearing old snapshots".*
+4. `chartbook run --check`; `chartbook check` is gone. *Built 2026-11-19.*
 5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone.
 6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
 7. What is not in your store: the list, in order.

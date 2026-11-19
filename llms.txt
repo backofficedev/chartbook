@@ -11,7 +11,7 @@ A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declar
 - [Let Your Agent Use the Catalog](docs_src/guide/agents.md): what is there (`chartbook ls --json`), what it is (`chartbook get-docs ID`), use it (`chartbook add`, `data.load`, `chartbook path`), can it be trusted (`chartbook lineage`)
 - [Start a Project From the Template](docs_src/guide/starting-a-project.md): `chartbook init`; each data source chosen brings a dataframe and a chart
 - [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
-- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs build`, `chartbook docs open`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook get-docs`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs build`, `chartbook docs open`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook run --check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook get-docs`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
 
 ## Guides
 
@@ -42,7 +42,7 @@ chartbook run             # THE command: pin what has no pin, run [scripts] buil
 chartbook docs build -f   # Force overwrite existing docs
 chartbook docs build -f --watch  # Rebuild incrementally on every file change
 chartbook docs open          # Open the generated site
-chartbook check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
+chartbook run --check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 # every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,
 # notebook, note, model and files asset, each with an ID (scope/pipeline:kind/name) and a content hash,
 # and docs/llms.txt: a line per pipeline, dataframe, chart, model and files asset with its ID and page link
@@ -54,7 +54,7 @@ chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in
 chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
 chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
 chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between two builds, from their index.json: data, pins, versions, labels, staleness
-# A model is out of date when what it was trained on has moved: its page says so, index.json has stale_inputs, `chartbook check` warns; `chartbook run` retrains
+# A model is out of date when what it was trained on has moved: its page says so, index.json has stale_inputs, `chartbook run --check` warns; `chartbook run` retrains
 # In Python: data.sql("select * from {df_a} join {df_b} using (date)") runs SQL with dataframes named in braces (DuckDB, or the warehouse of a databricks source);
 # data.ref("df") is a dataframe's name in SQL; data.connect("source") the raw connection. [sources] in chartbook.toml.
 chartbook publish            # Stage publishable files to a directory

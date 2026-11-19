@@ -1262,7 +1262,7 @@ def training_inputs(directory: Path, raw: dict, assets: dict) -> dict[str, dict[
     A local dataframe's hash is the one this snapshot records for it; another
     pipeline's is the one the folder's lockfile pins, under the ID the
     lockfile uses (the dependency's key). An input that is not built, not
-    pinned, or not a reference that parses is left out; ``chartbook check``
+    pinned, or not a reference that parses is left out; ``chartbook run --check``
     reports those.
 
     :returns: By the model's reference, ``{input_id: content_hash}``.
@@ -1325,7 +1325,7 @@ def labels_of(raw: dict) -> dict[str, dict[str, str]]:
             continue
         for label, version in aliases.items():
             # Only a label a reference can carry, and one that does not read
-            # as a version; `chartbook check` refuses the rest, and a snapshot
+            # as a version; `chartbook run --check` refuses the rest, and a snapshot
             # must not hand a dependant a name its lockfile cannot hold
             if not LABEL_PATTERN.match(label) or _HEX_START.match(label):
                 continue
@@ -2449,7 +2449,7 @@ def _scores(directory: Path, entry) -> Optional[dict]:
     try:
         return read_metrics(metrics_file)
     except ValueError:
-        return None  # `chartbook check` is what reports a malformed one
+        return None  # `chartbook run --check` is what reports a malformed one
 
 
 def pipeline_in(directory: Union[str, Path]) -> str:
@@ -2521,7 +2521,7 @@ def make(
     no_table = section_that_is_no_table(_read_manifest_file(directory), MANIFEST_NAME)
     if no_table:
         # What walks the tables would stop on it, each in its own way: said once, in the manifest's words
-        raise SnapshotError(f"{pipeline} cannot have a snapshot: {no_table} `chartbook check` says more.")
+        raise SnapshotError(f"{pipeline} cannot have a snapshot: {no_table} `chartbook run --check` says more.")
     code = require_committed(directory, pipeline, ignoring)
     from chartbook.multi_store import Stores
     if store is None or isinstance(store, Stores):

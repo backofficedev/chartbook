@@ -727,11 +727,11 @@ class TestCatalogInitAndAdd:
 
 
 class TestCheck:
-    """`chartbook check` is not gated; it says the level when it is not `run`."""
+    """`chartbook run --check` is not gated; it says the level when it is not `run`."""
 
     def test_it_says_the_folder_is_not_trusted_last(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["check"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         last = result.output.strip().splitlines()[-1]
         assert last.startswith("This pipeline is not trusted: `chartbook run` refuses to run the build script, and `chartbook docs build` renders the site as one from a store is")
         assert "`chartbook trust` here trusts it; `chartbook trust --list` shows what is trusted." in last
@@ -739,7 +739,7 @@ class TestCheck:
     def test_render_only_is_said_as_that(self, pipeline_project, monkeypatch):
         config.record_trust(pipeline_project, "render")
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["check"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         last = result.output.strip().splitlines()[-1]
         assert last.startswith("This pipeline is trusted to render, not to run: `chartbook run` refuses")
         assert "`chartbook docs build`" not in last
@@ -747,7 +747,7 @@ class TestCheck:
     def test_a_trusted_folder_draws_no_line(self, pipeline_project, monkeypatch):
         config.record_trust(pipeline_project, "run")
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["check"])
+        result = CliRunner().invoke(main, ["run", "--check"])
         assert "chartbook trust" not in result.output
 
 

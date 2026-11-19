@@ -264,7 +264,7 @@ def task_check():
         # Checking the catalog checks every member pipeline against its
         # policy. Like the tests, it is run again when what it checks has
         # changed, not on every build.
-        "actions": [f"chartbook check --project-dir {folder}" for folder in PIPELINE_DIRS],
+        "actions": [f"chartbook run --check --project-dir {folder}" for folder in PIPELINE_DIRS],
         "file_dep": catalog_inputs(),
         "uptodate": context(),
         "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
