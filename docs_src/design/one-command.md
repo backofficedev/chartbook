@@ -1,4 +1,4 @@
-# Design: one command to know
+# Design: a few commands to know
 
 ```{note}
 A design document, written 2026-11-19 from two days of talk with the maintainer, who found the
@@ -14,9 +14,10 @@ anything was built; what that changed is marked *(found by review)*.
 
 Changed 2026-11-20: **a run no longer ends with a snapshot.** `chartbook run` builds, and
 `chartbook snapshot`, typed, makes the snapshot that other pipelines read. The page is rewritten
-for that, and what was built first is kept as a record in "`chartbook snapshot` is typed". Where
-{doc}`snapshots-and-increments` still says that a run makes a snapshot or chooses its kind, this
-page is the newer one.
+for that, and what was built first is kept as a record in "`chartbook snapshot` is typed". That
+change was read against the code by a reviewer too, before it was built; what the reviewer found
+is marked *(found by review, 2026-11-20)*. The page was first called "one command to know", when
+a run did nearly all of it, and keeps that file name.
 ```
 
 ## Who it is for, and what it does
@@ -31,14 +32,14 @@ version, and shows all of them in one catalog.
 |---|---|
 | Start a pipeline | `chartbook init` |
 | Build it | `chartbook run` |
-| Make that build what your other pipelines read | `chartbook snapshot` |
+| Make that build what your other pipelines read, and the catalog shows | `chartbook snapshot` |
 | Take newer data from a pipeline you depend on | `chartbook pin --update` |
 | Look at everything | `chartbook catalog open` |
 | Teach your coding agent ChartBook | `chartbook install agents` |
 
 That is the whole list. Every other command stays, for the day it is needed, and none of them is
 needed to start. *Decided 2026-11-18 and 19: `pin` is the word for the lockfile; `snapshot` keeps
-its name. Decided 2026-11-20: `run` builds and `snapshot` records, each typed. For two days the
+its name. Decided 2026-11-20: `run` builds and `snapshot` records, each typed. For a day the
 list was five, with a run that ended in a snapshot; why it is six is in "`chartbook snapshot` is
 typed".*
 
@@ -48,18 +49,20 @@ What a person types, and what they see. The output is as it is to be built; wher
 today it is today's.
 
 **1. Build.** `run` pins what the pipeline reads, runs its build, and looks for what
-`chartbook.toml` declares. Its last line is the same after every build, committed or not.
+`chartbook.toml` declares. Its last two lines are the same after every build, committed or not.
 
 ```text
 $ chartbook run
 acme/rates: build
 …
 Ran build in 1 pipeline(s).
-acme/rates: built. Other pipelines read a snapshot of it, not this folder: `chartbook snapshot` makes one.
+acme/rates: built.
+  For other pipelines and the catalog: commit, then `chartbook snapshot`.
 ```
 
 **2. Commit, and snapshot.** This version of the pipeline is now in your store, where your other
-pipelines can read it. Nothing is built again: a snapshot takes what the build left on disk.
+pipelines can read it and the catalog shows it. Nothing is built again: a snapshot takes what the
+build left on disk.
 
 ```text
 $ git add -A && git commit -m "Yields through October" && chartbook snapshot
@@ -67,8 +70,8 @@ acme/rates at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
-The first snapshot on a machine also asks, once, whether to make the catalog that shows it. With
-something not committed it makes no snapshot, and says what:
+Typed at a terminal where there is no catalog yet, it also asks whether to make the one that
+shows it. With something not committed it makes no snapshot, and says what:
 
 ```text
 $ chartbook snapshot
@@ -108,6 +111,7 @@ acme/rates: 1 moved
   acme/rates:treasury
     sha256:b47d6f2bd9db… -> sha256:48b68a0be6a0…
     24 new rows, through 2026-11-11; earlier rows unchanged
+  From its snapshot at 9b1e22d, made 2026-11-12 09:40 UTC.
 Wrote chartbook.lock.
 ```
 
@@ -153,22 +157,34 @@ The catalog's site is behind your stores: 3 snapshots are not in it yet. Build i
 5. **Looks for what was declared.** An output that `chartbook.toml` declares and the build did
    not write is a failed run: `acme/rates: its build did not write 1 thing chartbook.toml
    declares: forgotten (./_data/forgotten.csv)`. Today the run says `Ran build` and exits 0.
-6. **Says, in one line, how the build reaches other pipelines:** `chartbook snapshot`
-   (scenario 1). It makes no snapshot of the pipeline it built.
+6. **Says how the build reaches other pipelines and the catalog:** commit, then `chartbook
+   snapshot` (scenario 1). It makes no snapshot of the pipeline it built.
 
 *Decided 2026-11-18 (items 4 and 5, as proposed by Claude and taken up by the maintainer) and
 2026-11-20 (item 6, the maintainer's: a run does not end with a snapshot).*
 
 What was left open, *proposed by Claude, 2026-11-19 and 20:*
 
-- **The closing line is the same after every build** that the run was not asked to follow with a
-  snapshot. It does not look at git or at the store to choose its words: what stands in the way
-  of a snapshot is `chartbook snapshot`'s to say, when it is typed. A pipeline that declares
-  nothing a snapshot holds is told nothing. *(2026-11-20.)*
-- **`chartbook run --snapshot` is run, then snapshot, in one command,** as it is today: it
-  refuses to build with anything uncommitted, on a branch or not, and fails if no snapshot can be
-  made. For a script that must end with one, and for building someone's pipeline at the commit
-  they pinned (scenario 5).
+- **The closing lines are the same after every build** that the run was not asked to follow with
+  a snapshot. They do not look at git or at the store to choose their words, so the command does
+  one thing whatever state the folder is in. They always say "commit, then": most runs are of
+  work that is not committed yet, and a line that named `chartbook snapshot` alone sent the
+  person straight into its refusal. They name the catalog beside other pipelines, since the
+  catalog shows only snapshots and somebody with one pipeline has no other reason to make one.
+  And they are two lines, the second under eighty columns for a command typed in the pipeline's
+  own folder. *(Found by review, 2026-11-20: the first draft was one line of 106 columns that
+  named neither the commit nor the catalog.)* What else stands in a snapshot's way is `chartbook
+  snapshot`'s to say, when it is typed.
+- **Not under `--frozen`,** which is for CI and for a store one may only read: a snapshot is not
+  what comes next there. *(Found by review, 2026-11-20.)* And a pipeline that declares nothing a
+  snapshot holds is told nothing, as before.
+- **Where the run was given `--project-dir`, the command in the line has it too,** quoted for
+  the shell.
+- **`chartbook run --snapshot` is the build and the snapshot in one command,** as it is today,
+  for a script that must end with one and for building someone's pipeline at the commit they
+  pinned (scenario 5). It refuses before it builds with anything uncommitted but the lockfile,
+  which its own pin is about to write; it fails if no snapshot can be made; and it asks nothing
+  about its snapshot. The table below sets it beside the other two.
 - **`chartbook run --frozen` pins nothing,** as today.
 - **What counts as declared (item 5):** whatever `chartbook.toml` gives a `path` that the build is
   to write, which is what `chartbook check` called an output. A dataframe that is a table or a
@@ -188,15 +204,15 @@ What was left open, *proposed by Claude, 2026-11-19 and 20:*
 *Decided 2026-11-20, the maintainer's:* too much had been put into `chartbook run`, and the
 snapshot is a command of its own again.
 
-For two days a run ended with a snapshot wherever everything was committed (step 2 of "The order
-of work", built and merged 2026-11-19). Three questions that had no good answer each came from
-that one thing:
+For a day a plain run ended with a snapshot wherever everything was committed (step 2 of "The
+order of work", built and merged 2026-11-19). Three questions that had no good answer each came
+from that one thing:
 
 - **A run on a side branch made the newest snapshot of its pipeline,** which is what the next
   `chartbook pin --update` of anything that reads it takes. In a store a team shares, that is a
   publication nobody chose.
-- **Every run of committed work hashed its outputs and copied them into the store,** and the only
-  way to say no was to leave a file uncommitted.
+- **Every run of committed work hashed its outputs and copied them into the store,** and a plain
+  run had no way to say no.
 - **Snapshots piled up behind every run, so a run had to clear them,** and each rule for clearing
   with no list and no question lost data when it was reviewed ("Clearing old snapshots: the
   record", below).
@@ -208,8 +224,9 @@ part nobody could keep in mind.
 
 So:
 
-- **`chartbook run` makes no snapshot of the pipeline it builds,** and writes nothing to a store
-  for it. Asked with `--snapshot`, it does, as above.
+- **A plain `chartbook run` makes no snapshot of the pipeline it builds,** and puts nothing of
+  what it built in a store. (A pin still leaves its note there, and a pin from a repository its
+  record.) Asked with `--snapshot`, it makes one.
 - **`chartbook snapshot` makes one of what is built and committed,** as it always has. It does
   not run the build: it takes what is on disk, and lists what is not built. Everything in the
   folder has to be committed but what git ignores, `chartbook.lock` with the rest (scenario 2).
@@ -217,28 +234,64 @@ So:
 - **Which kind of snapshot it makes is `chartbook snapshot`'s own choice,** complete or an
   increment, by the rule of {doc}`snapshots-and-increments`. `chartbook snapshot --complete` asks
   for a complete one, and `chartbook run --snapshot` follows the same rule. Both come with the
-  store's new layout, in that page's order of work, and not with step 11 here. "Typed, the word
-  means a complete one" told a typed snapshot from a run's, and goes: every snapshot is typed.
-- **A typed snapshot takes your word that what is on disk was built by the commit you are on.**
-  `chartbook snapshot` has always said so of itself, and its record does not say that ChartBook
-  ran the build; the record of `chartbook run --snapshot` does. Somebody who builds, changes a
-  file, commits and then snapshots has a snapshot named for a commit that did not build it.
-  *Left as it is. Proposed by Claude, not asked for and not built:* a run could leave a note of
-  the files it built from, for `chartbook snapshot` to hold against the commit.
-- **A snapshot made on a side branch is still the newest of its pipeline.** It is now made on
-  purpose. What a store that a team shares should take is `chartbook publish`'s question
-  ("Later").
+  store's new layout, in that page's order of work, and not with step 11 here.
+- **A snapshot made on a side branch, or of an old commit checked out by its hash, is still the
+  newest of its pipeline,** as one typed there always was. It is now made on purpose. What a
+  store that a team shares should take is `chartbook publish`'s question ("Later").
 - **Neither a run nor a snapshot removes anything from a store.** `chartbook store gc` does, with
   its list and its question, and a snapshot goes on ending with the line that says what `store
-  gc` could clear, as it has since 0.5.0. A snapshot is made when somebody types the word, so
+  gc` could clear, as it has since 0.5.0. A snapshot is made when somebody asks for one, so
   nothing piles up behind a run. *Decided 2026-11-20.*
-- **The first snapshot on a machine asks once whether to make the catalog that shows it,** as
-  today. A run asks nothing of the kind: it has no snapshot to show.
+- **An agent makes a snapshot when a person asks for one.** The section `chartbook install
+  agents` writes says so: a snapshot goes into a store that other people may read.
 
-What step 2 built for the run's own snapshot is taken out again: the lines `not snapshotted: …`,
-each with its reason; the rule that an uncommitted `chartbook.lock` counts; the rule that a
-commit checked out by its hash gets none; and a snapshot that asks no question. The other half
-of step 2 stands: a run looks for what was declared (item 5).
+The three ways to build or snapshot, side by side *(asked for by review, 2026-11-20, which found
+the page calling two of them the same)*:
+
+| | `chartbook run` | `chartbook snapshot` | `chartbook run --snapshot` |
+|---|---|---|---|
+| Runs the build | Yes | No | Yes |
+| Makes a snapshot | No | Yes | Yes |
+| With work that is not committed | Builds | Refuses, and lists it | Refuses before it builds |
+| A `chartbook.lock` that is not committed | Builds | Refuses: it is one more file | Passes over it: its own pin writes it. Commit it after |
+| With several stores, which one | | May ask, at a terminal | Never asks: where the catalog sends the pipeline |
+| Where there is no catalog yet | Makes none | Asks at a terminal, and makes one elsewhere | The same |
+| Its record says ChartBook ran the build | | No | Yes |
+
+What step 2 built for a plain run's own snapshot is taken out again: the lines `not snapshotted:
+…`, each with its reason; the rule that an uncommitted `chartbook.lock` holds a plain run's
+snapshot up; and the rule that a commit checked out by its hash gets none. Two things it built
+are kept and moved *(found by review, 2026-11-20: the first draft dropped them)*: where a
+catalog's first store may only be read, the way out (`pipelines = ["acme/rates"]` under the store
+to send it to) is now said by `chartbook snapshot`; and a run that is asked for a snapshot, with
+`--snapshot` or `--upstream`, still asks nothing about it. The other half of step 2 stands: a run
+looks for what was declared (item 5).
+
+### What it costs
+
+Said plainly, since the day with one command hid each of these *(found by review, 2026-11-20)*:
+
+- **A pipeline that is built and never snapshotted is the ordinary state again.** It was the
+  commonest reason another pipeline could not read one, and the reason step 2 was built. The
+  closing lines of every run are what there is against it. `chartbook pin --update` in a pipeline
+  that reads this one says nothing of a newer build that has no snapshot: it never reads the
+  folder.
+- **A typed snapshot takes your word that what is on disk was built by the commit you are on.**
+  `chartbook snapshot` has always said so of itself, and its record does not say that ChartBook
+  ran the build; the record of `chartbook run --snapshot` does, and the catalog marks only those.
+  Build, change a file, commit, snapshot: the snapshot is named for a commit that did not build
+  it. That is now the taught way, and no longer the seldom one. *Proposed by Claude, and put to
+  the maintainer, not built:* a run leaves a note of the files it built from, and `chartbook
+  snapshot` holds the commit against it, records that the build ran where they are the same, and
+  says so where they differ.
+- **`chartbook snapshot` takes what is there.** After a run that failed for an output its build
+  did not write, a snapshot is still made of the rest, with the missing one listed, as it always
+  was. And one typed while a build is running takes the files as they are at that moment.
+- **An asset marked `keep = true` is kept by the store once a snapshot holds it,** and not by a
+  run. After a build that cost something: commit, and snapshot.
+- **`chartbook snapshot` in a folder that is in no git repository** says that only a pipeline in
+  git has snapshots, and not `git init`. A project `chartbook init` makes without `--git` meets
+  that. Left as it is.
 
 ### Clearing old snapshots: the record
 
@@ -553,20 +606,27 @@ every command and option, as the tests of it require, and each step below change
 that step changes. *Proposed by Claude, 2026-11-19.*
 
 *To change with step 11, proposed by Claude, 2026-11-20:* six lines where there were five, with
-`chartbook snapshot` after `chartbook run`, and a line for `run` that no longer says "snapshot":
+`chartbook snapshot` after `chartbook run`:
 
 ```text
 Start with these:
   chartbook init            Start a project from the template
-  chartbook run             Pin and build this pipeline
-  chartbook snapshot        Put this build in your store, for other pipelines
-  chartbook pin --update    Take the newest snapshot of what it reads
+  chartbook run             Build this pipeline, pinning what it reads
+  chartbook snapshot        Make this build what other pipelines read
+  chartbook pin --update    Take newer snapshots of what this one reads
   chartbook catalog open    Browse every snapshot in your stores
   chartbook install agents  Teach your coding agent ChartBook
 ```
 
-The section that holds the table in each file is headed "The commands to know", which names no
-number. What is written below is of the five, as they were built.
+- **Each line is at most 72 columns,** as the five were held to, so that none wraps in a terminal
+  of eighty. *(Found by review, 2026-11-20: the first draft's line for `snapshot` was 77.)*
+- **`run` pins what the pipeline reads, not the pipeline,** and the line for `pin --update` names
+  "this one", now that the line above it is no longer `run`'s. *(Found by review, 2026-11-20.)*
+- **The section that holds the table in each file is headed "Start with these",** the help's own
+  words. They name no number, and do not sit beside the skill's "Key CLI Commands" as a second
+  heading that says nearly the same. *(Found by review, 2026-11-20: "The commands to know" did.)*
+
+What is written below is of the five, as they were built.
 
 *Built 2026-11-19*, as far as it can be before the store's new layout lands
 ({doc}`snapshots-and-increments`):
@@ -634,7 +694,7 @@ changes.
 9. `chartbook install agents`. *Built 2026-11-19.*
 10. The first screen: `--help`, the Quickstart, the README, the skill. *Built 2026-11-19, but for
     the Quickstart's walk-through (see "The first screen").*
-11. `chartbook run` builds and `chartbook snapshot` records: a run ends with one line and no
-    snapshot, and the first screen has six commands. *Decided 2026-11-20; to be built.* Which
+11. `chartbook run` builds and `chartbook snapshot` records: a run ends by saying what makes a
+    snapshot, and makes none; the first screen has six commands. *Decided 2026-11-20; to be built.* Which
     kind of snapshot `chartbook snapshot` makes, and `--complete`, are in the order of work of
     {doc}`snapshots-and-increments`.
