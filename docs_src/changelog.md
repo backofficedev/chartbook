@@ -135,6 +135,22 @@ Nothing is built yet: `chartbook run` builds it.
 - The template's CI file, its README and the line `chartbook init` ends with say `chartbook run --check`, and so do this repository's examples. A project made from an earlier template has `chartbook check --skip-outputs` in `.github/workflows/python_tests.yml`: change the line.
 - In Python, `chartbook.check.run_checks(..., not_built=[])` gathers the outputs that are not built into the list and does not report them; `skip_outputs` is as it was.
 
+### Changed — `chartbook catalog open` asks before it opens a site that is behind
+
+A run makes a snapshot and builds no catalog, so the catalog's site is built when it is looked at ({design}`one-command`):
+
+```text
+$ chartbook catalog open
+The catalog's site is behind your stores: 3 snapshots are not in it yet. Build it before opening? [Y/n]: 
+```
+
+- **Enter builds it,** as `chartbook catalog build` does, and opens it. `n` opens it as it is.
+- **A site that was never built is asked for the same way,** where the command stopped with `Catalog docs not found`. Where nothing can ask, that is still an error, and it names `chartbook catalog build`.
+- **Behind is worked out when you ask,** by comparing the snapshots the site was built from (the `index.json` beside it) with those in the catalog's stores now: ones the site does not show yet, and ones it shows that are gone. So a snapshot that came through a synced folder from another machine counts, and nothing has to be left behind by a run.
+- **Where nothing can ask,** it opens what there is and says how far behind it is, on stderr.
+- **What is only away is not called gone.** With a store that is not there now, a record that cannot be read, or an ID two repositories claim, nothing is asked: a build then would take pages out of the site. It says it cannot tell, and opens the site as it is.
+- In Python: `chartbook.versions.behind(catalog_toml)` gives a `Behind` (`built`, `missing`, `gone`, and `unknown`, why it cannot be told; false when the site shows what the stores have), and `Behind.said()` the sentence.
+
 ### Added — What a pipeline reads that is not in your store: the list, in the order to build it
 
 A class with no shared store, a new laptop. The lockfile pins snapshots this machine's store does not have, and each of those was built from others it may not have either. `chartbook run` and `chartbook pin` used to say it one dependency at a time, and nothing of what each of those reads. Now they say all of it, and stop ({design}`one-command`):

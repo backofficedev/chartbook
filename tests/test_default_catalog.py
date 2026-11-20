@@ -57,7 +57,7 @@ class TestWhereNothingCanAsk:
         assert result.exit_code == 1
         assert config.get_global_catalog_path().is_file()
         assert _made_line() in result.output
-        assert "Run 'chartbook catalog build' first." in result.output
+        assert "Error: The catalog's site has not been built yet. `chartbook catalog build` builds it." in result.output
 
     def test_snapshot_makes_it_after_the_snapshot(self, tmp_path, monkeypatch):
         folder = pipeline(tmp_path)

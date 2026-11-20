@@ -6,10 +6,14 @@ default the two are one unit: ChartBook makes the catalog over your store the fi
 it, and asks first at a terminal.
 
 ```console
-$ chartbook catalog build       # the first time: "No catalog yet. Create one over your store at …? [Y/n]"
-$ chartbook catalog open
+$ chartbook catalog open        # the first time: "No catalog yet. Create one over your store at …? [Y/n]"
+The catalog's site has not been built yet. Build it before opening? [Y/n]: 
 $ chartbook store add team "~/Google Drive/chartbook-store-team"   # a second store joins it
 ```
+
+`chartbook catalog open` is the one command to remember: it builds the site when the stores have
+snapshots the site does not show yet, after asking, and opens it. `chartbook catalog build` builds
+it without opening, for a script.
 
 The catalog lists every snapshot of every pipeline in its stores, each its own site as its owner
 declared it ready, and which pipeline pins it. {doc}`../tutorials/explore-a-catalog` builds this one
