@@ -414,6 +414,7 @@ class TestWithNoBuildOfYours:
             f"{commit} stands in: codes, model/ar1, treasury",
             f"  To build it yourself: in ../rates, `git checkout {commit}` and `chartbook run --snapshot`: a build "
             f"of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.",
+            "  What it reads in turn may not be in the store either: `chartbook run` lists all there is to build, in order.",
             "  Where a store is shared: point CHARTBOOK_STORE at the one that has them; in a synced folder, wait "
             "for the sync to finish, here and on the machine that made the pin.",
             "3 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.",
@@ -425,9 +426,12 @@ class TestWithNoBuildOfYours:
         commit = lock.read_lock(report).dependencies[0]["location"]["commit"][:7]
         result = CliRunner().invoke(main, ["pin", "--project-dir", str(report)])
         assert result.exit_code == 1
-        (lost,) = [line for line in result.output.splitlines() if line.startswith("  lost")]
-        assert lost.startswith("  lost, each of codes, model/ar1, treasury: it is not in the store at ")
-        assert f"Otherwise build it yourself, in ../rates, `git checkout {commit}` and `chartbook run --snapshot`" in lost
+        # Once for the dependency, as the list of what is not in the store (tests/test_not_in_your_store.py)
+        said = result.output.splitlines()
+        assert said[0] == f"acme/report cannot be pinned yet: 1 pipeline it reads is not in the store at {student}."
+        (line,) = [line for line in said if line.startswith("1. ")]
+        assert line.startswith(f"1. acme/rates at {commit}    ") and "(a folder on this machine" in line
+        assert not any(line.startswith("  lost") for line in said)
         # The store has no snapshot of it: `chartbook pin --update` would find none, and is not offered
         assert "chartbook pin --update" not in result.output
 

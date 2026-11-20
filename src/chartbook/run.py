@@ -350,6 +350,11 @@ class RunReport:
             snapshot under :data:`WHEN_COMMITTED`, each with why, in a few
             words: work that is not committed, a folder in no repository, a
             store that is not there. Not a failure: the run went well.
+        not_in_store: Where the pipeline asked for could not be pinned for
+            want of pipelines to build: what it reads that is not in the
+            store, each after everything it reads
+            (:class:`chartbook.missing.Listing`). ``reason`` is
+            :data:`NOT_IN_STORE` where that is all that stopped the run.
     """
 
     script: str
@@ -358,9 +363,14 @@ class RunReport:
     snapshots: list = field(default_factory=list)
     not_snapshotted: list[tuple[Step, str]] = field(default_factory=list)
     undeclared: list[str] = field(default_factory=list)
+    not_in_store: Optional[object] = None
     failed: Optional[Step] = None
     exit_code: int = 0
     reason: str = ""
+
+
+#: A run's ``reason`` where all that stopped it is in its ``not_in_store``: the list says the rest.
+NOT_IN_STORE = "what it reads is not in your store"
 
 
 #: For ``run(snapshot=...)``: after a pipeline's build, make a snapshot of it
@@ -1572,11 +1582,30 @@ def run(
                     break
                 would_be.pop(step.directory, None)  # written now: its file is what holds
                 wrote_lockfile = pins.written
+                no_order = None
+                if pins.problems and step.source == "asked":
+                    # What it reads that is not in the store, and what each of those reads: the
+                    # list, in the order to build it (docs_src/design/one-command.md)
+                    from chartbook import missing
+
+                    try:
+                        pins.not_in_store = missing.after_pin(step.directory, pins, store, git_cache, echo)
+                    except missing.NoOrder as error:
+                        no_order = error
+                    report.not_in_store = pins.not_in_store
                 if on_pin is not None:
                     on_pin(step, pins)
+                if no_order is not None:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = f"{no_order}\nIt was not built"
+                    break
                 if pins.problems:
                     report.failed, report.exit_code = step, 1
-                    report.reason = "what it depends on could not be pinned"
+                    listed = pins.not_in_store.keys if pins.not_in_store is not None else set()
+                    report.reason = (
+                        NOT_IN_STORE if listed and all(event.dependency in listed for event in pins.problems)
+                        else "what it depends on could not be pinned"
+                    )
                     break
 
             if building and ((snapshot and step.source == "asked") or step.snapshot_first):

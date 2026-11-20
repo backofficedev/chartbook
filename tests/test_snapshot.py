@@ -1259,16 +1259,25 @@ class TestCommands:
             "Wrote chartbook.lock.",
         ]
 
-    def test_pin_with_no_snapshot(self, user, work, monkeypatch):
+    def test_pin_with_no_snapshot(self, user, maker, work, monkeypatch):
         commit = _git(work, "rev-parse", "HEAD")
         monkeypatch.chdir(user)
+        import shlex
+
         result = self._run("pin")
-        assert result.exit_code == 1
-        assert result.output.splitlines()[0] == (
-            f"acme/maker: cannot be pinned: it has no snapshot at or before {commit[:7]}, "
-            f"the commit its folder is on. In ../maker: commit, then run `chartbook snapshot`"
-        )
-        assert "1 thing(s) could not be pinned." in result.output
+        assert result.exit_code == 1 and commit
+        # The list of what is not in the store (tests/test_not_in_your_store.py). Its files are there and
+        # committed, so a snapshot is all there is to make
+        assert result.output.splitlines()[:7] == [
+            "Wrote chartbook.lock.",
+            f"acme/user cannot be pinned yet: 1 pipeline it reads is not in the store at {default_store()}.",
+            "Build it first. It ends with a snapshot, which is what this one reads.",
+            "",
+            f"1. acme/maker    {os.path.join('..', 'maker')} (a folder on this machine, built already)",
+            f"     cd {shlex.quote(str(maker))} && chartbook snapshot",
+            "",
+        ]
+        assert "could not be pinned" not in result.output
 
     def test_pin_then_update(self, user, maker, monkeypatch):
         snapshot.make(maker)

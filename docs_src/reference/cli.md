@@ -728,7 +728,7 @@ An asset that the pinned snapshot had not built and the newer one has is still l
 
 **Its labels are pinned too.** A snapshot records the labels the pipeline's `[models.x.aliases]` gave when it was made, and `pin` writes each as a record of its own, `ftsfr/fed_yield_curve:model/term_premium_ar1@champion`, with the hash of the version it names. `forecasting:model/x@champion` then resolves to those bytes until `chartbook pin --update`, which follows the owner's labels: a label moved shows as `moved`, one taken away as `dropped`, and one the owner has moved since you pinned is reported by `pin` as changed upstream. A label whose version the store cannot supply (no snapshot names it, or its bytes are gone) is pinned without bytes, as a `not built` asset is, with the reason, and `chartbook pin --check` reports it. Labels come only from snapshots. A `git` dependency has no versions and no labels pinned, and a dependency that becomes one lets its labels go (`let go`).
 
-`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store, or not all there yet. The size on disk of each file a pin reads is compared with the size its record gives (no byte is read), so a file that a sync service has only half delivered is said, not read:
+`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store, or not all there yet. Where what stands in the way is a pipeline to build (no snapshot of it, or a pin from a snapshot this store does not have and no build of yours of that commit), `pin` says so as {ref}`chartbook run <not-in-your-store>` does: the list of what to build, each pipeline after everything it reads, with what to type. The size on disk of each file a pin reads is compared with the size its record gives (no byte is read), so a file that a sync service has only half delivered is said, not read:
 
 ```console
 $ chartbook pin --update
@@ -809,9 +809,12 @@ A model is met by the same file only. So is a version pinned by its label, and a
 $ chartbook pin --check
 ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/store, and no build of yours at 0db8051 stands in: treasury_yields
   To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
+  What it reads in turn may not be in the store either: `chartbook run` lists all there is to build, in order.
   Where a store is shared: point CHARTBOOK_STORE at the one that has it; in a synced folder, wait for the sync to finish, here and on the machine that made the pin.
 1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
 ```
+
+The check fetches nothing, so it names what this pipeline lacks and no more; {ref}`chartbook run <not-in-your-store>` reads what each of those reads in turn, and lists all of it.
 
 A store that has the snapshot the lockfile names has the pin itself, and no build stands in for it there: a pinned file such a store lacks is lost from it, or not synced yet, and the check says so and how to wait or put it back. That is the case of a team that shares a store, where another build of the same commit may be anyone's.
 
@@ -1005,6 +1008,40 @@ ftsfr/rate_forecast: not snapshotted: 2 files are not committed (`git status` li
 ```
 
 Yes does what {ref}`chartbook add <chartbook-add>` does, and builds again. The read is found when the code makes it; nothing reads your source for names. One pipeline is asked of at a time: a build stops at the first read it is refused, so a second is asked of when the build is run again.
+
+(not-in-your-store)=
+**What it reads is not in your store: the run lists what to build, in the order to build it.** A class with no shared store, a new laptop: the lockfile pins snapshots that this machine's store does not have, and each of those was built from others it may not have either. The run stops before anything is built and says all of it, each pipeline after everything it reads, with what to type:
+
+```console
+$ chartbook run
+Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
+ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/x/.chartbook/store.
+Build them in this order. Each ends with a snapshot, which is what the next one reads.
+
+1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
+     git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
+2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
+     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
+
+Then here again:
+     cd /work/report && chartbook run
+Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
+```
+
+- **What is on the list:** a dependency with no snapshot to pin, and one that is pinned where the store has neither the pinned snapshot nor a build of yours of that commit. A build of yours that is there and does not meet the pins is not on it: that is said {ref}`as it is <a-build-of-your-own>`, with `chartbook pin --update` as the way to read your build.
+- **It goes up.** For each pipeline on the list, its own `chartbook.toml` and `chartbook.lock` at the commit to build are read, and what *it* reads that the store lacks comes before it. A folder a `path` entry names is asked through git for those two files, and is not changed. A repository is fetched into ChartBook's git cache, as a `git` dependency is, and nothing of it is checked out; a fetch that receives nothing for 30 seconds is given up.
+- **A clone you already have is read where it is.** A repository whose clone sits beside this pipeline's own (a folder named as `git clone` names it, whose `origin` is that address), or that *is* this pipeline's own repository, is not fetched: its files are read from the clone at the commit to build, and its line says to build there (`../fed_yield_curve (a clone of https://…)`). A repository that wants a password cannot be fetched from here at all, and a class has its clones side by side. A folder is taken for a clone only by its `origin`, never by its name or by the ID of a pipeline in it; where nothing records a pipeline's address, a clone beside is its own when its `origin` gives that ID (`https://github.com/acme/rates` is `acme/rates`). A clone that lacks the commit gets a `git fetch` line first (`--unshallow` for a shallow one), and one with no commit yet a `git pull origin HEAD`; its folder in the clone is then taken from where the clone has the pipeline now, and the line says so.
+- **A pipeline is listed once for each commit of it that is wanted.** What two pipelines read is one line, and each names it (`reads 1 above`). A read with no pin is met by any line of that pipeline; and where one reader has no pin and another pins the very commit that would be built, the one line is the pinned one.
+- **A line says what is known, and no more.** It may lack its commit (never pinned: any commit of it will do), its address (`its repository is not recorded`: a snapshot made in a repository with no remote records none), or what it reads in turn (`What it reads in turn is not known: its repository could not be fetched (…)`).
+- **Every command can be pasted, from any folder, in the order given.** A folder is named whole, and a repository is cloned beside this pipeline's own, once, under a name that is free. A commit in a command is its first twelve digits. A pipeline in a folder of its repository is built in that folder, and the checkout is made from the repository's top first (`git -C REPOSITORY checkout COMMIT && cd FOLDER && …`), since the folder may not be there until then; a line with no pin, in a repository a line above has left on another commit, checks out the commit it was read at. One with no `build` script, which commits what it declares, is given `chartbook snapshot`; so is a folder that was never pinned, has nothing uncommitted and has every declared file on disk (`built already`), since a build may take an hour. On Windows the commands are written for `cmd.exe`, at its prompt: a word is in double quotes where it has to be, and a folder is entered with `cd /d`, which changes the drive too.
+- **No command moves this pipeline's own repository.** A pipeline in the same repository, wanted at another commit, is built in a worktree of that commit: `git -C REPOSITORY worktree add REPOSITORY-at-COMMIT COMMIT`, then `chartbook run --snapshot` in its folder there. Your checkout stays on its branch. A worktree of that name that is there, on that commit, is used as it is; a folder of that name that is anything else is passed by, for `REPOSITORY-at-COMMIT-2`.
+- **A repository that does not hold the pipeline is not on the list.** Where an entry's `repository` is another pipeline's, the pin's own words say so (`has no snapshot of acme/beta made in https://…`), and nothing says to build there. A manifest that cannot be read is still its folder's (the line names the folder, and that pipeline's own run says what is wrong with it), and in a repository of more than 200 manifests the line says how far the search went.
+- **Whose text it is.** A lockfile is anyone's. An address in it is printed, and fetched, only if it is a plain web address (`https://…`), which is all a snapshot records; a pipeline's name only if it is an ID; and everything is shown without control characters and quoted for the shell.
+- **Pipelines that are not in the store and read each other have no order to be built in.** That is an error, in the words of any cycle: which pipelines, and for each step the file it was read from.
+- **What the run builds by itself is not on the list:** a `git` dependency; one named by its ID where `[resolve] default_host` says where to clone it; and, with `--upstream`, a folder a `path` entry names that was never pinned. Where every line is such a folder with a `build` script, the list's last lines offer `chartbook run --upstream`.
+
+{ref}`chartbook pin <chartbook-pin>` prints the same list. `chartbook pin --update` does not: it asks for the newest snapshot of each, which is not the commit a pin names. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline itself lacks and that `chartbook run` lists the rest.
 
 It asks only where yes can work. With no one there to answer (a script, a pipe, CI), with `--frozen` or `--snapshot`, for a read made from another pipeline's folder, for a name two pipelines in the stores share, for an ID two repositories claim, and for a pipeline the stores have no snapshot of (a folder or a repository, which is declared by hand), there is no question: the build's own error stands, and it names the entry to write, and `chartbook add` where the store has the pipeline. Keys pressed while the build ran do not answer the question: they are discarded before it is shown.
 

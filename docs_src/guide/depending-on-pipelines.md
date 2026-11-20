@@ -190,6 +190,32 @@ A class, or two people on two laptops, share a repository and no store. The lock
 snapshots only its author has. So each person builds the other pipeline themselves, at the commit
 the lockfile names, and ChartBook checks that what they built holds the pinned rows.
 
+`chartbook run` says all there is to build, in the order to build it, and stops. What a pipeline
+on the list reads in turn is on it too, before it:
+
+```console
+$ chartbook run
+Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
+ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/x/.chartbook/store.
+Build them in this order. Each ends with a snapshot, which is what the next one reads.
+
+1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
+     git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
+2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
+     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
+
+Then here again:
+     cd /work/report && chartbook run
+Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
+```
+
+Each command can be pasted as it is, from any folder, in the order given. A folder on this
+machine is one your `[dependencies]` names by `path`; a clone you already have beside your project
+is read and built where it is; any other repository is cloned beside your project. Nothing here
+moves your own repository to another commit. The whole of it is in the
+{ref}`reference <not-in-your-store>`. One step of it, with the check that fetches nothing:
+
 ```console
 $ chartbook pin --check
 ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/.chartbook/store, and no build of yours at 0db8051 stands in: treasury_yields
