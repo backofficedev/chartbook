@@ -50,14 +50,14 @@ acme/rates: not snapshotted: 2 files are not committed (`git status` lists them)
 
 **2. Commit, and build again.** The build tool finds little to do, and the run ends with a
 snapshot: this version of the pipeline is now in your store, where your other pipelines can read
-it. Snapshots of it that nothing needs any more are cleared.
+it. (What a run clears, and when, is in {doc}`snapshots-and-increments`: an older snapshot of the
+same commit that the new one holds all the data of.)
 
 ```text
 $ git add -A && git commit -m "Yields through October" && chartbook run
 acme/rates: build
 acme/rates at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
-acme/rates: 2 older snapshots cleared from the store (nothing pins them; made before 2026-11-12).
 ```
 
 **3. Use another pipeline's table.** You write the read, and run. Nothing was declared, so the run
@@ -134,7 +134,8 @@ The catalog's site is behind your stores: 3 versions are not in it yet. Build th
    declares: forgotten (./_data/forgotten.csv)`. Today the run says `Ran build` and exits 0.
 6. **Makes a snapshot, when everything is committed** (scenarios 1 and 2).
 7. **Clears this pipeline's old snapshots from the store.** A run makes a snapshot every time, so
-   it also takes away the ones nothing needs any more. Only this pipeline's.
+   it also takes away the ones nothing needs any more. Only this pipeline's. *Which those are was
+   decided again on 2026-11-19: see "Clearing old snapshots" below.*
 
 *Decided 2026-11-18 (items 4, 5 and 6, as proposed by Claude and taken up by the maintainer) and
 2026-11-19 (item 7, the maintainer's).*
@@ -226,9 +227,10 @@ not merged, and waits for the maintainer.
 PIPELINE` lists it and asks (proposed); or a run removes with what can be closed closed, a
 longer window, and the first case accepted; or as written.
 
-*Decided 2026-11-19: none of the three.* A run clears an older snapshot when the new one holds
-all of its data, by the rule in {doc}`snapshots-and-increments` ("Clearing"), which has to see no
-pin. What is written below is not to be built, and the branch that built it is not to be merged.
+*Decided 2026-11-19: none of the three.* A run clears an older snapshot of the same commit when
+the new one holds all of its data, by the rule in {doc}`snapshots-and-increments` ("Clearing"),
+which does not depend on seeing every pin. What is written below is not to be built, and the
+branch that built it is not to be merged.
 ```
 
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
