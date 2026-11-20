@@ -84,6 +84,35 @@ Nothing is built yet: `chartbook run` builds it.
 - The template's CI file, its README and the line `chartbook init` ends with say `chartbook run --check`, and so do this repository's examples. A project made from an earlier template has `chartbook check --skip-outputs` in `.github/workflows/python_tests.yml`: change the line.
 - In Python, `chartbook.check.run_checks(..., not_built=[])` gathers the outputs that are not built into the list and does not report them; `skip_outputs` is as it was.
 
+### Added — What a pipeline reads that is not in your store: the list, in the order to build it
+
+A class with no shared store, a new laptop. The lockfile pins snapshots this machine's store does not have, and each of those was built from others it may not have either. `chartbook run` and `chartbook pin` used to say it one dependency at a time, and nothing of what each of those reads. Now they say all of it, and stop ({design}`one-command`):
+
+```text
+$ chartbook run
+Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
+ftsfr/report cannot be built yet: 2 pipelines it reads are not in your store.
+Build them in this order. Each ends with a snapshot, which is what the next one reads.
+
+1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
+     git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
+     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
+2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
+     cd /work/fed_yield_curve && git checkout 0db8051 && chartbook run --snapshot
+
+Then here again:
+     cd /work/report && chartbook run
+Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
+```
+
+- **On the list** is a dependency with no snapshot to pin, and one that is pinned where the store has neither the pinned snapshot nor a build of yours of that commit. A build of yours that does not meet the pins is said as before, with `chartbook pin --update`.
+- **It goes up.** Each listed pipeline's own `chartbook.toml` and `chartbook.lock` are read at the commit to build, and what it reads that the store lacks comes before it. A folder on this machine, or a clone beside this pipeline's repository, is asked through git and is not changed; a repository is fetched into the git cache, and nothing is checked out.
+- **A line says what is known:** it may lack its commit (never pinned), its address (`its repository is not recorded`), or what it reads in turn (`its repository could not be fetched (…)`).
+- **Every command can be pasted from any folder,** and following them ends in a build: a test types each line as printed, and then the last. A pipeline with no `build` script is given `chartbook snapshot`, and so is a folder that is on the commit with its declared files on disk (`built already`).
+- **Pipelines that are not in the store and read each other** are an error, in the words of any cycle.
+- `chartbook pin --update` is as it was. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline lacks and add `` `chartbook run` lists all there is to build, in order``.
+- In Python: `chartbook.missing.find()` gives the list (`Listing`, of `Wanted` lines) and `missing.said()` its lines; `RunReport.not_in_store` and `PinReport.not_in_store` hold it, and a run stopped by nothing else has `reason == run.NOT_IN_STORE`. `GitCache.paths_at()` and `GitCache.text_at()` read a commit's files with nothing checked out.
+
 ### Added — `chartbook run` offers to add a pipeline your code reads and `chartbook.toml` does not declare
 
 You write `data.load("acme/rates:treasury")` and run. Nobody has to know `chartbook add` ({design}`one-command`):

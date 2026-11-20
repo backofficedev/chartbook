@@ -39,7 +39,9 @@ class TestUpstream:
     def test_without_it_the_run_stops_and_says_who_makes_the_snapshot(self, pair, work):
         up, down = pair
         report = run.run(down, echo=lambda line: None)
-        assert report.failed.id == "down" and report.reason == "what it depends on could not be pinned"
+        assert report.failed.id == "down" and report.reason == run.NOT_IN_STORE
+        # The list of what to build (tests/test_not_in_your_store.py) has it, and offers --upstream
+        assert [(line.pipeline, line.folder) for line in report.not_in_store.wanted] == [("up", up)]
         assert _order(work) == []
 
     def test_an_upstream_with_no_snapshot_is_built_and_snapshotted_first(self, pair, work):
@@ -373,7 +375,7 @@ class TestWhatTheSecondReviewFound:
         report = run.run(down, upstream=True, echo=said.append)
         assert "up: its snapshots cannot be read now; not built" in said
         assert "up" not in _order(work) and _snapshots_of("up") == []
-        assert report.failed.id == "down" and report.reason == "what it depends on could not be pinned"
+        assert report.failed.id == "down" and report.reason == run.NOT_IN_STORE
 
 
 def _child_env(work):

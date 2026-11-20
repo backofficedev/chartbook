@@ -1092,6 +1092,12 @@ class PinReport:
             snapshotted again by a ChartBook that records them.
         not_hashed_now: And those whose pin now says why its rows are not
             hashed (:func:`rows_not_hashed_now`), each with why.
+        not_in_store: Where something could not be pinned for want of a
+            pipeline to build: what this pipeline reads that is not in the
+            store, in the order to build it
+            (:class:`chartbook.missing.Listing`). Set by the commands that
+            make the list, ``chartbook run`` and ``chartbook pin``; None
+            otherwise.
     """
 
     lockfile: Path
@@ -1110,6 +1116,7 @@ class PinReport:
     without_rows: list = field(default_factory=list)
     rows_now: list = field(default_factory=list)
     not_hashed_now: list = field(default_factory=list)
+    not_in_store: Optional[object] = None
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -2311,6 +2318,8 @@ def not_in_store_said(
     build = build_it_said(entry)
     if build:
         lines.append(f"  To build it yourself: {build}.")
+        # This check fetches nothing, so it names what this pipeline lacks and no more
+        lines.append("  What it reads in turn may not be in the store either: `chartbook run` lists all there is to build, in order.")
     lines.append(
         f"  Where a store is shared: point CHARTBOOK_STORE at the one that has {'it' if one else 'them'}; in a "
         f"synced folder, wait for the sync to finish, here and on the machine that made the pin."

@@ -99,19 +99,23 @@ The run says all that has to be built, in the order to build it, and stops.
 
 ```text
 $ chartbook run
+Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
+Fetching https://github.com/ftsfr/fed_yield_curve, to see what ftsfr/fed_yield_curve reads in turn.
 acme/report cannot be built yet: 3 pipelines it reads are not in your store.
 Build them in this order. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
-     git clone https://github.com/ftsfr/he_kelly_manela && cd he_kelly_manela
-     git checkout 7802799 && chartbook run --snapshot
+     git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
+     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
 2. ftsfr/fed_yield_curve at 5bb7217    https://github.com/ftsfr/fed_yield_curve
-     git clone https://github.com/ftsfr/fed_yield_curve && cd fed_yield_curve
-     git checkout 5bb7217 && chartbook run --snapshot
-3. acme/rates at 4f2a91c    ../rates (a folder on this machine); reads 2 above
-     cd ../rates && git checkout 4f2a91c && chartbook run --snapshot
+     git clone https://github.com/ftsfr/fed_yield_curve /work/fed_yield_curve
+     cd /work/fed_yield_curve && git checkout 5bb7217 && chartbook run --snapshot
+3. acme/rates at 4f2a91c    ../rates (a folder on this machine); reads 1 and 2 above
+     cd /work/rates && git checkout 4f2a91c && chartbook run --snapshot
 
-Then `chartbook run` here again.
+Then here again:
+     cd /work/report && chartbook run
+Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
 **6. Look.**
@@ -344,6 +348,31 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   name a host to clone it from; and, with `--upstream`, a folder on this machine. The list is for
   the rest. *(Found by review: the page read as if nothing were built today.)*
 
+*Built 2026-11-19* (`chartbook/missing.py`), with what building it settled:
+
+- **Every command can be pasted from any folder.** The proposal's `git clone … && cd name` made a
+  clone inside the folder it was typed in, and its `cd ../rates` held only from one folder. A
+  folder is named whole, and a repository is cloned beside the pipeline's own repository. The
+  last lines say how to come back: `cd /work/report && chartbook run`.
+- **A clone that sits beside the pipeline is read where it is.** A folder there, named as `git
+  clone` names it or as the pipeline is, that holds that pipeline: its two files are asked of it
+  through git, nothing is fetched, and its line is a folder's. A repository that wants a password
+  cannot be fetched from here at all, and a class has its clones side by side.
+- **A line names the lines it reads:** `reads 1 and 2 above`, where "reads 2 above" could be
+  taken for a count or for a line.
+- **The last line is the other way on:** where a store is shared, nothing has to be built. On a
+  team that is the likelier cause, and it was in every message this list takes the place of.
+- **`chartbook pin --update` keeps its own words.** It asks for the newest snapshot of each, and
+  the list would say to build the commit a pin names.
+- **An ID the store has in other letters is not on the list.** It is a name to put right, and the
+  pin says which.
+- **A folder that is built is not built again.** On the commit to build, with every declared file
+  on disk, its line says `built already` and `chartbook snapshot`; so does a pipeline with no
+  `build` script. The words this list takes the place of said "commit, then run `chartbook
+  snapshot`", and a build may take an hour.
+- **With `--upstream` to offer, the list offers it:** where every line is a folder on this
+  machine that was never pinned, `chartbook run --upstream` builds them all, and a line says so.
+
 ## The catalog knows when it is behind
 
 *Decided 2026-11-19: `chartbook catalog open` asks before it opens a site that is behind.*
@@ -410,7 +439,7 @@ changes.
 5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone. *Built 2026-11-19.*
 6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
    *Built 2026-11-19.*
-7. What is not in your store: the list, in order.
+7. What is not in your store: the list, in order. *Built 2026-11-19.*
 8. `chartbook catalog open` asks before opening a site that is behind.
 9. `chartbook install agents`.
 10. The first screen: `--help`, the Quickstart, the README, the skill.

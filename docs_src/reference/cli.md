@@ -728,7 +728,7 @@ An asset that the pinned snapshot had not built and the newer one has is still l
 
 **Its labels are pinned too.** A snapshot records the labels the pipeline's `[models.x.aliases]` gave when it was made, and `pin` writes each as a record of its own, `ftsfr/fed_yield_curve:model/term_premium_ar1@champion`, with the hash of the version it names. `forecasting:model/x@champion` then resolves to those bytes until `chartbook pin --update`, which follows the owner's labels: a label moved shows as `moved`, one taken away as `dropped`, and one the owner has moved since you pinned is reported by `pin` as changed upstream. A label whose version the store cannot supply (no snapshot names it, or its bytes are gone) is pinned without bytes, as a `not built` asset is, with the reason, and `chartbook pin --check` reports it. Labels come only from snapshots. A `git` dependency has no versions and no labels pinned, and a dependency that becomes one lets its labels go (`let go`).
 
-`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store, or not all there yet. The size on disk of each file a pin reads is compared with the size its record gives (no byte is read), so a file that a sync service has only half delivered is said, not read:
+`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store, or not all there yet. Where what stands in the way is a pipeline to build (no snapshot of it, or a pin from a snapshot this store does not have and no build of yours of that commit), `pin` says so as {ref}`chartbook run <not-in-your-store>` does: the list of what to build, each pipeline after everything it reads, with what to type. The size on disk of each file a pin reads is compared with the size its record gives (no byte is read), so a file that a sync service has only half delivered is said, not read:
 
 ```console
 $ chartbook pin --update
@@ -809,9 +809,12 @@ A model is met by the same file only. So is a version pinned by its label, and a
 $ chartbook pin --check
 ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/store, and no build of yours at 0db8051 stands in: treasury_yields
   To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
+  What it reads in turn may not be in the store either: `chartbook run` lists all there is to build, in order.
   Where a store is shared: point CHARTBOOK_STORE at the one that has it; in a synced folder, wait for the sync to finish, here and on the machine that made the pin.
 1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
 ```
+
+The check fetches nothing, so it names what this pipeline lacks and no more; {ref}`chartbook run <not-in-your-store>` reads what each of those reads in turn, and lists all of it.
 
 A store that has the snapshot the lockfile names has the pin itself, and no build stands in for it there: a pinned file such a store lacks is lost from it, or not synced yet, and the check says so and how to wait or put it back. That is the case of a team that shares a store, where another build of the same commit may be anyone's.
 
@@ -1005,6 +1008,35 @@ ftsfr/rate_forecast: not snapshotted: 2 files are not committed (`git status` li
 ```
 
 Yes does what {ref}`chartbook add <chartbook-add>` does, and builds again. The read is found when the code makes it; nothing reads your source for names. One pipeline is asked of at a time: a build stops at the first read it is refused, so a second is asked of when the build is run again.
+
+(not-in-your-store)=
+**What it reads is not in your store: the run lists what to build, in the order to build it.** A class with no shared store, a new laptop: the lockfile pins snapshots that this machine's store does not have, and each of those was built from others it may not have either. The run stops before anything is built and says all of it, each pipeline after everything it reads, with what to type:
+
+```console
+$ chartbook run
+Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
+ftsfr/report cannot be built yet: 2 pipelines it reads are not in your store.
+Build them in this order. Each ends with a snapshot, which is what the next one reads.
+
+1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
+     git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
+     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
+2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
+     cd /work/fed_yield_curve && git checkout 0db8051 && chartbook run --snapshot
+
+Then here again:
+     cd /work/report && chartbook run
+Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
+```
+
+- **What is on the list:** a dependency with no snapshot to pin, and one that is pinned where the store has neither the pinned snapshot nor a build of yours of that commit. A build of yours that is there and does not meet the pins is not on it: that is said {ref}`as it is <a-build-of-your-own>`, with `chartbook pin --update` as the way to read your build.
+- **It goes up.** For each pipeline on the list, its own `chartbook.toml` and `chartbook.lock` at the commit to build are read, and what *it* reads that the store lacks comes before it. A folder on this machine (a `path` dependency, or a clone that sits beside this pipeline's repository) is asked through git for those two files, and is not changed. A repository is fetched into ChartBook's git cache, as a `git` dependency is, and nothing of it is checked out.
+- **A line says what is known, and no more.** It may lack its commit (never pinned: any commit of it will do), its address (`its repository is not recorded`: a snapshot made in a repository with no remote records none), or what it reads in turn (`What it reads in turn is not known: its repository could not be fetched (…)`).
+- **Every command can be pasted, from any folder.** A folder is named whole, and a repository is cloned beside this pipeline's own. A pipeline in a folder of its repository is built in that folder, and one with no `build` script, which commits what it declares, is given `chartbook snapshot` to type. So is a folder on this machine that is on the commit to build and has every declared file on disk (`built already`): a snapshot is all it lacks, and a build that may take an hour is not run again.
+- **Pipelines that are not in the store and read each other have no order to be built in.** That is an error, in the words of any cycle: which pipelines, and for each step the file it was read from.
+- **What the run builds by itself is not on the list:** a `git` dependency; one named by its ID where `[resolve] default_host` says where to clone it; and, with `--upstream`, a folder on this machine that was never pinned (the list says so in its last lines).
+
+{ref}`chartbook pin <chartbook-pin>` prints the same list. `chartbook pin --update` does not: it asks for the newest snapshot of each, which is not the commit a pin names. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline itself lacks and that `chartbook run` lists the rest.
 
 It asks only where yes can work. With no one there to answer (a script, a pipe, CI), with `--frozen` or `--snapshot`, for a read made from another pipeline's folder, for a name two pipelines in the stores share, for an ID two repositories claim, and for a pipeline the stores have no snapshot of (a folder or a repository, which is declared by hand), there is no question: the build's own error stands, and it names the entry to write, and `chartbook add` where the store has the pipeline. Keys pressed while the build ran do not answer the question: they are discarded before it is shown.
 

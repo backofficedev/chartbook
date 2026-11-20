@@ -896,6 +896,9 @@ class TestNotBuiltYet:
     def test_a_catalog_keeps_its_own_rules(self, catalog_project, monkeypatch, capsys):
         from tests.fixtures import remove_tree
         remove_tree(catalog_project / "pipelines")
+        # The site is laid out in ./_docs: in the project, and not in the folder the tests were started from,
+        # which every test running beside this one shares (found 2026-11-19: one run in many failed there)
+        monkeypatch.chdir(catalog_project)
         generate_docs(output_dir=catalog_project / "docs_test", project_dir=catalog_project)
         assert (catalog_project / "docs_test/cb/dataframes/pipeline_a/dataframe_0.html").is_file()
 
