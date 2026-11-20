@@ -349,3 +349,98 @@ class TestDamaged:
             assert problem.message.startswith("_data/treasury.parquet is no longer what its record says")
         (said,) = [problem.message for problem in fresh.verify()]
         assert said.startswith("_data/treasury.parquet is no longer what its record says") and said.endswith(f"(the snapshot {complete.name})")
+
+
+def _form(root: Path) -> list:
+    """Each snapshot of a store as it is kept: its folder's name, whether it is an increment, and what it builds on."""
+    store_module._read_records.clear()
+    return [(record.folder.name, record.increment, record.builds_on) for record in FolderStore(root).records()]
+
+
+class TestCopiesKeepTheirForm:
+    """`store move`, `store export` and `store import`: each complete snapshot, then the increments on it."""
+
+    @pytest.fixture(params=SHAPES)
+    def shaped(self, request, unpinned, store):
+        complete, increments = with_increments(store.root, request.param)["acme+rates"]
+        return request.param, complete, increments, _form(store.root)
+
+    def test_store_move(self, shaped, work, store):
+        from chartbook import transfer
+        from chartbook.multi_store import NamedStore, Stores
+
+        _, complete, increments, form = shaped
+        target = work / "target"
+        stores = Stores([
+            NamedStore("here", str(store.root), FolderStore(store.root)),
+            NamedStore("there", str(target), FolderStore(target), create=True),
+        ])
+        transfer.move("acme/rates", stores, "there", keep=False, route=False)
+        assert _form(target) == form and FolderStore(target).verify() == []
+        moved = target / "increments" / "acme+rates" / increments[0].name
+        assert json.loads((moved / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))["stored"] == {"builds_on": complete.name}
+        assert (moved / "_chartbook" / "INCREMENT.txt").read_text(encoding="utf-8") == (
+            f"The rest of this snapshot's files are in snapshots/acme+rates/{complete.name}\n"
+        )
+        assert (moved.parent / "README.txt").read_text(encoding="utf-8") == store_module.INCREMENTS_README
+        assert not (moved / "_data" / "treasury.parquet").exists()  # kept once, in the one it builds on
+        assert _form(store.root) == [] and not complete.exists() and not any(folder.exists() for folder in increments)
+
+    def test_export_and_import(self, shaped, work, store):
+        from chartbook import sharing
+
+        _, complete, increments, form = shaped
+        out = work / "out"
+        done = sharing.export(FolderStore(store.root), "acme/rates", out, None)
+        assert len(done.copied) == 3 and done.refused == []
+        assert _form(out) == form and FolderStore(out).verify() == []
+        other = work / "other"
+        done = sharing.import_snapshots(FolderStore(other), out)
+        assert len(done.copied) == 3 and done.refused == []
+        assert _form(other) == form and FolderStore(other).verify() == []
+        # Again: each is there already, whole, and nothing is written
+        again = sharing.import_snapshots(FolderStore(other), out)
+        assert len(again.there) == 3 and again.copied == [] and again.refused == []
+
+    def test_export_latest_is_one_complete_snapshot(self, shaped, work, store):
+        from chartbook import sharing
+
+        shape, complete, increments, form = shaped
+        newest = max(name for name, _, _ in form)
+        out = work / "out"
+        done = sharing.export(FolderStore(store.root), "acme/rates", out, "latest")
+        assert len(done.copied) == 1
+        assert _form(out) == [(newest, False, "")] and FolderStore(out).verify() == []
+        assert (out / "snapshots" / "acme+rates" / newest / "_data" / "treasury.parquet").is_file()
+        assert not (out / "increments").exists()
+        assert "stored" not in json.loads((out / "snapshots" / "acme+rates" / newest / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+
+    def test_an_increment_alone_is_imported_complete(self, shaped, work, store):
+        """What it builds on is not among what is copied, and is not in the store it goes to: every file is at hand, and it is written complete."""
+        from chartbook import sharing
+
+        _, complete, increments, form = shaped
+        out = work / "out"
+        one = increments[0].name
+        commit = json.loads((increments[0] / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))["code"]["commit"]
+        made_at = json.loads((increments[0] / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))["made_at"]
+        done = sharing.export(FolderStore(store.root), "acme/rates", out, [f"{commit}@{made_at}"])
+        assert len(done.copied) == 1 and _form(out) == [(one, False, "")] and FolderStore(out).verify() == []
+
+    def test_store_move_stops_at_a_file_with_other_bytes_in_the_one_an_increment_builds_on(self, shaped, work, store):
+        from chartbook import transfer
+        from chartbook.multi_store import NamedStore, Stores
+        from chartbook.store import StoreError
+
+        _, complete, increments, form = shaped
+        damaged = complete / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))
+        target = work / "target"
+        stores = Stores([
+            NamedStore("here", str(store.root), FolderStore(store.root)),
+            NamedStore("there", str(target), FolderStore(target), create=True),
+        ])
+        with pytest.raises(StoreError):
+            transfer.move("acme/rates", stores, "there", keep=False, route=False)
+        assert _form(store.root) == form  # nothing was removed from where it came from

@@ -360,6 +360,10 @@ class ReadOnlyStoreError(StoreError):
     """
 
 
+class BuiltOnGoneError(StoreError):
+    """Raised when an increment is about to be written and the complete snapshot it builds on has gone from the store: whoever writes it has every file at hand, and writes it complete."""
+
+
 class EarlierLayoutError(StoreError):
     """Raised when a store laid out as ChartBook 0.5 laid one out is asked to take a snapshot or an object, or to let go of anything.
 
@@ -2094,12 +2098,20 @@ class FolderStore(Store):
         return sorted(record.path for record in self.records() if record.readable and record.made_by == "pin")
 
     def begin(
-        self, pipeline: str, commit: str, made_at: str, base: Optional[Union[str, Path]] = None, made_by: str = "snapshot"
+        self, pipeline: str, commit: str, made_at: str, base: Optional[Union[str, Path]] = None, made_by: str = "snapshot",
+        builds_on: Optional[str] = None,
     ) -> "PendingSnapshot":
+        """Begin a snapshot (:meth:`Store.begin`); with *builds_on*, the folder name of a complete snapshot of the pipeline here, one kept as an increment on it.
+
+        Nothing in ordinary use passes *builds_on* yet: a run writes every
+        snapshot complete. A copy of a pipeline from another store does, so
+        that it keeps its form (``store move``, ``store import``, ``store
+        export``).
+        """
         self._check_layout(create=True)
         self.check_writable()
         self._forget()
-        return _FolderPending(self, pipeline, commit, made_at, base, made_by)
+        return _FolderPending(self, pipeline, commit, made_at, base, made_by, builds_on)
 
     def remove_snapshot(self, path: Path) -> bool:
         """Clear one snapshot: its record goes, and ``_chartbook/CLEARED.txt`` says so until its folder has gone.
@@ -3695,7 +3707,7 @@ class _FolderPending(PendingSnapshot):
     snapshot has), copies nothing.
     """
 
-    def __init__(self, store: FolderStore, pipeline: str, commit: str, made_at: str, base, made_by: str):
+    def __init__(self, store: FolderStore, pipeline: str, commit: str, made_at: str, base, made_by: str, builds_on: Optional[str] = None):
         from chartbook.identity import validate_pipeline_id
 
         validate_pipeline_id(pipeline)
@@ -3711,6 +3723,15 @@ class _FolderPending(PendingSnapshot):
         self.made_by = made_by
         self.base = Path(os.path.abspath(base)) if base is not None else None
         self.pipeline_path = store.pipeline_path(pipeline)
+        #: For an increment: the folder name of the complete snapshot of the pipeline it builds on. Its own
+        #: folder is then under increments/, one character longer than under pipelines/ was, and every
+        #: path in it is checked for length as it is claimed, as any snapshot's is (:func:`_check_length`)
+        self.builds_on = builds_on
+        if builds_on is not None:
+            increments = store.increments_path()
+            if increments is None or made_by != "snapshot" or not is_snapshot_folder(builds_on):
+                raise ValueError("An increment is a snapshot its owner made, on one complete snapshot, in a store that keeps increments.")
+            self.pipeline_path = increments / pipeline_folder(pipeline)
         self.name: Optional[str] = None
         self.placed = False
         self._written = False
@@ -3747,7 +3768,10 @@ class _FolderPending(PendingSnapshot):
         if self._kept is None:
             self._kept = {}
             for record in self.store.records():
-                if record.readable and record.folder.parent == self.pipeline_path:
+                # Of the pipeline, in either folder: a copy source. For an increment, the one it builds on alone
+                if not record.readable or record.folder.parent.name != self.pipeline_path.name:
+                    continue
+                if self.builds_on is None or (not record.increment and record.folder.name == self.builds_on):
                     for asset in record.assets:
                         for file in asset.files:
                             self._kept.setdefault(file.content_hash, []).append(file)
@@ -3894,6 +3918,14 @@ class _FolderPending(PendingSnapshot):
         if path in self._here:
             raise StoreError(f"{target} is in the store already, with other bytes than {source}.")
         kept = self._held_whole(content_hash, size)
+        if kept is not None and self.builds_on is not None:
+            # Kept where it is, in the complete snapshot this one builds on: named there, and not copied
+            there = kept.relative_to(self.store.pipeline_path(self.pipeline) / self.builds_on).as_posix()
+            self._here[path] = content_hash
+            return {
+                "path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.builds_on,
+                **({"kept_as": there} if there != path else {}),
+            }
         if kept is not None:
             entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
             self._here[path] = content_hash
@@ -4009,6 +4041,13 @@ class _FolderPending(PendingSnapshot):
                     written["made_by"] = self.made_by
             written.setdefault("made_by", self.made_by)
             document = written
+        # How the store keeps the snapshot is the store's to say: what another store said of it is not kept
+        document = {name: value for name, value in document.items() if name != "stored"}
+        if self.builds_on is not None:
+            on = self.store.pipeline_path(self.pipeline) / self.builds_on
+            if not os.path.isfile(_any_length(on / OWN_DIR / RECORD_FILE)):
+                raise BuiltOnGoneError(f"The snapshot {self.store._shown(on)}, which this one builds on, has gone from the store.")
+            document["stored"] = {"builds_on": self.builds_on}
         own = self._claim() / OWN_DIR
         _check_length(own / f"{'0' * 12}.tmp")
         self._alive()
@@ -4028,7 +4067,13 @@ class _FolderPending(PendingSnapshot):
         self.store._forget()
         self._after_record()
         self._drop_note()
-        write_readme(self.pipeline_path, self.store._places().readme)  # for a person who finds the folder
+        if self.builds_on is not None:
+            # One line for a person: where the rest of this snapshot's files are
+            (own / INCREMENT_FILE).write_text(
+                f"The rest of this snapshot's files are in {V3_LAYOUT.pipelines}/{self.pipeline_path.name}/{self.builds_on}\n",
+                encoding="utf-8", newline="\n",
+            )
+        write_readme(self.pipeline_path, INCREMENTS_README if self.builds_on is not None else self.store._places().readme)
         return record
 
     def discard(self) -> None:

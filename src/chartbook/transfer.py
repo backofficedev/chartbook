@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from chartbook import snapshot
-from chartbook.store import StoreError
+from chartbook.store import BuiltOnGoneError, StoreError
 
 
 class NotWholeThere(StoreError):
@@ -31,7 +31,30 @@ class NotWholeThere(StoreError):
         )
 
 
-def copy_snapshot(taken, source, target):
+def _complete_first(taken_and_where):
+    """A sort key for snapshots of one store: each complete one, then the increments, so that what an increment builds on is there before it; oldest first in each."""
+    taken, source = taken_and_where
+    asked = getattr(source, "builds_on", None)
+    return (asked is not None and asked(taken.path) is not None, taken.made_at)
+
+
+def _builds_on_there(taken, source, target):
+    """The folder name, in the target, of the complete snapshot that a snapshot kept as an increment in the source builds on; None where the target has none, or keeps no increments, and it is written complete there."""
+    asked = getattr(source, "builds_on", None)
+    complete = asked(taken.path) if asked is not None else None
+    if complete is None or getattr(target, "increments_path", lambda: None)() is None:
+        return None
+    try:
+        on = snapshot.read(complete)
+    except (snapshot.SnapshotError, OSError):
+        return None  # gone from the source: every file of the increment that is left is copied, complete
+    for record in target.records():
+        if record.readable and not record.increment and (record.pipeline, record.commit, record.made_at) == (on.pipeline, on.commit, on.made_at):
+            return record.folder.name
+    return None
+
+
+def copy_snapshot(taken, source, target, complete=False):
     """Copy one snapshot into another store, each file checked by its hash as it is written; its record there.
 
     One the target has already is left as it is, and is there only if its
@@ -56,7 +79,13 @@ def copy_snapshot(taken, source, target):
                 raise NotWholeThere(taken, target, held.path, problems)
             return held.path
     document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
-    pending = target.begin(taken.pipeline, taken.commit, taken.made_at, made_by=document.get("made_by", "snapshot"))
+    # It keeps its form: an increment in the source is one in the target, on the same complete snapshot,
+    # where the target has that one; where it has not, it is written complete, every file being at hand
+    on = None if complete else _builds_on_there(taken, source, target)
+    pending = target.begin(
+        taken.pipeline, taken.commit, taken.made_at, made_by=document.get("made_by", "snapshot"),
+        **({"builds_on": on} if on is not None else {}),
+    )
     try:
         parts = list(document.get("records", [])) + [document.get("documents"), document.get("index")]
         for part in parts:
@@ -78,7 +107,12 @@ def copy_snapshot(taken, source, target):
             if result.content_hash != part["content_hash"]:
                 raise StoreError(f"Copy of {part.get('id', 'documents')} failed hash verification")
             part["stored"] = result.stored
-        path = pending.write(document)
+        try:
+            path = pending.write(document)
+        except BuiltOnGoneError:
+            # What it builds on went from the target meanwhile: written complete
+            pending.discard()
+            return copy_snapshot(taken, source, target, complete=True)
         for origin in source.origins(taken.commit, snapshot.record_name(taken.subdirectory)):
             target.note_origin(taken.commit, snapshot.record_name(taken.subdirectory), origin)
         return path
@@ -143,7 +177,7 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
         return sum(len(t) for _, t in sources), total
     # Copy and verify every snapshot and note before removing anything.
     for entry, chosen in sources:
-        for taken in chosen:
+        for taken in sorted(chosen, key=lambda taken: _complete_first((taken, entry.store))):
             try:
                 copy_snapshot(taken, entry.store, target)
             except NotWholeThere as error:
@@ -175,7 +209,8 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
     if not keep:
         for entry, chosen in sources:
             # Oldest first lets a store that keeps each file once (a bucket) preserve files referenced by remaining snapshots.
-            for taken in sorted(chosen, key=lambda t: t.made_at):
+            # Increments first: what one builds on is there for as long as it is
+            for taken in sorted(chosen, key=lambda t: (not _complete_first((t, entry.store))[0], t.made_at)):
                 entry.store.remove_snapshot(taken.path)
     if route and stores.catalog:
         from chartbook.catalog_config import route as set_route

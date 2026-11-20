@@ -35,12 +35,15 @@ from chartbook.store import (
     RECORD_FILE,
     V2_LAYOUT,
     V3_LAYOUT,
+    BuiltOnGoneError,
     EarlierLayoutError,
     FolderStore,
     KeptRecord,
     Store,
     StoreError,
+    INCREMENTS_DIR,
     _any_length,
+    _increment_of,
     _kept_files,
     is_snapshot_folder,
     pipeline_folder,
@@ -85,7 +88,7 @@ def _pipeline_folders(source: Path) -> list[Path]:
     Both names are looked under: a store of 0.5 that was moved from one of
     0.2 has a ``snapshots/`` too, with no pipeline's folder in it.
     """
-    held = [source / layout.pipelines for layout in (V3_LAYOUT, V2_LAYOUT) if (source / layout.pipelines).is_dir()]
+    held = [source / name for name in (V3_LAYOUT.pipelines, INCREMENTS_DIR, V2_LAYOUT.pipelines) if (source / name).is_dir()]
     if held:
         return sorted(p for folder in held for p in folder.iterdir() if p.is_dir() and not p.name.startswith("+"))
     if any(p.is_dir() and is_snapshot_folder(p.name) for p in source.iterdir()):
@@ -101,7 +104,8 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
     record is not one a store wrote, is refused and said, and the rest go.
     """
     done = Copied()
-    for record in sorted(records, key=lambda record: (record.made_at, record.folder.name)):
+    # Each complete snapshot, then the increments on it, so that what an increment builds on is there before it
+    for record in sorted(records, key=lambda record: (record.increment, record.made_at, record.folder.name)):
         moment = (record.pipeline, record.commit, record.made_at)
         if not record.readable:
             done.refused.append((str(record.path), "its record cannot be read"))
@@ -142,10 +146,20 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             continue
         pending = None
         try:
-            pending = into.begin(record.pipeline, record.commit, record.made_at)
+            on = _builds_on_there(record, into)  # it keeps its form where what it builds on is there; complete otherwise
+            pending = into.begin(record.pipeline, record.commit, record.made_at, **({"builds_on": on} if on is not None else {}))
             why = _copy_parts(document, record, pending, done)
             if why is None:
-                pending.write(document)
+                try:
+                    pending.write(document)
+                except BuiltOnGoneError:
+                    # What it builds on went from the store meanwhile: written complete, every file being at hand
+                    pending.discard()
+                    pending = into.begin(record.pipeline, record.commit, record.made_at)
+                    document = json.loads(record.path.read_text(encoding="utf-8"))
+                    why = _copy_parts(document, record, pending, done)
+                    if why is None:
+                        pending.write(document)
         except (OSError, ValueError, StoreError) as error:
             why = str(error) or type(error).__name__
         except BaseException:
@@ -160,6 +174,20 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
         done.copied.append(moment)
         echo(f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}")
     return done
+
+
+def _builds_on_there(record: KeptRecord, into: Store) -> Optional[str]:
+    """The folder name, in the store copied into, of the complete snapshot that an increment builds on where it came from; None where that store has none, or keeps no increments, and it is written complete."""
+    if not (record.increment and record.builds_on) or getattr(into, "increments_path", lambda: None)() is None:
+        return None
+    source = record.folder.parent.parent.parent / V3_LAYOUT.pipelines / record.folder.parent.name / record.builds_on / OWN_DIR / RECORD_FILE
+    on = read_kept_record(source) if os.path.isfile(_any_length(source)) else None
+    if on is None or not on.readable:
+        return None
+    for kept in into.records():
+        if kept.readable and not kept.increment and (kept.pipeline, kept.commit, kept.made_at) == (on.pipeline, on.commit, on.made_at):
+            return kept.folder.name
+    return None
 
 
 def _not_to_copy(record: KeptRecord) -> Optional[str]:
@@ -193,14 +221,17 @@ def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Op
             continue  # declared and not built
         if "stored" not in part:
             return f"its record's {part.get('id', 'part')} names {part['content_hash']}, and does not say where its files are"
-        kept = _kept_files(part["stored"], record.folder.parent, record.folder.name)
+        kept = _kept_files(part["stored"], record.folder.parent, record.folder.name, _increment_of(record.folder, document))
         if kept is None:
             return f"its record's {part.get('id', 'part')} says nothing a store could follow"
         at, single, files = kept
         # A folder sent by someone may hold a link to a file of this machine's: never followed
-        inside = Path(os.path.realpath(record.folder.parent))
+        inside = [Path(os.path.realpath(record.folder.parent))]
+        if record.increment:
+            # An increment's files are in two folders of what it came in: its own, and the one it builds on
+            inside.append(Path(os.path.realpath(record.folder.parent.parent.parent / V3_LAYOUT.pipelines / record.folder.parent.name)))
         for file in files:
-            if file.location.is_symlink() or not Path(os.path.realpath(file.location)).is_relative_to(inside):
+            if file.location.is_symlink() or not any(Path(os.path.realpath(file.location)).is_relative_to(folder) for folder in inside):
                 return f"{file.path} is a link, or leads out of the folder it came in"
         missing = next((file for file in files if not file.location.is_file()), None)
         if missing is not None:
