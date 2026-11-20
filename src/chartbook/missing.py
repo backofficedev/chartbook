@@ -106,6 +106,14 @@ class Wanted:
             is not looked for.
         on_commit: Whether its folder on this machine is on that commit
             already, so that nothing has to be checked out.
+        read_at: The commit its two files were read at, in full: the pinned
+            one, or for one that was never pinned the commit its
+            repository was on. A line above may leave that repository on
+            another commit, and this is the one to come back to.
+        absent: Whether its repository was read at that commit and holds
+            no pipeline of this ID: there is nothing there to build.
+        shallow: Whether its clone on this machine is a shallow one, which
+            a plain ``git fetch`` does not deepen.
         builds: Whether its manifest, where it was read, has a ``build``
             script. One that has none commits what it declares, and its
             snapshot is made by ``chartbook snapshot``.
@@ -131,6 +139,9 @@ class Wanted:
     placed: bool = False
     given: bool = False
     on_commit: bool = False
+    read_at: str = ""
+    absent: bool = False
+    shallow: bool = False
     builds: bool = True
     built: bool = False
     by_path: bool = False
@@ -298,7 +309,10 @@ class _Walk:
             # or, read from a clone on this machine, a folder beside that clone
             beside_it = _within(place.within, _text(entry.get("path"))) if by_path and place.base is None and place.repository else None
             if by_path and place.base is None and place.clone is not None and beside_it is None:
-                folder = Path(os.path.normpath(place.clone / place.within / _text(entry.get("path"))))
+                # Only where clones are kept, beside the pipeline's own repository: a lockfile is anyone's,
+                # and must not aim a command at any folder of this machine
+                beside_clone = Path(os.path.normpath(place.clone / place.within / _text(entry.get("path"))))
+                folder = beside_clone if beside_clone.parent == self.beside else None
             if lock.names_a_snapshot(was):
                 pipeline = _an_id(lock.pinned_pipeline(was, folder) or _text(entry.get("_store")))
                 if not pipeline:
@@ -313,6 +327,8 @@ class _Walk:
                     else:
                         wanted.repository = _address(location.get("repository")) or self._recorded(pipeline)
                         wanted.clone = self._cloned(wanted.repository)
+                        if wanted.repository is None:
+                            wanted.repository, wanted.clone = self._cloned_by_its_id(pipeline)
                         wanted.expected = _plain(_text(entry.get("path"))) if by_path else ""
                 found.append(_Need(key, pipeline, wanted))
             elif entry.get("_store"):
@@ -325,7 +341,10 @@ class _Walk:
                     pass  # there under the same ID in other letters: a name to put right, as the pin says, and nothing to build
                 elif not any(_text(taken.commit).startswith(at) for taken in of_it) and not self.host():
                     repository = _address(entry.get("_repository")) or self._recorded(pipeline)
-                    wanted = Wanted(pipeline, at or None, repository, clone=self._cloned(repository))
+                    clone = self._cloned(repository)
+                    if repository is None:
+                        repository, clone = self._cloned_by_its_id(pipeline)
+                    wanted = Wanted(pipeline, at or None, repository, clone=clone)
                 found.append(_Need(key, pipeline, wanted))
             elif folder is not None:
                 if not (folder / MANIFEST_NAME).is_file():
@@ -376,13 +395,35 @@ class _Walk:
         wanted = repository_key(repository) if repository else ""
         if not wanted:
             return None
-        for top in dict.fromkeys([*([self.own_top] if self.own_top else []), self.beside / _clone_name(repository)]):
+        for top in dict.fromkeys([*([self.own_top] if self.own_top else []), *_clone_folders(self.beside, _clone_name(repository))]):
             try:
                 if Path(top).is_dir() and is_repository_top(top) and repository_key(get_git_remote_url(top)) == wanted:
                     return Path(top)
             except (OSError, ValueError):
                 continue
         return None
+
+    def _cloned_by_its_id(self, pipeline: str) -> tuple[Optional[str], Optional[Path]]:
+        """For a pipeline whose address nothing records: a clone beside the pipeline's own, told by its ``origin`` giving that ID; its address and its top, or neither.
+
+        ``https://example.org/acme/rates`` is the repository of
+        ``acme/rates`` (:func:`chartbook.identity.id_from_address`), as a
+        pipeline at the top of its repository is named. A folder is still
+        told by its ``origin`` alone, never by what its manifest says.
+        """
+        from chartbook.identity import get_git_remote_url, id_from_address, is_repository_top, remote_to_web_url
+
+        for top in _clone_folders(self.beside, pipeline.rsplit("/", 1)[-1]):
+            try:
+                if not (top.is_dir() and is_repository_top(top)):
+                    continue
+                origin = get_git_remote_url(top)
+                address = _address(remote_to_web_url(origin)) if origin else None
+                if address and id_from_address(address) == pipeline:
+                    return address, top
+            except (OSError, ValueError):
+                continue
+        return None, None
 
     def _pin_is_not_here(self, was: dict, assets: dict, folder: Optional[Path]) -> bool:
         """Whether the store has neither the snapshot a pin names, nor a build of yours of that commit, nor every pinned file."""
@@ -414,12 +455,14 @@ class _Walk:
         wanted.top = code.top if code is not None else None
         if not wanted.commit:
             wanted.built = code is not None and _is_built(folder)
+            wanted.read_at = code.commit if code is not None else ""
             return _Place(folder, folder, str(folder / MANIFEST_NAME)), ""
         if not _COMMIT.match(wanted.commit):
             return None, "its pin names no commit git would take"
         if code is None:
             return None, f"{folder} is not in a git repository"
         wanted.on_commit = code.commit.startswith(wanted.commit)
+        wanted.read_at = wanted.commit
         within = f"{code.subdirectory}/" if code.subdirectory else ""
         try:
             manifest = snapshot._git(code.top, "show", f"{wanted.commit}:{within}{MANIFEST_NAME}")
@@ -451,21 +494,29 @@ class _Walk:
         if wanted.commit and not _COMMIT.match(wanted.commit):
             return None, "its pin names no commit git would take"
         source = _Source(self, wanted.repository, wanted.clone)
+        if wanted.clone is not None:
+            wanted.top = wanted.clone
+            try:
+                wanted.shallow = snapshot._git(wanted.clone, "rev-parse", "--is-shallow-repository").strip() == "true"
+            except snapshot.SnapshotError:
+                wanted.shallow = False
         commit, why = source.commit(wanted.commit, wanted.pipeline)
         if why:
             return None, why
+        wanted.read_at = commit
         if wanted.given:
             chosen = f"{wanted.subdirectory}/{MANIFEST_NAME}" if wanted.subdirectory else MANIFEST_NAME
         else:
             chosen = self._manifest_of(wanted.pipeline, source, commit)
         manifest = source.text(commit, chosen) if chosen is not None else None
         if manifest is None:
+            wanted.absent = True
             return None, f"no {MANIFEST_NAME} of {wanted.pipeline} was found in its repository at {commit[:7]}"
         within = chosen[: -len(MANIFEST_NAME)]
         wanted.subdirectory, wanted.placed = within.rstrip("/"), True
         if wanted.clone is not None:
             # Its folder on this machine, which the line says to build in
-            wanted.folder, wanted.top = wanted.clone / within if within else wanted.clone, wanted.clone
+            wanted.folder = wanted.clone / within if within else wanted.clone
             try:
                 wanted.on_commit = snapshot.code_of(wanted.clone).commit == commit
             except snapshot.SnapshotError:
@@ -481,17 +532,16 @@ class _Walk:
     def _manifest_of(self, pipeline: str, source: "_Source", commit: str) -> Optional[str]:
         """The path, in a repository at a commit, of the manifest of a pipeline.
 
-        The only manifest there is; else the one that gives that ID, or
-        that its place in the repository gives it
-        (:func:`chartbook.identity.derive_pipeline_id`: the repository's
-        name at the top, the folder's name below, under the scope its
-        address gives).
+        The one that gives that ID, or that its place in the repository
+        gives it (:func:`chartbook.identity.derive_pipeline_id`: the
+        repository's name at the top, the folder's name below, under the
+        scope its address gives). The only manifest there is is not taken
+        for it unasked: an entry that names another pipeline's repository
+        would be told to build that pipeline, for ever.
         """
         from chartbook.resolve import MANIFEST_NAME
 
         paths = source.paths(commit, MANIFEST_NAME)
-        if len(paths) <= 1:
-            return paths[0] if paths else None
         # Those whose place gives the ID are read first: of many, at most so many are read
         paths.sort(key=lambda path: _derived(source.url, path) != pipeline)
         for path in paths[:MOST_MANIFESTS]:
@@ -547,7 +597,9 @@ class _Source:
             try:
                 return snapshot._git(self.clone, "rev-parse", "--verify", "--quiet", f"{wanted or 'HEAD'}^{{commit}}").strip(), ""
             except snapshot.SnapshotError:
-                return "", f"its clone, {self.clone}, does not have the commit {(wanted or 'HEAD')[:7]} (`git fetch` there)"
+                if not wanted:
+                    return "", f"its clone, {self.clone}, has no commit yet"
+                return "", f"its clone, {self.clone}, does not have the commit {wanted[:7]}"
         why = self.walk._fetch(self.url, pipeline)
         if why:
             return "", f"its repository could not be fetched ({why})"
@@ -607,6 +659,16 @@ def _within(within: str, path: str) -> Optional[str]:
 def _not_for_ever():
     """While a walk fetches: a fetch that receives nothing is given up (:data:`SLOWEST_FETCH`), where the person has not said how long to wait."""
     set_here = {name: value for name, value in SLOWEST_FETCH.items() if name not in os.environ}
+    try:
+        # http.lowSpeedLimit and http.lowSpeedTime, in any of git's own files: the environment would go over them
+        said = subprocess.run(
+            ["git", "config", "--get-regexp", r"^http\.lowspeed(limit|time)$"], capture_output=True, text=True, timeout=10,
+            encoding="utf-8", errors="replace",
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        said = ""
+    if said:
+        set_here = {}
     os.environ.update(set_here)
     try:
         yield
@@ -684,19 +746,34 @@ def find(
                 wanted = need.wanted
                 if wanted is None:
                     continue
-                if first:
-                    listing.keys.add(need.key)
                 # One that was never pinned is met by any line of that pipeline
                 known = numbered.get((wanted.pipeline, wanted.commit)) or (
                     None if wanted.commit else next((n for (pipeline, _), n in numbered.items() if pipeline == wanted.pipeline), None)
                 )
+                if known is None and wanted.commit:
+                    # A line of it with no pin, listed already from another reader, that builds this very
+                    # commit: it is this build, and takes the pin. At another commit they are two builds
+                    earlier = next(
+                        ((at, n) for (pipeline, at), n in numbered.items() if pipeline == wanted.pipeline and not at), None
+                    )
+                    line = listing.wanted[earlier[1] - 1] if earlier is not None else None
+                    if line is not None and line.read_at and _COMMIT.match(wanted.commit) and line.read_at.startswith(wanted.commit):
+                        line.commit, line.on_commit, line.built, line.by_path = wanted.commit, True, False, False
+                        del numbered[(wanted.pipeline, earlier[0])]
+                        numbered[(wanted.pipeline, wanted.commit)] = known = earlier[1]
                 if known is not None:
+                    if first:
+                        listing.keys.add(need.key)
                     reads.append(known)
                     continue
                 if len(chain) > DEEPEST:
                     above, wanted.unknown = None, f"the list stops here: it is more than {DEEPEST} pipelines deep"
                 else:
                     above, wanted.unknown = walk.place_of(wanted)
+                if wanted.absent and first:
+                    continue  # the repository its entry names holds no such pipeline: an entry to put right, as its pin says
+                if first:
+                    listing.keys.add(need.key)
                 if above is not None:
                     chain.append(wanted.pipeline)
                     edges.append(edge)
@@ -748,14 +825,30 @@ def _first_line(error: object) -> str:
 
 def _plain(text: str, most: int = 300) -> str:
     """Text a file gave (an ID, an address, a path), as a terminal can show it: no control or format character, and not without end."""
-    kept = "".join(character for character in text if character.isprintable())
+    import unicodedata
+
+    # Controls, format characters, lone surrogates, private and unassigned ones, and line separators: not a
+    # space of another kind, which a folder's name may well have
+    kept = "".join(
+        character for character in text
+        if unicodedata.category(character) not in ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
+    )
     return kept if len(kept) <= most else kept[: most - 1] + "…"
 
 
-def _quoted(text: Union[str, Path]) -> str:
-    """A word of a command, as this system's shell takes it: quoted where it has to be, and never with a control character."""
+def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
+    """A word of a command, as this system's shell takes it: quoted where it has to be, and never with a control character.
+
+    :param windows: Whether for ``cmd.exe``; by the system it runs on, by default.
+    """
     text = _plain(str(text), most=4096)
-    return subprocess.list2cmdline([text]) if os.name == "nt" else shlex.quote(text)
+    if not (os.name == "nt" if windows is None else windows):
+        return shlex.quote(text)
+    # cmd.exe: inside double quotes `&`, `|`, `<`, `>`, `^` and spaces are text. A `"` is doubled, and a `%`,
+    # which it would read as the start of a variable's name even there, is doubled too
+    if re.fullmatch(r"[A-Za-z0-9_./:\\-]+", text):
+        return text
+    return '"' + text.replace('"', '""').replace("%", "%%") + '"'
 
 
 def _counted(numbers: list[int]) -> str:
@@ -769,6 +862,11 @@ def _clone_name(url: str) -> str:
     name = re.split(r"[/\\:]", url.rstrip("/\\"))[-1]
     name = name[:-4] if name.endswith(".git") else name
     return name if re.fullmatch(r"[A-Za-z0-9._-]+", name) and name.strip(".") else "repository"
+
+
+def _clone_folders(beside: Path, name: str) -> list[Path]:
+    """Where a clone of a repository may be, beside the pipeline's own: under the name ``git clone`` gives it, or the next names the list offers where that one is taken (``NAME-2`` …)."""
+    return [beside / (name if number == 1 else f"{name}-{number}") for number in range(1, 10)]
 
 
 def said(listing: Listing, again: str = "chartbook run", done: str = "built", here: Optional[Union[str, Path]] = None) -> list[str]:
@@ -805,70 +903,102 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
     cloned: dict = {}
     worktrees: set = set()
     moved: set = set()
+
+    def at_its_commit(top: Path, folder: Path, commit: str, make: str) -> str:
+        """Check a repository out and build in a folder of it: from its top, since the folder may not be there until the checkout."""
+        moved.add(top)
+        if _same(top, folder):
+            return f"cd {_quoted(top)} && git checkout {commit} && {make}"
+        return f"git -C {_quoted(top)} checkout {commit} && cd {_quoted(folder)} && {make}"
+
+    def in_a_worktree(line: Wanted, commit: str, make: str, fetch: str = "") -> list[str]:
+        """Build in a worktree of the pipeline's own repository at a commit, which leaves the repository itself where it is."""
+        tree = beside / f"{_clone_name(listing.top.name)}-at-{commit}"
+        folder = tree / os.path.relpath(line.folder, listing.top) if line.folder is not None else tree
+        commands = [f"cd {_quoted(folder)} && {make}"]
+        if tree not in worktrees and not tree.exists():
+            commands.insert(0, f"git -C {_quoted(listing.top)} worktree add {_quoted(tree)} {commit}")
+        if fetch:
+            commands.insert(0, fetch)
+        worktrees.add(tree)
+        return commands
+
     for number, line in enumerate(wanted, 1):
-        at = f" at {line.commit[:7]}" if line.commit and _COMMIT.match(line.commit) else ""
+        pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
+        at = f" at {line.commit[:7]}" if pinned else ""
+        # In a command, enough of a commit that a large repository has no two of it
+        commit = (line.commit if pinned else line.read_at)[:12]
         built = line.built and line.top not in moved
         # One with no build script commits what it declares, and one that is built has its files: a
         # snapshot is all there is to make, and a build that may take an hour is not run again
         make = "chartbook run --snapshot" if line.builds and not built else "chartbook snapshot"
         unknown = line.unknown
-        if line.folder is not None:
+        in_own = listing.top is not None and line.top is not None and _same(line.top, listing.top)
+        if line.absent:
+            # Its repository was read, and has no pipeline of this ID: nothing there to build
+            where = f"{_plain(line.repository)}, which holds no pipeline of that ID" + (f" at {line.read_at[:7]}" if line.read_at else "")
+            commands = []
+            unknown = "it could not be found, so no command is given for it"
+        elif line.folder is not None:
             shown = _plain(_from(line.folder, here))
-            in_own = listing.top is not None and line.top is not None and _same(line.top, listing.top)
-            if at and in_own and not line.on_commit:
+            if pinned and in_own and not line.on_commit:
                 # In the pipeline's own repository, at another commit: a checkout would move the pipeline
                 # itself, so it is built in a worktree of that commit, and the reader's work stays where it is
-                tree = beside / f"{_clone_name(listing.top.name)}-at-{line.commit[:7]}"
                 where = f"{shown} (a folder of this repository, at another commit)"
-                commands = [f"cd {_quoted(tree / os.path.relpath(line.folder, listing.top))} && {make}"]
-                if tree not in worktrees:
-                    commands.insert(0, f"git -C {_quoted(listing.top)} worktree add {_quoted(tree)} {line.commit[:7]}")
-                    worktrees.add(tree)
+                commands = in_a_worktree(line, commit, make)
             else:
-                checkout = f"git checkout {line.commit[:7]} && " if at and (not line.on_commit or line.top in moved) else ""
-                if checkout and line.top is not None:
-                    moved.add(line.top)
+                # Checked out where its pin says, or, for one that was never pinned, where it was read once a
+                # line above has left its repository on another commit. Never the pipeline's own repository
+                moves = (pinned and (not line.on_commit or line.top in moved)) or (not pinned and line.top in moved and commit and not in_own)
                 where = f"{shown} (a folder on this machine{', built already' if built else ''})"
                 if line.repository and not in_own:
                     where = f"{shown} (a clone of {_plain(line.repository)}{', built already' if built else ''})"
-                commands = [f"cd {_quoted(line.folder)} && {checkout}{make}"]
+                if moves and line.top is not None:
+                    commands = [at_its_commit(line.top, line.folder, commit, make)]
+                else:
+                    commands = [f"cd {_quoted(line.folder)} && {'git checkout ' + commit + ' && ' if moves else ''}{make}"]
         elif line.repository and line.clone is not None:
             # A clone of it is here, and could not be read at that commit: fetched there, it can be
-            checkout = f"git checkout {line.commit[:7]} && " if at else ""
+            fetch = f"git -C {_quoted(line.clone)} fetch{' --unshallow' if line.shallow else ''}"
             where = f"{_plain(_from(line.clone, here))} (a clone of {_plain(line.repository)})"
-            commands = [f"cd {_quoted(line.clone)} && git fetch && {checkout}{make}"]
-            if line.top is not None:
-                moved.add(line.top)
+            if in_own and pinned:
+                commands = in_a_worktree(line, commit, make, fetch)  # and not by moving the pipeline's own repository
+            elif pinned:
+                commands = [fetch, at_its_commit(line.clone, line.clone, commit, make)]
+            else:
+                # Never pinned, and its clone could not be read where it is: it has no commit yet (`git init`, an
+                # `origin`, and nothing pulled). A fetch would leave its folder empty; a pull fills it
+                commands = [f"git -C {_quoted(line.clone)} pull origin HEAD", f"cd {_quoted(line.clone)} && {make}"]
             if unknown and not line.placed:
                 unknown += "; if it is not at the top of its repository, `cd` to its folder there first"
         elif line.repository:
-            checkout = f"git checkout {line.commit[:7]} && " if at else ""
             address = _plain(line.repository)
-            if address not in cloned:
+            first = address not in cloned
+            if first:
                 # Beside the pipeline's own, under the name `git clone` gives it, or the next that is free
                 name = _clone_name(address)
                 cloned[address] = next(
-                    (folder for folder in (beside / (name if n == 1 else f"{name}-{n}") for n in range(1, 100)) if not folder.exists()),
-                    beside / name,
+                    (folder for folder in _clone_folders(beside, name) if not os.path.lexists(folder)), beside / f"{name}-clone"
                 )
-                first = True
-            else:
-                first = False  # once for a repository of several pipelines: a second clone into the same folder would only fail
             clone = cloned[address]
             into = clone / line.subdirectory if line.subdirectory else clone
             where = address
-            commands = [f"cd {_quoted(into)} && {checkout}{make}"]
-            if first:
+            # A commit where its pin names one; and for one that was never pinned, the commit it was read at once a
+            # line above has left the clone elsewhere
+            if commit and (pinned or clone in moved):
+                commands = [at_its_commit(clone, into, commit, make)]
+            else:
+                commands = [f"cd {_quoted(into)} && {make}"]
+            if first:  # once for a repository of several pipelines: a second clone into the same folder would only fail
                 commands.insert(0, f"git clone {_quoted(address)} {_quoted(clone)}")
             if unknown and not line.placed:
                 unknown += "; if it is not at the top of its repository, `cd` to its folder there first"
         else:
-            checkout = f"git checkout {line.commit[:7]} && " if at else ""
             where = (
                 f"its folder, {line.expected}, is not on this machine, and its repository is not recorded" if line.expected
                 else "its repository is not recorded"
             ) + ", so neither is what it reads in turn"
-            commands = [f"In a clone of it: {checkout}{make}"]
+            commands = [f"In a clone of it: {'git checkout ' + commit + ' && ' if pinned else ''}{make}"]
             unknown = ""
         reads = f"; reads {_counted(line.reads)} above" if line.reads else ""
         lines.append(f"{number}. {_plain(line.pipeline)}{at}    {where}{reads}")
