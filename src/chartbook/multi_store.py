@@ -234,8 +234,9 @@ class Stores:
             raise failures[0]
         raise ObjectNotFoundError(f"No reachable store holds {content_hash}")
 
-    def incomplete(self, content_hash, size_bytes, files=None, every=False):
-        problems = [s.incomplete(content_hash, size_bytes, files, every) for s in self._holding(content_hash)]
+    def incomplete(self, content_hash, size_bytes, files=None, every=False, pipeline=None):
+        # In the stores that have it for that pipeline, as a read of it looks for it
+        problems = [s.incomplete(content_hash, size_bytes, files, every, pipeline=pipeline) for s in self._holding(content_hash, pipeline)]
         return None if None in problems else (problems[0] if problems else "not in any store")
 
     def hashes(self):

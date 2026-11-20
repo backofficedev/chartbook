@@ -877,7 +877,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         # snapshot to read it from: a pin where the bytes are, and none where they are not
         from chartbook.multi_store import with_dependencies as _with
 
-        if not _with(manifest_dir).has(record["content_hash"]):
+        if not _with(manifest_dir).has(record["content_hash"], locks.pinned_pipeline(entry, _folder_of(dependency))):
             record = None
     if record is None and pinned.kind not in locks.LOCKED_KINDS and locks.from_a_snapshot(entry):
         # A chart, a notebook, a note or a plain file of a dependency pinned
@@ -948,7 +948,9 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(manifest_dir)
     listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
-    if not store.has(content_hash):
+    # Of that pipeline's own snapshots, and no other's: what a read is handed, and what `store gc` keeps for it
+    pipeline = locks.pinned_pipeline(listed, _folder_of(dependency))
+    if not store.has(content_hash, pipeline):
         # A snapshot of yours of the pinned commit may hold the same rows, and stand in:
         # for the dependency whole, so one that meets this pin and not another is not read
         stood = locks.your_build(listed, of_dependency, store, lambda: _snapshots_in(store), _folder_of(dependency))
@@ -981,8 +983,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
 
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)
-    # The pinned snapshot's own copy, where the store has it: the path of a pin stays while the pin does
-    held = _held(store, record, listed.get("pinned_from"), _moment_of(listed))
+    # The pinned snapshot's own copy, where the store has it whole: the path of a pin stays while it does
+    held = _held(store, record, pipeline, _moment_of(listed))
     if isinstance(held, FileLocation) and isinstance(record.get("rows"), dict) and record.get("date_col"):
         # The pin's own last date, whichever file is read: what data.as_of() gives
         held = dataclasses.replace(held, as_of=record.get("as_of"), date_col=record["date_col"])
@@ -1088,9 +1090,9 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
 
     def as_it_was_pinned():
         """What a lockfile of an earlier version names of it, where the store still has it."""
-        if earlier.get("content_hash") and store.has(earlier["content_hash"]):
+        if earlier.get("content_hash") and store.has(earlier["content_hash"], locks.pinned_pipeline(entry, _folder_of(dependency))):
             _note_the_read(lock_path, locked, store)
-            return _held(store, earlier, entry.get("pinned_from"), _moment_of(entry))
+            return _held(store, earlier, locks.pinned_pipeline(entry, _folder_of(dependency)), _moment_of(entry))
         return None
 
     if not isinstance(commit, str) or not commit:
@@ -1145,7 +1147,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
             return None
         if not record.get("content_hash"):
             not_built = not_built or f"its snapshot made {taken.made_at} did not build {name}"
-        elif not store.has(record["content_hash"]):
+        elif not store.has(record["content_hash"], taken.pipeline):
             lacking = lacking or f"the store does not have the bytes of {name} from its snapshot made {taken.made_at}"
         else:
             _note_the_read(lock_path, locked, store)
@@ -1232,17 +1234,12 @@ def _note_the_read(lock_path: Path, locked, store) -> None:
     _noted_reads.add(key)
 
 
-#: For a read that names no snapshot and is still to get the same copy each time: a version of a
-#: model read by its hash is handed the earliest-made snapshot that holds it whole (:meth:`chartbook.store.Store.files`)
-_EARLIEST = (None, None)
-
-
 def _moment_of(entry: dict) -> tuple[Optional[str], Optional[str]]:
     """The snapshot a dependency's entry in a lockfile pins, as far as it names it: its commit, and when it was made.
 
     An entry pinned from a snapshot names both. A ``git`` dependency's
-    names its commit alone, and the read is then handed the earliest-made
-    snapshot at that commit that holds the asset whole.
+    names its commit alone, and the read is then handed the newest
+    snapshot of that commit that holds the asset whole.
     """
     location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
     commit, made_at = location.get("commit"), entry.get("snapshot")
@@ -1254,15 +1251,14 @@ def _held(
 ) -> Location:
     """Where the store holds an asset, given its record with a content hash.
 
-    :param pipeline: The pipeline it was pinned from, whose copy is the one
-        read: the same bytes in another pipeline's snapshot may be cleared
-        while this one's is kept.
+    :param pipeline: The pipeline it was pinned from, whose own snapshots
+        alone it is read from: never another pipeline's copy of the same
+        bytes, which ``store gc`` does not keep for it. None where nothing
+        says which pipeline (a lockfile from before 0.3.0).
     :param snapshot: The snapshot it is read from, as far as the read
-        knows it, its commit and when it was made: where each snapshot has
-        its own copy of every file, the one handed out is chosen by these,
-        and is the same each time (:meth:`chartbook.store.Store.files`), so
-        that the path of a pinned file does not move when its owner makes
-        another snapshot of the same bytes.
+        knows it, its commit and when it was made: that one's own copy
+        where the store has it whole, and otherwise the newest of the
+        pipeline's that does (:meth:`chartbook.store.Store.files`).
     """
     from chartbook import hashing
     from chartbook.snapshot import not_whole
@@ -1272,7 +1268,7 @@ def _held(
     # synced folder can have a file before the whole of it, and a bucket a
     # key before all of an object's. Nothing is read, and this comes before
     # the object is fetched, which for a bucket would copy and check it
-    unsynced = not_whole(store, record)
+    unsynced = not_whole(store, record, pipeline)
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     from chartbook.formats import kept as kept_reading
@@ -1451,7 +1447,7 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
             f"Give more digits.",
         )
     store = default_store()
-    if not store.has(matches[0]):
+    if not store.has(matches[0], dict(versions)[matches[0]].pipeline):
         raise VersionNotFoundError(
             local,
             asset.rev,
@@ -1460,7 +1456,7 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
             f"made{pointing}, and the store at {store} no longer has its "
             f"bytes.",
         )
-    return _held(store, records[matches[0]], dict(versions)[matches[0]].pipeline, _EARLIEST)
+    return _held(store, records[matches[0]], dict(versions)[matches[0]].pipeline)
 
 
 def _resolve_pinned_version(
@@ -1517,9 +1513,12 @@ def _resolve_pinned_version(
         and other.get("ref", {}).get("kind") == pinned.kind
         and (other.get("content_hash") or "").split(":", 1)[-1].startswith(digits)
     ]
-    if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"]):
-        return _held(store, by_label[0], snapshot=_EARLIEST)
+    from chartbook import lock as locks
+
     entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
+    of_pipeline = locks.pinned_pipeline(entry, _folder_of(dependency))
+    if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"], of_pipeline):
+        return _held(store, by_label[0], of_pipeline)
     commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")
     if not (commit and made_at):
         raise AssetNotPinnedError(
@@ -1568,14 +1567,14 @@ def _resolve_pinned_version(
             f"{', '.join(snapshot.version_name(h, hashes) for h, _ in matches)}. Give more digits.",
         )
     content_hash, taken = matches[0]
-    if not store.has(content_hash):
+    if not store.has(content_hash, taken.pipeline):
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
             f"Version {pinned.rev} of {without} is named by a snapshot, and its "
             f"bytes are not in the store at {store}.",
         )
-    return _held(store, taken.assets[local], taken.pipeline, _EARLIEST)
+    return _held(store, taken.assets[local], taken.pipeline)
 
 
 def _declared_in_source(dependency: PipelineLocation, name: str) -> Optional[str]:
@@ -2088,9 +2087,9 @@ def _held_in(asset: AssetRef, newest, found: list, store):
         )
     if not record.get("content_hash"):
         return None, f"its newest snapshot, {newest.commit[:7]}, did not build {name}"
-    if not store.has(record["content_hash"]):
+    if not store.has(record["content_hash"], newest.pipeline):
         return None, f"the store does not have the bytes of {name} from its newest snapshot"
-    return _held(store, record), ""
+    return _held(store, record, newest.pipeline), ""
 
 
 def _refuse_working_in_a_batch(asset: AssetRef, why: str, folder: Path) -> None:

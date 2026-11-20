@@ -809,7 +809,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
         except (StoreError, OSError, ValueError, snapshot.SnapshotError):
             pass
     # A record kept of an earlier lockfile is a pin only where its bytes are (lock.still_pinned)
-    records = [r for r in records if lock.in_lockfile(r) or folder is None or folder.has(r["content_hash"])]
+    records = [r for r in records if lock.in_lockfile(r) or folder is None or folder.has(r["content_hash"], lock.pinned_pipeline(pinned))]
     # Pinned, too, by the snapshot its entry names, with none of its assets in the lockfile
     if not (records or lock.names_a_snapshot(pinned)) or lock._declared_elsewhere(pinned, lock._dependency_entry(key, entry)):
         return (
@@ -824,7 +824,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             False,
         )
     try:
-        whole = folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
+        whole = folder is None or all(folder.has(r["content_hash"], lock.pinned_pipeline(pinned)) and not lock._incomplete(folder, r, lock.pinned_pipeline(pinned)) for r in records)
         if whole and folder is not None and not records:
             # Pinned by its entry alone: what is read of it is read from a snapshot, as a read finds one
             whole = bool(lock.read_from(pinned, snapshot.readable_snapshots(folder)[0]))

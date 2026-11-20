@@ -1682,7 +1682,8 @@ class S3Store(Store):
         return bool(remote) and names[0] not in remote
 
     def incomplete(
-        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False,
+        pipeline: Optional[str] = None,  # which a folder store asks by; a bucket keeps each file once
     ) -> Optional[str]:
         """Why an asset is not whole as its record has it, by the keys a listing gives and their sizes; None if it is.
 

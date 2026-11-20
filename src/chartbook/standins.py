@@ -178,14 +178,14 @@ def compare(taken, records: Mapping, store) -> Found:
         pinned = record.get("content_hash")
         if not pinned:
             continue  # not built when it was pinned: nothing to meet, and the check says so itself
-        if not lock.in_lockfile(record) and not store.has(pinned):
+        if not lock.in_lockfile(record) and not store.has(pinned, taken.pipeline):
             continue  # kept of an earlier lockfile, for a store that had its bytes: no pin here (lock.still_pinned)
         labelled = bool((record.get("ref") or {}).get("rev"))
         theirs = None if labelled else taken.assets.get(snapshot.local_name(record))
-        if store.has(pinned):
+        if store.has(pinned, taken.pipeline):
             # The cheapest check, wherever the bytes came from. In part, they are on their
             # way: waiting gives the pinned file, and no build is read in its place
-            in_part = snapshot.not_whole(store, record)
+            in_part = snapshot.not_whole(store, record, taken.pipeline)
             if in_part:
                 found.unmet.append(Unmet(asset_id, f"the store has the pinned file in part: {in_part}", lost=True))
             else:
@@ -208,7 +208,7 @@ def compare(taken, records: Mapping, store) -> Found:
         elif theirs["content_hash"] == pinned:
             # The same file, which the store does not have, or not whole (seen above)
             found.unmet.append(Unmet(asset_id, "it is the pinned file, which the store does not have", lost=True))
-        elif not store.has(theirs["content_hash"]) or snapshot.not_whole(store, theirs):
+        elif not store.has(theirs["content_hash"], taken.pipeline) or snapshot.not_whole(store, theirs, taken.pipeline):
             found.unmet.append(Unmet(asset_id, "the store does not have all of your build's file yet"))
         elif kind != "dataframe":
             found.unmet.append(Unmet(asset_id, f"a {kind} is met by the same file only, and your build's is another"))

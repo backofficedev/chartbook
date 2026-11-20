@@ -40,11 +40,17 @@ OLDER, OLD, NOW, LATER, LAST = (
     "2025-12-01T09:15:00.000000Z", "2026-01-01T09:15:00.000000Z", "2026-11-19T14:02:00.000000Z",
     "2026-11-19T15:02:00.000000Z", "2026-11-19T16:02:00.000000Z",
 )
-#: What gc says to do where it holds a pipeline back
-WHAT_TO_DO = (
-    "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. "
-    "A snapshot that has lost a file for good goes once nothing pins it any more."
-)
+#: When a snapshot gc keeps as the newest of its pipeline goes, and one a lockfile pins: the way out gc names for each
+NEWEST = "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it"
+PINNED = "once no lockfile pins it: `chartbook pin --update` in the pipeline that does moves its pin to a newer snapshot"
+
+
+def what_to_do(way: str) -> str:
+    """What gc says to do where it holds a pipeline back, with the way out for the reason the snapshot is kept."""
+    return (
+        "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. "
+        f"If it is lost for good, that snapshot goes {way}."
+    )
 
 
 @pytest.fixture
@@ -453,8 +459,8 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
             assert result.output.splitlines()[-4:] == [
                 f"Kept: 2 snapshot(s), naming {len(first.hashes() | second.hashes())} object(s): 1 because it is the newest of "
                 f"its pipeline, 1 because a snapshot of its pipeline that stays has lost a file",
-                f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name}, which stays, lacks _data/treasury.parquet.",
-                WHAT_TO_DO,
+                f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name} lacks _data/treasury.parquet, and stays because it is the newest of its pipeline.",
+                what_to_do(NEWEST),
                 "Nothing to remove.",
             ]
         assert _files(_folder_of(first)) and (_folder_of(first) / "_data" / "treasury.parquet").is_file()
@@ -470,7 +476,7 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
         plan = lock.plan_gc(FolderStore(store.root))
         assert plan.snapshots_delete == [] and plan.held_back == {"acme/rates": (second.path, "README.md", 2)}
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
-        assert f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name}, which stays, lacks README.md and 1 more." in result.output.splitlines()
+        assert f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name} lacks README.md and 1 more, and stays because it is the newest of its pipeline." in result.output.splitlines()
 
     def test_one_that_is_itself_to_go_holds_nothing_back(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
@@ -533,7 +539,7 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
         assert data.load("acme/parted:parts", project_dir=reads).collect().shape[0] == 2
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.exit_code == 0, result.output
-        assert f"Nothing of acme/parted is removed: its snapshot {_folder_of(third).name}, which stays, lacks _data/parts/year=2020/part-0.parquet." in result.output.splitlines()
+        assert f"Nothing of acme/parted is removed: its snapshot {_folder_of(third).name} lacks _data/parts/year=2020/part-0.parquet, and stays because a lockfile pins it." in result.output.splitlines()
         assert sorted(taken.made_at for taken in snapshot.all_snapshots(FolderStore(store.root))) == [OLDER, OLD, NOW]
         assert data.load("acme/parted:parts", project_dir=reads).collect().shape[0] == 2
 
@@ -560,8 +566,8 @@ class TestAHoleNoRunCanFill:
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
-        assert f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name}, which stays, lacks _data/treasury.parquet." in lines
-        assert WHAT_TO_DO in lines and lines[-1] == "Nothing to remove."
+        assert f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name} lacks _data/treasury.parquet, and stays because a lockfile pins it." in lines
+        assert what_to_do(PINNED) in lines and lines[-1] == "Nothing to remove."
         assert "puts it back" not in result.output and "puts it back" not in CliRunner().invoke(main, ["store", "gc", "--help"]).output
         assert _folder_of(first).is_dir()
 
@@ -605,8 +611,8 @@ class TestWhatGcSaysAfterTheYes:
         assert result.output.splitlines()[-5:] == [
             f"Kept after all: acme/rates at {first.commit[:7]}, made 2026-01-01 09:15 UTC: a snapshot of its pipeline that stays has lost a file",
             f"Kept after all: {only_its} object(s), which a lockfile or a snapshot names or uses now",
-            f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name}, which stays, lacks _data/treasury.parquet.",
-            WHAT_TO_DO,
+            f"Nothing of acme/rates is removed: its snapshot {_folder_of(second).name} lacks _data/treasury.parquet, and stays because it is the newest of its pipeline.",
+            what_to_do(NEWEST),
             "Removed 0 snapshot(s) and 0 object(s), 0 bytes.",
         ]
         assert "pinned" not in "\n".join(result.output.splitlines()[-5:])
@@ -775,9 +781,10 @@ class TestStoreMoveWhereTheTargetsOwnSnapshotLacksAFile:
         with pytest.raises(StoreError) as stopped:
             transfer.move("acme/rates", stores(), "there", keep=False, route=False)
         assert str(stopped.value) == (
-            f"The snapshot of acme/rates made {OLD} is in {FolderStore(target)} already, and lacks _data/treasury.parquet "
-            f"there ({_folder_of(copies[OLD])}): nothing was removed from where it came from. If a sync is still bringing "
-            f"it, wait for the sync to finish and move again; `chartbook store verify` there lists everything missing."
+            f"The store at {FolderStore(target)} has the snapshot of acme/rates made {OLD} already, in "
+            f"{_folder_of(copies[OLD]).name}, and not whole: _data/treasury.parquet is not in the store. Nothing was removed "
+            f"from where it came from. If a sync is still bringing it, wait for the sync to finish and move again; "
+            f"`chartbook store verify` there lists everything missing or damaged."
         )
         assert _state(store.root) == here and len(snapshot.all_snapshots(FolderStore(store.root))) == 2
         assert (_folder_of(first) / "_data" / "treasury.parquet").is_file()

@@ -579,7 +579,7 @@ def _docs_info(
         stores, taken = newest if newest is not None else _newest_snapshot(manifest, pipeline_key)
         if not taken.documents:
             raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
-        kept = stores.files(taken.documents["content_hash"], pipeline_key).by_relative()
+        kept = stores.files(taken.documents["content_hash"], taken.pipeline, snapshot=(taken.commit, taken.made_at)).by_relative()
         manifest_file = kept.get("chartbook.toml")
         if manifest_file is None:
             raise KeyError(f"The newest snapshot of {pipeline_key} keeps no chartbook.toml among its documents")
@@ -615,7 +615,7 @@ def _docs_info(
             record = taken.assets.get(str(ref)) or {}
             if not record.get("content_hash"):
                 raise KeyError(f"The newest snapshot of {pipeline_key} keeps no file of {shown}")
-            files = stores.files(record["content_hash"], pipeline_key).files
+            files = stores.files(record["content_hash"], taken.pipeline, snapshot=(taken.commit, taken.made_at)).files
             if len(files) != 1:
                 raise KeyError(f"{pipeline_key}'s {shown} is {len(files)} files, not one page")
             return "path", declared, Path(files[0].location)

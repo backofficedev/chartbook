@@ -329,14 +329,14 @@ class TestEverySnapshotIsComplete:
 
 
 class TestThePathOfAPinnedFile:
-    """The copy a read is handed is the same one each time, whatever snapshots are made after it.
+    """Which copy a read is handed, of the pipeline's own snapshots that hold the asset whole, and never another pipeline's.
 
-    Of the pipeline's snapshots that hold the asset whole: the one the
-    lockfile names, by its commit and when it was made; else the earliest
-    made at that commit (a ``git`` dependency's entry names its commit
-    alone); else the earliest made (a version of a model read by its hash
-    names neither). So the path changes when the pin moves, and when
-    ``store gc`` removes that snapshot or it loses the file: not otherwise.
+    The snapshot the lockfile names, by its commit and when it was made; for
+    a ``git`` dependency, whose entry names its commit alone, the newest of
+    that commit; and otherwise the newest, which is the one ``store gc``
+    keeps (a version of a model read by its hash or its label). So the
+    path of a file read through a pin stays while the pinned snapshot is in
+    the store and whole.
     """
 
     def test_it_stays_where_it_is_while_neither_the_pin_nor_the_bytes_move(self, rates, reader, store):
@@ -361,10 +361,10 @@ class TestThePathOfAPinnedFile:
         own.unlink()
         assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(second) / "_data" / "treasury.parquet"
         assert data.load("acme/rates:treasury", project_dir=reader).collect().shape == (3, 2)
-        # And that one stays the one read when a third is made: the earliest made of those that have it whole
+        # Where the pinned one has lost it, the newest of the pipeline that has it whole: the one `store gc` keeps
         _chart(rates, "and again")
-        snapshot.make(rates, store=FolderStore(store.root), made_at=THIRD)
-        assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(second) / "_data" / "treasury.parquet"
+        third = snapshot.make(rates, store=FolderStore(store.root), made_at=THIRD).snapshot
+        assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(third) / "_data" / "treasury.parquet"
 
     @pytest.fixture
     def with_parts(self, rates):
@@ -457,8 +457,8 @@ class TestThePathOfAPinnedFile:
         assert len(list((store.root / "snapshots" / "acme+upstream").glob("*/_chartbook/snapshot.json"))) == 2
         assert data.path("acme/upstream:steady", project_dir=one) == before
 
-    def test_a_version_of_a_model_read_by_its_hash_is_in_the_earliest_snapshot_that_holds_it(self, work, store):
-        """`models.path("m@<hash>")`: the path changes only when `store gc` removes that snapshot."""
+    def test_a_version_of_a_model_read_by_its_hash_is_in_the_newest_snapshot_that_holds_it(self, work, store):
+        """`models.path("m@<hash>")`: the copy `store gc` keeps, so the path changes when a later snapshot holds the version too."""
         from chartbook import models
 
         folder = work / "forecast"
@@ -484,12 +484,13 @@ class TestThePathOfAPinnedFile:
         for text, made_at in (("two", SECOND), ("three", THIRD)):
             (folder / "_output" / "curve.html").write_text(f"<p>{text}</p>\n", encoding="utf-8", newline="\n")
             made.append(snapshot.make(folder, store=FolderStore(store.root), made_at=made_at).snapshot)
-            assert models.path(f"m@{version}", project_dir=folder) == _folder_of(first) / "_output" / "m.json"
-        # Once that snapshot is removed, the earliest of those left
-        fresh = FolderStore(store.root)
-        assert fresh.remove_snapshot(first.path) is True
-        fresh.tidy_pipeline("acme/forecast")
-        assert models.path(f"m@{version}", project_dir=folder) == _folder_of(made[1]) / "_output" / "m.json"
+            assert models.path(f"m@{version}", project_dir=folder) == _folder_of(made[-1]) / "_output" / "m.json"
+        # And that is the one gc keeps: with nothing kept for being new, the two older ones go and the path stays
+        before = models.path(f"m@{version}", project_dir=folder)
+        plan = lock.plan_gc(FolderStore(store.root), keep_days=0)
+        assert sorted(taken.made_at for taken, _ in plan.snapshots_delete) == [FIRST, SECOND]
+        lock.run_gc(plan, FolderStore(store.root))
+        assert before.is_file() and models.path(f"m@{version}", project_dir=folder) == before
 
     def test_a_store_of_0_5_has_one_place_for_it_whichever_snapshot_is_named(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
@@ -1097,7 +1098,8 @@ class TestAFolderWithPipelinesAndNoMarker:
             f"The store at {store} has no store.json, and holds a pipelines/ folder with snapshots or objects in it: "
             f"what a store of ChartBook 0.5 holds, whose store.json may not have arrived yet (a sync that has not "
             f"finished). Until it has, the folder is read as that store, and no data is written to it or removed from "
-            f"it. If it is no store of ChartBook 0.5 any more, remove pipelines/ from it and try again."
+            f"it. If it is no store of ChartBook 0.5 any more, remove pipelines/ from it and try again. If it is one whose store.json is lost "
+            f'for good, put one back that holds {{"schema": "chartbook/store/v2"}}.'
         )
         for write in (
             lambda: store.begin("acme/rates", "c" * 40, "2026-11-20T00:00:00.000000Z", base=work),
@@ -1178,7 +1180,8 @@ class TestAFolderWithPipelinesAndNoMarker:
             f"The store at {store} has no store.json, and holds a roots/ folder with notes in it: what a store of "
             f"ChartBook 0.5 holds, whose store.json may not have arrived yet (a sync that has not finished). Until it "
             f"has, the folder is read as that store, and no data is written to it or removed from it. If it is no "
-            f"store of ChartBook 0.5 any more, remove roots/ from it and try again."
+            f"store of ChartBook 0.5 any more, remove roots/ from it and try again. If it is one whose store.json is lost for "
+            f'good, put one back that holds {{"schema": "chartbook/store/v2"}}.'
         )
         assert "migrate" not in str(refused.value)
         assert _tree(root) == [f"roots/{'ab' * 16}.json"]
@@ -1200,7 +1203,7 @@ class TestAFolderWithPipelinesAndNoMarker:
         with pytest.raises(StoreError) as refused:
             FolderStore(store.root).put(work / "new.bin")
         assert "holds a pipelines/ folder with snapshots or objects in it and a roots/ folder with notes in it:" in str(refused.value)
-        assert str(refused.value).endswith("remove pipelines/ and roots/ from it and try again.")
+        assert "remove pipelines/ and roots/ from it and try again. If it is one whose store.json is lost for good" in str(refused.value)
 
     def test_an_object_no_pipeline_owned_is_enough(self, work):
         root = work / "objects-only"

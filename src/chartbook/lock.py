@@ -529,13 +529,13 @@ def still_pinned(
     for asset_id, record in sorted(earlier.items()):
         content_hash = record.get("content_hash")
         try:
-            if not content_hash or not store.has(content_hash):
+            if not content_hash or not store.has(content_hash, pinned_pipeline(entry, folder)):
                 continue
             if builds is None:
                 builds = read_from(entry, snapshots(), folder)
             name = snapshot.local_name(record)
             read = any(
-                (taken.assets.get(name) or {}).get("content_hash") and store.has(taken.assets[name]["content_hash"])
+                (taken.assets.get(name) or {}).get("content_hash") and store.has(taken.assets[name]["content_hash"], taken.pipeline)
                 for taken in builds
             )
         except (OSError, StoreError, snapshot.SnapshotError, KeyError, TypeError, ValueError):
@@ -1034,9 +1034,9 @@ NOT_SYNCED_YET = (
 )
 
 
-def _incomplete(store: Store, record: dict) -> Optional[str]:
+def _incomplete(store: Store, record: dict, pipeline: Optional[str] = None) -> Optional[str]:
     """Why the store's object of a record with a hash does not hold all of its bytes yet; None if it does, or that cannot be told."""
-    return snapshot.not_whole(store, record)
+    return snapshot.not_whole(store, record, pipeline)
 
 
 @dataclass
@@ -1098,6 +1098,9 @@ class PinReport:
     events: list[PinEvent] = field(default_factory=list)
     written: bool = False
     git: set = field(default_factory=set)
+    #: The pipeline each dependency's pins are of, by its own ID, as its entry before this pin says it
+    #: (pinned_pipeline): whose snapshots "is it in the store" is asked of, as a read asks it
+    pipelines: dict = field(default_factory=dict)
     snapshots: dict = field(default_factory=dict)
     unrooted: str = ""
     refused: str = ""
@@ -1766,6 +1769,7 @@ def _sync_now(
         had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
         had_assets = {k: v for k, v in had.items() if k not in had_labels}
         was = locked.get(key)
+        report.pipelines[key] = pinned_pipeline(was, entry.get("_resolved_path"))
         kept_as_it_is = False
         chosen = None  # the snapshot a `rev` walked back to
         rev_failure = None
@@ -1840,8 +1844,8 @@ def _sync_now(
                 content_hash = record.get("content_hash")
                 if not content_hash:
                     continue
-                if store.has(content_hash):
-                    unsynced = _incomplete(store, record)
+                if store.has(content_hash, report.pipelines.get(key)):
+                    unsynced = _incomplete(store, record, report.pipelines.get(key))
                     report.events.append(
                         PinEvent("unsynced", key, asset_id, old=content_hash, new=content_hash, detail=unsynced)
                         if unsynced
@@ -1918,7 +1922,7 @@ def _sync_now(
             if directory is None and listed is was and (was or {}).get("location", {}).get("kind") == "store":
                 # Not got from its repository: the store pin stays as it was, labels and all
                 report.git.discard(key)
-                lost = any(r.get("content_hash") and not store.has(r["content_hash"]) for r in had.values())
+                lost = any(r.get("content_hash") and not store.has(r["content_hash"], report.pipelines.get(key)) for r in had.values())
                 if may_move or not any(r.get("content_hash") for r in had.values()) or lost:
                     report.events.append(PinEvent("unfetched", key, detail=failure))
                 for asset_id, record in sorted(had.items()):
@@ -1942,7 +1946,7 @@ def _sync_now(
             commit_moved = bool(commit_was and commit_now and commit_was != commit_now)
             pinned = any(record.get("content_hash") for record in had.values())
             lost = failure is not None and any(
-                record.get("content_hash") and not store.has(record["content_hash"]) for record in had.values()
+                record.get("content_hash") and not store.has(record["content_hash"], report.pipelines.get(key)) for record in had.values()
             )
             if failure and (may_move or not pinned or lost):
                 # With pins in the store and nothing asked to move, a
@@ -2205,7 +2209,7 @@ def your_build(entry: dict, assets: dict, store: Store, snapshots: Callable[[], 
     absent = [
         record for record in assets.values()
         # One kept of an earlier lockfile is a pin only where its bytes are (still_pinned)
-        if record.get("content_hash") and not store.has(record["content_hash"]) and in_lockfile(record)
+        if record.get("content_hash") and not store.has(record["content_hash"], pinned_pipeline(entry, folder)) and in_lockfile(record)
     ]
     if not absent:
         return None
@@ -2538,7 +2542,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
             report.problems.append(FrozenProblem(key, None, does_not_match(key, stood), "differs"))
         for asset_id in sorted(assets):
             content_hash = assets[asset_id].get("content_hash")
-            if content_hash and not in_lockfile(assets[asset_id]) and from_a_snapshot(entry) and not store.has(content_hash):
+            if content_hash and not in_lockfile(assets[asset_id]) and from_a_snapshot(entry) and not store.has(content_hash, pinned_pipeline(entry, dependencies[key].get("_resolved_path"))):
                 # A record kept of an earlier lockfile, for a store that had its bytes and no snapshot
                 # to read it from (still_pinned): here it is no pin, and is read as any asset the
                 # lockfile does not hold. No rebuild gives a chart's bytes again
@@ -2579,7 +2583,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                         "not_built",
                     )
                 )
-            elif not store.has(content_hash):
+            elif not store.has(content_hash, pinned_pipeline(entry, dependencies[key].get("_resolved_path"))):
                 plain = False  # a pin from a snapshot, by its bytes: said once for its dependency
                 if assets[asset_id].get("label"):
                     remedy = f"its owner makes a snapshot that holds that version again, and then `chartbook pin --update {key}`"
@@ -2613,7 +2617,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                         "not_in_store" if plain else "",
                     )
                 )
-            elif unsynced := _incomplete(store, assets[asset_id]):
+            elif unsynced := _incomplete(store, assets[asset_id], pinned_pipeline(entry, dependencies[key].get("_resolved_path"))):
                 in_part.append(asset_id)
                 report.problems.append(
                     FrozenProblem(key, asset_id, f"is pinned at {content_hash[:19]}…, and {unsynced}.")
@@ -3224,18 +3228,18 @@ def _sync_from_snapshots(
                 built = theirs.get(snapshot.local_name(record))
                 said = "a newer snapshot has it: `chartbook pin --update` pins it" if built else _where(record)
                 report.events.append(PinEvent("not_built", key, record["id"], detail=said))
-            elif not in_lockfile(record) and not store.has(old):
+            elif not in_lockfile(record) and not store.has(old, report.pipelines.get(key)):
                 # Kept of an earlier lockfile, on a machine whose store had its bytes: here
                 # it is read as any asset the lockfile does not hold, and is no pin
                 report.events.append(PinEvent("unlocked", key, record["id"], detail=(record.get("ref") or {}).get("kind", "")))
-            elif stood is not None and not store.has(old):
+            elif stood is not None and not store.has(old, report.pipelines.get(key)):
                 met = stood.met.get(record["id"])
                 if met is not None:
                     report.events.append(PinEvent("stood_in", key, record["id"], old=old, new=old, detail=met.as_of or ""))
                 else:
                     why = next((unmet.why for unmet in stood.unmet if unmet.asset == record["id"]), "your build does not hold it")
                     report.events.append(PinEvent("differs", key, record["id"], old=old, detail=why))
-            elif not store.has(old):
+            elif not store.has(old, report.pipelines.get(key)):
                 report.events.append(
                     PinEvent(
                         "lost",
@@ -3245,7 +3249,7 @@ def _sync_from_snapshots(
                         detail=f"it is not in the store at {store}. {NOT_SYNCED_YET}.{ways_on()}",
                     )
                 )
-            elif unsynced := _incomplete(store, record):
+            elif unsynced := _incomplete(store, record, report.pipelines.get(key)):
                 report.events.append(PinEvent("unsynced", key, record["id"], old=old, new=old, detail=unsynced))
             else:
                 now = theirs.get(snapshot.local_name(record))
@@ -3257,11 +3261,11 @@ def _sync_from_snapshots(
             old = record.get("content_hash")
             now = (newest.labels.get(snapshot.local_name(record)) or {}).get(record.get("label")) if newer else None
             moved = bool(old and now and not old.split(":", 1)[-1].startswith(now))
-            if old and stood is not None and not store.has(old):
+            if old and stood is not None and not store.has(old, report.pipelines.get(key)):
                 # A version no build of this commit gives: met by its own file only
                 why = next((unmet.why for unmet in stood.unmet if unmet.asset == asset_id), "the store does not have it")
                 report.events.append(PinEvent("differs", key, asset_id, old=old, detail=why))
-            elif old and not store.has(old):
+            elif old and not store.has(old, report.pipelines.get(key)):
                 report.events.append(
                     PinEvent(
                         "lost", key, asset_id, old=old,
@@ -3307,14 +3311,14 @@ def _sync_from_snapshots(
         (snapshot.renamed(newest.assets[name], key)["id"], newest.assets[name]["content_hash"])
         for name in sorted(newest.assets)
         if newest.assets[name].get("content_hash")
-        and not store.has(newest.assets[name]["content_hash"])
+        and not store.has(newest.assets[name]["content_hash"], newest.pipeline)
     ]
     # Or it has the object, and not all of its bytes yet: a store in a
     # synced folder can have a file before the whole of it
     unsynced = []
     for name in sorted(newest.assets):
-        if newest.assets[name].get("content_hash") and store.has(newest.assets[name]["content_hash"]):
-            short = _incomplete(store, newest.assets[name])
+        if newest.assets[name].get("content_hash") and store.has(newest.assets[name]["content_hash"], newest.pipeline):
+            short = _incomplete(store, newest.assets[name], newest.pipeline)
             if short:
                 unsynced.append((snapshot.renamed(newest.assets[name], key)["id"], newest.assets[name]["content_hash"], short))
     if missing or unsynced:
@@ -3576,10 +3580,11 @@ def _report_kept(record: dict, key: str, store: Store, report: PinReport) -> Non
     pinned = record.get("content_hash")
     if not pinned:
         return
-    unsynced = _incomplete(store, record) if store.has(pinned) else None
+    of = report.pipelines.get(key)  # asked of that pipeline's own snapshots, as a read asks
+    unsynced = _incomplete(store, record, of) if store.has(pinned, of) else None
     if unsynced:
         report.events.append(PinEvent("unsynced", key, record["id"], old=pinned, new=pinned, detail=unsynced))
-    elif store.has(pinned):
+    elif store.has(pinned, of):
         report.events.append(
             PinEvent("kept", key, record["id"], old=pinned, new=pinned)
         )
@@ -3685,7 +3690,8 @@ def _pin_asset(
         warnings.warn(f"Could not read {absolute}: {error}", stacklevel=2)
         current = None
     same = current is not None and current.content_hash == old
-    unsynced = _incomplete(store, had) if store.has(old) else None
+    of = report.pipelines.get(key)  # asked of that pipeline's own snapshots, as a read asks
+    unsynced = _incomplete(store, had, of) if store.has(old, of) else None
     names = snapshot.files_read(had) or {}
     # The bytes are one file, as its record and the checkout have them
     single = not isinstance(had.get("files"), list) and os.path.isfile(absolute)
@@ -3707,13 +3713,13 @@ def _pin_asset(
             # Put once the lockfile may be written, and said restored then if that makes it whole
             store.recheck[stored.content_hash] = (asset_id, had)
         elif stored is not None:
-            unsynced = _incomplete(store, had)
+            unsynced = _incomplete(store, had, of)
             if not unsynced:
                 report.events.append(PinEvent("restored", key, asset_id, old=old, new=old))
                 return had
     if unsynced:
         report.events.append(PinEvent("unsynced", key, asset_id, old=old, new=old, detail=unsynced))
-    elif store.has(old):
+    elif store.has(old, of):
         status = "kept" if same else "stale"
         report.events.append(PinEvent(status, key, asset_id, old=old, new=old))
     elif same:
@@ -3951,8 +3957,9 @@ class _PutLater:
                     raise
             if pending is None:
                 return stored
-            new = [put for put in stored.values() if put.stored and not self._store.has(put.content_hash)]
-            if not pending.placed and not new:
+            # It adds nothing only where one recorded snapshot of the pipeline holds every asset put,
+            # whole: not where each file is whole in some snapshot or other, which no read can use
+            if not pending.placed and self._store.holds_whole(pipeline, {put.content_hash for put in stored.values() if put.stored}):
                 pending.discard()
                 return stored
             records = []
@@ -4504,14 +4511,10 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
         else:
             plan.delete.append((content_hash, store.size_of(content_hash)))
     plan.recent_files = recent_files
-    if says_what_is_left and plan.snapshots_delete:
-        # The removed snapshots' own copies of files an object that stays has too: of no object that
-        # goes, and freed all the same. Of the snapshots the plan lists: a record a pin made goes
-        # without a word, as before, and what its folder holds is not counted
-        unsaid = [taken.path for taken, _ in plan.pinned_delete]
+    if says_what_is_left and going:
         for content_hash in stay:
             staying = {name for name, _ in files_left(content_hash)}
-            for name, size in store.files_left(content_hash, unsaid):
+            for name, size in store.files_of(content_hash):
                 if name not in staying and name not in kept_files and name not in counted:
                     counted.add(name)
                     plan.copies[name] = size
@@ -4522,16 +4525,27 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
 
 
 def _keep_what_only_they_hold(plan: "GcPlan", keep: set) -> None:
-    """Keep a snapshot that holds bytes a lockfile pins and no kept snapshot holds: a snapshot's record is what says where its files are.
+    """Keep a snapshot that holds bytes a lockfile pins and no kept snapshot of its pipeline holds: a snapshot's record is what says where its files are.
 
-    The newest such first, so that of two holding the same bytes the newer is kept.
+    The newest such first, so that of two holding the same bytes the newer
+    is kept: the one a read is handed. Only its own pipeline's snapshots
+    count as holding them (:func:`_held_by_pipeline`), since a read never
+    takes another pipeline's copy.
     """
-    held = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept))
+    held = _held_by_pipeline(plan.snapshots_kept)
     for taken, why in sorted(plan.snapshots_delete, key=lambda pair: pair[0].made_at, reverse=True):
-        if (taken.hashes() & keep) - held:
+        if (taken.hashes() & keep) - held.setdefault(taken.pipeline, set()):
             plan.snapshots_delete.remove((taken, why))
             plan.snapshots_kept.append((taken, "a lockfile pins bytes it alone holds"))
-            held |= taken.hashes()
+            held[taken.pipeline] |= taken.hashes()
+
+
+def _held_by_pipeline(kept: list) -> dict:
+    """What the kept snapshots of each pipeline hold, by the pipeline's ID: the holders gc counts for that pipeline's assets."""
+    held: dict = {}
+    for taken, _ in kept:
+        held.setdefault(taken.pipeline, set()).update(taken.hashes())
+    return held
 
 
 #: Why ``store gc`` removes no snapshot of a pipeline one of whose snapshots that stay has lost a file of its own
@@ -4585,11 +4599,11 @@ def _plan_pinned(store: Store, plan: "GcPlan", keep: set, recent_seconds: float)
             pinned.append(snapshot.read(path))
         except snapshot.SnapshotError as error:
             raise LockError(f"{error}. Nothing is removed from a store when what it must keep is in doubt.") from None
-    held = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept))
+    held = _held_by_pipeline(plan.snapshots_kept)  # by the pipeline's own snapshots alone, as a read finds them
     for taken in sorted(pinned, key=lambda taken: taken.made_at, reverse=True):
-        if (taken.hashes() & keep) - held:
+        if (taken.hashes() & keep) - held.setdefault(taken.pipeline, set()):
             plan.pinned_kept.append((taken, "a lockfile pins what it holds"))
-            held |= taken.hashes()
+            held[taken.pipeline] |= taken.hashes()
         elif age(taken) >= recent_seconds:
             plan.pinned_delete.append((taken, "no lockfile pins what it alone holds"))
 
@@ -4654,6 +4668,8 @@ class GcDone:
     kept_after_all: list = field(default_factory=list)
     objects_kept: int = 0
     held_back: dict = field(default_factory=dict)
+    #: Each snapshot the plan made again keeps, with why: what says why one that lacks a file stays
+    kept: list = field(default_factory=list)
 
 
 def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
@@ -4720,13 +4736,13 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
     # What the cleared snapshots held goes now, file by file, but what a
     # snapshot that stays uses
     stuck: dict = {}
-    tidied: set = set()
+    tidied: dict = {}  # each file that went, with its size
     try:
         # Never what either plan spared for being new
-        tidied = {name for name, _ in store.tidy(keep=plan.recent_files | now.recent_files)}
+        tidied = dict(store.tidy(keep=plan.recent_files | now.recent_files))
     except TidyError as error:
         stuck = dict(error.failed)
-        tidied = {name for name, _ in error.removed}
+        tidied = dict(error.removed)
         if not any(name in stuck for names in plan.files.values() for name in names):
             failures.append(("what no snapshot uses", str(error)))
     except (StoreError, OSError) as error:
@@ -4750,18 +4766,22 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
             if files is None:
                 gone = store.delete_unowned(content_hash)
             else:
-                # Its files went with its snapshots, unless a snapshot being made has taken one meanwhile
-                gone = set(files) <= tidied
+                # Its files went with its snapshots, or were not there to go; one still there was taken
+                # up by a snapshot being made meanwhile
+                left = set(files) - set(tidied)
+                if left and isinstance(getattr(store, "root", None), Path):
+                    left = {name for name in left if os.path.lexists(store.root / name)}
+                gone = not left
         except (StoreError, OSError) as error:
             failures.append((f"the object {content_hash}", str(error)))
             continue
         if gone:
             removed += 1
-            size_bytes += size
+            size_bytes += size if files is None else 0  # an object no pipeline owns; a file is counted below
         elif files is not None:
             objects_kept += 1  # a snapshot being made took one of its files up
-    # And the removed snapshots' own copies of what stays, which went with their folders
-    size_bytes += sum(size for name, size in plan.copies.items() if name in tidied)
+    # Every file that went with a folder, as the disk had it: the removed snapshots' own, a pin-made one's among them
+    size_bytes += sum(tidied.values())
     # Only what both plans forget: a drive plugged back in before the yes brings its lockfile back
     for lockfile, machine in [(lockfile, None) for lockfile in set(plan.forget) & set(now.forget)] + [
         (lockfile, "") for lockfile in set(plan.forget_old) & set(now.forget_old)
@@ -4774,4 +4794,4 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         raise GcError(removed_snapshots, removed, size_bytes, failures)
     why_now = {taken.path: why for taken, why in now.snapshots_kept}
     kept_after_all = [(taken, why_now[taken.path]) for taken, _ in plan.snapshots_delete if taken.path in why_now]
-    return GcDone(removed_snapshots, removed, size_bytes, kept_after_all, objects_kept, now.held_back)
+    return GcDone(removed_snapshots, removed, size_bytes, kept_after_all, objects_kept, now.held_back, now.snapshots_kept + now.pinned_kept)

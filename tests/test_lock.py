@@ -1144,21 +1144,23 @@ class TestCommands:
         assert result.output.splitlines() == [
             "Kept: 3 object(s), named by 1 lockfile(s)",
             f"  {downstream / LOCK_FILE}",
-            "Would remove 1 object(s), 5 bytes, that nothing names:",
+            "Would remove 1 object(s), 33 bytes, that nothing names:",
             f"  {HELLO}  5 bytes",
+            # With the folder the pin kept them in: its own copies of the files the newer pin holds too
+            "  and the copies of files a kept snapshot has too, in the folders that go  28 bytes",
         ]
         assert garbage.has(HELLO)
 
     def test_gc_asks_first(self, garbage):
         result = self._run("store", "gc", input="n\n")
         assert result.exit_code == 0, result.output
-        assert "Would remove 1 object(s), 5 bytes, that nothing names." in result.output
+        assert "Would remove 1 object(s), 33 bytes, that nothing names." in result.output
         assert "Remove them? [y/N]" in result.output
         assert "Nothing was removed." in result.output
         assert garbage.has(HELLO)
 
         result = self._run("store", "gc", input="y\n")
-        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
+        assert "Removed 0 snapshot(s) and 1 object(s), 33 bytes." in result.output
         assert not garbage.has(HELLO)
 
     def test_gc_with_no_answer_removes_nothing(self, garbage):
@@ -1170,7 +1172,7 @@ class TestCommands:
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 0, result.output
         assert "Remove them?" not in result.output
-        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
+        assert "Removed 0 snapshot(s) and 1 object(s), 33 bytes." in result.output
         assert not garbage.has(HELLO)
         assert "Nothing to remove." in self._run("store", "gc").output
 

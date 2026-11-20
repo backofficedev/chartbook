@@ -108,14 +108,29 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             continue
         if record.made_by != "snapshot":
             continue  # where a pin kept a clone's files: the pinning machine's, not the pipeline's
-        if any(
-            (kept.pipeline, kept.commit, kept.made_at) == moment
-            for kept in (into.records() if hasattr(into, "records") else [])
-            if kept.readable
-        ):
-            done.there.append(moment)
-            continue
         what = f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}"
+        here = next(
+            (
+                kept for kept in (into.records() if hasattr(into, "records") else [])
+                if kept.readable and (kept.pipeline, kept.commit, kept.made_at) == moment
+            ),
+            None,
+        )
+        if here is not None:
+            # There only if the store's own snapshot of that moment is whole, its own files read and
+            # hashed: nothing is imported over one that is not, since a snapshot's folder is not changed
+            wrong = into.verify_snapshot(here.path, [asset.content_hash for asset in here.assets])
+            if wrong:
+                more = f" (and {len(wrong) - 1} more of its files)" if len(wrong) > 1 else ""
+                done.refused.append((what, (
+                    f"the store has it already, in {here.folder.name}, and not whole: {wrong[0].message}{more}. Nothing "
+                    f"was imported over it. If a sync is still bringing it, wait for the sync to finish; a snapshot "
+                    f"that has lost a file for good goes with `chartbook store gc` once nothing keeps it, and can be "
+                    f"imported then"
+                )))
+            else:
+                done.there.append(moment)
+            continue
         why = _not_to_copy(record)
         if why is not None:
             done.refused.append((what, why))

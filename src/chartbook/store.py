@@ -1175,7 +1175,7 @@ class Store(abc.ABC):
 
     @abc.abstractmethod
     def has(self, content_hash: str, pipeline: Optional[str] = None) -> bool:
-        """Whether the store holds an asset with this hash."""
+        """Whether the store holds an asset with this hash; with *pipeline*, whether one of that pipeline's own snapshots does (or it is an object no pipeline owns): an asset of a pipeline is never read from another pipeline's copy, whatever its bytes."""
 
     @abc.abstractmethod
     def files(
@@ -1241,7 +1241,8 @@ class Store(abc.ABC):
         return False
 
     def incomplete(
-        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False,
+        pipeline: Optional[str] = None,
     ) -> Optional[str]:
         """Why an object the store has is not whole as its record has it; None if it is, or if that cannot be told cheaply.
 
@@ -1253,8 +1254,32 @@ class Store(abc.ABC):
         of one of them that the service made. Asked of every pin and every
         read, so it reads nothing; :meth:`verify` reads every byte. A store
         that cannot tell without reading says None.
+
+        :param pipeline: The pipeline the asset is of. Where each snapshot
+            holds its own copy of every file, the asset is whole if one of
+            that pipeline's own snapshots holds every file of it: never file
+            by file across snapshots, and never by another pipeline's copy.
         """
         return None
+
+    def holds_whole(self, pipeline: str, content_hashes: Iterable[str]) -> bool:
+        """Whether one recorded snapshot of a pipeline holds every one of these assets whole, its own files at the sizes its record says.
+
+        What says that a pin from a clone would add nothing. A store that
+        keeps each file once has one place for each: there, whether it has
+        them all.
+        """
+        return all(self.has(content_hash) for content_hash in content_hashes)
+
+    def verify_snapshot(self, record: Path, content_hashes: Iterable[str]) -> list["StoreProblem"]:
+        """What is wrong with the snapshot with this record, reading every byte of its own files: empty when it is whole.
+
+        Asked before another store's copy of the same snapshot is removed
+        (``store move``), and before one is said to be here already
+        (``store import``, a snapshot sent to several stores). A store that
+        keeps each file once checks the assets by their hashes.
+        """
+        return self.verify(content_hashes)
 
     @abc.abstractmethod
     def add_root(
@@ -1808,7 +1833,8 @@ class FolderStore(Store):
             f"The store at {self} has no store.json, and holds {holds}: what a store of ChartBook 0.5 holds, whose "
             f"store.json may not have arrived yet (a sync that has not finished). Until it has, the folder is read "
             f"as that store, and no data is written to it or removed from it. If it is no store of ChartBook 0.5 "
-            f"any more, remove {named} from it and try again."
+            f"any more, remove {named} from it and try again. If it is one whose store.json is lost for good, put "
+            f"one back that holds {json.dumps({'schema': SCHEMA})}."
         )
 
     def roots_path(self) -> Path:
@@ -1906,10 +1932,18 @@ class FolderStore(Store):
                 self._memo = None
 
     def _held(self, content_hash: str, pipeline: Optional[str] = None) -> list[KeptAsset]:
-        """Every record's hold of an asset, newest first; *pipeline*'s first."""
+        """Every record's hold of an asset, newest first; with *pipeline*, that pipeline's own records' alone.
+
+        An asset of a pipeline is found in that pipeline's own snapshots
+        and nowhere else, whatever bytes another pipeline holds: so a read
+        is handed a copy ``store gc`` keeps for it, and gc keeps the copy a
+        read is handed.
+        """
         self.records()
         held = list(self._memo[2].get(content_hash, ())) if self._memo is not None else []
-        held.sort(key=lambda asset: (asset.record.pipeline == pipeline, asset.record.made_at), reverse=True)
+        if pipeline is not None:
+            held = [asset for asset in held if asset.record.pipeline == pipeline]
+        held.sort(key=lambda asset: (asset.record.made_at, asset.record.folder.name), reverse=True)
         return held
 
     def unowned_path(self, content_hash: str) -> Path:
@@ -2228,6 +2262,9 @@ class FolderStore(Store):
     def has(self, content_hash: str, pipeline: Optional[str] = None) -> bool:
         """Whether the store holds an asset with this hash: a snapshot's record says where, or no pipeline owns it.
 
+        :param pipeline: The pipeline it is of: only that pipeline's own
+            snapshots are asked (:meth:`_held`), and the objects no
+            pipeline owns.
         :raises StoreError: If the store has a layout this version does not
             read, as :meth:`get` does: what it holds cannot be said.
         """
@@ -2253,16 +2290,17 @@ class FolderStore(Store):
         keeps is read in the earlier one's folder: nothing is copied or
         gathered. They are there to be read, not written.
 
-        :param pipeline: The pipeline the asset is of, whose snapshots are
-            looked in first.
+        :param pipeline: The pipeline the asset is of: it is read from that
+            pipeline's own snapshots alone.
         :param name: For an asset that is one file, the name it is read by:
             the same bytes may be two assets', each under its own name, and
             kept once.
         :param snapshot: The snapshot it is read from, as ``(commit, made
-            at)``, either of which may be None: of the pipeline's snapshots
-            that have the files whole, the one made then at that commit is
-            handed out; else the earliest made at that commit; else the
-            earliest made. With None, the newest holder's.
+            at)``: that one's own copy is handed out where it is in the
+            store and holds the asset whole; where the entry names a commit
+            and no time (``(commit, None)``), the newest of that commit that
+            does. Otherwise, and with None, the newest that does, which is
+            the one ``store gc`` keeps.
         :raises ObjectNotFoundError: If the store has no such asset.
         :raises StoreError: If a file of it is missing, not synced yet, or
             leads out of the store: a store a team shares holds what anyone
@@ -2270,17 +2308,12 @@ class FolderStore(Store):
         """
         self._check_layout()
         held = _of_shape(self._held(content_hash, pipeline), single=bool(name))
-        if snapshot is not None:
-            # Every snapshot has its own copy. The one the read names first; then the earliest made at
-            # its commit; then the earliest made: none of which a later snapshot of the same bytes is,
-            # so the path a read is handed stays where it is until that snapshot goes
+        if snapshot is not None and snapshot[0]:
+            # Every snapshot has its own copy. The one the read names first (of an entry that names a
+            # commit and no time, the newest of that commit); then the newest, as they are ordered
             commit, made_at = snapshot
-            held.sort(key=lambda asset: (
-                pipeline is not None and asset.record.pipeline != pipeline,
-                not (commit and made_at and (asset.record.commit, asset.record.made_at) == (commit, made_at)),
-                not (commit and asset.record.commit == commit),
-                asset.record.made_at,
-                asset.record.folder.name,
+            held.sort(key=lambda asset: not (
+                asset.record.commit == commit and (made_at is None or asset.record.made_at == made_at)
             ))
         if name:
             # The one under that name first; another's bytes under that name else
@@ -2459,6 +2492,14 @@ class FolderStore(Store):
         try:
             schema = _read_marker(marker)
         except FileNotFoundError:
+            both = [_snapshot_folder_in(self.root, layout) for layout in (V2_LAYOUT, V3_LAYOUT)]
+            if all(both):
+                # Read as either, the other's snapshots would be passed over without a word
+                raise StoreError(
+                    f"The store at {self} has no store.json, and holds snapshots of both layouts: laid out as "
+                    f"ChartBook 0.5 laid them out under {V2_LAYOUT.pipelines}/ ({self._shown(both[0])}), and as this "
+                    f"version lays them out under {V3_LAYOUT.pipelines}/ ({self._shown(both[1])}). {self._how_to_part()}"
+                )
             if not create:
                 return  # nothing here yet; nothing to misread
             if holds_v1(self.root):
@@ -2526,14 +2567,18 @@ class FolderStore(Store):
                     f"laid out as this version lays them out ({self._shown(found)}): most likely a store this ChartBook "
                     f"made here before a store of 0.5, on its way by a sync, arrived with its store.json"
                 )
-            raise StoreError(
-                f"The store at {self} has a store.json that {what}. It is neither read nor written as it is. To part "
-                f"the two, the store of 0.5 staying here, where every machine expects it: move "
-                f"{V3_LAYOUT.pipelines}/ and {OWN_DIR}/ out of it into a folder of their own, beside a store.json "
-                f"that holds {json.dumps({'schema': FOLDER_SCHEMA})}, which is then a store of this version's layout; "
-                f"and see that the store.json here holds {json.dumps({'schema': SCHEMA})}."
-            )
+            raise StoreError(f"The store at {self} has a store.json that {what}. {self._how_to_part()}")
         self._layout, self._layout_checked = layout, True
+
+    @staticmethod
+    def _how_to_part() -> str:
+        """What a folder with both layouts in it says to do: the store of 0.5 stays where every machine expects it."""
+        return (
+            f"It is neither read nor written as it is. To part the two, the store of 0.5 staying here, where every "
+            f"machine expects it: move {V3_LAYOUT.pipelines}/ and {OWN_DIR}/ out of it into a folder of their own, "
+            f"beside a store.json that holds {json.dumps({'schema': FOLDER_SCHEMA})}, which is then a store of this "
+            f"version's layout; and see that the store.json here holds {json.dumps({'schema': SCHEMA})}."
+        )
 
     @staticmethod
     def _move_into_place(
@@ -2747,20 +2792,23 @@ class FolderStore(Store):
         return not os.path.lexists(on_disk(path, parts))
 
     def incomplete(
-        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False,
+        pipeline: Optional[str] = None,
     ) -> Optional[str]:
         """Why an asset is not whole as its record has it, by the sizes of its files; None if it is.
 
         A folder that a sync service keeps can have a snapshot's record before
         its files, or a file before its bytes. Each file's size is in the
-        record, and is compared with the file's, which reads nothing. An
-        object no pipeline owns is judged as *size_bytes* and *files* say
+        record, and is compared with the file's, which reads nothing. It is
+        whole where one snapshot (of *pipeline*, if one is named) holds
+        every file of it, which is the one a read is handed. An object no
+        pipeline owns is judged as *size_bytes* and *files* say
         (:func:`unsynced_part`).
         """
         # Of the record's shape: one file it is read by, or several (a directory, a glob)
-        held = _of_shape(self._held(content_hash), single=bool(files) and len(files) == 1 and not every)
+        held = _of_shape(self._held(content_hash, pipeline), single=bool(files) and len(files) == 1 and not every)
         if held:
-            seen = (str(self.root), content_hash, bool(files) and len(files) == 1 and not every)
+            seen = (str(self.root), content_hash, bool(files) and len(files) == 1 and not every, pipeline)
             if seen in _found_whole:
                 return None
             what = None
@@ -2924,6 +2972,26 @@ class FolderStore(Store):
     def holes_of(self, record: Path) -> list[str]:
         """The files one snapshot's record names that are not where it says, or are there at another size, by their paths in the pipeline (:meth:`Store.holes_of`)."""
         return _holes(read_kept_record(Path(record)))
+
+    def holds_whole(self, pipeline: str, content_hashes: Iterable[str]) -> bool:
+        """Whether one recorded snapshot of the pipeline holds every one of these assets whole (:meth:`Store.holds_whole`): one snapshot, not a file from each."""
+        wanted = set(content_hashes)
+        for record in self.records():
+            if record.readable and record.pipeline == pipeline:
+                held = [asset for asset in record.assets if asset.content_hash in wanted]
+                if wanted <= {asset.content_hash for asset in held} and all(
+                    _is_whole(file, record.folder.parent) for asset in held for file in asset.files
+                ):
+                    return True
+        return not wanted
+
+    def verify_snapshot(self, record: Path, content_hashes: Iterable[str] = ()) -> list[StoreProblem]:
+        """Every file of one snapshot that is missing or has other bytes, read where its record says it is (:meth:`Store.verify_snapshot`)."""
+        kept = read_kept_record(Path(record))
+        return [
+            StoreProblem(asset.content_hash, kept.folder, said)
+            for asset in kept.assets for _, said in what_is_wrong_in(asset)
+        ]
 
     def holes_left(self, without: Iterable[Path]) -> dict[str, tuple[Path, str, int]]:
         """Each pipeline with a snapshot among the records *without* one of whose other snapshots has a hole (:meth:`Store.holes_left`)."""

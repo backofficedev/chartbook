@@ -274,7 +274,7 @@ class TestNamingAVersion:
         assert "Give more digits." in str(e.value)
 
         # One more digit names one of them
-        monkeypatch.setattr(default_store().__class__, "has", lambda self, h: False)
+        monkeypatch.setattr(default_store().__class__, "has", lambda self, h, pipeline=None: False)
         with pytest.raises(VersionNotFoundError) as e:
             models.path("m@7f3a9c2e41b0a", project_dir=forecast)
         assert e.value.reason == "not_in_store"  # found, which is the point
@@ -652,13 +652,15 @@ class TestAnotherPipelinesVersion:
         for reference in (f"acme/forecast:m@{first}", f"forecast:m@{first}", "acme/forecast:m@champion", "forecast:m@champion"):
             assert models.path(reference, project_dir=serve).read_bytes() == b"weights-1", reference
 
-    def test_the_path_of_each_stays_when_the_owner_makes_another_snapshot_of_the_same_models(self, forecast):
-        """Each snapshot holds its own copy of every file, and a read is handed the same one each time.
+    def test_the_pinned_models_path_stays_and_a_version_by_its_hash_or_label_is_in_the_newest_snapshot_holding_it(self, forecast):
+        """Each snapshot holds its own copy of every file. Which one a read is handed:
 
-        The pinned snapshot's own for the model as pinned; the earliest-made
-        snapshot that holds it for a version named by its label or by its
-        hash, which the pinned snapshot need not hold (found by the second
-        review of the store's layout, 2026-11-20).
+        the pinned snapshot's own for the model as pinned, while it is in
+        the store and whole; and for a version named by its label or by its
+        hash, the newest snapshot of the pipeline that holds it, which is
+        the one `store gc` keeps: so that path changes when a later
+        snapshot holds the version too (the second and third reviews of the
+        store's layout, 2026-11-20).
         """
         from chartbook import lock
 
@@ -680,7 +682,10 @@ class TestAnotherPipelinesVersion:
         (forecast / "README.md").write_text("# Forecast, with a word more\n", encoding="utf-8", newline="\n")
         _commit(forecast)
         assert snapshot.make(forecast).made and len(store.all_snapshot_files()) == 3
-        assert {reference: models.path(reference, project_dir=serve) for reference in references} == before
+        newest = max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at).path.parent.parent
+        assert {reference: models.path(reference, project_dir=serve) for reference in references} == {
+            **before, f"forecast:m@{second}": newest / "_models" / "m.json",
+        }
 
     def test_a_label_the_owner_spells_illegally_is_not_recorded(self, forecast):
         """Found by a reviewer: `check` refuses it, `snapshot` recorded it, and every

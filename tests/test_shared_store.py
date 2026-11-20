@@ -1922,7 +1922,7 @@ class TestNoPasswordOfAStoreAtAPath:
         shutil.copytree(forecast, clone)
         monkeypatch.setenv("CHARTBOOK_STORE", "//alice:s3cr3tpw@fileserver/share/store")
 
-        def unreadable(self, content_hash):
+        def unreadable(self, content_hash, pipeline=None):
             raise PermissionError(13, "Permission denied", str(self.root / "objects"))
 
         monkeypatch.setattr(FolderStore, "has", unreadable)
