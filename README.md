@@ -111,7 +111,7 @@ command line the same questions and gets the same answers.
 | **Use it** | Copy the snippet on the page | `data.load("yield_curve:repo_public")`, `chartbook path`, `chartbook add yield_curve` |
 | **Can I trust it?** | The Provenance table and the Versions page | `chartbook lineage --json`, and `chartbook.lock` in git |
 
-`chartbook install claude-skill` teaches Claude Code all of this.
+`chartbook install agents` teaches your coding agent all of this: a skill for Claude Code, and a section in the project's `AGENTS.md` for the others.
 
 ## Documentation
 

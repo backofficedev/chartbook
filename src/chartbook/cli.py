@@ -302,6 +302,12 @@ def _say_if_the_skill_is_stale():
 
         for copy in claude_skill.stale():
             click.echo(click.style("Note: ", fg="yellow", bold=True) + claude_skill.notice(copy), err=True)
+        from chartbook import agents
+
+        # And what other agents read of ChartBook in this project
+        old = agents.stale()
+        if old is not None:
+            click.echo(click.style("Note: ", fg="yellow", bold=True) + agents.notice(*old), err=True)
     except Exception:  # noqa: BLE001 - a note about the skill never stops a command
         pass
 
@@ -626,6 +632,16 @@ def _can_ask() -> bool:
     return _stdin_is_a_terminal() and _stderr_is_a_terminal()
 
 
+def _let_ctrl_c_end_a_read() -> None:
+    """Make a read at the terminal end at Ctrl-C, whatever a library loaded since has done to the signal."""
+    import signal
+
+    try:
+        signal.siginterrupt(signal.SIGINT, True)
+    except (AttributeError, ValueError, OSError):  # no such call on Windows; not the main thread
+        pass
+
+
 def _confirm(question: str, default: bool) -> bool:
     """Ask a yes-or-no question that comes after work has run, on stderr; `click.Abort` at Ctrl-C or the end of input.
 
@@ -637,12 +653,8 @@ def _confirm(question: str, default: bool) -> bool:
     question before it was shown: what was typed before is discarded.
     """
     import os
-    import signal
 
-    try:
-        signal.siginterrupt(signal.SIGINT, True)
-    except (AttributeError, ValueError, OSError):  # no such call on Windows; not the main thread
-        pass
+    _let_ctrl_c_end_a_read()
     try:
         if _stdin_is_a_terminal():
             if os.name == "nt":
@@ -1210,6 +1222,11 @@ def _check_pipeline(project_dir, within_days, policy_path):
 
         for copy in claude_skill.stale(project_dir):
             click.echo(f"warning: {claude_skill.notice(copy)}", err=True)
+        from chartbook import agents
+
+        old = agents.stale(project_dir)
+        if old is not None:
+            click.echo(f"warning: {agents.notice(*old)}", err=True)
     except Exception:  # noqa: BLE001 - a note about the skill never stops a check
         pass
     try:
@@ -5200,6 +5217,7 @@ def install_claude_skill(force, project):
             click.echo(f"The skill in {shown} is this version's, with files changed since it was installed.")
         else:
             click.echo(f"Skill files already exist in {shown}, naming no ChartBook version.")
+        _let_ctrl_c_end_a_read()  # found by review: Ctrl-C at this question did nothing until Enter
         if not click.confirm(f"Replace them with ChartBook {__version__}'s?"):
             raise SystemExit(0)
 
@@ -5222,6 +5240,170 @@ def install_claude_skill(force, project):
     else:
         click.echo(f"\nInstalled {len(skill_files)} skill file(s) to {shown} (ChartBook {__version__})")
 
+
+
+@install.command("agents")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Replace skill files, and a ChartBook section of AGENTS.md, that were changed by hand or are a newer ChartBook's, without asking",
+)
+@click.pass_context
+def install_agents(ctx, force):
+    """Set a project up for coding agents: the Claude Code skill, and a ChartBook section in AGENTS.md.
+
+    Two halves. The first installs the Claude Code skill for you, as
+    `chartbook install claude-skill` does. The second, in a pipeline's
+    folder (or below one), writes a ChartBook section into that project's
+    AGENTS.md, which other coding agents read: what the project is, the
+    few commands that matter, and where the whole reference is.
+
+    The section stands between two marker lines. Run again after an
+    upgrade, the command replaces what is between them with this
+    version's and leaves the rest of the file alone, so notes of your own
+    go outside those lines. A section somebody has written in is replaced
+    only when you say so, or with --force, and a newer ChartBook's is
+    left as it is. Commit AGENTS.md: it is for everyone who works in the
+    repository.
+
+    Anywhere else it installs the skill and says the AGENTS.md half is
+    for a project.
+
+    \b
+    Examples:
+        chartbook install agents
+    """
+    import os
+
+    import tomli
+
+    from chartbook import agents
+    from chartbook.check import display_path
+
+    def stop(said: str) -> None:
+        click.echo(click.style("Error: ", fg="red", bold=True) + said, err=True)
+        raise SystemExit(1)
+
+    from chartbook import claude_skill
+
+    failed = False
+    yours = claude_skill.user_dir()
+    try:
+        newer = claude_skill.version_of(yours) if claude_skill.relation(yours) == "newer" else None
+    except OSError:
+        newer = None  # a copy that cannot be read: the skill's own half says so
+    if newer and not force:
+        # As for the section below: two environments on two versions do not take turns, and neither fails for it
+        click.echo(
+            f"The skill in {claude_skill.shown(yours)} is for ChartBook {newer}, newer than this one, {__version__}. "
+            "Left as it is (--force installs this version's)."
+        )
+    else:
+        try:
+            ctx.invoke(install_claude_skill, force=force, project=False)
+        except SystemExit as stopped:  # declined at its question, or no skill in the package: the other half is still done
+            failed = bool(stopped.code)
+        except click.Abort:
+            if _can_ask():
+                raise  # a person at the question, with Ctrl-C: the command ends, and nothing more is written
+            # Its question, where nobody could answer it
+            click.echo("", err=True)
+            click.echo("The skill was left as it is: `chartbook install claude-skill` installs it, and asks.", err=True)
+            failed = True
+        except (OSError, RuntimeError) as e:  # a folder that cannot be written; no input to ask of
+            click.echo(click.style("Error: ", fg="red", bold=True) + f"the skill could not be installed: {_explain_os_error(e)}", err=True)
+            failed = True
+
+    project = agents.project_folder()
+    if project is None:
+        click.echo(
+            "No chartbook.toml here, or above in this repository: the AGENTS.md half is for a project. Run "
+            "`chartbook install agents` in a pipeline's folder to write it."
+        )
+        raise SystemExit(1 if failed else 0)
+    try:
+        tomli.loads((project / "chartbook.toml").read_bytes().decode("utf-8"))
+    except (OSError, ValueError) as e:
+        stop(f"{display_path(project / 'chartbook.toml', relative_to=Path.cwd())} cannot be read as a manifest ({_said(e)}), so no AGENTS.md was written beside it.")
+    file = project / agents.FILE
+    shown = display_path(file, relative_to=Path.cwd())
+    # A link is written through only to a file of the project that is there: never to one outside it, or to nothing
+    to = ""
+    if file.is_symlink():
+        real = Path(os.path.realpath(file))
+        if real.is_dir():
+            stop(f"{shown} is a link to {real}, which is a folder. Nothing was written.")
+        if not real.is_file():
+            stop(f"{shown} is a link to {real}, which is not there. Nothing was written.")
+        if project.resolve() not in real.parents:
+            stop(f"{shown} is a link to {real}, outside this project. Nothing was written to it.")
+        to = f" (a link to {display_path(real, relative_to=project.resolve())})"
+    try:
+        existed = file.exists()
+        was = file.read_bytes() if existed else None
+        found = agents.read(was.decode("utf-8") if existed else "")
+    except agents.Unclosed as e:
+        stop(f"{shown}: {e}. Nothing was written to it: close the fence, and run this again.")
+    except agents.Malformed as e:
+        stop(f"{shown}: {e}. Nothing was written to it: put its marker lines right, or take them out, and run this again.")
+    except (OSError, ValueError) as e:
+        stop(f"{shown} cannot be read as text: {_explain_os_error(e)}")
+
+    standing = agents.standing(found)
+    if standing == "current":
+        click.echo(f"{shown}: its ChartBook section is up to date (ChartBook {__version__}).")
+        raise SystemExit(1 if failed else 0)
+    if standing == "newer" and not force:
+        # As for the skill: two environments on two versions do not take turns at one committed file
+        click.echo(
+            f"{shown}: its ChartBook section is for ChartBook {found.version}, newer than this one, {__version__}. "
+            "Left as it is (--force writes this version's)."
+        )
+        raise SystemExit(1 if failed else 0)
+    if standing == "by hand" and not force:
+        # Which lines, and how many would go: a yes is given knowing what it is to
+        where = f"lines {found.first} to {found.last}"
+        between = found.last - found.first - 1
+        said = (
+            f"The ChartBook section of {shown} ({where}) was changed since ChartBook {found.version} wrote it."
+            if found.hashed and claude_skill._parsed(found.version) is not None
+            else f"The ChartBook section of {shown} ({where}) is not one that `chartbook install agents` wrote."
+        )
+        if not _can_ask():
+            stop(
+                f"{said} Notes of your own go outside its two marker lines. `chartbook install agents --force` replaces what "
+                "is between them, and skill files changed by hand too."
+            )
+        click.echo(f"{said} Notes of your own go outside its two marker lines.", err=True)
+        try:
+            agreed = _confirm(f"Replace what is between them ({between} line{'' if between == 1 else 's'})?", default=False)
+        except click.Abort:  # Ctrl-C, or the end of input
+            click.echo("", err=True)
+            agreed = False
+        if not agreed:
+            click.echo(f"{shown} was left as it is.")
+            raise SystemExit(1 if failed else 0)
+    try:
+        agents.write(file, agents.written(found), was=was)
+    except agents.NotWritten as e:
+        stop(f"{shown} was not written: {e}.")
+    except OSError as e:
+        stop(f"{shown} could not be written, and is as it was: {_explain_os_error(e)}")
+    if not existed:
+        click.echo(f"Wrote {shown}: a ChartBook section, for the agents that read that file (ChartBook {__version__}).")
+    elif standing == "none":
+        click.echo(f"Added a ChartBook section to {shown}{to} (ChartBook {__version__}). The rest of the file is as it was.")
+    elif found.version and found.version != __version__ and standing in ("older", "newer"):
+        click.echo(
+            f"Updated the ChartBook section of {shown}{to} from ChartBook {found.version} to {__version__}. "
+            "The rest of the file is as it was."
+        )
+    else:
+        click.echo(f"Wrote the ChartBook section of {shown}{to} again (ChartBook {__version__}). The rest of the file is as it was.")
+    if failed:
+        raise SystemExit(1)
 
 
 @catalog.command("migrate")

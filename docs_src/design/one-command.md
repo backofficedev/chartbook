@@ -477,6 +477,55 @@ it when ChartBook moves on and leaves the rest of the file alone. Run anywhere e
 the skill and says that the `AGENTS.md` half is for a project. `chartbook install claude-skill`
 stays as the first half alone.
 
+*Built 2026-11-19* (`chartbook/agents.py`, and the section's text in `chartbook/agents_section.md`),
+with what building it settled:
+
+- **The project is the nearest folder with a `chartbook.toml`,** from the working directory up to
+  the top of its git repository, and never the home folder; in no repository, the folder itself
+  or nothing. That is where `AGENTS.md` is written. *(Found by review: with no repository the
+  walk went up to the top of the disk.)*
+- **Nothing a person wrote is replaced unasked.** *(Found by review: only a section naming
+  exactly this version was protected; a newer one, an older one written in, and markers typed by
+  hand were all replaced without a word.)* The opening marker names the version, as the skill's
+  `SKILL.md` does, and carries a hash of the section: its two marker lines and the text between
+  them. A section that is as some ChartBook left it is replaced when it is an older one, and
+  left when it is a newer one, as the skill is. Any other is replaced at a yes or with
+  `--force`, and where nothing can ask the command stops and says that notes go outside the two
+  lines. *(Found by the second pass: the hash was of the text alone, so words written into a
+  marker's own comment went unasked; the question did not say which lines would go; and a
+  section somebody had written in was called stale at every command, for ever.)*
+- **A marker is a whole line, from its first column, outside a code fence.** *(Found by review:
+  a line that mentioned a marker was taken for one, and the project's text between two of them
+  was replaced.)* A marker line with other text on it, and marker lines that do not hold one
+  section, are an error that says which lines, and nothing is written.
+- **A fence is as Markdown takes one,** and a file that ends inside one is refused. *(Found by
+  the second pass: any line that began with three backticks opened or closed a fence. Inline
+  code at the start of a line, or a fence never closed, hid the section below it, and the
+  command added another section at every run.)*
+- **The rest of the file is kept byte for byte, and the file is written whole or not at all.**
+  *(Found by review: blank lines were cut, one CRLF turned the section to CRLF, a byte-order mark
+  hid the section, and a write that failed part-way left the project's notes cut short.)* The
+  file is replaced by a move, which asks nothing of the file it replaces, so three things are
+  looked at first. *(Found by the second pass: a read-only file was written; a hard link was
+  broken with no word; and what somebody else saved while the question waited was lost.)* Each
+  is refused, and the command says which.
+- **A link is written through only to a file of the project that is there.**
+- **Both halves are done** where the skill's question was answered no, could not be answered, or
+  its folder could not be written. *(Found by review: only the first of those.)* Ctrl-C at the
+  skill's question ends the command, and a newer ChartBook's skill is left as it is and is no
+  error. *(Found by the second pass: Ctrl-C was taken for a question nobody could answer, and
+  from the older of two environments the command failed every time.)*
+- **The section sends an agent to nothing that writes over a person's files.** *(Found by
+  review: it named `chartbook docs build`, which asks before it replaces `docs/`, and told the
+  agent to do what a message says.)* It names what only reads, and says to show a stopped
+  command's message to the person, and not to answer, force or trust on its own.
+- **A section from an older ChartBook is said** as a stale skill is: in one line to a person at a
+  terminal, and by `chartbook run --check`.
+- **The section is short.** It says what an agent gets wrong without it (build with `chartbook
+  run`, never edit the lockfile, declare before writing, read other pipelines through
+  `chartbook.data`) and where the whole reference is. It is held to the same test as the skill:
+  every command it names is one.
+
 ## The first screen
 
 `chartbook --help` lists the five commands above first, under their own heading, and the rest
@@ -523,5 +572,5 @@ changes.
    *Built 2026-11-19.*
 7. What is not in your store: the list, in order. *Built 2026-11-19.*
 8. `chartbook catalog open` asks before opening a site that is behind. *Built 2026-11-19.*
-9. `chartbook install agents`.
+9. `chartbook install agents`. *Built 2026-11-19.*
 10. The first screen: `--help`, the Quickstart, the README, the skill.

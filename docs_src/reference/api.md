@@ -59,6 +59,7 @@ chartbook
 ../apidocs/chartbook/chartbook.multi_store
 ../apidocs/chartbook/chartbook.catalog_config
 ../apidocs/chartbook/chartbook.links
+../apidocs/chartbook/chartbook.agents
 ../apidocs/chartbook/chartbook.hubs
 ../apidocs/chartbook/chartbook.transfer
 ```
