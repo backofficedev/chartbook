@@ -5907,8 +5907,10 @@ def catalog_migrate(catalog_path):
             f"{settings_path} if it is no longer needed as a fallback for other catalogs; "
             "it is ignored by this catalog and otherwise warns on each command."
         )
+    from chartbook.missing import _quoted
+
     for pipeline, folder in missing:
-        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {str(folder)!r}")
+        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {_quoted(folder)}")
 
 
 @ls.command("stores")

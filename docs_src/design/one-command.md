@@ -560,11 +560,14 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   them, and the last built. In Git Bash a path printed bare, `C:\work\rates`, reached the
   command as `C:workrates`.)*
   The same function now quotes every command a message prints with a folder or a word of the
-  user's in it (`chartbook restore --project-dir …`, `chartbook pin --update …`): `shlex`, which
-  they used, writes for a POSIX shell alone, and `cmd.exe` read its single quotes as part of the
-  folder's name. A test reads the source for another use of it. The `cruft link` line of
-  `chartbook init` is left: its answers are JSON, which no one spelling gives to `cmd.exe` and
-  PowerShell alike.
+  user's in it (`chartbook restore --project-dir …`, `chartbook pin --update …`, the line that
+  says where to `chartbook pin`, `chartbook catalog migrate`): `shlex`, which most of them used,
+  writes for a POSIX shell alone, and `cmd.exe` read its single quotes as part of the folder's
+  name. *(Found by the second pass of the review: two of them wrote the folder their own way, a
+  Python repr and double quotes of their own.)* Two tests read the source, for another use of
+  `shlex` and for a folder after `--project-dir` that the function did not write. The `cruft
+  link` line of `chartbook init` is left: its answers are JSON, which no one spelling gives to
+  `cmd.exe` and PowerShell alike.
   What it costs *(the first of these as its review found it, 2026-11-20, by typing whole lists
   into a shell; the page had said less)*:
   - *A line no longer stops at its first failure.* `git checkout … && chartbook run --snapshot`
@@ -585,17 +588,33 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     Seen in a repository of two pipelines wanted at two commits.
   - *One more line for each pipeline that is pinned.*
   - *Each command runs in the environment it is typed in.* After `cd FOLDER`, tools that choose
-    an environment by the folder (`uv run`, pyenv, direnv) chose the upstream's. The reference
+    an environment by the folder (`uv run`, pyenv's shims) chose the upstream's. The reference
     says to enter the folder where a pipeline has an environment of its own.
-  - *On Windows no spelling keeps a `$`, a backtick, a `!` or a `%NAME%` as text in `cmd.exe`,
-    PowerShell and Git Bash alike.* *(Found by review: an address in a lockfile may hold
-    `$env:TOKEN` or `%TOKEN%`, and the `git clone` line would have sent the token where the
-    address says; a folder of a cloned repository may be named `$(…)`, which PowerShell and Git
-    Bash run.)* A line whose commands would hold one is given no command there, and says so,
-    with what to type by hand in its folder. `%NAME%` counts where NAME is a variable of the
-    machine, or one `cmd.exe` fills in by itself (`%CD%`); `%20` in an address is text. The last
-    line names the person's own folder and is given as it is. A network folder (`\\server\…`)
-    is read otherwise by Git Bash, and the reference says so.
+  - *On Windows no spelling keeps every sign as text in `cmd.exe`, PowerShell and Git Bash
+    alike.* *(Found by review: an address in a lockfile may hold `$env:TOKEN` or `%TOKEN%`, and
+    the `git clone` line would have sent the token where the address says; a folder of a cloned
+    repository may be named `$(…)`, which PowerShell and Git Bash run. Pasting a line would
+    have run somebody's code before anything asked whether their folder is trusted.)* What each
+    reads inside double quotes: PowerShell and Git Bash a `$` and a backtick; Git Bash a `!`, and
+    a `\"`, which it takes for a quote that is text; PowerShell a word processor's `“`, `”` or
+    `„`, which ends the word as the plain quote does; `cmd.exe` a `%NAME%`. *(The last three by
+    the second pass, which made a file from a folder's name in bash; and it found the word was
+    read as it was given, where what is pasted is what is printed, without the signs that print
+    as nothing.)* A line whose commands would hold one is given no command there, and says so,
+    with what to make by hand and no word of how: a `git checkout` by hand may be of the
+    reader's own repository. Nothing such a line would have made is counted on by the lines
+    after it. The last line is read the same way.
+    A `$` that ends a name or comes before a slash is text to both shells (`\\server\home$\…`,
+    the one common `$` in a Windows path). A `%` is text only where it begins the two digits a
+    web address writes a sign with (`%20`), and where no name between two of them is a variable
+    of this machine or one `cmd.exe` fills in by itself (`%CD%`). What that leaves: a variable
+    whose name begins, and is followed, as such digits (`%DB_PASSWORD%2F`), set in the window
+    the line is pasted into and not in the one that printed it.
+    The function that quotes never writes such a word, whatever message asks it to:
+    `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. So a run's
+    closing line, `chartbook restore` and the rest hold no such word either, and say less well
+    why. A network folder (`\\server\…`) is read otherwise by Git Bash, and the reference says
+    so.
   - *A clone found beside the pipeline is named as the disk names it.* It is looked for under
     the name its address gives (`rates`), and a disk that takes either letter case finds
     `Rates`. *(Found by review: under the address's name the list had pathlib's words in it, a

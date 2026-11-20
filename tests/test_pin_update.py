@@ -134,6 +134,10 @@ class TestPinUpdate:
         assert (
             "Error: consumer is a folder, and a pipeline is named with --project-dir: `chartbook pin --project-dir consumer`."
         ) in result.output.splitlines()
+        # And one whose name a shell would split is one word of the command
+        (work / "my consumer").mkdir()
+        spaced = '"my consumer"' if os.name == "nt" else "'my consumer'"
+        assert f"`chartbook pin --project-dir {spaced}`." in CliRunner().invoke(main, ["pin", "my consumer"]).output
 
     def test_the_check_takes_no_name(self, consumer):
         """Found by review: asked for the check that writes nothing, it answered with a command that moves a pin."""

@@ -853,6 +853,10 @@ def after_pin(
     return listing if listing.wanted else None
 
 
+#: On Windows, in the place of a word that one of its shells would read even inside quotes: a command a
+#: message prints never holds such a word. The list says it better, and gives no command at all
+NOT_TEXT = "ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS"
+
 #: Said of a repository whose pipeline could not be placed in it, where the command names the repository's top
 NOT_AT_THE_TOP = "if it is not at the top of its repository, give its folder there to `--project-dir`"
 
@@ -886,7 +890,7 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     text = _plain(str(text), most=4096)
     if not (os.name == "nt" if windows is None else windows):
         return shlex.quote(text)
-    # cmd.exe: inside double quotes `&`, `|`, `<`, `>`, `^` and spaces are text, and a `"` is doubled. A `%` stays
+    # cmd.exe: inside double quotes `&`, `|`, `<`, `>`, `^` and spaces are text. A `%` stays
     # as it is: doubled it is one only in a batch file, and these lines are pasted at a prompt, where `%20` in an
     # address must stay `%20`. (A `%NAME%` that names a variable is filled in there, in quotes or out, and
     # nothing typed prevents it: the word is then another word, and still one word.)
@@ -896,12 +900,15 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     # the command as `C:workrates`; found by typing it, 2026-11-20), and inside double quotes as itself before
     # anything a path has. So a word with a backslash is in double quotes, a path among them. (Not right there:
     # a `$NAME` or a backtick, as in PowerShell, and the `\\` a network path begins with.) What no spelling
-    # makes text in all three, the list gives no command for: `_a_windows_shell_reads`.
+    # makes text in all three, the list gives no command for: `_a_windows_shell_reads`. And no other message
+    # is to hold it either, whoever writes it: the word is then this one, which runs nothing and says why
+    if _a_windows_shell_reads([text]):
+        return NOT_TEXT
     if re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
         return text
     # A backslash that would come before the closing quote would be read with it, as a quote that is text:
     # doubled, it is one backslash (`"C:\\"`, of a drive's own folder)
-    return '"' + text.replace('"', '""') + "\\" * (len(text) - len(text.rstrip("\\"))) + '"'
+    return '"' + text + "\\" * (len(text) - len(text.rstrip("\\"))) + '"'
 
 
 def typed(words: Iterable[Union[str, Path]], windows: Optional[bool] = None) -> str:
@@ -964,28 +971,53 @@ def _named_by_the_disk(folder: Path) -> Path:
 
 
 #: What cmd.exe fills in by itself, where no variable of that name is set
-_CMD_OWN = frozenset({"CD", "DATE", "TIME", "RANDOM", "ERRORLEVEL", "CMDEXTVERSION", "CMDCMDLINE", "HIGHESTNUMANODENUMBER"})
+_CMD_OWN = frozenset({
+    "CD", "DATE", "TIME", "RANDOM", "ERRORLEVEL", "CMDEXTVERSION", "CMDCMDLINE", "HIGHESTNUMANODENUMBER", "__CD__", "__APPDIR__",
+})
+
+#: What PowerShell takes for a double quote, beside the one on the keyboard
+_QUOTES = "\u201c\u201d\u201e"
 
 
-def _a_windows_shell_reads(words: Iterable[str], environment: Optional[Iterable[str]] = None) -> str:
+def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optional[Iterable[str]] = None) -> str:
     """What, in a word of a command, a shell on Windows reads even inside double quotes, as a message names it; empty for nothing.
 
-    PowerShell and Git Bash read a ``$`` there (a variable, and with a
-    parenthesis a command to run) and a backtick; Git Bash a ``!``, for a
-    command typed before; ``cmd.exe`` a ``%NAME%`` whose name is a variable
-    of this machine. No one spelling keeps any of them as text in all
-    three, so a line with one is given no command. A folder may be named
-    so, and an address or a folder in a lockfile is anyone's: a command
-    that held ``$env:TOKEN`` would send the token where the address says.
+    On Windows a word is in double quotes, and each of its shells reads
+    something inside them:
+
+    - PowerShell and Git Bash a ``$`` (a variable, and with a parenthesis
+      a command to run) and a backtick. A ``$`` that ends the word, or
+      comes before a slash of either kind, is text to both: a share that
+      is not listed is named so (``\\\\server\\home$\\work``).
+    - Git Bash a ``!``, for a command typed before, and a ``\\"``, which it
+      takes for a quote that is text, so that the next one ends the word.
+    - PowerShell a ``"`` of the kind a word processor writes, which ends
+      the word as the plain one does.
+    - ``cmd.exe`` a ``%NAME%`` whose name is a variable. So a ``%`` is
+      text only where it begins the two digits a web address writes a
+      sign with (``%20``), and no name between two of them is a variable
+      of this machine, or one cmd.exe fills in by itself (``%CD%``).
+
+    No one spelling keeps any of them as text in all three, so a line with
+    one is given no command. A folder may be named so, and an address or a
+    folder in a lockfile or in a repository's tree is anyone's: a command
+    that held ``$env:TOKEN`` would send the token where the address says,
+    and one that held ``$(…)`` would run it.
+
+    The word is read as it is printed (:func:`_plain`), which is what is
+    pasted.
 
     :param environment: The names of the variables that are set; this
         process's, by default.
     """
     names = {name.upper() for name in (os.environ if environment is None else environment)} | _CMD_OWN
     for word in words:
-        for sign, said in (("$", "a `$`"), ("`", "a backtick"), ("!", "a `!`")):
+        word = _plain(str(word), most=4096)
+        for sign in ("`", '"', "!", *_QUOTES):
             if sign in word:
-                return said
+                return "a backtick" if sign == "`" else f"a `{sign}`"
+        if re.search(r"\$(?![\\/]|$)", word):
+            return "a `$`"
         # As cmd.exe reads a line at its prompt: from a `%` to the next is a name (up to a `:`, which
         # begins what to take of it); one that is no variable is left as text, and its second `%` may begin another
         start = word.find("%")
@@ -997,6 +1029,9 @@ def _a_windows_shell_reads(words: Iterable[str], environment: Optional[Iterable[
             if name.upper() in names:
                 return f"`%{name}%`"
             start = end
+        # And a name that is no variable here may be one in the shell the line is pasted into
+        if re.search(r"%(?![0-9A-Fa-f]{2})", word):
+            return "a `%`"
     return ""
 
 
@@ -1033,7 +1068,7 @@ def said(
 
     On Windows a line whose commands would hold what one of its shells
     reads even inside quotes (:func:`_a_windows_shell_reads`) is given no
-    command, and says so.
+    command, and says so; so is the last.
 
     :param again: The command to give once they are built, as it was
         typed. It is given the pipeline's folder.
@@ -1103,6 +1138,7 @@ def said(
 
     for number, line in enumerate(wanted, 1):
         held.clear()
+        before = (dict(cloned), dict(worktrees), set(moved))
         pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
         at = f" at {line.commit[:7]}" if pinned else ""
         # In a command, enough of a commit that a large repository has no two of it: of the commit it was read
@@ -1190,11 +1226,16 @@ def said(
             unknown = ""
         read = _a_windows_shell_reads(held) if windows else ""
         if read:
-            # No spelling of it is text in every shell there, and a pasted line is run as it is read
+            # No spelling of it is text in every shell there, and a pasted line is run as it is read. What to
+            # make is said, and not how: a checkout by hand may be of the pipeline's own repository
             commands = [
                 f"No command is given for it: one would hold {read}, which a shell on Windows reads even inside quotes.",
-                f"By hand, in its folder: {'`git checkout ' + commit + '`, then ' if commit and pinned else ''}`{make}`",
+                f"By hand: `{make}` in its folder{', at ' + commit if commit and pinned else ''}.",
             ]
+            # Nothing of it was typed: no clone was made by it, no worktree, and no repository moved
+            for kept, was in zip((cloned, worktrees, moved), before):
+                kept.clear()
+                kept.update(was)
         reads = f"; reads {_counted(line.reads)} above" if line.reads else ""
         lines.append(f"{number}. {_plain(line.pipeline)}{at}    {where}{reads}")
         lines += [f"     {command}" for command in commands]
@@ -1202,8 +1243,13 @@ def said(
             lines.append("     It could not be found there, so no command is given for it.")
         elif unknown:
             lines.append(f"     What it reads in turn is not known: {unknown}. Its own `chartbook run` says.")
-    # With its folder, as every command above has its own: typed wherever those were, it builds this pipeline
-    lines += ["", "Then here again:", f"     {again}{_in(listing.directory, windows)}"]
+    # With its folder, as every command above has its own: typed wherever those were, it builds this pipeline.
+    # The pipeline's folder may be one of somebody's repository too, named as they named it
+    own = _a_windows_shell_reads([listing.directory]) if windows else ""
+    lines += ["", "Then here again:", (
+        f"     In this pipeline's folder, which no command can name (it holds {own}): `{again}`" if own
+        else f"     {again}{_in(listing.directory, windows)}"
+    )]
     if again == "chartbook run" and all(line.by_path and line.builds for line in wanted):
         these = "this folder" if one else "these folders"
         lines.append(f"Or `chartbook run --upstream` here, which builds and snapshots {these} itself.")

