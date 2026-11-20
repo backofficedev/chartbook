@@ -275,6 +275,18 @@ class TestARunMakesNoSnapshot:
         # And another script is no build
         assert run.run(demo, "test", echo=lambda line: None).to_snapshot == []
 
+    def test_a_git_dependency_the_run_builds_is_not_named(self, work, store, monkeypatch):
+        """ChartBook's own copy of a repository is nobody's folder to snapshot from. What the run built of it is pinned, and the lines are of the pipeline asked for."""
+        _committed(_folder(work / "ref", {**DEMO, "project": {"id": "acme/ref"}}))
+        (work / "top").mkdir()
+        top = _folder(work / "top" / "pipeline", {**DEMO, "dependencies": {"ref": {"git": "../../ref"}}})
+        _committed(work / "top")
+        monkeypatch.chdir(top)
+        result = _run()
+        assert result.exit_code == 0, result.output
+        assert _after_the_run(result, pipelines=2) == _closing()
+        assert [taken.pipeline for taken in _snapshots(store)] == []
+
     def test_with_upstream_what_it_reads_is_snapshotted_and_it_is_not(self, demo, store, upstream):
         """--upstream builds and snapshots what this one depends on first, as it did, for this run to pin. The pipeline asked for is built."""
         _depends_on_upstream(demo)
