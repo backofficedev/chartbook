@@ -49,9 +49,7 @@ def _install(*words: str, input: str = None):
 
 def _of(version: str) -> str:
     """The section as another ChartBook wrote it: text of its own, and its own version and hash in the marker."""
-    theirs = agents.body().replace("`chartbook pin --update`", "`chartbook update`")
-    start, _, end = agents.section(version).partition(agents.body())
-    return re.sub(r"text=[0-9a-f]{12}", f"text={agents._hash(theirs)}", start) + theirs + end
+    return agents.section(version, agents.body().replace("`chartbook pin --update`", "`chartbook update`"))
 
 
 def _written_in(section: str) -> str:
@@ -121,6 +119,13 @@ class TestInAProject:
         assert result.exit_code == 0 and (project / "AGENTS.md").is_file() and not (project / "src" / "AGENTS.md").exists()
         assert f"Wrote {project / 'AGENTS.md'}: " in result.output  # named whole, from a folder it is not in
 
+    @pytest.mark.skipif(os.name == "nt", reason="a file has no such mode there")
+    def test_a_file_keeps_its_mode(self, project):
+        (project / "AGENTS.md").write_text(_of("0.5.1"), encoding="utf-8", newline="\n")
+        (project / "AGENTS.md").chmod(0o755)
+        assert _install().exit_code == 0
+        assert (project / "AGENTS.md").stat().st_mode & 0o777 == 0o755
+
     def test_a_write_that_fails_leaves_the_file_as_it_was(self, project, monkeypatch):
         """Found by review: the file was opened for writing in place, and a disk that filled left a project's notes cut short."""
         (project / "AGENTS.md").write_text(OWN * 50, encoding="utf-8", newline="\n")
@@ -135,6 +140,59 @@ class TestInAProject:
         assert sorted(path.name for path in project.iterdir()) == ["AGENTS.md", "chartbook.toml"]  # and nothing is left beside it
 
 
+class TestWhatMovingAFileOverAnotherWouldPassOver:
+    """Found by the second pass: the file is replaced by a move, which asks nothing of the file it replaces."""
+
+    @pytest.mark.skipif(os.name != "nt" and os.geteuid() == 0, reason="nothing is read-only to root")
+    def test_a_read_only_file_is_not_written(self, project):
+        (project / "AGENTS.md").write_text(_of("0.5.1"), encoding="utf-8", newline="\n")
+        (project / "AGENTS.md").chmod(0o444)
+        try:
+            result = _install()
+        finally:
+            (project / "AGENTS.md").chmod(0o644)
+        assert result.exit_code == 1 and _last(result) == "Error: AGENTS.md was not written: it is read-only."
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == _of("0.5.1")
+
+    def test_one_file_under_two_names_is_not_written(self, project):
+        """A hard link: the move would leave the other name with the old text, and say nothing."""
+        (project / "AGENTS.md").write_text(_of("0.5.1"), encoding="utf-8", newline="\n")
+        try:
+            os.link(project / "AGENTS.md", project / "CLAUDE.md")
+        except OSError:
+            pytest.skip("no hard links here")
+        result = _install()
+        assert result.exit_code == 1 and _last(result) == (
+            "Error: AGENTS.md was not written: it is one file under two names (a hard link), and the other name would "
+            "keep the old text. Make one of them a symbolic link to the other."
+        )
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == (project / "CLAUDE.md").read_text(encoding="utf-8") == _of("0.5.1")
+
+    def test_what_somebody_saved_while_the_question_waited_is_not_lost(self, project, monkeypatch):
+        """An editor, or another agent: the text to write was made from the file as it was read before the question."""
+        text = OWN + "\n" + _written_in(agents.section())
+        (project / "AGENTS.md").write_text(text, encoding="utf-8", newline="\n")
+
+        def yes_after_a_colleague_saved(question, default):
+            with open(project / "AGENTS.md", "a", encoding="utf-8", newline="\n") as f:
+                f.write("A colleague's line.\n")
+            return True
+
+        monkeypatch.setattr(cli, "_can_ask", lambda: True)
+        monkeypatch.setattr(cli, "_confirm", yes_after_a_colleague_saved)
+        result = _install()
+        assert result.exit_code == 1 and _last(result) == (
+            "Error: AGENTS.md was not written: it was changed by something else while this ran. Run this again."
+        )
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == text + "A colleague's line.\n"
+
+    def test_a_file_that_appeared_meanwhile_is_not_written_over(self, project):
+        (project / "AGENTS.md").write_text(OWN, encoding="utf-8", newline="\n")
+        with pytest.raises(agents.NotWritten):
+            agents.write(project / "AGENTS.md", agents.section(), was=None)
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == OWN
+
+
 class TestWhatAPersonWroteIsNotReplacedUnasked:
     """Found by review: only a section naming exactly this version was protected, and every other was replaced without a word."""
 
@@ -145,6 +203,11 @@ class TestWhatAPersonWroteIsNotReplacedUnasked:
         "one that names no version": lambda: agents.section().replace(f" version={__version__}", ""),
         "one whose version is none": lambda: agents.section().replace(f"version={__version__}", "version=;rm"),
         "markers typed by a person": lambda: "<!-- chartbook:start -->\nOur own rules for ChartBook.\n<!-- chartbook:end -->\n",
+        # Found by the second pass: the hash was of the text alone, and words in a marker's own comment went unasked
+        "a word in its opening marker": lambda: _of("0.5.1").replace("two lines. -->", "two lines. Ana: do not touch before the audit. -->"),
+        "a word in its closing marker": lambda: _of("0.5.1").replace("<!-- chartbook:end -->", "<!-- chartbook:end (see docs/agents.md for ours) -->"),
+        "a version typed over": lambda: agents.section().replace(f"version={__version__}", "version=0.5.1"),
+        "a version that is none, though its hash is right": lambda: agents.section("banana"),
     }
 
     @pytest.mark.parametrize("case", CASES)
@@ -164,6 +227,9 @@ class TestWhatAPersonWroteIsNotReplacedUnasked:
         assert "was changed since ChartBook 0.5.1 wrote it." in _last(_install())
         (project / "AGENTS.md").write_text(self.CASES["markers typed by a person"](), encoding="utf-8", newline="\n")
         assert "is not one that `chartbook install agents` wrote." in _last(_install())
+        # Nor is "ChartBook banana" said to have written anything
+        (project / "AGENTS.md").write_text(_written_in(agents.section("banana")), encoding="utf-8", newline="\n")
+        assert "is not one that `chartbook install agents` wrote." in _last(_install())
 
     def test_force_replaces_it(self, project):
         (project / "AGENTS.md").write_text(OWN + "\n" + _written_in(agents.section()), encoding="utf-8", newline="\n")
@@ -178,7 +244,12 @@ class TestWhatAPersonWroteIsNotReplacedUnasked:
         (project / "AGENTS.md").write_text(text, encoding="utf-8", newline="\n")
         result = _install(input="\n")  # Enter is no
         assert result.exit_code == 0 and (project / "AGENTS.md").read_text(encoding="utf-8") == text
-        assert "Replace what is between them? [y/N]: " in result.output and _last(result) == "AGENTS.md was left as it is."
+        # It says which lines, and how many would go: found by the second pass, a yes was given without knowing what to
+        lines = text.splitlines()
+        first, last = lines.index(agents.section().splitlines()[0]) + 1, len(lines)
+        assert f"The ChartBook section of AGENTS.md (lines {first} to {last}) was changed since ChartBook {__version__} wrote it." in result.output
+        assert f"Replace what is between them ({last - first - 1} lines)? [y/N]: " in result.output
+        assert _last(result) == "AGENTS.md was left as it is."
         result = _install(input="y\n")
         assert result.exit_code == 0 and (project / "AGENTS.md").read_text(encoding="utf-8") == OWN + "\n" + agents.section()
 
@@ -193,6 +264,62 @@ class TestWhatAPersonWroteIsNotReplacedUnasked:
             "Left as it is (--force writes this version's)."
         )
         assert _install("--force").exit_code == 0 and agents.same(agents.read((project / "AGENTS.md").read_text(encoding="utf-8")))
+
+
+    def test_this_versions_number_with_another_builds_text_is_replaced(self, project):
+        """As that build left it, and not this one's: neither newer nor somebody's writing."""
+        (project / "AGENTS.md").write_text(_of(__version__), encoding="utf-8", newline="\n")
+        result = _install()
+        assert result.exit_code == 0, result.output
+        assert _last(result) == f"Wrote the ChartBook section of AGENTS.md again (ChartBook {__version__}). The rest of the file is as it was."
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == agents.section()
+
+    def test_blank_lines_a_formatter_puts_inside_the_markers_are_nobodys_writing(self, project):
+        """Or the command and the formatter would take turns at the file, one commit each."""
+        first, *between, last = agents.section().splitlines(keepends=True)
+        text = first + "\n" + "".join(between) + "\n" + last
+        (project / "AGENTS.md").write_text(text, encoding="utf-8", newline="\n")
+        assert _last(_install()) == f"AGENTS.md: its ChartBook section is up to date (ChartBook {__version__})."
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == text
+        # Nor are spaces after a marker
+        spaced = first.rstrip("\n") + "  \n" + "".join(between) + last.rstrip("\n") + " \n"
+        (project / "AGENTS.md").write_text(spaced, encoding="utf-8", newline="\n")
+        assert _last(_install()) == f"AGENTS.md: its ChartBook section is up to date (ChartBook {__version__})."
+
+
+class TestWhatAFenceIs:
+    """Found by the second pass: any line that began with three backticks opened or closed a fence, and where the count
+    went wrong the section below was never seen again: the command added another at every run."""
+
+    SHAPES = {
+        "inline code that begins a line": "```chartbook run``` builds everything.\n",
+        "three backticks inside four": "````markdown\n```\n<!-- chartbook:end -->\n````\n",
+        "a fence line with a word after it, inside a fence": "```\n```python\n<!-- chartbook:end -->\n```\n",
+        "opened at three spaces and closed at four": "- An example:\n   ```\n   chartbook run\n    ```\n",
+        "tildes inside backticks": "```\n~~~\n<!-- chartbook:end -->\n```\n",
+        "backticks inside tildes": "~~~\n```\n<!-- chartbook:start -->\n~~~\n",
+    }
+
+    @pytest.mark.parametrize("shape", SHAPES)
+    def test_the_section_below_one_is_found_and_the_file_does_not_grow(self, project, shape):
+        above = OWN + self.SHAPES[shape] + "\n"
+        (project / "AGENTS.md").write_text(above + _of("0.5.1"), encoding="utf-8", newline="\n")
+        result = _install()
+        assert _last(result) == f"Updated the ChartBook section of AGENTS.md from ChartBook 0.5.1 to {__version__}. The rest of the file is as it was."
+        assert (project / "AGENTS.md").read_text(encoding="utf-8") == above + agents.section()
+        assert _last(_install()) == f"AGENTS.md: its ChartBook section is up to date (ChartBook {__version__})."
+
+    @pytest.mark.parametrize("below", ["", "\n" + agents.section()], ids=["with no section", "with a section below it"])
+    def test_one_that_is_never_closed_is_refused(self, project, below):
+        """Everything below it is code: a section written there would be too, and would not be found the next time."""
+        text = OWN + "```console\n$ chartbook run\n" + below
+        (project / "AGENTS.md").write_text(text, encoding="utf-8", newline="\n")
+        result = _install("--force")
+        assert result.exit_code == 1 and (project / "AGENTS.md").read_text(encoding="utf-8") == text
+        assert _last(result) == (
+            "Error: AGENTS.md: the code fence opened on line 4 is never closed, so everything below it is part of that code, "
+            "and a section written there would be too. Nothing was written to it: close the fence, and run this again."
+        )
 
 
 class TestWhatAMarkerIs:
@@ -269,6 +396,13 @@ class TestAFileThatIsALink:
         assert result.exit_code == 1 and (tmp_path / "TEAM.md").read_text(encoding="utf-8") == OWN
         assert _last(result) == f"Error: AGENTS.md is a link to {(tmp_path / 'TEAM.md').resolve()}, outside this project. Nothing was written to it."
 
+    def test_to_a_folder_it_says_so(self, project):
+        (project / "notes").mkdir()
+        (project / "AGENTS.md").symlink_to("notes")
+        result = _install()
+        assert result.exit_code == 1
+        assert _last(result) == f"Error: AGENTS.md is a link to {project / 'notes'}, which is a folder. Nothing was written."
+
     def test_to_nothing_nothing_is_made(self, project):
         (project / "AGENTS.md").symlink_to(project / "not-there.md")
         result = _install()
@@ -311,6 +445,31 @@ class TestTheTwoHalves:
         assert result.exit_code == 1 and isinstance(result.exception, SystemExit)
         assert any(line.startswith("Error: the skill could not be installed: ") for line in result.output.splitlines())
         assert (project / "AGENTS.md").read_text(encoding="utf-8") == agents.section()
+
+    def test_ctrl_c_at_the_skills_question_ends_the_command(self, project, claude_config_dir, monkeypatch):
+        """Found by the second pass: it was taken for a question nobody could answer, and the project's file was written."""
+        self._changed_skill(claude_config_dir)
+        (project / "AGENTS.md").unlink()
+        monkeypatch.setattr(cli, "_can_ask", lambda: True)  # a person is there
+        result = _install(input="")  # and ends the question
+        assert result.exit_code == 1 and isinstance(result.exception, SystemExit) and "Aborted!" in result.output
+        assert not (project / "AGENTS.md").exists()
+
+    def test_a_newer_chartbooks_skill_is_left_and_no_error(self, project, claude_config_dir):
+        """Found by the second pass: from the older of two environments the command failed every time, having done the right thing."""
+        _install()
+        (project / "AGENTS.md").unlink()
+        skill = claude_config_dir / "skills" / "chartbook" / "SKILL.md"
+        newer = skill.read_text(encoding="utf-8").replace(f'chartbook-version: "{__version__}"', 'chartbook-version: "99.0.0"')
+        assert "99.0.0" in newer
+        skill.write_text(newer, encoding="utf-8", newline="\n")
+        result = _install()
+        assert result.exit_code == 0, result.output
+        assert result.output.splitlines()[0].endswith(
+            f"is for ChartBook 99.0.0, newer than this one, {__version__}. Left as it is (--force installs this version's)."
+        )
+        assert skill.read_text(encoding="utf-8") == newer and (project / "AGENTS.md").read_text(encoding="utf-8") == agents.section()
+        assert _install("--force").exit_code == 0 and claude_skill.version_of(skill.parent) == __version__
 
     def test_force_is_for_both(self, project, claude_config_dir):
         skill = self._changed_skill(claude_config_dir)
@@ -364,6 +523,11 @@ class TestWhereAProjectIs:
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         (tmp_path / "work").mkdir()
         assert agents.project_folder(tmp_path / "work") is None and agents.project_folder(tmp_path) is None
+        # Where the home folder is itself a repository, its folders are not one project: only the folder itself
+        (tmp_path / "work" / "chartbook.toml").write_text("[project]\n", encoding="utf-8", newline="\n")
+        (tmp_path / "work" / "deep").mkdir()
+        assert agents.project_folder(tmp_path / "work" / "deep") is None
+        assert agents.project_folder(tmp_path / "work") == (tmp_path / "work").resolve()
 
     def test_a_manifest_that_is_none_gets_no_file_beside_it(self, project):
         (project / "chartbook.toml").write_text("not [toml", encoding="utf-8", newline="\n")
@@ -388,8 +552,12 @@ class TestASectionOfAnOlderChartBook:
     @pytest.mark.parametrize("text", [
         "", OWN, agents.section(), _of("99.0.0"), agents.section().replace(f" version={__version__}", ""),
         agents.START + " version=0.5.1 -->\n",  # no section: its marker lines do not hold one
+        # Found by the second pass: one somebody wrote in was called stale for ever, since the command named would not replace it unasked
+        _written_in(_of("0.5.1")),
+        "<!-- chartbook:start version=0.1 -->\nOur own rules.\n<!-- chartbook:end -->\n",
+        _of(__version__),  # this version's number, from another build of it
     ])
-    def test_not_this_versions_a_newer_ones_or_none(self, project, text):
+    def test_not_this_versions_a_newer_ones_one_somebody_wrote_in_or_none(self, project, text):
         (project / "AGENTS.md").write_text(text, encoding="utf-8", newline="\n")
         assert agents.stale(project) is None
 
