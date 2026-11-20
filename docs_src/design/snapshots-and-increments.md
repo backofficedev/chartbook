@@ -517,6 +517,20 @@ to Claude.* Three forms of a run that removes were broken before a line of them 
 **A run removes nothing. It says what `chartbook store gc` could remove of its pipeline; `store
 gc` removes it, with its list, its question and its week, as today, and knows more.**
 
+```{note}
+*2026-11-19, later, and not yet written into the rest of this section.* The maintainer, on
+reading the sentence above: the idea was always the narrow one, a run doing for its own pipeline
+what `chartbook store gc` does for the store, and never a rule of its own. He is right: the three
+forms above were a detour from it, and the notes of every branch and tag (item 1 below) answer
+what broke the first of them, a pin on another branch. **Agreed: in a store that one machine
+uses, a run ends by removing, of its own pipeline, what `store gc` would remove.** ChartBook
+tells such a store by its notes, which come from one machine. **Open, and his to answer:** in a
+store that several machines use, whether a run removes too or only says what can go. There one
+risk is left that the notes do not answer: a machine that was off runs before the sync has
+brought a pin made meanwhile. Claude's recommendation is that it only says, and `store gc` is
+run by a person.
+```
+
 For 0.6.0:
 
 1. **The store's notes say what each project pins on every branch and tag,** with what the third
@@ -583,13 +597,45 @@ and his other work read them with 0.5 until then.*
   of each file it shared.
 - **A folder that held files for later snapshots and is no snapshot goes,** once the files that
   records name are out of it.
-- **What no record names is not removed.** It is listed, and left where it is.
-- **It can be stopped and taken up again,** by the journal the move from 0.2 keeps.
+- **What no record names is not removed.** It is counted, and moved at its old path under
+  `_chartbook/left-by-0.5/`. *(Changed when it was built: left where it was, under `pipelines/`,
+  it would make a store of both layouts, which every command refuses.)* A `README.txt` that a
+  person wrote goes there too; only ChartBook's own texts are replaced.
 - **Nobody else writes to the store meanwhile,** and every machine that shares it needs this
   ChartBook afterwards: a 0.5 that has not yet seen the new `store.json` would go on writing a
-  `pipelines/` folder. The command says both before it starts, and looks once more at the end
-  for anything that arrived during the move.
+  `pipelines/` folder. The command says both before it starts.
 - **In a bucket a move is a copy and a delete,** file by file.
+
+As built, after two reviews of the mover, by three rules:
+
+1. **Nothing that was true before the move stops it half way.** What can stop it is found before
+   the first file moves, each with its way out: a record that cannot be read, or that names a
+   file outside its pipeline's folder; a folder with files and no record (a sync brings a record
+   last); two names the disk does not tell apart; a folder that may not be written; a folder
+   that is a link. A file that is missing, or is not what its record says, does not stop it: it
+   was so before, it is asked about, and the last lines name it.
+2. **The folders are the truth.** A journal, `_chartbook/move-to-v3.jsonl`, says only that a move
+   is under way and on which machine; while it is there every other command stops with one line.
+   What is left to do is worked out from the folders, so a move cut short at any step is taken up
+   by running the command again, with the journal or without it. A test stops it after every
+   step, removes the journal, and compares the result file by file.
+3. **`chartbook store migrate` can always be run again on a moved store, and is the one remedy.**
+   A machine that had not been brought the move may write afterwards where 0.5 keeps things: a
+   note of a lockfile in `roots/`, a snapshot in `pipelines/`. Every other command then refuses
+   the store and names this one. Run again, it puts the notes with the others, and moves a late
+   snapshot in if every file its record names is in its own folder or in its pipeline's complete
+   snapshot; one with a file found nowhere is set aside whole under `_chartbook/left-by-0.5/`
+   and named, never moved in with a file missing.
+
+- **A file changes folder by a rename and is not read.** The copies are few: a file that several
+  older snapshots share and the newest lacks, a file a snapshot kept once under two names, and
+  what a pin-made snapshot shared. On a skeleton of a real store of 23 GB (its records, with
+  empty files of the real sizes) the move came to 38 snapshots, 32 complete and 6 increments,
+  6,015 renames and 6 copies of 858 KB together.
+- **An increment made by a move builds on a snapshot made after it.** Nothing that reads one may
+  take the complete snapshot for the older.
+- **A store of 0.2 takes two runs:** the first moves it to the layout of 0.5 and says to run the
+  command once more.
 
 ## What a person can do with a complete snapshot
 
@@ -600,7 +646,7 @@ data in mind.
 - Somebody without ChartBook reads the files.
 - Somebody with ChartBook runs `chartbook store import` on it, which hashes every file against
   its record as it copies. *Proposed by Claude, 2026-11-19: `import` takes one snapshot's folder
-  as well as a pipeline's.*
+  as well as a pipeline's. Not built with the layout: it takes a folder laid out as a store.*
 - `chartbook store export` writes a folder laid out as a store of this layout; with `--latest`
   that is one complete snapshot, as today.
 - A pipeline copied from one store to another (`store move`, `store import`) keeps its form:
@@ -639,12 +685,15 @@ files for what it changes.
    written; a snapshot of either kind is read, and every new one is written complete for now; a
    store of 0.5 is read as it is; `store gc`, `store verify`, `store move`, `restore` and `store
    ls` on the new layout.
-3. `chartbook store migrate` from the layout of 0.5.
-4. The S3 store, and `store export` and `store import`.
+3. `chartbook store migrate` from the layout of 0.5. *Steps 2 and 3 are one pull request: main
+   never names a command that cannot yet move a store.* `store export`, `store import` and `store
+   move` of the folder store came with them, since each has to keep a snapshot's form.
+4. The S3 store.
 5. Increments are made: which one a run makes, the last line of a run, `chartbook snapshot` and
    `run --snapshot` complete.
-6. Clearing, as "Where it stands" has it: the notes of every branch and tag, with the pipeline in
-   each name; the line of what `store gc` could remove of this pipeline; `store gc` saying which
-   note holds a snapshot, and forgetting one. No run removes.
+6. Clearing, as "Where it stands" has it with its note: the notes of every branch and tag, with
+   the pipeline in each name; the line of what `store gc` could remove of this pipeline; `store
+   gc` saying which note holds a snapshot, and forgetting one; and a run removing of its own
+   pipeline in a store one machine uses.
 7. The guide, the vocabulary and the changelog, read through once more against what was built;
    and what `data.path` says of `data.as_of`.
