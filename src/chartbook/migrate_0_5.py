@@ -1,43 +1,40 @@
 """Move a folder store that ChartBook 0.5 laid out to this version's layout (``chartbook/store/v3``).
 
 ``docs_src/design/snapshots-and-increments.md``, "Moving a store to this
-layout". For each pipeline:
+layout". The move does four things, and removes nothing of anyone's:
 
-- the newest snapshot its owner made becomes complete, under
-  ``snapshots/<pipeline>/<snapshot>/``, every file of its version in its own
-  place under its own name;
-- every other snapshot its owner made becomes an increment on that one, under
-  ``increments/<pipeline>/<snapshot>/``: a file the complete one has, by its
-  bytes and size whatever its name, is kept there, and a file it does not
-  have is in the increment's own folder;
-- every snapshot a pin made from a repository becomes complete too.
+1. It renames the files that records name to where this layout keeps them,
+   and makes the few copies the result needs (a file two folders must each
+   hold), each hashed as it is written. Per pipeline: the newest snapshot
+   its owner made becomes complete under ``snapshots/``; every other one its
+   owner made becomes an increment on it under ``increments/``, keeping in
+   its own folder only the files that one does not have at their size; and
+   every snapshot a pin made becomes complete.
+2. It writes the new records (rewritten only in ``stored``), each
+   increment's line for a person, and the READMEs, in the new trees.
+3. It moves the top's own folders (``roots/``, ``origins/``, ``tmp/``,
+   ``pipelines/+unowned/``) under ``_chartbook/``, merging.
+4. Last, it moves what is left of ``pipelines/`` aside in one rename, to
+   ``_chartbook/left-by-0.5/pipelines``: the old records, the notes, every
+   file no record names, and anything that arrived meanwhile. Then
+   ``store.json`` says the new layout, and then the journal goes.
 
-A file changes folder by a rename inside the store and is not read: a store
-in a synced folder uploads nothing again. The only bytes read are the copies
-the result needs (a file that two folders must each hold). A record is
-rewritten only in ``stored``. What no record names is not removed: it is
-moved, at its old path, under ``_chartbook/left-by-0.5/``.
+Three rules hold it together.
 
-Three rules hold the rest together.
-
-1. Nothing that was true before a move stops it half way. Whatever can stop
-   one is found by :func:`check` before the first step, and said with what
-   to do. After the first step only a failure of the disk stops it.
-2. The folders are the truth. Every plan, the first and every later one, is
-   made from the store as it is: a store that is half moved comes to the
-   steps that are left, each of which can be done again with nothing lost.
-   The journal only says that a move is under way and whose it is: while it
-   is there no other command reads or writes the store
-   (:meth:`chartbook.store.FolderStore._check_layout`), and another
-   machine's stops this one's move.
-3. The command can always be run again on a moved store, and is the one
-   remedy for what a machine that had not been brought the move wrote at
-   the top afterwards. A snapshot found there is moved in where every file
-   its record names is found, in its own folder or by its hash in the
-   complete snapshot its pipeline has; where one is found nowhere, the whole
-   snapshot is set aside, never moved in with a hole.
-
-``store.json`` says the new layout last, and the journal goes after that.
+- Nothing that was true before a move stops it half way: :func:`check`
+  finds it before the first step, and says it with what to do. A file a
+  record names that is not there is no such thing. It was missing before,
+  it is counted and named, and its record goes on naming it.
+- The folders are the truth. Every plan is made from the store as it is. The
+  old records stay under ``pipelines/`` until the last step, so a plan made
+  at any moment of a move sees all of them, and a rename whose file is
+  already where it goes is done. The journal only says that a move is under
+  way and whose it is.
+- The command can always be run again. On a store that is moved already and
+  has what 0.5 keeps at its top again (a machine that had not been brought
+  the move wrote there), it merges the notes and moves ``pipelines/`` aside,
+  whole. Nothing under it is moved in: the last lines name each snapshot
+  there, to be made again with this ChartBook.
 """
 
 from __future__ import annotations
@@ -51,8 +48,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+from chartbook import hashing
 from chartbook.store import (
-    _LEFT_BY_A_DESKTOP,
     CLEARED_FILE,
     FOLDER_SCHEMA,
     INCREMENT_FILE,
@@ -60,8 +57,6 @@ from chartbook.store import (
     INCREMENTS_README,
     OWN_DIR,
     PENDING_SECONDS,
-    PIPELINE_README,
-    PIPELINE_README_OF_0_5,
     README_FILE,
     RECORD_FILE,
     SCHEMA,
@@ -82,7 +77,7 @@ from chartbook.store import (
 JOURNAL = f"{OWN_DIR}/move-to-v3.jsonl"
 JOURNAL_SCHEMA = "chartbook/store/move-to-v3"
 
-#: Where what no record names is moved, at its old path: nothing is removed that ChartBook did not write.
+#: Where what is left of the old layout is moved, whole: nothing is removed that ChartBook did not write.
 LEFT_ASIDE = f"{OWN_DIR}/left-by-0.5"
 
 #: The mark the move from the layout of 0.2 left for ChartBook 0.2 to trip over; the name is now the snapshots' own.
@@ -91,25 +86,23 @@ OLD_MARK = "0" * 40
 #: What ChartBook 0.5 kept at the top of a store, which a moved store has under ``_chartbook/`` or not at all.
 OLD_TOP = (V2_LAYOUT.pipelines, V2_LAYOUT.roots, V2_LAYOUT.origins, V2_LAYOUT.tmp)
 
-#: The notes ChartBook itself wrote for a person, by their text: only these are replaced or removed.
-OURS = (STORE_README, PIPELINE_README, PIPELINE_README_OF_0_5, INCREMENTS_README)
-
-_COUNTS = ("renamed", "renamed_bytes", "copied", "copied_bytes", "folders_gone", "aside")
+_COUNTS = ("renamed", "renamed_bytes", "copied", "copied_bytes", "aside")
 
 
 class MoveError(StoreError):
-    """Raised when a store cannot be moved, or a move stops: it says what and what to do."""
+    """Raised when a store cannot be moved: it says what and what to do."""
 
 
 @dataclass
 class Step:
     """One thing a move does, which can be done again with nothing lost.
 
-    ``rename`` moves a file inside the store, and ``aside`` one that no
-    record names; ``copy`` writes a second copy of a file; ``write`` writes
-    a file of ChartBook's own (a record, a note); ``remove`` removes a file
-    ChartBook wrote; ``rmdir`` removes a folder that is empty by then;
-    ``movedir`` moves one of the top's folders under ``_chartbook/``.
+    ``rename`` moves a file a record names; ``copy`` writes a second copy of
+    one; ``write`` writes a record or an increment's line; ``note`` writes a
+    README where there is none, or one ChartBook wrote; ``movedir`` merges
+    one of the top's folders under ``_chartbook/``; ``aside`` moves a file
+    or a folder, whole, under ``_chartbook/left-by-0.5/``; ``unmark``
+    removes the mark the move from 0.2 left.
     """
 
     op: str
@@ -130,13 +123,15 @@ class Plan:
             how many of those a pin made, and how many become increments.
         renamed, renamed_bytes: The files that change folder by rename.
         copied, copied_bytes: The files copied, which are read.
-        folders_gone: The folders that are no snapshot and go.
-        aside: The files no record names, which are moved aside.
+        aside: The files no record names, which go aside with the old folder.
         missing: The files a record names that are not there, or are there
             at another size, each as ``(snapshot's folder, path)``.
-        set_aside: The snapshots moved aside whole, since a file of each is
-            found nowhere, each as ``(pipeline's folder, snapshot's folder)``.
+        set_aside: The snapshots whose records go aside without having been
+            moved in, each as ``(pipeline's folder, snapshot's folder)``.
+        late: The files that arrived for a snapshot already moved, by where
+            they are once aside.
         copied_as_is: The copies whose bytes are not what their record says.
+        kept: Where the old folder is kept, once the move has put it aside.
         steps: The steps, in order.
     """
 
@@ -149,17 +144,13 @@ class Plan:
     renamed_bytes: int = 0
     copied: int = 0
     copied_bytes: int = 0
-    folders_gone: int = 0
     aside: int = 0
     missing: list = field(default_factory=list)
     set_aside: list = field(default_factory=list)
+    late: list = field(default_factory=list)
     copied_as_is: list = field(default_factory=list)
+    kept: str = ""
     steps: list = field(default_factory=list)
-
-
-def left_by_a_desktop(name: str) -> bool:
-    """Whether a file's name is one a desktop leaves in a folder it shows (``.DS_Store``, ``desktop.ini``), as the store passes them over."""
-    return name.startswith(".") or name.lower() in _LEFT_BY_A_DESKTOP
 
 
 def marker_of(root: Path) -> Optional[str]:
@@ -176,6 +167,13 @@ def old_left(root: Path) -> list[str]:
     return [name for name in OLD_TOP if (Path(root) / name).is_dir()]
 
 
+def new_there(root: Path) -> bool:
+    """Whether a store has anything of this layout's two trees: a store of 0.5 that has is half moved."""
+    return any(
+        True for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR) for path in (Path(root) / tree).glob("*/*") if path.parent.name != OLD_MARK
+    )
+
+
 def to_move(root: Path) -> bool:
     """Whether ``chartbook store migrate`` has something to do in a folder store: one of 0.5, one whose move was cut short, or a moved one with what 0.5 keeps at its top."""
     root = Path(root)
@@ -190,14 +188,10 @@ def journal_of(root: Path) -> Optional[dict]:
     """
     path = Path(root) / JOURNAL
     try:
-        text = path.read_text(encoding="utf-8")
+        first = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
     except FileNotFoundError:
         return None
-    except (OSError, ValueError) as error:
-        text, first = None, error
-    try:
-        first = json.loads((text or "").splitlines()[0]) if text else None
-    except (ValueError, IndexError):
+    except (OSError, ValueError, IndexError):
         first = None
     if not isinstance(first, dict) or first.get("schema") != JOURNAL_SCHEMA or not isinstance(first.get("machine"), str):
         raise MoveError(
@@ -222,14 +216,18 @@ def cut_short_said(root: Path) -> str:
     )
 
 
-def _parts(document: dict) -> list[dict]:
+def _followed(document: dict, taken: frozenset) -> list[dict]:
+    """The parts of a record that the store's own reader took, and so the only ones a move follows: a part it passes over is anyone's."""
     parts = [part for part in document.get("records") or [] if isinstance(part, dict)]
     parts += [document[name] for name in ("index", "documents") if isinstance(document.get(name), dict)]
-    return [part for part in parts if isinstance(part.get("stored"), dict) and isinstance(part["stored"].get("files"), list)]
+    return [
+        part for part in parts
+        if part.get("content_hash") in taken and isinstance(part.get("stored"), dict) and isinstance(part["stored"].get("files"), list)
+    ]
 
 
-def _read(record: Path, name: str) -> dict:
-    """A snapshot's record as the store's own reader takes it: readable, every part followed, in its pipeline's folder."""
+def _read(record: Path, name: str) -> tuple[dict, frozenset]:
+    """A snapshot's record as the store's own reader takes it: readable, every part followed, in its pipeline's folder. The document, and the hashes the reader took."""
     kept = read_kept_record(record)
     why = None
     if not kept.readable:
@@ -240,7 +238,7 @@ def _read(record: Path, name: str) -> dict:
         why = "it is not in the folder of its pipeline and its commit"
     if why is None:
         try:
-            return json.loads(record.read_text(encoding="utf-8"))
+            return json.loads(record.read_text(encoding="utf-8")), kept.named
         except (OSError, ValueError) as error:
             why = str(error)
     raise MoveError(
@@ -258,11 +256,7 @@ def _size(path: Path) -> Optional[int]:
 
 
 def _bases(root: Path) -> dict:
-    """The complete snapshot each pipeline has under ``snapshots/`` that its owner made, the newest, with the files it holds whole.
-
-    A file counts as held only where it is there at the size its record
-    says: an increment keeps its own good copy of one that is not.
-    """
+    """The complete snapshot each pipeline has under ``snapshots/`` that its owner made, the newest, with the files it holds whole."""
     found: dict = {}
     tree = root / V3_LAYOUT.pipelines
     for folder in (sorted(tree.iterdir()) if tree.is_dir() else []):
@@ -285,184 +279,167 @@ def _bases(root: Path) -> dict:
 
 
 def plan(root) -> Plan:
-    """Work out what is left to move in a store, from its folders as they are; nothing is moved.
+    """Work out what is left to do in a store, from its folders as they are; nothing is moved.
 
-    The same for a store of 0.5, for one whose move was cut short, and for a
-    moved one that has what 0.5 keeps at its top again.
+    In a store whose ``store.json`` says the layout of 0.5 every record
+    under ``pipelines/`` is moved by the same rules, whatever of it is
+    moved already. In one that says this layout, nothing under a
+    ``pipelines/`` that is there again is moved in: it goes aside whole,
+    and its snapshots are named.
 
-    :raises MoveError: For what is found before anything moves and is in
-        the records and folders themselves: a record that cannot be
-        followed, and a folder that is no snapshot yet.
+    :raises MoveError: For a record that cannot be followed, and a folder
+        that is no snapshot yet.
     """
     root = Path(root)
     found = Plan()
     old = root / V2_LAYOUT.pipelines
-    bases = _bases(root)
+    moved = marker_of(root) == FOLDER_SCHEMA
     if old.is_dir() and not old.is_symlink():
+        bases = {} if moved else _bases(root)
+        named: set = set()
         for folder in sorted(old.iterdir()):
-            if folder.is_symlink() or not folder.is_dir():
-                _aside(root, folder, found)
-            elif folder.name == UNOWNED_DIR:
-                found.steps.append(Step("movedir", folder.relative_to(root).as_posix(), V3_LAYOUT.unowned))
+            if folder.is_symlink() or not folder.is_dir() or folder.name == UNOWNED_DIR:
+                continue
+            if moved:
+                for record in sorted(folder.glob(f"*/{OWN_DIR}/{RECORD_FILE}")):
+                    found.set_aside.append((folder.name, record.parent.parent.name))
             else:
-                _plan_pipeline(root, folder, found, bases.get(folder.name))
-        found.steps.append(Step("rmdir", V2_LAYOUT.pipelines))
-    found.steps.extend(_top(root, found))
+                named |= _plan_pipeline(root, folder, found, bases.get(folder.name))
+        if (old / UNOWNED_DIR).is_dir():
+            found.steps.append(Step("movedir", f"{V2_LAYOUT.pipelines}/{UNOWNED_DIR}", V3_LAYOUT.unowned))
+        ours = {RECORD_FILE, CLEARED_FILE, README_FILE}
+        for path in old.rglob("*"):
+            parts = path.relative_to(old).parts
+            if not path.is_file() or parts[0] == UNOWNED_DIR or path.name in ours or path.relative_to(root).as_posix() in named:
+                continue
+            of = (parts[0], parts[1]) if len(parts) > 2 else None
+            if moved and of in found.set_aside:
+                continue  # a file of a snapshot that goes aside with its record, and is named with it
+            if moved and of and any((root / tree / of[0] / of[1] / OWN_DIR / RECORD_FILE).is_file() for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR)):
+                # It arrived for a snapshot that is moved already: said, with where it will be
+                found.late.append(f"{LEFT_ASIDE}/{path.relative_to(root).as_posix()}")
+            else:
+                found.aside += 1
+    for old_name, new in ((V2_LAYOUT.roots, V3_LAYOUT.roots), (V2_LAYOUT.origins, V3_LAYOUT.origins), (V2_LAYOUT.tmp, V3_LAYOUT.tmp)):
+        if (root / old_name).is_dir() and not (root / old_name).is_symlink():
+            found.steps.append(Step("movedir", old_name, new))
+    if (root / V3_LAYOUT.pipelines / OLD_MARK).is_dir():
+        found.steps.append(Step("unmark", f"{V3_LAYOUT.pipelines}/{OLD_MARK}"))
+    readme = root / README_FILE
+    if not moved:
+        if readme.is_file() and _text(readme) != STORE_README:
+            # A note a person wrote is not ChartBook's to destroy: aside, on the first move only
+            found.steps.append(Step("aside", README_FILE, f"{LEFT_ASIDE}/{README_FILE}"))
+            found.aside += 1
+        found.steps.append(Step("note", target=README_FILE, text=STORE_README))
+    if old.is_dir() and not old.is_symlink():
+        # Last: what is left of the old folder, as it then is, in one rename
+        found.steps.append(Step("aside", V2_LAYOUT.pipelines, f"{LEFT_ASIDE}/{V2_LAYOUT.pipelines}"))
     return found
 
 
-def _aside(root: Path, file: Path, found: Plan) -> None:
-    relative = file.relative_to(root).as_posix()
-    found.steps.append(Step("aside", relative, f"{LEFT_ASIDE}/{relative}"))
-    found.aside += 0 if left_by_a_desktop(file.name) and os.path.lexists(root / LEFT_ASIDE / relative) else 1
-
-
-def _plan_pipeline(root: Path, folder: Path, found: Plan, base_there: Optional[tuple]) -> None:
+def _plan_pipeline(root: Path, folder: Path, found: Plan, base_there: Optional[tuple]) -> set:
+    """Plan one pipeline of a store of 0.5; the files its records name, by where 0.5 kept them."""
     name = folder.name
     old = f"{V2_LAYOUT.pipelines}/{name}"
-    documents: dict[str, dict] = {}
-    others: list[Path] = []
+    documents: dict[str, tuple] = {}
     for child in sorted(folder.iterdir()):
-        if child.is_dir() and not child.is_symlink() and is_snapshot_folder(child.name) and (child / OWN_DIR / RECORD_FILE).is_file():
+        if not child.is_dir() or child.is_symlink() or not is_snapshot_folder(child.name):
+            continue
+        if (child / OWN_DIR / RECORD_FILE).is_file():
             documents[child.name] = _read(child / OWN_DIR / RECORD_FILE, name)
-        elif child.is_dir() and not child.is_symlink():
-            others.append(child)
-    for other in others:
-        moved = any((root / tree / name / other.name / OWN_DIR / RECORD_FILE).is_file() for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR))
-        cleared = (other / OWN_DIR / CLEARED_FILE).is_file()
-        if is_snapshot_folder(other.name) and not cleared and not moved and any(p.is_file() and not left_by_a_desktop(p.name) for p in other.rglob("*")):
+        elif not (child / OWN_DIR / CLEARED_FILE).is_file() and any(p.is_file() for p in child.rglob("*")):
             raise MoveError(
-                f"The folder {other} holds files and has no record: a snapshot whose record a sync has not brought yet, "
+                f"The folder {child} holds files and has no record: a snapshot whose record a sync has not brought yet, "
                 f"or one that was never finished. The store is not moved. If a sync is still bringing it, wait and run "
-                f"this again; if it is left from a snapshot that was never finished, remove that folder and run this again."
+                f"this again; if not, move that folder out of the store and run this again: a file in it that a record "
+                f"names is then missing, as it would have been, and the move says which."
             )
-        found.folders_gone += 1 if cleared else 0
+    if not documents:
+        return set()
+    found.pipelines += 1
+    found.snapshots += len(documents)
+    owners = sorted((d["made_at"], s) for s, (d, _) in documents.items() if d.get("made_by", "snapshot") != "pin")
+    base = base_there[0] if base_there else (owners[-1][1] if owners else None)
     base_has: dict = dict(base_there[1]) if base_there else {}
 
     def target_of(snapshot: str, tree: str, path: str) -> str:
         return f"{tree}/{name}/{snapshot}/{path}"
 
-    def found_somewhere(snapshot: str, document: dict) -> bool:
-        """Whether every file a record names is found: where its record says, where this move puts it, or by its hash in the complete snapshot the pipeline has."""
-        for part in _parts(document):
-            for entry in part["stored"]["files"]:
-                kept_in, kept_as = entry.get("kept_in", snapshot), entry.get("kept_as", entry["path"])
-                if (root / old / kept_in).is_dir() or (entry["content_hash"], entry["size_bytes"]) in base_has:
-                    continue  # there, or missing as it was before the move, which its record goes on saying
-                if not any(os.path.lexists(root / target_of(snapshot, tree, entry["path"])) for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR)):
-                    return False
-        return True
-
-    nowhere = sorted(snapshot for snapshot, document in documents.items() if not found_somewhere(snapshot, document))
-    for snapshot in nowhere:
-        # Never moved in with a hole: the whole snapshot is set aside, at its old path
-        for path in sorted(p for p in (folder / snapshot).rglob("*") if not p.is_dir() or p.is_symlink()):
-            _aside(root, path, found)
-        found.set_aside.append((name, snapshot))
-        del documents[snapshot]
-    found.pipelines += 1 if documents else 0
-    found.snapshots += len(documents)
-    owners = sorted((d["made_at"], s) for s, d in documents.items() if d.get("made_by", "snapshot") != "pin")
-    base = base_there[0] if base_there else (owners[-1][1] if owners else None)
-    if base is not None and not base_there:
-        for part in _parts(documents[base]):
+    if base is not None and not base_there and base in documents:
+        for part in _followed(*documents[base]):
             for entry in part["stored"]["files"]:
                 kept_in, kept_as = entry.get("kept_in", base), entry.get("kept_as", entry["path"])
                 there = (root / old / kept_in / kept_as, root / target_of(base, V3_LAYOUT.pipelines, entry["path"]))
+                # The base has a file only where it is there at its size: an increment keeps its own good copy otherwise
                 if any(_size(place) == entry["size_bytes"] for place in there):
                     base_has.setdefault((entry["content_hash"], entry["size_bytes"]), entry["path"])
     # Where each file is wanted, by where it is now: the complete one first, then the increments, then what a pin made
     wanted: dict[str, list] = {}
-    rewritten: dict[str, tuple] = {}
-    for snapshot in sorted(documents, key=lambda s: (s != base, documents[s].get("made_by", "snapshot") == "pin", s)):
-        document = json.loads(json.dumps(documents[snapshot]))
+    order = sorted(documents, key=lambda s: (s != base, documents[s][0].get("made_by", "snapshot") == "pin", s))
+    for snapshot in order:
+        document, taken = documents[snapshot]
+        document = json.loads(json.dumps(document))
         by_pin = document.get("made_by", "snapshot") == "pin"
         increment = not by_pin and base is not None and snapshot != base
         tree = INCREMENTS_DIR if increment else V3_LAYOUT.pipelines
-        for part in _parts(document):
+        for part in _followed(document, taken):
             for entry in part["stored"]["files"]:
                 kept_in, kept_as = entry.get("kept_in", snapshot), entry.get("kept_as", entry["path"])
                 key = (entry["content_hash"], entry["size_bytes"])
                 entry.pop("kept_as", None)
-                source = f"{old}/{kept_in}/{kept_as}"
-                target = target_of(snapshot, tree, entry["path"])
                 if increment and key in base_has:
                     entry["kept_in"] = base
                     if base_has[key] != entry["path"]:
                         entry["kept_as"] = base_has[key]
                     continue
                 entry["kept_in"] = snapshot
-                if not (root / old / kept_in).is_dir() and not os.path.lexists(root / target) and key in base_has and base_there:
-                    # A snapshot that arrived after a move, complete here: its file is in the pipeline's complete one, by its hash
-                    source = target_of(base_there[0], V3_LAYOUT.pipelines, base_has[key])
-                    wanted.setdefault(source, [(source, *key, base_there[0])]).append((target, *key, snapshot))
-                    continue
-                wanted.setdefault(source, []).append((target, *key, snapshot))
+                wanted.setdefault(f"{old}/{kept_in}/{kept_as}", []).append((target_of(snapshot, tree, entry["path"]), *key, snapshot))
         document = {key: value for key, value in document.items() if key != "stored"}
+        own = f"{tree}/{name}/{snapshot}/{OWN_DIR}"
         if increment:
             document["stored"] = {"builds_on": base}
             found.increments += 1
         else:
             found.complete += 1
             found.by_pins += 1 if by_pin else 0
-        rewritten[snapshot] = (tree, document, increment)
-    named = set()
+        documents[snapshot] = (tree, own, document, increment)
     for source, targets in sorted(wanted.items()):
-        named.add(source)
         size = targets[0][2]
         there = _size(root / source)
         moved = _size(root / targets[0][0]) if there is None else None
         if (there if there is not None else moved) != size:
             # As it was before the move: counted, said, and its record goes on naming it
-            found.missing.extend((snapshot, target.split("/", 3)[3]) for target, _, _, snapshot in targets if target != source)
+            found.missing.extend((snapshot, target.split("/", 3)[3]) for target, _, _, snapshot in targets)
         seen: list = []
         for target, content_hash, _, _ in targets:
             if target in seen:
                 continue
-            if not seen and target != source:
+            if not seen:
                 # Planned whether the file is there or not: one that arrives before its step is put where its record names it
                 found.steps.append(Step("rename", source, target))
                 if there is not None or moved is not None:
                     found.renamed += 1
                     found.renamed_bytes += there if there is not None else moved
-            elif seen:
+            else:
                 found.steps.append(Step("copy", seen[0], target, content_hash, size))
                 if there is not None or moved is not None:
                     found.copied += 1
                     found.copied_bytes += there if there is not None else moved
             seen.append(target)
-    for snapshot, (tree, document, increment) in sorted(rewritten.items()):
-        own = f"{tree}/{name}/{snapshot}/{OWN_DIR}"
+    for snapshot in sorted(documents):
+        tree, own, document, increment = documents[snapshot]
         if increment:
             found.steps.append(Step(
                 "write", target=f"{own}/{INCREMENT_FILE}",
                 text=f"The rest of this snapshot's files are in {V3_LAYOUT.pipelines}/{name}/{base}\n",
             ))
         found.steps.append(Step("write", target=f"{own}/{RECORD_FILE}", text=json.dumps(document, indent=2, ensure_ascii=False) + "\n"))
-    if any(not increment for _, _, increment in rewritten.values()):
+    if any(not increment for _, _, _, increment in documents.values()):
         found.steps.append(Step("note", target=f"{V3_LAYOUT.pipelines}/{name}/{README_FILE}", text=V3_LAYOUT.readme))
-    if any(increment for _, _, increment in rewritten.values()):
+    if any(increment for _, _, _, increment in documents.values()):
         found.steps.append(Step("note", target=f"{INCREMENTS_DIR}/{name}/{README_FILE}", text=INCREMENTS_README))
-    # What is left of the pipeline's old folder: what no record names is moved aside, then its records and notes go
-    ours = {f"{old}/{snapshot}/{OWN_DIR}/{RECORD_FILE}" for snapshot in documents}
-    ours |= {f"{other.relative_to(root).as_posix()}/{OWN_DIR}/{CLEARED_FILE}" for other in others}
-    readme = folder / README_FILE
-    if readme.is_file() and _text(readme) in OURS:
-        ours.add(f"{old}/{README_FILE}")  # one ChartBook wrote; a person's is moved aside with the rest
-    set_aside = tuple(f"{old}/{snapshot}/" for snapshot in nowhere)
-    removes = []
-    for path in sorted(folder.rglob("*")):
-        relative = path.relative_to(root).as_posix()
-        if (path.is_dir() and not path.is_symlink()) or relative.startswith(set_aside):
-            continue
-        if relative in ours:
-            removes.append(Step("remove", relative))
-        elif relative not in named:
-            _aside(root, path, found)
-    found.steps.extend(removes)
-    for path in sorted((p for p in folder.rglob("*") if p.is_dir() and not p.is_symlink()), key=lambda p: len(p.parts), reverse=True):
-        found.steps.append(Step("rmdir", path.relative_to(root).as_posix()))
-    found.steps.append(Step("rmdir", folder.relative_to(root).as_posix()))
+    return set(wanted)
 
 
 def _text(path: Path) -> Optional[str]:
@@ -470,28 +447,6 @@ def _text(path: Path) -> Optional[str]:
         return path.read_text(encoding="utf-8")
     except (OSError, ValueError):
         return None
-
-
-def _top(root: Path, found: Plan) -> list[Step]:
-    """What the rest of the top becomes: ChartBook's own folders under ``_chartbook/``, the old mark gone, the README in this layout's words."""
-    steps = []
-    for old, new in ((V2_LAYOUT.roots, V3_LAYOUT.roots), (V2_LAYOUT.origins, V3_LAYOUT.origins), (V2_LAYOUT.tmp, V3_LAYOUT.tmp)):
-        if (root / old).is_dir() and not (root / old).is_symlink():
-            steps.append(Step("movedir", old, new))
-    mark = root / V3_LAYOUT.pipelines / OLD_MARK
-    if mark.is_dir() and not mark.is_symlink():
-        for path in sorted(p for p in mark.rglob("*") if not p.is_dir()):
-            steps.append(Step("remove", path.relative_to(root).as_posix()))
-        for path in sorted((p for p in mark.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
-            steps.append(Step("rmdir", path.relative_to(root).as_posix()))
-        steps.append(Step("rmdir", mark.relative_to(root).as_posix()))
-    readme = root / README_FILE
-    if readme.is_file() and _text(readme) not in OURS:
-        # A note a person wrote is not ChartBook's to destroy
-        steps.append(Step("aside", README_FILE, f"{LEFT_ASIDE}/{README_FILE}"))
-        found.aside += 1
-    steps.append(Step("note", target=README_FILE, text=STORE_README))
-    return steps
 
 
 def _tells_case_apart(root: Path) -> bool:
@@ -508,8 +463,7 @@ def check(root: Path, found: Plan) -> None:
     """
     root = Path(root)
     started = journal_of(root)
-    mine = this_machine(create=False)
-    if started is not None and started["machine"] != mine:
+    if started is not None and started["machine"] != this_machine(create=False):
         raise MoveError(
             f"A move of the store at {root} was started on another machine ({started['machine']}), on {started.get('started', 'a day it does not say')}, "
             f"and is not finished: let it finish there (run `chartbook store migrate` again on that machine), and let the "
@@ -526,13 +480,14 @@ def check(root: Path, found: Plan) -> None:
     links = [p for p in ([old] + list(old.glob("*")) + list(old.glob("*/*")) if old.exists() or old.is_symlink() else []) if p.is_symlink()]
     if links:
         raise MoveError(
-            f"{links[0]} is a link to another place, and a move does not follow one: the store is not moved. Put the "
-            f"folder itself there, or remove the link, and run this again."
+            f"{links[0]} is a link to another place, and a move does not follow one: the store is not moved. If a sync "
+            f"is still bringing what it stands for, wait; if not, move the link out of the store and run this again: a "
+            f"file a record names through it is then missing, as it would have been, and the move says which."
         )
     notes = root / V2_LAYOUT.tmp
     fresh = [
         p for p in (notes.rglob("*") if notes.is_dir() else [])
-        if p.is_file() and not left_by_a_desktop(p.name) and time.time() - p.stat().st_mtime < PENDING_SECONDS
+        if p.is_file() and not hashing.is_ignored(p.name) and time.time() - p.stat().st_mtime < PENDING_SECONDS
     ]
     if fresh:
         raise MoveError(
@@ -575,59 +530,55 @@ def check(root: Path, found: Plan) -> None:
         )
 
 
-def _listing(root: Path) -> list:
-    return sorted(p.relative_to(root).as_posix() for name in OLD_TOP for p in (root / name).rglob("*")) + old_left(root)
-
-
 def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Callable[[int], None] = lambda number: None) -> Plan:
-    """Move a store to this layout, go on with a move that was cut short, or move in what a moved store has at its top again; what the whole move came to.
+    """Move a store to this layout, go on with a move that was cut short, or put aside what a moved store has at its top again; what the whole move came to.
 
     :param after_step: Called after each step with its number; for tests
         that stop a move part way.
     :raises MoveError: Before anything moves, for what :func:`check` and
-        :func:`plan` stop at; or, part way, when a pass moves nothing of
-        what is left. The journal stays, and the command is run again.
+        :func:`plan` stop at. Nothing has moved then.
     """
     root = Path(root)
     journal = root / JOURNAL
+    started = journal_of(root)
+    found = plan(root)
+    check(root, found)
     done = Plan()
     number = 0
-    last = None
-    while True:
-        started = journal_of(root)
-        found = plan(root)
-        check(root, found)
-        if not old_left(root) and marker_of(root) == FOLDER_SCHEMA and not (root / V3_LAYOUT.pipelines / OLD_MARK).exists():
-            break
-        listing = _listing(root)
-        if last is not None and listing == last:
-            raise MoveError(
-                f"The move of the store at {root} can do no more, and this is left at its top: {', '.join(listing[:5])}"
-                f"{' and more' if len(listing) > 5 else ''}. Something there is in use, or keeps arriving: see that "
-                f"nothing else uses the store, and run `chartbook store migrate` again."
-            )
-        first, last = last is None, listing
-        # What the whole move comes to is carried in the journal's first line, from one pass and one run to the next
+    if found.steps:
+        # What the whole move comes to is carried in the journal's first line, from one run to the next: a plan of a
+        # move under way counts what is done with what is left, as the first did, and the larger is the whole
         carried = (started or {}).get("so_far") or {}
-        # A plan of a move already under way counts what is done with what is left, as the journal's first line did: the
-        # larger is the whole. A later pass of one run moves only what arrived since, and adds
-        again = started is not None and first
-        so_far = {key: max(carried.get(key, 0), getattr(found, key)) if again else carried.get(key, 0) + getattr(found, key) for key in _COUNTS}
-        so_far["set_aside"] = list(carried.get("set_aside", [])) + [list(pair) for pair in found.set_aside if list(pair) not in carried.get("set_aside", [])]
-        so_far["copied_as_is"] = list(carried.get("copied_as_is", []))
+        so_far = {key: max(carried.get(key, 0), getattr(found, key)) for key in _COUNTS}
+        for key in ("set_aside", "late", "copied_as_is"):
+            so_far[key] = list(carried.get(key, [])) + [item for item in map(_plain, getattr(found, key)) if item not in carried.get(key, [])]
+        so_far["kept"] = carried.get("kept", "")
         header = {
             "schema": JOURNAL_SCHEMA, "machine": this_machine(), "so_far": so_far,
             "started": (started or {}).get("started") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
         _write_journal(journal, header, found.steps)
         for step in found.steps:
-            if _do(root, step) == "as it is":
-                header["so_far"]["copied_as_is"].append(step.target)
+            if step.op == "aside" and step.source == V2_LAYOUT.pipelines:
+                # Once more, just before the old folder goes aside: a file that arrived since its step is put in its place,
+                # and a record that arrived is named with what goes aside
+                for earlier in found.steps:
+                    if earlier.op in ("rename", "copy"):
+                        _do(root, earlier)
+                known = {(p.parent.parent.parent.name, p.parent.parent.name) for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR) for p in (root / tree).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")}
+                for record in sorted((root / V2_LAYOUT.pipelines).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")):
+                    pair = [record.parent.parent.parent.name, record.parent.parent.name]
+                    if tuple(pair) not in known and pair not in so_far["set_aside"]:
+                        so_far["set_aside"].append(pair)
+            said = _do(root, step)
+            if said == "as it is":
+                so_far["copied_as_is"].append(step.target)
+            elif said:
+                so_far["kept"] = said
+            if said:
                 _write_journal(journal, header, found.steps)
             number += 1
             after_step(number)
-        if not old_left(root):
-            break
     # The marker last, and the journal after it
     marker = root / "store.json"
     if marker_of(root) != FOLDER_SCHEMA:
@@ -644,7 +595,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     for key in _COUNTS:
         setattr(done, key, so_far.get(key, 0))
     done.set_aside = [tuple(pair) for pair in so_far.get("set_aside", [])]
-    done.copied_as_is = list(so_far.get("copied_as_is", []))
+    done.late, done.copied_as_is, done.kept = list(so_far.get("late", [])), list(so_far.get("copied_as_is", [])), so_far.get("kept", "")
     # And what the store holds now, from its folders
     for tree, increment in ((V3_LAYOUT.pipelines, False), (INCREMENTS_DIR, True)):
         for record in sorted((root / tree).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")):
@@ -655,6 +606,10 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
             done.by_pins += 1 if kept.readable and kept.made_by == "pin" else 0
     done.pipelines = len({p.name for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR) for p in (root / tree).glob("*") if any(p.glob(f"*/{OWN_DIR}/{RECORD_FILE}"))})
     return done
+
+
+def _plain(item):
+    return list(item) if isinstance(item, tuple) else item
 
 
 def _write_journal(journal: Path, header: dict, steps: list) -> None:
@@ -671,34 +626,36 @@ def _write_journal(journal: Path, header: dict, steps: list) -> None:
 
 
 def _free_name(target: Path) -> Path:
-    """A place beside *target* that is not taken: ``name (2)``, ``name (3)``."""
-    number = 2
-    while os.path.lexists(target.with_name(f"{target.name} ({number})")):
+    """*target*, or a place beside it that is not taken: ``name (2)``, ``name (3)``."""
+    number, free = 2, target
+    while os.path.lexists(free):
+        free = target.with_name(f"{target.name} ({number})")
         number += 1
-    return target.with_name(f"{target.name} ({number})")
+    return free
 
 
-def _writable(path: Path) -> None:
-    if not path.is_symlink():
-        os.chmod(path, 0o644)
+def _own_temporary(path: Path) -> Path:
+    """The temporary name a file of ChartBook's own is written under; one left by a move that was cut short is ChartBook's to remove."""
+    temporary = path.with_name(path.name + ".moving")
+    if os.path.lexists(temporary):
+        os.chmod(temporary, 0o644)
+        temporary.unlink()
+    return temporary
 
 
 def _do(root: Path, step: Step) -> Optional[str]:
-    """Do one step, or find it done. ``"as it is"`` for a copy whose bytes are not what its record says."""
+    """Do one step, or find it done. ``"as it is"`` for a copy whose bytes are not what its record says; for the old folder put aside, where it is kept."""
     source, target = root / step.source, root / step.target
-    if step.op in ("rename", "aside"):
-        if not os.path.lexists(source):
-            return None  # done before the move was cut short; or a file that was never there
-        if os.path.lexists(target):
-            if left_by_a_desktop(source.name):
-                _writable(source)
-                source.unlink()  # a desktop's own file, in the way
-                return None
-            if step.op == "rename":
-                return None  # its place is taken by the file this move put there: what is left here is moved aside later
+    if step.op == "rename":
+        if os.path.lexists(source) and not os.path.lexists(target):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(source, target)
+    elif step.op == "aside":
+        if os.path.lexists(source):
             target = _free_name(target)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        os.replace(source, target)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(source, target)
+            return target.relative_to(root).as_posix() if step.source == V2_LAYOUT.pipelines else None
     elif step.op == "movedir":
         if not source.is_dir():
             return None
@@ -706,26 +663,18 @@ def _do(root: Path, step: Step) -> Optional[str]:
             target.parent.mkdir(parents=True, exist_ok=True)
             os.replace(source, target)
             return None
-        for child in sorted(source.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        for child in sorted((p for p in source.rglob("*") if not p.is_dir() or p.is_symlink()), key=lambda p: len(p.parts), reverse=True):
             there = target / child.relative_to(source)
-            if child.is_dir() and not child.is_symlink():
-                continue
-            if not os.path.lexists(there):
+            if not os.path.lexists(there) or (there.is_file() and child.is_file() and there.stat().st_mtime < child.stat().st_mtime):
                 there.parent.mkdir(parents=True, exist_ok=True)
-                os.replace(child, there)
-            elif left_by_a_desktop(child.name) or (there.is_file() and there.stat().st_mtime >= child.stat().st_mtime):
-                _writable(child)
-                child.unlink()  # a desktop's file; or a note the store has a later one of
-            else:
-                os.replace(child, there)  # a note written since: the later one is the lockfile's
-        for child in sorted((p for p in source.rglob("*") if p.is_dir() and not p.is_symlink()), key=lambda p: len(p.parts), reverse=True):
-            child.rmdir()
-        source.rmdir()
+                os.replace(child, there)  # not there yet; or a note written since, and the later one is the lockfile's
+        # What is left of it (a note the store has a later one of, a folder emptied) goes aside, whole
+        os.replace(source, _free_name(root / LEFT_ASIDE / step.source))
     elif step.op == "copy":
         if os.path.lexists(target) or not source.is_file():
             return None  # done; or the file was never there, and its record goes on naming it
         target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_name(target.name + ".moving")
+        temporary = _own_temporary(target)
         hashed = hashlib.sha256()
         with open(source, "rb") as read, open(temporary, "wb") as write:
             for block in iter(lambda: read.read(1 << 20), b""):
@@ -738,26 +687,13 @@ def _do(root: Path, step: Step) -> Optional[str]:
         if step.content_hash and f"sha256:{hashed.hexdigest()}" != step.content_hash:
             return "as it is"  # it was wrong before: two copies of it are no worse, and the last lines name it
     elif step.op in ("write", "note"):
-        if step.op == "note" and target.is_file() and _text(target) not in OURS:
+        if step.op == "note" and target.is_file() and _text(target) not in (STORE_README, V3_LAYOUT.readme, INCREMENTS_README):
             return None  # a note a person wrote stays
         target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_name(target.name + ".moving")
-        if target.is_file():
-            _writable(target)
+        temporary = _own_temporary(target)
         temporary.write_text(step.text, encoding="utf-8", newline="\n")
         os.replace(temporary, target)
-    elif step.op == "remove":
-        if os.path.lexists(source):
-            _writable(source)
-            source.unlink()
-    elif step.op == "rmdir":
+    elif step.op == "unmark":
         if source.is_dir() and not source.is_symlink():
-            for child in list(source.iterdir()):
-                if child.is_file() and left_by_a_desktop(child.name) and step.source.split("/")[0] in OLD_TOP + (V3_LAYOUT.pipelines,):
-                    _writable(child)
-                    child.unlink()  # a desktop left it since the plan: in the way
-            try:
-                source.rmdir()
-            except OSError:
-                pass  # something arrived in it since the plan: the next look moves it
+            shutil.rmtree(source)  # ChartBook's own mark, which the move from 0.2 left
     return None

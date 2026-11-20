@@ -4325,18 +4325,19 @@ def _say_how_long_paths_are(folder) -> None:
 def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
     """`chartbook store migrate` for a store that ChartBook 0.5 laid out, for one whose move was cut short, and for a moved one with what 0.5 keeps at its top: say what would happen, ask, move, and say what the whole move came to."""
     from chartbook import migrate_0_5
-    from chartbook.store import FOLDER_SCHEMA, StoreError
+    from chartbook.store import FOLDER_SCHEMA, StoreError, this_machine
 
     def counts(found, verb: str) -> list:
         are = "are" if verb == "become" else "were"
+        aside = f"{migrate_0_5.LEFT_ASIDE}/"
         lines = [
             f"  {found.complete} snapshot(s) {verb} complete ({found.by_pins} of them made by a pin), {found.increments} "
             f"{verb} increments on the newest of their pipeline.",
             f"  {found.renamed} file(s), {_format_bytes(found.renamed_bytes)}, {are} moved inside the store by rename: "
             f"nothing is copied or uploaded again for these.",
             f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {are} copied: each is in two folders that must each hold it.",
-            f"  {found.folders_gone} folder(s) that are no snapshot any more go; {found.aside} file(s) that no record names "
-            f"are moved aside, under {migrate_0_5.LEFT_ASIDE}/.",
+            f"  What is left of pipelines/ {'goes' if verb == 'become' else 'went'} aside whole, under {aside}: its old records and "
+            f"notes, and {found.aside} file(s) that no record names. Nothing is removed.",
         ]
         if found.missing:
             first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.missing[:3])
@@ -4347,9 +4348,14 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         if found.set_aside:
             named = ", ".join(f"{pipeline}/{snapshot}" for pipeline, snapshot in found.set_aside[:3])
             lines.append(
-                f"  {len(found.set_aside)} snapshot(s) {are} set aside whole, under {migrate_0_5.LEFT_ASIDE}/, since a file of "
-                f"each is found nowhere: {named}{' and more' if len(found.set_aside) > 3 else ''}. Run those pipelines again "
-                f"with this ChartBook."
+                f"  {len(found.set_aside)} snapshot(s) {'go' if verb == 'become' else 'went'} aside without being moved in: {named}"
+                f"{' and more' if len(found.set_aside) > 3 else ''}. Run that pipeline again with this ChartBook."
+            )
+        if found.late:
+            lines.append(
+                f"  {len(found.late)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
+                f"aside: {', '.join(found.late[:3])}{' and more' if len(found.late) > 3 else ''}. `chartbook store verify` "
+                f"names the snapshot that lacks each."
             )
         if found.copied_as_is:
             lines.append(
@@ -4366,23 +4372,31 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         found = migrate_0_5.plan(root)
         migrate_0_5.check(root, found)
         moved = migrate_0_5.marker_of(root) == FOLDER_SCHEMA
-        half = started is not None or (not moved and any(True for tree in ("snapshots", "increments") for path in (root / tree).glob("*/*") if path.parent.name != migrate_0_5.OLD_MARK))
-        if moved and started is None:
+        # The question is skipped only where this machine's own journal says a move is under way
+        mine = started is not None and started.get("machine") == this_machine(create=False)
+        if mine:
+            click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
+        elif moved:
             click.echo(
                 f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
-                f"({', '.join(name + '/' for name in migrate_0_5.old_left(root))}): it is moved in."
+                f"({', '.join(name + '/' for name in migrate_0_5.old_left(root))}). Its notes are moved under _chartbook/, and "
+                f"pipelines/ goes aside whole: nothing under it is moved in."
             )
-        elif half:
-            click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
+        elif migrate_0_5.new_there(root):
+            click.echo(
+                f"The store at {the_store} has the layout of ChartBook 0.5, and folders of this version's beside it: it "
+                f"looks half moved, and the move goes on from the folders as they are. {found.pipelines} pipeline(s), "
+                f"{found.snapshots} snapshot(s)."
+            )
         else:
             click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: {found.pipelines} pipeline(s), {found.snapshots} snapshot(s).")
-        if not half:
-            for line in counts(found, "become"):
+        if not mine:
+            for line in counts(found, "become")[0 if not moved else 3:]:
                 click.echo(line)
         if dry_run:
             click.echo("Nothing was moved.")
             return
-        if not half:
+        if not mine:
             click.echo("Nothing else may use the store while this runs, on this machine or another.")
             click.echo("Afterwards every machine that uses it needs this ChartBook: an earlier one will not read it.")
             click.echo(synced)
@@ -4403,8 +4417,10 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         )
         raise SystemExit(1)
     click.echo(f"The store at {the_store} has this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
-    for line in counts(done, "became"):
+    for line in counts(done, "became")[0 if not moved else 3:]:
         click.echo(line)
+    if done.kept:
+        click.echo(f"The old folder, with its records, is kept at {done.kept}: it may be removed once the move has been checked.")
     click.echo(synced)
 
 
