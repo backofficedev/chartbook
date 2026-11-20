@@ -1,4 +1,4 @@
-"""The store: where the snapshots of pipelines are kept, each file once.
+"""The store: where the snapshots of pipelines are kept, each complete in its own folder.
 
 A pipeline's data is read by other pipelines from the store, never from
 its folder. What a pipeline has built is put there by ``chartbook
@@ -6,33 +6,45 @@ snapshot``, and what a pin takes from another repository by ``chartbook
 pin``. The store's layout is made to be read by a person as well::
 
     ~/.chartbook/store/
-      store.json                                which layout this is
-      pipelines/
+      snapshots/
         ftsfr+fed_yield_curve/                  one folder per pipeline (pipeline_folder)
           2026-10-12T091500Z_4f2a91c0e1b2/      a snapshot: when it was made _ its commit
             _data/treasury_rates.parquet        the pipeline's files, in their own places
             _chartbook/snapshot.json            the record, and the dictionary of every file
-          2026-10-26T182205Z_9b1e22d7a0c4/      a later one: only what is new or changed
-        +unowned/7f3a9c…/rates.parquet          an object no pipeline owns
-      origins/                                  the folders snapshots were made from
-      roots/                                    the lockfiles that pin what is here
-      tmp/                                      what is being written
+          2026-10-26T182205Z_9b1e22d7a0c4/      a later one: every file of it again
+      _chartbook/                               ChartBook's own notes; nothing here is for a person
+        roots/                                  the lockfiles that pin what is here
+        origins/                                the folders snapshots were made from
+        tmp/                                    what is being written
+        unowned/7f3a9c…/rates.parquet           an object no pipeline owns
+      store.json                                which layout this is
+      README.txt                                what the folder is, for whoever opens it
 
-**Each file is kept once in its pipeline's folder**, usually in the first
-snapshot that had it. A snapshot's folder may hold only what is new or changed,
-and its record says, for every file of every asset, its hash, its size and
-the snapshot that keeps it (``kept_in``). The record is written last, so
-a folder without one is never taken for a snapshot, and nothing in the
-store is moved or rewritten once written: only ``store gc`` removes. That
-is what makes a store in a synced folder, a bucket, and a pipeline's folder
-copied by hand into another store safe. The design is
-``docs_src/design/plan-0.3.0.md``.
+**Every snapshot is complete.** Its folder holds every file of every
+asset, of its documents and of its index, each at its own path, so it can
+be read, copied and sent as it is. Its record says, for every file, its
+hash, its size and the folder that keeps it (``kept_in``), which is the
+snapshot's own. The record is written last, so a folder without one is
+never taken for a snapshot, and nothing in the store is moved or rewritten
+once written: only ``store gc`` removes. That is what makes a store in a
+synced folder, and a pipeline's folder copied by hand into another store,
+safe. The design is ``docs_src/design/snapshots-and-increments.md``.
+
+**A store of ChartBook 0.5** (:data:`V2_LAYOUT`: ``pipelines/``,
+``roots/``, ``origins/`` and ``tmp/`` at the top) kept each file once in
+its pipeline's folder: a later snapshot's folder held only what was new,
+and its record named the earlier folder that keeps each other file. Such
+a store is read as it is, and the notes of lockfiles are written where it
+keeps them. Nothing else is written to it or removed from it
+(:class:`EarlierLayoutError`) until ``chartbook store migrate`` has moved
+it. A bucket (:mod:`chartbook.stores.s3`) has that layout still.
 
 An asset is still named by its content hash (:mod:`chartbook.hashing`):
 one file's, or the hash of the listing of its files. A reader asks for it
 by that hash (:meth:`Store.files`) and is handed its files, each by its
 path inside the asset (``year=2024/part-0.parquet``) and where the store
-keeps it, which may be another snapshot's folder.
+keeps it, which in a store of 0.5 or a bucket may be another snapshot's
+folder.
 Readers take the list: polars and DuckDB read a list of files, Hive keys
 included. Nothing gathers a version into one folder on each machine; the
 one folder a version is laid out in is one a command was asked for
@@ -61,8 +73,8 @@ btrfs, XFS), else a copy, so nothing outside the store can change it.
 :meth:`Store.verify` hashes every file again and reports each that is no
 longer what its record says.
 
-Pinning leaves a note of each lockfile under ``roots/`` so that clearing
-the store out never removes another project's pins.
+Pinning leaves a note of each lockfile under ``_chartbook/roots/`` so that
+clearing the store out never removes another project's pins.
 
 **A store in a synced folder.** A folder that a sync service (Google
 Drive, Dropbox, OneDrive) keeps in step between machines is a store they
@@ -110,49 +122,59 @@ LINKS = ("reflink", "hardlink", "symlink", "copy")
 #: outside the store can change.
 FROZEN_LINKS = frozenset({"reflink", "copy"})
 
-#: The version of the store's layout on disk.
+#: The layout of a store of ChartBook 0.3 to 0.5 (:data:`V2_LAYOUT`): what a
+#: bucket has still (:mod:`chartbook.stores.s3`), what ``chartbook store
+#: migrate`` moves a store of 0.2 to, and what a folder store is read in and
+#: not written (:class:`EarlierLayoutError`).
 SCHEMA = "chartbook/store/v2"
 
+#: The layout of a folder store this ChartBook makes and writes (:data:`V3_LAYOUT`).
+FOLDER_SCHEMA = "chartbook/store/v3"
+
 #: The layout of a store made by ChartBook 0.2: objects named by their hash,
-#: records by their commit. ``chartbook store migrate`` moves one to this.
+#: records by their commit. ``chartbook store migrate`` moves one to that of 0.5.
 V1_SCHEMA = "chartbook/store/v1"
 
 #: The file at the store's root that says which layout it has.
 MARKER_FILE = "store.json"
 
-#: Where the pipelines are, under the root: one folder each (:func:`pipeline_folder`).
+#: Where the pipelines are, under the root, in the layout of 0.5: one folder each (:func:`pipeline_folder`).
 PIPELINES_DIR = "pipelines"
 
-#: The folder, among the pipelines', of objects no pipeline owns: one put
-#: with no snapshot to put it in, or one ``store migrate`` found no owner
-#: for. No ID has a ``+`` of its own, so no pipeline's folder has this name.
+#: The folder, among the pipelines' in the layout of 0.5, of objects no
+#: pipeline owns: one put with no snapshot to put it in, or one ``store
+#: migrate`` found no owner for. No ID has a ``+`` of its own, so no
+#: pipeline's folder has this name.
 UNOWNED_DIR = "+unowned"
 
-#: The one name in a snapshot's folder that is ChartBook's own.
+#: The one name in a snapshot's folder that is ChartBook's own; and, at the
+#: top of a store of this layout, the folder of ChartBook's own notes.
 OWN_DIR = "_chartbook"
 
 #: A snapshot's record, its dictionary, in its folder's ``_chartbook/``.
 RECORD_FILE = "snapshot.json"
 
-#: What a snapshot's ``_chartbook/`` holds once ``store gc`` has cleared it
-#: and files later snapshots use are left in its folder.
+#: What a snapshot's ``_chartbook/`` holds once ``store gc`` has cleared its
+#: record, until its folder is gone. In a store of 0.5 the folder stays while
+#: later snapshots use files in it. In this layout nothing does: one is there
+#: only where a removal was cut short, until the next ``store gc``.
 CLEARED_FILE = "CLEARED.txt"
 
 #: Where a table or a query written out as parquet is, in a snapshot's folder.
 TABLES_DIR = "_chartbook/tables"
 
-#: Where the store notes the folders each pipeline's snapshots were made from.
+#: Where the store notes the folders each pipeline's snapshots were made from, in the layout of 0.5.
 ORIGINS_DIR = "origins"
 
 #: Where a file is written before it is moved into place, and where a
-#: snapshot being made notes the files of earlier ones it uses.
+#: snapshot being made notes the files of earlier ones it uses, in the layout of 0.5.
 TMP_DIR = "tmp"
 
-#: The journal of ``chartbook store migrate``, under :data:`TMP_DIR`: while it is there, the move has not finished.
+#: The journal of ``chartbook store migrate``, where the store keeps what is being written: while it is there, the move has not finished.
 MIGRATE_JOURNAL = "migrate.jsonl"
 
 #: Where the store remembers which lockfiles name its objects, so that
-#: removing what nothing needs never removes another project's pins.
+#: removing what nothing needs never removes another project's pins, in the layout of 0.5.
 ROOTS_DIR = "roots"
 
 #: Where ChartBook 0.4 gathered, in this machine's cache, assets whose files
@@ -163,11 +185,34 @@ OLD_VIEWS_DIR = "views"
 #: The marker ``chartbook.cli`` leaves in the cache once the folder above has been removed.
 OLD_VIEWS_REMOVED = ".views-removed"
 
-#: The note left in each pipeline's folder of a folder store, for a person who finds the folder: what a
-#: snapshot's folder holds, and that ``store gc`` is how to remove snapshots. Written once, never rewritten.
+#: The note left at the top of a folder store when it is made, and in each pipeline's folder, for a person
+#: who finds the folder: what it holds, and that ``store gc`` is how to remove snapshots. Written once, never rewritten.
 README_FILE = "README.txt"
 
-README_TEXT = """This folder holds the snapshots of one pipeline, kept by ChartBook.
+#: What the note at the top of a store says.
+STORE_README = """This folder is a ChartBook store: the snapshots of pipelines, kept for other pipelines to read.
+
+snapshots/   One folder for each pipeline, and in it one folder for each snapshot, named by when
+             it was made and the commit it was made at. Each snapshot's folder is complete: it
+             holds every file of that version, and can be read or copied as it is.
+_chartbook/  ChartBook's own notes. Nothing in it is for a person.
+store.json   Which layout this is, for ChartBook.
+
+Remove a snapshot with `chartbook store gc`, not by hand.
+"""
+
+#: What the note in a pipeline's folder says.
+PIPELINE_README = """This folder holds the snapshots of one pipeline, kept by ChartBook.
+
+Each folder here is one complete snapshot, named by when it was made and the commit it was made
+at. It holds every file of that version in its own place, and _chartbook/snapshot.json, the
+record that lists each file with its hash. A snapshot's folder can be read or copied as it is.
+
+Remove one with `chartbook store gc`, not by hand: gc keeps what a lockfile pins.
+"""
+
+#: What the note in a pipeline's folder says in a store of ChartBook 0.5, which ``store migrate`` still writes from a store of 0.2.
+PIPELINE_README_OF_0_5 = """This folder holds the snapshots of one pipeline, kept by ChartBook.
 
 Each snapshot is a folder named by when it was made and the commit it was made at, and a
 complete record of that version: _chartbook/snapshot.json lists every file of every asset,
@@ -185,16 +230,78 @@ standalone copy of the newest version wherever you say.
 """
 
 
-def write_readme(pipeline_path: Path) -> None:
-    """Leave :data:`README_FILE` in a pipeline's folder if there is none; nothing in the store is ever rewritten."""
-    note = pipeline_path / README_FILE
+def write_readme(folder: Path, text: str) -> None:
+    """Leave :data:`README_FILE` in a folder of the store if there is none; nothing in the store is ever rewritten."""
+    note = folder / README_FILE
     if note.exists() or os.path.lexists(note):
         return
     try:
         with open(note, "x", encoding="utf-8", newline="\n") as f:
-            f.write(README_TEXT)
+            f.write(text)
     except OSError:
         pass  # a store read-only for this user, or a race with another writer: the note is a courtesy
+
+
+@dataclass(frozen=True)
+class Layout:
+    """Where a folder store keeps each thing under its root, and whether this ChartBook writes a store laid out so.
+
+    Attributes:
+        schema: What ``store.json`` says of it.
+        pipelines: The folder of the pipelines' folders, one each
+            (:func:`pipeline_folder`), a snapshot's folder for each snapshot in it.
+        unowned: The folder of the objects no pipeline owns, each a folder named by its hash.
+        roots: Where the notes of the lockfiles that pin what is here are.
+        origins: Where the notes of the folders snapshots were made from are.
+        tmp: Where a file is written before it is moved into place, and
+            where a snapshot being made keeps its note.
+        writes: Whether a snapshot is made in a store laid out so, an
+            object put in it, and anything removed from it. Its notes of
+            lockfiles are written either way.
+        readme: What the note in each pipeline's folder says.
+        cleared: What :data:`CLEARED_FILE` says, after the line that says when.
+    """
+
+    schema: str
+    pipelines: str
+    unowned: str
+    roots: str
+    origins: str
+    tmp: str
+    writes: bool
+    readme: str
+    cleared: str
+
+
+#: The layout of ChartBook 0.5: read as it is, and never written with data.
+V2_LAYOUT = Layout(
+    schema=SCHEMA,
+    pipelines=PIPELINES_DIR,
+    unowned=f"{PIPELINES_DIR}/{UNOWNED_DIR}",
+    roots=ROOTS_DIR,
+    origins=ORIGINS_DIR,
+    tmp=TMP_DIR,
+    writes=False,
+    readme=PIPELINE_README_OF_0_5,
+    cleared=(
+        "The files left in this folder are used by later snapshots of the same pipeline,\n"
+        "whose _chartbook/snapshot.json says so; the folder goes once none is.\n"
+    ),
+)
+
+#: The layout a folder store is made in: two names at the top for a person (``snapshots/`` and
+#: ``README.txt``), ``store.json``, and the rest under ``_chartbook/``.
+V3_LAYOUT = Layout(
+    schema=FOLDER_SCHEMA,
+    pipelines="snapshots",
+    unowned=f"{OWN_DIR}/unowned",
+    roots=f"{OWN_DIR}/roots",
+    origins=f"{OWN_DIR}/origins",
+    tmp=f"{OWN_DIR}/tmp",
+    writes=True,
+    readme=PIPELINE_README,
+    cleared="This folder is no snapshot any more. What is left of it goes with the next `chartbook store gc`.\n",
+)
 
 #: How long a note of a snapshot being made keeps the files it uses from
 #: ``store gc``, in seconds; a snapshot's folder with no record is left as
@@ -224,6 +331,26 @@ class ReadOnlyStoreError(StoreError):
     caller that can do without the write (the note a pin leaves for ``gc``)
     catches this and carries on; see :func:`chartbook.lock.is_read_only`.
     """
+
+
+class EarlierLayoutError(StoreError):
+    """Raised when a store laid out as ChartBook 0.5 laid one out is asked to take a snapshot or an object, or to let go of anything.
+
+    This ChartBook reads such a store as it is, and writes its notes of
+    lockfiles there. It makes no snapshot in it and removes nothing from
+    it: ``chartbook store migrate`` moves it first.
+
+    Attributes:
+        store: The store, as a message names it.
+    """
+
+    def __init__(self, store: object):
+        self.store = str(store)
+        super().__init__(
+            f"The store at {self.store} has the layout of ChartBook 0.5, which this ChartBook reads and does not "
+            f"write. `chartbook store migrate` moves it to this version's; an earlier ChartBook will not read it "
+            f"afterwards."
+        )
 
 
 class TidyError(StoreError):
@@ -801,8 +928,8 @@ def _read_note(note: Path) -> Optional[Root]:
         return None
 
 
-def _unreadable_note_remedy(name: str, error: Optional[Exception] = None) -> str:
-    """What to do about a file under ``roots/`` that cannot be read.
+def _unreadable_note_remedy(name: str, error: Optional[Exception] = None, folder: str = ROOTS_DIR) -> str:
+    """What to do about a file among the notes of lockfiles that cannot be read.
 
     A sync that has not finished is the likeliest cause when the file cannot
     be opened or is not JSON (a file can be there before its bytes), for a
@@ -810,23 +937,25 @@ def _unreadable_note_remedy(name: str, error: Optional[Exception] = None) -> str
     that is JSON of another shape is not one this version reads, and is said
     so. Nothing is removed from the store until it is read or gone, since it
     may be the only record of a machine's pins.
+
+    :param folder: Where the store keeps its notes, under its root.
     """
     if is_root_name(name) and error is not None and not isinstance(error, (OSError, json.JSONDecodeError)):
         return (
-            f" It is not a note this version of ChartBook reads: remove roots/{name}; the next `chartbook pin`, "
+            f" It is not a note this version of ChartBook reads: remove {folder}/{name}; the next `chartbook pin`, "
             f"`chartbook pin --update`, `chartbook run --frozen` or read through its lockfile writes it again. Nothing is removed "
             f"from the store until it is read or gone"
         )
     if is_root_name(name):
         return (
             f" A sync that has not finished is the likeliest cause (a file there before its bytes): run this "
-            f"again once it has finished. If it stays unreadable, remove roots/{name}; the next `chartbook pin`, "
+            f"again once it has finished. If it stays unreadable, remove {folder}/{name}; the next `chartbook pin`, "
             f"`chartbook pin --update`, `chartbook run --frozen` or read through its lockfile writes it again. Nothing is removed "
             f"from the store until it is read or gone"
         )
     return (
         f" It is not named as a note is: a sync service's copy of one, perhaps, half synced. Wait for the "
-        f"sync, or remove roots/{name} if it is a copy nobody needs; nothing is removed from the store "
+        f"sync, or remove {folder}/{name} if it is a copy nobody needs; nothing is removed from the store "
         f"until it is read or gone"
     )
 
@@ -1175,6 +1304,26 @@ class Store(abc.ABC):
         """Where the store keeps an asset's files, each as a name for it in the store and its size; empty for an object no pipeline owns."""
         return []
 
+    def files_left(self, content_hash: str, without: Iterable[Path] = ()) -> list[tuple[str, int]]:
+        """Where the store would keep an asset's files once the snapshots with the records *without* were removed, as :meth:`files_of` gives them.
+
+        For the plan of ``store gc`` in a store whose snapshots are each
+        complete: a file only the removed snapshots' records name goes with
+        their folders, though a snapshot that stays has the same bytes in
+        its own. A store that cannot tell says what :meth:`files_of` says,
+        as if every file stayed where a record names it.
+        """
+        return self.files_of(content_hash)
+
+    def check_writable(self) -> None:
+        """Raise if this is a store this ChartBook reads and does not write with data; nothing otherwise.
+
+        Asked before a command that would write or remove does anything
+        else. The notes of lockfiles are not data, and are written either way.
+
+        :raises EarlierLayoutError: For a folder store laid out as ChartBook 0.5 laid one out.
+        """
+
     def listing(self, content_hash: str, single: bool) -> Optional[tuple[hashing.FileEntry, ...]]:
         """Each file of an asset, by its path in the asset, with its size and hash, as a snapshot's record gives them.
 
@@ -1229,17 +1378,19 @@ class Store(abc.ABC):
 class PendingSnapshot(abc.ABC):
     """A snapshot being written: its files go into its own folder, and its record last.
 
-    Got from :meth:`Store.begin`. Each :meth:`put` stores one asset, each
-    file kept once in its pipeline's folder: a file an earlier snapshot of
+    Got from :meth:`Store.begin`. Each :meth:`put` stores one asset, its
+    files at their paths in the pipeline. In a folder store every file of
+    the snapshot is in its own folder once it is written. A bucket keeps
+    each file once in its pipeline's folder: a file an earlier snapshot of
     the pipeline already keeps is used where it is, and only a new one is
-    copied, into this snapshot's folder at its path in the pipeline.
-    :meth:`write` writes the record, ``_chartbook/snapshot.json``, last, so
-    that a folder without one is never taken for a snapshot. :meth:`discard`
-    lets go of a snapshot that is not to be written.
+    copied. :meth:`write` writes the record, ``_chartbook/snapshot.json``,
+    last, so that a folder without one is never taken for a snapshot.
+    :meth:`discard` lets go of a snapshot that is not to be written.
     """
 
-    #: Whether a file has been written into this snapshot's own folder: a
-    #: snapshot that has is to be written, or its files are lost.
+    #: Whether the store lacked a file this snapshot was given, which was
+    #: then written into its own folder: a snapshot that has one is to be
+    #: written, or the file is lost again.
     placed: bool = False
 
     @abc.abstractmethod
@@ -1547,6 +1698,7 @@ class FolderStore(Store):
     def __init__(self, root: Union[str, Path]):
         self.root = Path(os.path.abspath(Path(root).expanduser()))
         self._layout_checked = False
+        self._layout: Optional[Layout] = None
         self._memo: Optional[tuple] = None
         self._reading = 0
 
@@ -1558,11 +1710,42 @@ class FolderStore(Store):
 
         return shown_store_url(str(self.root))  # a //host path may carry a password
 
+    # Where each thing is
+
+    def _places(self) -> Layout:
+        """The layout this store has on disk, which says where each thing in it is (:class:`Layout`).
+
+        What its ``store.json`` names. A folder with none is laid out as a
+        new store is made, unless it holds what a store of ChartBook 0.5
+        held (:func:`holds_v2`): then its ``store.json`` has not arrived,
+        and it is read as the store of 0.5 it is.
+
+        :raises StoreError: If the layout is one this version does not read,
+            as :meth:`_check_layout` says it.
+        """
+        self._check_layout()
+        if self._layout is not None:
+            return self._layout
+        # No store.json, so nothing is remembered: one may arrive, or the store be made, at any moment
+        return V2_LAYOUT if holds_v2(self.root) else V3_LAYOUT
+
+    def check_writable(self) -> None:
+        """Refuse to write data to, or remove anything from, a store laid out as ChartBook 0.5 laid one out.
+
+        :raises EarlierLayoutError: Saying so, and which command moves it.
+        """
+        if not self._places().writes:
+            raise EarlierLayoutError(self)
+
+    def roots_path(self) -> Path:
+        """The folder of the store's notes of lockfiles."""
+        return self.root / self._places().roots
+
     # The pipelines and their snapshots
 
     def pipeline_path(self, pipeline: str) -> Path:
         """The folder of one pipeline's snapshots."""
-        return self.root / PIPELINES_DIR / pipeline_folder(pipeline)
+        return self.root / self._places().pipelines / pipeline_folder(pipeline)
 
     def records(self) -> list[KeptRecord]:
         """Every snapshot's record in the store, made by an owner or by a pin, oldest folder first in each pipeline.
@@ -1575,7 +1758,7 @@ class FolderStore(Store):
         self._check_layout()
         if self._memo is not None and self._reading:
             return list(self._memo[1])
-        pipelines = self.root / PIPELINES_DIR
+        pipelines = self.root / self._places().pipelines
         try:
             folders = sorted(os.listdir(pipelines))
         except (FileNotFoundError, NotADirectoryError):
@@ -1652,12 +1835,12 @@ class FolderStore(Store):
         return held
 
     def unowned_path(self, content_hash: str) -> Path:
-        """Where an object no pipeline owns is, or would be: ``pipelines/+unowned/<hex>``.
+        """Where an object no pipeline owns is, or would be: ``_chartbook/unowned/<hex>`` (``pipelines/+unowned/<hex>`` in a store of 0.5).
 
         :raises ValueError: If *content_hash* is not a content hash.
         """
         _, digest = _split_hash(content_hash)
-        return self.root / PIPELINES_DIR / UNOWNED_DIR / digest
+        return self.root / self._places().unowned / digest
 
     def object_path(self, content_hash: str) -> Path:
         """Where an object no pipeline owns is, or would be (:meth:`unowned_path`)."""
@@ -1693,25 +1876,34 @@ class FolderStore(Store):
         self, pipeline: str, commit: str, made_at: str, base: Optional[Union[str, Path]] = None, made_by: str = "snapshot"
     ) -> "PendingSnapshot":
         self._check_layout(create=True)
+        self.check_writable()
         self._forget()
         return _FolderPending(self, pipeline, commit, made_at, base, made_by)
 
     def remove_snapshot(self, path: Path) -> bool:
-        """Clear one snapshot: its record goes, and ``_chartbook/CLEARED.txt`` says so.
+        """Clear one snapshot: its record goes, and ``_chartbook/CLEARED.txt`` says so until its folder has gone.
 
-        Its files go with :meth:`tidy`, but those a later snapshot uses,
-        which stay where they are in this one's folder, so no other record
-        goes out of date; the folder goes once nothing in it is used.
+        Its files go with the :meth:`tidy` that follows, as ``store gc``
+        and ``store move`` call it: every file of its folder that no other
+        snapshot's record names, which is all of them where each snapshot
+        is complete, and the folder with them. A folder left with
+        ``CLEARED.txt`` in it is one whose removal was cut short, or one a
+        snapshot being made is copying a file from; the next :meth:`tidy`
+        takes it.
 
+        :raises EarlierLayoutError: In a store laid out as ChartBook 0.5
+            laid one out, from which nothing is removed.
         :raises StoreError: If it could not be removed, naming it and what
             to do (see :meth:`delete`).
         """
+        self.check_writable()
         path = Path(path)
         if not path.is_file():
             return False
         folder = path.parent.parent
         self._forget()
-        pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
+        places = self._places()
+        pipelines = Path(os.path.realpath(self.root / places.pipelines))
         if folder.is_symlink() or folder.parent.is_symlink() or not Path(os.path.realpath(path)).is_relative_to(pipelines):
             raise StoreError(
                 f"The snapshot record {self._shown(path)} is in a folder that is a link to another place: it is not "
@@ -1729,8 +1921,7 @@ class FolderStore(Store):
         try:
             (path.parent / CLEARED_FILE).write_text(
                 f"Cleared by `chartbook store gc` on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC.\n"
-                f"The files left in this folder are used by later snapshots of the same pipeline,\n"
-                f"whose _chartbook/snapshot.json says so; the folder goes once none is.\n",
+                f"{places.cleared}",
                 encoding="utf-8",
                 newline="\n",
             )
@@ -1753,7 +1944,7 @@ class FolderStore(Store):
         """What the notes of snapshots being made keep, while each is younger than :data:`PENDING_SECONDS`: their own folders, and the files of earlier ones they use."""
         folders: set = set()
         files: set = set()
-        tmp = self.root / TMP_DIR
+        tmp = self.root / self._places().tmp
         now = time.time()
         for note in tmp.glob("*" + PENDING_SUFFIX) if tmp.is_dir() else ():
             try:
@@ -1803,7 +1994,10 @@ class FolderStore(Store):
         :param dry_run: Say what would be removed, and remove nothing.
         :returns: What was removed (or would be), each with its size; and what
             could not be, each with why.
+        :raises EarlierLayoutError: In a store laid out as ChartBook 0.5
+            laid one out, from which nothing is removed.
         """
+        self.check_writable()
         if pipeline_path.is_symlink():
             return [], []  # another place's snapshots, shared by a link: cleared there
         # The notes first, then the records as they are now: a snapshot that is written between the
@@ -1941,7 +2135,7 @@ class FolderStore(Store):
         """Where the store notes the repository folders a pipeline's snapshots at a commit were made from."""
         if not _FULL_COMMIT.match(commit):
             raise ValueError(f"{commit!r} is not a full commit hash.")
-        return self.root / ORIGINS_DIR / commit / f"{name}.txt"
+        return self.root / self._places().origins / commit / f"{name}.txt"
 
     # Assets, by their hash
 
@@ -1966,9 +2160,9 @@ class FolderStore(Store):
     def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> KeptFiles:
         """The asset with this hash as its files, each where the store keeps it (:meth:`Store.files`).
 
-        A file of a later snapshot that an earlier one keeps is read in the
-        earlier one's folder: nothing is copied or gathered. They are there
-        to be read, not written.
+        In a store of 0.5, a file of a later snapshot that an earlier one
+        keeps is read in the earlier one's folder: nothing is copied or
+        gathered. They are there to be read, not written.
 
         :param pipeline: The pipeline the asset is of, whose snapshots are
             looked in first.
@@ -1991,12 +2185,13 @@ class FolderStore(Store):
                 for asset in held
             ]
         missing = None
-        pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
+        places = self._places()
+        pipelines = Path(os.path.realpath(self.root / places.pipelines))
         checked: dict = {}
         for asset in held:
             # A link first, there or not: what it leads to is never read, nor taken for a sync to wait for
             for file in asset.files:
-                if _is_or_under_a_link(file.location, self.root / PIPELINES_DIR, checked) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
+                if _is_or_under_a_link(file.location, self.root / places.pipelines, checked) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
                     raise StoreError(
                         f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of the "
                         f"store, or is under a link; it is not read. `chartbook store verify` checks a store."
@@ -2016,7 +2211,7 @@ class FolderStore(Store):
         path = self.unowned_path(content_hash)
         if not path.is_dir():
             raise ObjectNotFoundError(f"The store at {self} has no object {content_hash}.")
-        unowned = Path(os.path.realpath(self.root / PIPELINES_DIR / UNOWNED_DIR))
+        unowned = Path(os.path.realpath(self.root / places.unowned))
         if path.is_symlink() or not Path(os.path.realpath(path)).is_relative_to(unowned):
             raise StoreError(
                 f"The object {content_hash} in the store at {self} is a link, or leads out of "
@@ -2029,7 +2224,7 @@ class FolderStore(Store):
 
         What a snapshot holds is put by :meth:`begin` instead, into the
         pipeline's folder. An object put here is in
-        ``pipelines/+unowned/<hex>/``, its files under their own names, until
+        ``_chartbook/unowned/<hex>/``, its files under their own names, until
         ``store gc`` finds nothing names it.
 
         *path* is a file, a directory, or a glob, as in a manifest. It is
@@ -2048,6 +2243,8 @@ class FolderStore(Store):
             one that is the store's own.
         :returns: The stored object.
         :raises FileNotFoundError: If nothing is at *path*.
+        :raises EarlierLayoutError: In a store laid out as ChartBook 0.5
+            laid one out, into which no object is put.
         :raises StoreError: If no kind of link works, or the store's layout
             is one this version does not know.
         :raises ValueError: If *links* names an unknown kind.
@@ -2063,6 +2260,7 @@ class FolderStore(Store):
             raise FileNotFoundError(f"Nothing at {path} to put in the store.")
 
         self._check_layout(create=True)
+        self.check_writable()
         # The longest it could be, before anything is written: under its hash, its own names
         root_of_files = os.path.abspath(found.root)
         for file in found.files:
@@ -2070,7 +2268,7 @@ class FolderStore(Store):
             _check_length(self.unowned_path(hashing.format_hash("0" * 64)) / (
                 declared_name(relative) or relative if found.single else relative
             ))
-        staging = self.root / TMP_DIR / uuid.uuid4().hex[:12]
+        staging = self.root / self._places().tmp / uuid.uuid4().hex[:12]
         staging.mkdir(parents=True)
         try:
             used = set()
@@ -2125,15 +2323,19 @@ class FolderStore(Store):
             return None
 
     def _check_layout(self, create: bool = False) -> None:
-        """Check that the store on disk has the layout this class reads.
+        """Check that the store on disk has a layout this class reads, and remember which.
 
-        A store says which layout it has in :data:`MARKER_FILE`. One made by
-        another ChartBook, laid out differently, is refused instead of
-        being misread: one of 0.2 is moved to this layout by ``chartbook
-        store migrate``.
+        A store says which layout it has in :data:`MARKER_FILE`. One this
+        ChartBook made says :data:`FOLDER_SCHEMA`. One of ChartBook 0.5
+        (:data:`SCHEMA`) is read as it is, and :meth:`check_writable`
+        refuses the rest. One laid out otherwise is refused instead of
+        being misread: one of 0.2 is moved by ``chartbook store migrate``.
 
-        :param create: If True, a store that does not exist yet is made.
-        :raises StoreError: If the layout is not this one.
+        :param create: If True, a store that does not exist yet is made:
+            its ``store.json``, and the note for whoever opens the folder.
+        :raises StoreError: If the layout is not one this version reads; or,
+            with *create*, if the folder has no ``store.json`` and holds the
+            folders of an earlier layout, whose ``store.json`` may be on its way.
         """
         if self._layout_checked:
             return
@@ -2150,13 +2352,21 @@ class FolderStore(Store):
                     f"removed. Nothing is written to it. Wait for the sync; if store.json is gone, run `chartbook "
                     f"store migrate` once every machine that uses it has ChartBook 0.3."
                 )
+            if holds_v2(self.root):
+                raise StoreError(
+                    f"The store at {self} has no store.json, and holds the folders of a store of ChartBook 0.5 "
+                    f"({PIPELINES_DIR}/): its store.json has not arrived (a sync that has not finished), or was "
+                    f"removed. Nothing is written to it. Wait for the sync; if store.json is gone, write it again "
+                    f"as ChartBook 0.5 had it, a file holding {json.dumps({'schema': SCHEMA})}, and `chartbook "
+                    f"store migrate` then moves the store to this version's layout."
+                )
             # A store in too long a folder is said as such, where Windows would say only that the path is not there
             _check_length(marker)
             self.root.mkdir(parents=True, exist_ok=True)
             # Written whole or not at all, for another process reading it
             temporary = marker.with_name(f"{MARKER_FILE}.{uuid.uuid4().hex[:12]}.tmp")
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
-                json.dump({"schema": SCHEMA}, f)
+                json.dump({"schema": FOLDER_SCHEMA}, f)
                 f.write("\n")
             try:
                 replace_when_let(temporary, marker)
@@ -2170,7 +2380,8 @@ class FolderStore(Store):
                 if not marker.is_file():
                     raise
                 return self._check_layout()
-            self._layout_checked = True
+            self._layout, self._layout_checked = V3_LAYOUT, True
+            write_readme(self.root, STORE_README)  # once, when the store is made
             return
         except (OSError, ValueError, AttributeError) as error:
             raise StoreError(f"Cannot read {self._shown(marker)}: {unreadable_detail(marker, error)}") from None
@@ -2180,13 +2391,14 @@ class FolderStore(Store):
                 f"{SCHEMA!r}. Once every machine that uses this store has ChartBook 0.3, run `chartbook store "
                 f"migrate` on one of them; until then, use ChartBook 0.2 with it."
             )
-        if schema != SCHEMA:
+        layout = {V2_LAYOUT.schema: V2_LAYOUT, V3_LAYOUT.schema: V3_LAYOUT}.get(schema) if isinstance(schema, str) else None
+        if layout is None:
             raise StoreError(
                 f"The store at {self} has the layout {schema!r}, and this "
-                f"version of ChartBook reads {SCHEMA!r}. Use a newer ChartBook, "
+                f"version of ChartBook reads {FOLDER_SCHEMA!r}. Use a newer ChartBook, "
                 f"or point CHARTBOOK_STORE at another directory."
             )
-        self._layout_checked = True
+        self._layout, self._layout_checked = layout, True
     @staticmethod
     def _move_into_place(
         staging: Path, final: Path, single: bool, frozen: bool = False
@@ -2315,7 +2527,7 @@ class FolderStore(Store):
     def _remove_old_note(self, lockfile: Union[str, Path]) -> bool:
         """Remove the note of a lockfile from before notes named their machine; True if there was one."""
         try:
-            (self.root / ROOTS_DIR / root_name(lockfile)).unlink()
+            (self.roots_path() / root_name(lockfile)).unlink()
         except FileNotFoundError:
             return False
         except OSError:
@@ -2344,12 +2556,12 @@ class FolderStore(Store):
 
     def _root_file(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Path:
         """Where the store notes one lockfile of a machine; this machine's by default."""
-        return self.root / ROOTS_DIR / root_name(lockfile, this_machine() if machine is None else machine)
+        return self.roots_path() / root_name(lockfile, this_machine() if machine is None else machine)
 
     def roots(self) -> list[Root]:
         """Every lockfile the store has a note of, on every machine, by path.
 
-        A sync service's copy of a note, a ``.json`` file in ``roots/`` under
+        A sync service's copy of a note, a ``.json`` file among the notes under
         another name than a note's, is read too (:attr:`Root.copy`): it may
         hold what the note held before the conflict, and a note only ever
         adds to what is kept.
@@ -2359,7 +2571,7 @@ class FolderStore(Store):
             cannot say what it is keeping.
         """
         self._check_layout()
-        directory = self.root / ROOTS_DIR
+        directory = self.roots_path()
         if not directory.is_dir():
             return []
         found = []
@@ -2369,7 +2581,8 @@ class FolderStore(Store):
                     found.append(read_root(json.load(f), note.name))
             except (OSError, ValueError, KeyError, TypeError) as error:
                 raise StoreError(
-                    f"Cannot read {self._shown(note)}: {unreadable_detail(note, error)}.{_unreadable_note_remedy(note.name, error)}"
+                    f"Cannot read {self._shown(note)}: {unreadable_detail(note, error)}."
+                    f"{_unreadable_note_remedy(note.name, error, self._places().roots)}"
                 ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
@@ -2490,12 +2703,15 @@ class FolderStore(Store):
         too goes with it.
 
         :returns: True if there was one to remove.
+        :raises EarlierLayoutError: In a store laid out as ChartBook 0.5
+            laid one out, from which nothing is removed.
         :raises StoreError: If it could not be removed, naming it and what
             to do: in a store users share, another user's object is in a
             folder of theirs this user may not write.
         """
+        self.check_writable()
         removed = False
-        pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
+        pipelines = Path(os.path.realpath(self.root / self._places().pipelines))
         for asset in self._held(content_hash):
             for file in asset.files:
                 if not os.path.lexists(file.location):
@@ -2530,6 +2746,7 @@ class FolderStore(Store):
 
     def delete_unowned(self, content_hash: str) -> bool:
         """Remove the object no pipeline owns with this hash, and nothing a snapshot's record names; True if there was one."""
+        self.check_writable()
         path = self.unowned_path(content_hash)
         if not path.is_dir() or path.is_symlink():
             return False
@@ -2555,8 +2772,15 @@ class FolderStore(Store):
         return {asset.content_hash for record in self.records() if record.readable for asset in record.assets}
 
     def files_of(self, content_hash: str) -> list[tuple[str, int]]:
+        return self.files_left(content_hash)
+
+    def files_left(self, content_hash: str, without: Iterable[Path] = ()) -> list[tuple[str, int]]:
+        """Where the records name an asset's files, but for the records *without* (:meth:`Store.files_left`): each snapshot's folder holds its own copy, which goes with it."""
+        gone = {str(path) for path in without}
         found: dict = {}
         for asset in self._held(content_hash):
+            if str(asset.record.path) in gone:
+                continue
             for file in asset.files:
                 found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
@@ -2571,14 +2795,18 @@ class FolderStore(Store):
         :param dry_run: Say what would be removed, and remove nothing.
         :param keep: Names in the store not to remove: what ``store gc``
             spares for being new.
+        :raises EarlierLayoutError: In a store laid out as ChartBook 0.5
+            laid one out, from which nothing is removed: a plan of what
+            would be is not made of one either.
         :raises TidyError: Once the rest is removed, if some of it could not
             be, naming each with what the system said and what to do.
         """
         self._check_migrated()
+        self.check_writable()
         if not dry_run:
             self._tidy_tmp()
         try:
-            names = sorted(os.listdir(self.root / PIPELINES_DIR))
+            names = sorted(os.listdir(self.root / self._places().pipelines))
         except (FileNotFoundError, NotADirectoryError):
             return []
         return self._tidy_folders(names, list(keep), dry_run)
@@ -2586,16 +2814,18 @@ class FolderStore(Store):
     def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from one pipeline's folder (:meth:`sweep`); what was removed, each with its size.
 
+        :raises EarlierLayoutError: As :meth:`tidy` does.
         :raises TidyError: As :meth:`tidy` does.
         """
         self._check_migrated()
+        self.check_writable()
         return self._tidy_folders([pipeline_folder(pipeline)], [], dry_run)
 
     def _tidy_folders(self, names: list[str], keep: list[str], dry_run: bool) -> list[tuple[str, int]]:
         """Sweep the pipelines' folders of these names; raise :class:`TidyError` once all are swept, if some of it could not be removed."""
         removed, failed = [], []
         for name in names:
-            folder = self.root / PIPELINES_DIR / name
+            folder = self.root / self._places().pipelines / name
             if name != UNOWNED_DIR and folder.is_dir() and not folder.is_symlink():
                 gone, stuck = self.sweep(folder, keep=keep, dry_run=dry_run)
                 removed += [(path.relative_to(self.root).as_posix(), size) for path, size in gone]
@@ -2611,7 +2841,11 @@ class FolderStore(Store):
         return removed
 
     def _check_migrated(self) -> None:
-        """Refuse to remove anything from a store a migrate has not finished moving: what it moved may have no record yet."""
+        """Refuse to remove anything from a store a migrate has not finished moving: what it moved may have no record yet.
+
+        The move from 0.2 keeps its journal where a store of 0.5 keeps what
+        is being written (:data:`TMP_DIR`), whatever ``store.json`` says meanwhile.
+        """
         if (self.root / TMP_DIR / MIGRATE_JOURNAL).exists() or holds_v1(self.root):
             raise StoreError(
                 f"The store at {self} has not finished moving to the layout of ChartBook 0.3: it holds the folders "
@@ -2621,8 +2855,8 @@ class FolderStore(Store):
             )
 
     def _tidy_tmp(self) -> None:
-        """Remove what a writer that died left under ``tmp/``: its notes, a file half written, a staging folder; two days on."""
-        tmp = self.root / TMP_DIR
+        """Remove what a writer that died left where the store keeps what is being written: its notes, a file half written, a staging folder; two days on."""
+        tmp = self.root / self._places().tmp
         now = time.time()
         try:
             entries = list(tmp.iterdir())
@@ -2661,11 +2895,12 @@ class FolderStore(Store):
     def unowned_hashes(self) -> list[str]:
         """The hash of every object no pipeline owns, in order."""
         self._check_layout()
+        unowned = self.root / self._places().unowned
         try:
-            names = sorted(os.listdir(self.root / PIPELINES_DIR / UNOWNED_DIR))
+            names = sorted(os.listdir(unowned))
         except (FileNotFoundError, NotADirectoryError):
             return []
-        return [hashing.format_hash(name) for name in names if _HEX.match(name) and (self.root / PIPELINES_DIR / UNOWNED_DIR / name).is_dir()]
+        return [hashing.format_hash(name) for name in names if _HEX.match(name) and (unowned / name).is_dir()]
 
     def hashes(self) -> Iterator[str]:
         """The hash of every asset in the store, in order: what its records hold, and the objects no pipeline owns."""
@@ -2871,6 +3106,31 @@ def holds_v1(root: Path) -> bool:
     return any(next(_files_in(Path(path)), None) is not None for path in commits)
 
 
+def holds_v2(root: Path) -> bool:
+    """Whether a folder holds what a store of ChartBook 0.5 held: under pipelines/, a file in a snapshot's folder of some pipeline, or in an object no pipeline owns.
+
+    Asked of a folder with no ``store.json``: one that holds these is no
+    empty folder to make a store in, but a store of 0.5 whose ``store.json``
+    has not arrived. A folder a sync left empty, or holding only what a
+    desktop leaves, holds nothing.
+    """
+    try:
+        pipelines = [entry for entry in os.scandir(root / PIPELINES_DIR) if entry.is_dir()]
+    except OSError:
+        return False
+    for pipeline in pipelines:
+        try:
+            folders = [
+                entry.path for entry in os.scandir(pipeline.path)
+                if entry.is_dir() and (bool(_HEX.match(entry.name)) if pipeline.name == UNOWNED_DIR else is_snapshot_folder(entry.name))
+            ]
+        except OSError:
+            continue
+        if any(next(_files_in(Path(folder)), None) is not None for folder in folders):
+            return True
+    return False
+
+
 def _folded(path: str) -> str:
     """A path as a disk that tells neither letter case nor Unicode's two forms apart compares it."""
     return unicodedata.normalize("NFC", path).casefold()
@@ -2895,7 +3155,16 @@ def _newest_in(folder: Path) -> float:
 
 
 class _FolderPending(PendingSnapshot):
-    """A snapshot being written into a folder store (:meth:`FolderStore.begin`)."""
+    """A snapshot being written into a folder store (:meth:`FolderStore.begin`): complete, every file of it in its own folder.
+
+    A file the store lacks is written into the snapshot's folder when it is
+    put, and :attr:`placed` says so. A file an earlier snapshot of the
+    pipeline has whole is new to nobody: this snapshot's own copy of it is
+    made when its record is about to be written (:meth:`_complete`). So a
+    snapshot that turns out to say nothing new, and is not written (the same
+    commit, bytes and pins as the one before; a pin of bytes the owner's
+    snapshot has), copies nothing.
+    """
 
     def __init__(self, store: FolderStore, pipeline: str, commit: str, made_at: str, base, made_by: str):
         from chartbook.identity import validate_pipeline_id
@@ -2917,12 +3186,13 @@ class _FolderPending(PendingSnapshot):
         self.placed = False
         self._written = False
         self._kept: Optional[dict] = None
+        #: The hash of each file this snapshot has been given, by its path in the pipeline
         self._here: dict[str, str] = {}
+        #: What :meth:`_complete` copies before the record: each file's entry, where an earlier snapshot keeps its bytes, and the file it was given from
+        self._later: list = []
         self._note: Optional[Path] = None
         #: Hashes already known, by the source file's path, which are then not read again
         self.known: dict[str, str] = {}
-        self._reused: list = []
-        self._taken: list = []
 
     def _claim(self) -> Path:
         """This snapshot's folder, made the first time it is needed: its time, the next free second if another has it, and its commit."""
@@ -2956,7 +3226,7 @@ class _FolderPending(PendingSnapshot):
 
     def _note_line(self, line: str) -> None:
         if self._note is None:
-            tmp = self.store.root / TMP_DIR
+            tmp = self.store.root / self.store._places().tmp
             tmp.mkdir(parents=True, exist_ok=True)
             self._note = tmp / f"{uuid.uuid4().hex[:12]}{PENDING_SUFFIX}"
         with open(self._note, "a", encoding="utf-8", newline="\n") as f:
@@ -2974,54 +3244,40 @@ class _FolderPending(PendingSnapshot):
             except OSError:
                 pass
 
-    def _confirm(self, links: tuple = ("reflink", "copy")) -> None:
-        """See that each file of an earlier snapshot this one has taken is still named by a record, now that its use is noted.
+    def _complete(self) -> None:
+        """Copy into this snapshot's own folder each file an earlier snapshot of the pipeline has, now that this one is to be written.
 
-        Done once, before the record is written, from this pipeline's
-        records alone. The entries are the ones in the record about to be
-        written, so a file written here instead is written there too.
+        Each from where the earlier one keeps it, which this snapshot's note
+        has kept from ``store gc`` meanwhile, checked against its hash as it
+        is written; or from the file this snapshot was given it from, if that
+        copy has gone or is no longer what its record says.
 
-        ``store gc`` clears a snapshot's record before it removes the files
-        no record names, and keeps what a note names: one cleared before the
-        note was read may lose its files, so a file whose record has gone is
-        written into this snapshot's own folder instead.
+        :raises StoreError: If neither has the bytes any more: the snapshot
+            is not written.
         """
-        taken = [(entry, source) for entry, source in self._taken if entry.get("kept_in") != self.name]
-        if not taken:
-            return
-        named = set()
-        for record in self.store.records_in(self.pipeline_path):
-            if record.readable:
-                named |= record.mentioned
-        for entry, source in taken:
-            location = self.pipeline_path.joinpath(entry["kept_in"], *entry.get("kept_as", entry["path"]).split("/"))
-            if str(location) in named:
-                continue
+        for entry, kept, source in self._later:
+            self._alive()
             target = self._claim().joinpath(*entry["path"].split("/"))
-            if os.path.lexists(target):
-                continue  # this snapshot has it already, under this path
-            written, _ = self._write_file(source, target, links, expect=entry["content_hash"])
-            if written != entry["content_hash"]:
-                raise StoreError(f"{source} changed while a snapshot of {self.pipeline} was made: make it again.")
-            self.placed = True
-            self._here.setdefault(written, entry["path"])
-            self._reused = [reuse for reuse in self._reused if reuse[0] != location]
-            entry.update(kept_in=self.name)
-            entry.pop("kept_as", None)
-
-    def _refill(self) -> None:
-        """Put back a file of an earlier snapshot this one uses, if it went while this one was made (a ``store gc`` elsewhere)."""
-        for location, source, content_hash in self._reused:
-            if os.path.lexists(location):
-                continue
-            if not os.path.isfile(source):
+            for origin in (str(kept), source):
+                if os.path.islink(origin) or not os.path.isfile(origin):
+                    continue
+                written, _ = self._write_file(origin, target, ("reflink", "copy"), expect=entry["content_hash"])
+                if written == entry["content_hash"]:
+                    break
+            else:
                 raise StoreError(
-                    f"{location} went from the store while a snapshot of {self.pipeline} was made, which uses it, and "
-                    f"{source} is no longer there to put it back from. Make the snapshot again."
+                    f"{kept} went from the store, or is no longer what its record says, while a snapshot of "
+                    f"{self.pipeline} was made, and {source} is not there to take it from, or has changed. Make "
+                    f"the snapshot again."
                 )
-            written, _ = self._write_file(source, location, ("reflink", "copy"), expect=content_hash)
-            if written != content_hash:
-                raise StoreError(f"{source} changed while a snapshot of {self.pipeline} was made: make it again.")
+        self._later = []
+
+    def _before_record(self) -> None:
+        """What is done just before the record is written, once the snapshot's folder is claimed: its files made whole."""
+        self._complete()
+
+    def _after_record(self) -> None:
+        """What is done just after the record is written: nothing, for a snapshot whose files are all its own."""
 
     def _drop_note(self) -> None:
         if self._note is not None:
@@ -3040,7 +3296,7 @@ class _FolderPending(PendingSnapshot):
         """
         _check_length(target)
         self._inside(target)
-        tmp = self.store.root / TMP_DIR
+        tmp = self.store.root / self.store._places().tmp
         tmp.mkdir(parents=True, exist_ok=True)
         temporary = tmp / f"{uuid.uuid4().hex[:12]}.part"
         try:
@@ -3069,7 +3325,7 @@ class _FolderPending(PendingSnapshot):
 
     def _inside(self, target: Path) -> None:
         """Refuse to write where a link leads: a record or a folder of the store may be anyone's."""
-        pipelines = Path(os.path.realpath(self.store.root / PIPELINES_DIR))
+        pipelines = Path(os.path.realpath(self.store.root / self.store._places().pipelines))
         if os.path.islink(target) or not Path(os.path.realpath(target.parent)).is_relative_to(pipelines):
             raise StoreError(
                 f"{target} is a link, or under one that leads out of the store: nothing is written there. "
@@ -3077,18 +3333,48 @@ class _FolderPending(PendingSnapshot):
             )
 
     def _keep(self, source: str, path: str, links: tuple, used: set) -> dict:
-        """Keep one file at *path* in the pipeline, once: where an earlier snapshot keeps it, or new in this one's folder."""
+        """Keep one file at *path* in this snapshot's own folder, whatever another snapshot holds; its entry in the record.
+
+        Written now if the store lacks its bytes, which :attr:`placed` then
+        says. If an earlier snapshot of the pipeline has them whole, this
+        snapshot's copy is made when its record is about to be written
+        (:meth:`_complete`). Two files of one snapshot with the same bytes
+        are two files in its folder.
+        """
         self._alive()
         content_hash = self.known.get(source) or hashing.format_hash(hashing._file_hex(Path(source)))
         size = os.stat(source).st_size
-        if content_hash in self._here:
-            kept_as = self._here[content_hash]
+        target = self._claim().joinpath(*path.split("/"))
+        _check_length(target)  # before anything of it is written, now or with the record
+        if self._here.get(path) == content_hash:
+            # The same file given twice, as one that is of two assets: it is in the folder once
+            return {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
+        if path in self._here:
+            raise StoreError(f"{target} is in the store already, with other bytes than {source}.")
+        kept = self._held_whole(source, content_hash, size, links, used)
+        if kept is not None:
             entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
-            if kept_as != path:
-                entry["kept_as"] = kept_as
+            self._here[path] = content_hash
+            self._later.append((entry, kept, source))
             return entry
+        written, kind = self._write_file(source, target, links)
+        used.add(kind)
+        self.placed = True
+        self._here[path] = written
+        return {"path": path, "content_hash": written, "size_bytes": os.stat(target).st_size, "kept_in": self.name}
+
+    def _held_whole(self, source: str, content_hash: str, size: int, links: tuple, used: set) -> Optional[Path]:
+        """Where an earlier snapshot of the pipeline keeps a file of these bytes, whole by its size; None if none does.
+
+        The newest first: ``store gc`` never removes the newest snapshot of
+        a pipeline. Its use is noted before it is looked at, so that ``store
+        gc`` keeps it until this snapshot is written or let go. A file a
+        record names that is missing (removed by hand, or lost to a sync)
+        is put back where the record says, so that its snapshot is whole
+        again, as the store has done since 0.3.
+        """
         holes = []
-        for file in self._kept_files().get(content_hash, []):
+        for file in reversed(self._kept_files().get(content_hash, [])):
             if file.size_bytes != size:
                 continue
             self._note_use(file.location)
@@ -3100,37 +3386,17 @@ class _FolderPending(PendingSnapshot):
                 holes.append(file)
                 continue
             if there == size:
-                self._reused.append((file.location, source, content_hash))
-                entry = self._entry(path, content_hash, size, file.location)
-                self._taken.append((entry, source))
-                return entry
+                return file.location
         for file in holes:
-            # A file a record names that is missing (removed by hand, or lost
-            # to a sync): put back where the record says, so that it is whole again
             folder = self.pipeline_path / file.location.relative_to(self.pipeline_path).parts[0]
             if not os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE)):
                 continue
             written, kind = self._write_file(source, file.location, links, expect=content_hash)
             if written == content_hash:
                 used.add(kind)
-                self._reused.append((file.location, source, content_hash))
-                entry = self._entry(path, content_hash, size, file.location)
-                self._taken.append((entry, source))
-                return entry
-            content_hash = written  # the bytes changed since they were hashed: new, in this snapshot's folder
-        target = self._claim().joinpath(*path.split("/"))
-        written, kind = self._write_file(source, target, links)
-        used.add(kind)
-        self.placed = True
-        self._here.setdefault(written, path)
-        return {"path": path, "content_hash": written, "size_bytes": os.stat(target).st_size, "kept_in": self.name}
-
-    def _entry(self, path: str, content_hash: str, size: int, location: Path) -> dict:
-        kept_in, *kept_as = location.relative_to(self.pipeline_path).parts
-        entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": kept_in}
-        if "/".join(kept_as) != path:
-            entry["kept_as"] = "/".join(kept_as)
-        return entry
+                return file.location
+            break  # the bytes changed since they were hashed: new, in this snapshot's own folder
+        return None
 
     def put(self, path: Union[str, Path], place: Optional[str] = None, links: Iterable[str] = ("reflink", "copy")) -> StoredObject:
         if self._written:
@@ -3222,8 +3488,7 @@ class _FolderPending(PendingSnapshot):
         own = self._claim() / OWN_DIR
         _check_length(own / f"{'0' * 12}.tmp")
         self._alive()
-        self._confirm()
-        self._refill()
+        self._before_record()
         own.mkdir(exist_ok=True)
         record = own / RECORD_FILE
         temporary = own / f"{uuid.uuid4().hex[:12]}.tmp"
@@ -3237,9 +3502,9 @@ class _FolderPending(PendingSnapshot):
                 temporary.unlink()
         self._written = True
         self.store._forget()
-        self._refill()  # a `store gc` between the check and the record
+        self._after_record()
         self._drop_note()
-        write_readme(self.pipeline_path)  # for a person who finds the folder: what shared snapshots are, and gc
+        write_readme(self.pipeline_path, self.store._places().readme)  # for a person who finds the folder
         return record
 
     def discard(self) -> None:
@@ -3261,6 +3526,7 @@ class _FolderPending(PendingSnapshot):
             except OSError:
                 pass
         self.placed = False
+        self._here, self._later = {}, []
         self._drop_note()
 
 

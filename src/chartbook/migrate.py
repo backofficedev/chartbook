@@ -41,22 +41,27 @@ from chartbook import hashing
 from chartbook.replacing import rename_when_let, replace_when_let
 from chartbook.store import (
     holds_v1,
+    _any_length,
     _files_in,
     MIGRATE_JOURNAL,
     _check_length,
     plain_parts,
+    FOLDER_SCHEMA,
     MARKER_FILE,
     OBJECTS_DIR,
     ORIGINS_FILE,
     OWN_DIR,
     PIPELINES_DIR,
+    RECORD_FILE,
     SCHEMA,
     SNAPSHOTS_DIR,
     TABLES_DIR,
     TMP_DIR,
     UNOWNED_DIR,
     V1_SCHEMA,
+    V2_LAYOUT,
     FolderStore,
+    Layout,
     StoreError,
     _FolderPending,
     _HEX,
@@ -206,6 +211,9 @@ def plan(root) -> MigrationPlan:
     except (OSError, ValueError, AttributeError) as error:
         raise MigrateError(f"Cannot read {root / MARKER_FILE}: {error}") from None
     found = MigrationPlan(root, layout)
+    if layout == FOLDER_SCHEMA:
+        # Laid out as this version lays a store out: nothing of 0.2's to move, and its snapshots/ is its own
+        return found
     if layout not in (None, V1_SCHEMA):
         if layout != SCHEMA:
             raise MigrateError(f"The store at {root} has the layout {layout!r}, which this version does not move.")
@@ -362,11 +370,130 @@ class _Journal:
 
 
 class _Moving(_FolderPending):
-    """A snapshot being written by a migrate: a file of a 0.2 object is moved into place, not copied."""
+    """A snapshot being written by a migrate: a file of a 0.2 object is moved into place, not copied.
+
+    It is written as ChartBook 0.5 wrote one, which is the layout this
+    moves a store to: each file kept once in its pipeline's folder, where
+    the first snapshot that had it keeps it, so that a file is moved and
+    nothing is copied for a later snapshot of the same pipeline. A folder
+    store writes every snapshot complete (:class:`chartbook.store._FolderPending`);
+    what follows is the writer of 0.5, kept here for this move alone.
+    """
 
     def __init__(self, store, pipeline, commit, made_at, journal: _Journal):
         super().__init__(store, pipeline, commit, made_at, None, "snapshot")
         self.journal = journal
+        #: The path this snapshot's own folder keeps each file under, by the file's hash
+        self._first: dict[str, str] = {}
+        self._reused: list = []
+        self._taken: list = []
+
+    def _keep(self, source: str, path: str, links: tuple, used: set) -> dict:
+        """Keep one file at *path* in the pipeline, once: where an earlier snapshot keeps it, or new in this one's folder."""
+        self._alive()
+        content_hash = self.known.get(source) or hashing.format_hash(hashing._file_hex(Path(source)))
+        size = os.stat(source).st_size
+        if content_hash in self._first:
+            kept_as = self._first[content_hash]
+            entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
+            if kept_as != path:
+                entry["kept_as"] = kept_as
+            return entry
+        holes = []
+        for file in self._kept_files().get(content_hash, []):
+            if file.size_bytes != size:
+                continue
+            self._note_use(file.location)
+            if os.path.islink(file.location):
+                continue
+            try:
+                there = os.stat(file.location).st_size
+            except FileNotFoundError:
+                holes.append(file)
+                continue
+            if there == size:
+                self._reused.append((file.location, source, content_hash))
+                entry = self._entry(path, content_hash, size, file.location)
+                self._taken.append((entry, source))
+                return entry
+        for file in holes:
+            # A file a record names that is missing (removed by hand, or lost
+            # to a sync): put back where the record says, so that it is whole again
+            folder = self.pipeline_path / file.location.relative_to(self.pipeline_path).parts[0]
+            if not os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE)):
+                continue
+            written, kind = self._write_file(source, file.location, links, expect=content_hash)
+            if written == content_hash:
+                used.add(kind)
+                self._reused.append((file.location, source, content_hash))
+                entry = self._entry(path, content_hash, size, file.location)
+                self._taken.append((entry, source))
+                return entry
+            content_hash = written  # the bytes changed since they were hashed: new, in this snapshot's folder
+        target = self._claim().joinpath(*path.split("/"))
+        written, kind = self._write_file(source, target, links)
+        used.add(kind)
+        self.placed = True
+        self._first.setdefault(written, path)
+        return {"path": path, "content_hash": written, "size_bytes": os.stat(target).st_size, "kept_in": self.name}
+
+    def _entry(self, path: str, content_hash: str, size: int, location: Path) -> dict:
+        kept_in, *kept_as = location.relative_to(self.pipeline_path).parts
+        entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": kept_in}
+        if "/".join(kept_as) != path:
+            entry["kept_as"] = "/".join(kept_as)
+        return entry
+
+    def _confirm(self, links: tuple = ("reflink", "copy")) -> None:
+        """See that each file of an earlier snapshot this one has taken is still named by a record, now that its use is noted.
+
+        Done once, before the record is written, from this pipeline's
+        records alone. The entries are the ones in the record about to be
+        written, so a file written here instead is written there too.
+        """
+        taken = [(entry, source) for entry, source in self._taken if entry.get("kept_in") != self.name]
+        if not taken:
+            return
+        named = set()
+        for record in self.store.records_in(self.pipeline_path):
+            if record.readable:
+                named |= record.mentioned
+        for entry, source in taken:
+            location = self.pipeline_path.joinpath(entry["kept_in"], *entry.get("kept_as", entry["path"]).split("/"))
+            if str(location) in named:
+                continue
+            target = self._claim().joinpath(*entry["path"].split("/"))
+            if os.path.lexists(target):
+                continue  # this snapshot has it already, under this path
+            written, _ = self._write_file(source, target, links, expect=entry["content_hash"])
+            if written != entry["content_hash"]:
+                raise StoreError(f"{source} changed while a snapshot of {self.pipeline} was made: make it again.")
+            self.placed = True
+            self._first.setdefault(written, entry["path"])
+            self._reused = [reuse for reuse in self._reused if reuse[0] != location]
+            entry.update(kept_in=self.name)
+            entry.pop("kept_as", None)
+
+    def _refill(self) -> None:
+        """Put back a file of an earlier snapshot this one uses, if it went while this one was made."""
+        for location, source, content_hash in self._reused:
+            if os.path.lexists(location):
+                continue
+            if not os.path.isfile(source):
+                raise StoreError(
+                    f"{location} went from the store while a snapshot of {self.pipeline} was made, which uses it, and "
+                    f"{source} is no longer there to put it back from. Make the snapshot again."
+                )
+            written, _ = self._write_file(source, location, ("reflink", "copy"), expect=content_hash)
+            if written != content_hash:
+                raise StoreError(f"{source} changed while a snapshot of {self.pipeline} was made: make it again.")
+
+    def _before_record(self) -> None:
+        self._confirm()
+        self._refill()
+
+    def _after_record(self) -> None:
+        self._refill()
 
     def _write_file(self, source: str, target: Path, links: tuple, expect: Optional[str] = None) -> tuple[str, str]:
         objects = self.store.root / OBJECTS_DIR
@@ -393,10 +520,13 @@ class _Moving(_FolderPending):
 
 
 class _Opened(FolderStore):
-    """The store being moved: read as this layout, whatever its marker says, until the marker is switched."""
+    """The store being moved: read and written as a store of 0.5 is laid out, whatever its marker says, until the marker is switched."""
 
     def _check_layout(self, create: bool = False) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
+
+    def _places(self) -> Layout:
+        return V2_LAYOUT
 
 
 def run(root, echo: Callable[[str], None] = lambda line: None) -> MigrationPlan:
