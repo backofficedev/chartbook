@@ -10,21 +10,24 @@ about a run clearing old snapshots, and why none does. It is for 0.6.0, with
 
 Status: **to be built, step by step, in "The order of work" at the end.** Each part says whether
 the maintainer decided it, and when. A choice he left open is marked *Proposed by Claude*, with
-its date, until he says otherwise. The page was read against the code twice before anything was
-built, by reviewers asked to break it; what that changed is marked *(found by review)*. The
-layout and the increments stood; the clearing did not, three times, and its section says so.
-It adds no command and no field of `chartbook.toml`, and one option, `chartbook snapshot
---complete`.
+its date, until he says otherwise. The page was read against the code three times before
+anything was built, by reviewers asked to break it; what that changed is marked *(found by
+review)*. The layout and the increments stood; the clearing did not, three times, and its section
+says so. It adds no command and no field of `chartbook.toml`. It adds one option, `--complete`,
+on `chartbook snapshot` and on `chartbook run --snapshot`; and `chartbook store gc` will need a
+way to forget a note ("Where it stands"), which is not designed here.
 
 **Changed 2026-11-20, by the maintainer's decision that day: `chartbook run` no longer ends with
-a snapshot.** A run pins, builds and checks, and writes nothing to a store. `chartbook snapshot`
-puts what was built in the store, and it is the one that decides between a complete snapshot and
+a snapshot.** A run pins, builds and checks, and puts nothing of what it built in the store.
+`chartbook snapshot` does that, and it is the one that decides between a complete snapshot and
 an increment; `--complete` asks for a complete one. As first written, on 2026-11-19, this page
 had the run make the snapshot and decide. His reason, in his words: "part of the problems that
 we're creating are trying to combine too much stuff into Chartbook Run." What it settles here:
 which command the rule of "Which one `chartbook snapshot` makes" belongs to, the option, and
-clearing, which is not needed where snapshots are made only when somebody asks. What a run does
-and says is {doc}`one-command`'s to say.
+clearing, which is not needed where a pipeline's snapshots are made only when somebody asks.
+What a run does and says is {doc}`one-command`'s to say. A pin still leaves its note in the
+store, and still makes a snapshot of a dependency's repository where it pins from one: that is a
+pin's doing, as before, and nothing here changes it.
 ```
 
 ## What was wrong
@@ -79,15 +82,15 @@ its price was a store nobody could read.
 - **Everything under `increments/` is a snapshot too,** kept in less room: its folder holds only
   the files that differ from **one** complete snapshot, and says which. To anything that reads or
   pins, it is a snapshot like any other.
-- **`chartbook snapshot` decides which to make,** and its last line says which it made.
-  `chartbook snapshot --complete` makes a complete one.
+- **`chartbook snapshot` decides which to make,** and says which it made. `chartbook snapshot
+  --complete` makes a complete one.
 
 ## What everyone learns
 
 `chartbook snapshot`, beside `chartbook run`: a run builds, and a snapshot puts what was built in
 the store for other pipelines. *Decided 2026-11-20.* The list of commands is {doc}`one-command`'s.
-A person who never opens the store meets the word "increment" only in the last line of
-`chartbook snapshot`.
+A person who never opens the store meets the word "increment" only in what `chartbook snapshot`
+says when it has made one.
 
 ## What you see
 
@@ -136,14 +139,15 @@ acme/rates: 1 moved
 Wrote chartbook.lock.
 ```
 
-**5. You want a complete one now,** to look at, or to hand to somebody. `--complete` makes one
-whatever the rule would choose, and says where it is.
+**5. You want a complete one now,** to look at, or to hand to somebody: say, after 2, where the
+newest is an increment. `--complete` makes one whatever the rule would choose, and says where it
+is.
 
 ```text
 $ chartbook snapshot --complete
-acme/rates at c07d3e1: 3 asset(s) in the store
+acme/rates at 9b1e22d: 3 asset(s) in the store
 Snapshot made: 5 files, 23 MB.
-  ~/.chartbook/store/snapshots/acme+rates/2026-11-21T101500Z_c07d3e1a55f0
+  ~/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4
 ```
 
 **5a. A script does both at once.** `chartbook run --snapshot` is a run and then a snapshot, by
@@ -315,7 +319,8 @@ snapshot --complete` ends with a complete snapshot whatever the rule would choos
 too; it stays the strict form it is in {doc}`one-command`. Nothing is renamed.
 
 - **Where the newest snapshot is an increment of these same files, `--complete` makes a new,
-  complete one.** *Proposed by Claude (found by review), and decided 2026-11-19.* It joins the
+  complete one.** *Proposed by Claude (found by review), and decided 2026-11-19 for a typed
+  `chartbook snapshot`; it is `--complete`'s since 2026-11-20.* It joins the
   few cases in which the same files make a new snapshot today (documents that changed, rows
   recorded for the first time). Without the option there is no new snapshot, since nothing has
   changed. The first draft of this page turned the increment into a complete snapshot in its
@@ -326,13 +331,13 @@ too; it stays the strict form it is in {doc}`one-command`. Nothing is renamed.
 
 ## Words
 
-*Decided 2026-11-19.*
+*Decided 2026-11-19; `--complete` is of 2026-11-20.*
 
 - **Snapshot** stays the one word for what `chartbook snapshot` makes, what a pin names and what
   a catalog shows. The maintainer teaches it, and it does not change.
 - **Complete** and **increment** say how the store keeps a snapshot. They are met in the store's
-  folders, in `chartbook store ls`, in the last line of `chartbook snapshot` and in its option
-  `--complete`, and nowhere else.
+  folders, in `chartbook store ls`, in what `chartbook snapshot` and `chartbook store migrate`
+  say, and in the option `--complete`; nowhere else.
 - **Standalone** and **shared**, the words of 0.5.0, go: they named the same two things less
   plainly, and a shared snapshot's files could be anywhere.
 - No new word for "a snapshot of either kind" (*version* was proposed and taken back: it would
@@ -384,13 +389,15 @@ for each day of sixty years is fifteen thousand small files.
 
 ## Clearing: what was wanted, what broke three times, and what is built instead
 
-*Decided 2026-11-19: a run clears an older snapshot, whole, when the new one holds all of its
-data; a chart or a notebook does not count as data; and it is wanted in 0.6.0.* It was to take the
-place of step 3 of {doc}`one-command`, which applied `chartbook store gc`'s rules at every run,
-was built, was shown to lose data, and is held back.
+*How it began, and no longer the plan (see "Where it stands"). Decided 2026-11-19: a run was to
+clear an older snapshot, whole, when the new one held all of its data; a chart or a notebook did
+not count as data; and it was wanted in 0.6.0.* It was to take the place of step 3 of
+{doc}`one-command`, which applied `chartbook store gc`'s rules at every run, was built, was shown
+to lose data, and was held back.
 
-*Decided 2026-11-19, after the two reviews: 0.6.0 may be released without it, and the work on a
-rule goes on. Which form to try next is left to Claude.*
+*Decided 2026-11-19, after the two reviews: 0.6.0 might be released without it, and the work on a
+rule went on; which form to try next was left to Claude. Decided 2026-11-20: a run makes no
+snapshot, and there is nothing to clear after one.*
 
 **No run removes a snapshot.** Three forms of the rule were read against the code, before
 anything was built, by reviewers asked to break them, and each was broken, on paper. This
@@ -540,13 +547,15 @@ as today, and knows more.**
 
 *Settled 2026-11-20, by the maintainer's decision that a run no longer ends with a snapshot.*
 Clearing was wanted because every run left a snapshot behind and nobody had asked for them. Where
-a snapshot is made only when somebody types `chartbook snapshot`, or a script asks with `run
---snapshot`, they do not pile up behind anyone's back, and what is left is what `store gc` is
-for. Two things went with it:
+a pipeline's snapshot is made only when somebody types `chartbook snapshot`, or a script asks
+with `run --snapshot`, they do not pile up behind anyone's back, and what is left is what `store
+gc` is for. Two things went with it:
 
-- **The narrow form the maintainer had first meant,** and reminded Claude of on 2026-11-19: a
-  run doing for its own pipeline what `store gc` does for the store. It was agreed that day for
-  a store one machine uses, and it is not built: there is no run to hang it on.
+- **The narrow form the maintainer had first meant,** and reminded Claude of late on 2026-11-19,
+  after the sentence above had been written: a run doing for its own pipeline what `store gc`
+  does for the store. Claude agreed to it then for a store that one machine uses. It is not
+  built: a plain run makes no snapshot to clear after, and `run --snapshot` is for scripts,
+  where nothing should be removed unasked.
 - **The one question that was open,** whether a run should remove too in a store several machines
   use, where a machine that was off could run before the sync had brought a pin made meanwhile.
 
@@ -554,9 +563,9 @@ For 0.6.0:
 
 1. **The store's notes say what each project pins on every branch and tag,** with what the third
    review asked of them above. `chartbook store gc` uses them at once. They can lose nothing.
-2. **The line `chartbook snapshot` ends with says what `store gc` could remove of this
-   pipeline,** from a plan made for this pipeline. Today it makes the plan for the whole store
-   at every snapshot.
+2. **`chartbook snapshot` says, after which kind it made, what `store gc` could remove of this
+   pipeline,** where there is something, from a plan made for this pipeline. Today it makes the
+   plan for the whole store at every snapshot.
 3. **`chartbook store gc` says which note holds a snapshot, and can forget one note.**
 
 If removing by itself is ever wanted again: in a folder that a sync service keeps, nobody sees
@@ -601,7 +610,8 @@ newest snapshot of each pipeline becomes complete and the others increments on i
 maintainer's own stores are moved at the release and not before, since his installed ChartBook
 and his other work read them with 0.5 until then.*
 
-- **This ChartBook reads a store of 0.5 as it is,** and writes its notes there as 0.5 does.
+- **This ChartBook reads a store of 0.5 as it is,** and writes nothing there but its notes of
+  lockfiles, as 0.5 does.
   *(Found by review: {doc}`pins-and-rebuilds` promises that a store is shared across versions,
   and somebody who may only read a store cannot move it.)* It makes no snapshot in one and
   removes nothing from one: `chartbook snapshot` and `chartbook store gc` stop and say so
@@ -677,8 +687,8 @@ files for what it changes.
    ls` on the new layout.
 3. `chartbook store migrate` from the layout of 0.5.
 4. The S3 store, and `store export` and `store import`.
-5. Increments are made: which one `chartbook snapshot` makes, its last line, and `--complete` on
-   it and on `chartbook run --snapshot`. (That a run no longer ends with a snapshot is
+5. Increments are made: which one `chartbook snapshot` makes, the line that says which, and
+   `--complete` on it and on `chartbook run --snapshot`. (That a run no longer ends with a snapshot is
    {doc}`one-command`'s own step.)
 6. For `chartbook store gc`, as "Where it stands" has it: the notes of every branch and tag, with
    the pipeline in each name; the line of what `store gc` could remove of this pipeline; `store
