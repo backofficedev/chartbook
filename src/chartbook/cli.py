@@ -3976,15 +3976,15 @@ def store_ls(pipeline, store_name):
     """List the snapshots in the store, and how much each one's folder holds.
 
     One line per snapshot, newest last within its pipeline: when it was
-    made, its commit, that it is complete (its folder holds every file of
-    its version, and can be read or copied as it is), and how much the
-    folder holds. A snapshot is removed with `chartbook store gc`, never
-    by hand.
+    made, its commit, how the store keeps it, and how much its folder
+    holds. A complete snapshot's folder holds every file of its version,
+    and can be read or copied as it is. An increment's folder holds the
+    files that the complete snapshot it builds on does not have; the rest
+    are in that one's folder. A snapshot is removed with `chartbook store
+    gc`, never by hand.
 
     A store that ChartBook 0.5 laid out, and a bucket, keep each file once:
-    there a snapshot is listed as standalone (its folder holds every file
-    of its version) or shared (it holds only what changed, and the rest of
-    its files sit in other snapshots' folders).
+    there an increment's other files may be in several snapshots' folders.
 
     \b
     Examples:
@@ -4013,9 +4013,6 @@ def store_ls(pipeline, store_name):
         try:
             every = list(records())
             found = [r for r in every if r.readable and (pipeline is None or r.pipeline == pipeline)]
-            # A folder store this ChartBook writes holds each snapshot complete. One of 0.5, and a bucket,
-            # keep each file once, and are listed in their own words
-            keeps_once = not isinstance(the_store, FolderStore) or the_store.earlier_layout()
         except (StoreUnreachableError, OSError, StoreError) as error:
             click.echo(f"Store {name}: {the_store}: unreachable ({_said(error)})", err=True)
             unreachable += 1
@@ -4050,14 +4047,12 @@ def store_ls(pipeline, store_name):
                         here += file.size_bytes
                     else:
                         elsewhere += 1
-            if elsewhere:
-                # Its record names files in other snapshots' folders: as 0.5 wrote one, wherever it is found
-                kind = "shared"
-            else:
-                kind = "standalone" if keeps_once else "complete"
-            said_shared = said_shared or keeps_once or bool(elsewhere)
+            # Its record names files in another snapshot's folder: the one it builds on, or, as 0.5 wrote
+            # one, any earlier ones
+            kind = "increment" if elsewhere else "complete"
+            said_shared = said_shared or bool(elsewhere)
             said_complete = said_complete or kind == "complete"
-            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in other folders"
+            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
@@ -4084,8 +4079,9 @@ def store_ls(pipeline, store_name):
         )
     if said_shared:
         click.echo(
-            "A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, "
-            "which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand."
+            "An increment's folder holds the files that the complete snapshot it builds on does not have; the rest are "
+            "in that one's folder (in a store that ChartBook 0.5 laid out, in other snapshots' folders), which "
+            "`chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand."
         )
 
 

@@ -94,7 +94,8 @@ class TestStoreLs:
         assert sum(1 for line in one.splitlines() if line.startswith("  20") and "  complete " in line) == 2
         assert "No snapshot of other." in CliRunner().invoke(main, ["store", "ls", "other"]).output
 
-    def test_standalone_then_shared_in_a_store_of_0_5(self, news, store):
+    def test_complete_then_increment_in_a_store_of_0_5(self, news, store):
+        """The words of 0.5.0, standalone and shared, are gone: `store ls` says complete or increment of every snapshot, in any store."""
         from tests.store_of_0_5 import laid_out_as_0_5
 
         snapshot.make(news, store=store)
@@ -105,15 +106,15 @@ class TestStoreLs:
         assert result.exit_code == 0, result.output
         lines = [line for line in result.output.splitlines() if line.startswith("  20")]
         assert len(lines) == 2
-        assert Path(first.path).parent.parent.name in lines[0] and "standalone" in lines[0] and "other folders" not in lines[0]
+        assert Path(first.path).parent.parent.name in lines[0] and "  complete " in lines[0] and "other folders" not in lines[0]
         # The first year's part and the unchanged documents are kept in the first snapshot's folder
-        assert Path(second.path).parent.parent.name in lines[1] and "shared" in lines[1]
+        assert Path(second.path).parent.parent.name in lines[1] and "  increment " in lines[1]
         assert re.search(r"[1-9]\d* file\(s\) in other folders", lines[1]), lines[1]
         assert "news (2 snapshot(s))" in result.output and "never by hand" in result.output
-        assert "complete" not in result.output
+        assert "standalone" not in result.output and "shared" not in result.output
         # One pipeline, and none
         one = CliRunner().invoke(main, ["store", "ls", "news"]).output
-        assert sum(1 for line in one.splitlines() if line.startswith("  20") and "  shared " in line) == 1
+        assert sum(1 for line in one.splitlines() if line.startswith("  20") and "  increment " in line) == 1
         assert "No snapshot of other." in CliRunner().invoke(main, ["store", "ls", "other"]).output
 
     def test_an_empty_store(self, store):

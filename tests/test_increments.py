@@ -230,3 +230,27 @@ class TestGc:
         assert plan.freed_bytes == size
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.output.splitlines()[-1].endswith(f", {_format_bytes(size)}."), result.output
+
+
+class TestStoreLs:
+    def test_it_says_complete_or_increment_of_each(self, kept, store):
+        from chartbook.cli import _format_bytes
+
+        complete, increments, taken, _ = kept
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0, result.output
+        lines = result.output.splitlines()
+        assert lines[0] == "acme/rates (3 snapshot(s))"
+        kinds = {line.split()[0]: line.split()[5] for line in lines[1:4]}
+        assert kinds == {complete.name: "complete", **{folder.name: "increment" for folder in increments}}
+        for folder in increments:
+            own = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file() and p.name not in ("snapshot.json", "INCREMENT.txt"))
+            (line,) = [line for line in lines if line.split()[:1] == [folder.name]]
+            assert f"  increment  {_format_bytes(own)} here, " in line and line.endswith(f" file(s) in {complete.name}"), line
+        assert lines[4:] == [
+            "A complete snapshot's folder holds every file of its version, and can be read or copied as it is. "
+            "Remove snapshots with `chartbook store gc`, never by hand.",
+            "An increment's folder holds the files that the complete snapshot it builds on does not have; the rest are "
+            "in that one's folder (in a store that ChartBook 0.5 laid out, in other snapshots' folders), which "
+            "`chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.",
+        ]

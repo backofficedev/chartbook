@@ -749,7 +749,7 @@ class TestAStoreOf05IsReadAsItIs:
         assert old.verify() == [] and set(old.hashes()) == second.hashes()
         assert old.origins(second.commit, "_top") != []
 
-    def test_store_ls_lists_it_in_its_own_words(self, of_0_5):
+    def test_store_ls_lists_it_as_complete_or_increment(self, of_0_5):
         old, second, cleared = of_0_5
         folder = _folder_of(second)
         own = (folder / "_chartbook" / "index.json").stat().st_size + (folder / "_output" / "curve.html").stat().st_size
@@ -757,9 +757,10 @@ class TestAStoreOf05IsReadAsItIs:
         assert result.exit_code == 0, result.output
         assert result.output.splitlines() == [
             "acme/rates (1 snapshot(s))",
-            f"  {folder.name}  2026-11-19 14:02 UTC  {second.commit[:7]}  shared     {_format_bytes(own)} here, 3 file(s) in other folders",
-            "A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, "
-            "which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.",
+            f"  {folder.name}  2026-11-19 14:02 UTC  {second.commit[:7]}  increment  {_format_bytes(own)} here, 3 file(s) in other folders",
+            "An increment's folder holds the files that the complete snapshot it builds on does not have; the rest are "
+            "in that one's folder (in a store that ChartBook 0.5 laid out, in other snapshots' folders), which "
+            "`chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.",
         ]
 
     def test_store_info_and_store_verify_read_it(self, of_0_5):
