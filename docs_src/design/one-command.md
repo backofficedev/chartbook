@@ -106,12 +106,12 @@ Build them in this order. Each ends with a snapshot, which is what the next one 
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
 2. ftsfr/fed_yield_curve at 5bb7217    https://github.com/ftsfr/fed_yield_curve
      git clone https://github.com/ftsfr/fed_yield_curve /work/fed_yield_curve
-     cd /work/fed_yield_curve && git checkout 5bb7217 && chartbook run --snapshot
+     cd /work/fed_yield_curve && git checkout 5bb72171c0de && chartbook run --snapshot
 3. acme/rates at 4f2a91c    ../rates (a folder on this machine); reads 1 and 2 above
-     cd /work/rates && git checkout 4f2a91c && chartbook run --snapshot
+     cd /work/rates && git checkout 4f2a91c03b6e && chartbook run --snapshot
 
 Then here again:
      cd /work/report && chartbook run
@@ -399,6 +399,20 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   that was never pinned and has a `build` script, `chartbook run --upstream` builds them all, and
   a line says so. *(Found by review: it was offered for a clone of a pipeline named by its ID,
   which `--upstream` does not build.)*
+- **A checkout is made from the repository's top, and then the folder is entered.** *(Found by
+  the second pass of the review: a folder that an earlier line's commit does not have made `cd
+  FOLDER && git checkout` fail at the `cd`, every time.)* A line with no pin, in a repository
+  that a line above has left on another commit, checks out the commit it was read at. A commit in
+  a command is twelve digits, which a large repository has no two of.
+- **One pipeline, read with a pin and without one, is one line where the commit is the same.** *(Found by a
+  mutant no test caught: a reader with no pin, listed first, got a line of its own, and the pinned
+  reader a second one for the same commit, so the same pipeline was built twice.)* The line takes
+  the pin. At another commit they are two builds, and each reader names its own.
+- **A repository that was read and does not hold the pipeline is not built in.** *(Found by the
+  second pass: the only manifest of a repository was taken for whatever pipeline was asked of
+  it, so an entry that named another pipeline's repository was told to build that one, for
+  ever.)* Asked of the pipeline itself, it is left to the pin's own words; further up, its line
+  says it was not found and gives no command.
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
   entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
   is as the command left it.
