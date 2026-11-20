@@ -599,3 +599,143 @@ class TestRestore:
         assert result.exit_code == 0, result.output
         assert (rates / "_data" / "treasury.parquet").read_bytes() == table
         assert {path.name: path.read_bytes() for path in (rates / "_data" / "parts").iterdir()} == parts
+
+
+def _aged(root: Path) -> None:
+    """Every file under a folder was last changed two hours ago: nothing is spared for being new."""
+    then = __import__("time").time() - 7200
+    for path in sorted(root.rglob("*")):
+        os.utime(path, (then, then), follow_symlinks=False)
+
+
+class TestAfterTheReviewOfIncrements:
+    """What the sixth review found of increments (2026-11-20), each under the rule it broke."""
+
+    def test_a_folder_an_increment_builds_on_that_is_a_link_is_not_read_from(self, unpinned, work, store):
+        """The folder a file is read from is checked, whichever of the two it is: an import takes nothing through a link."""
+        import shutil
+
+        from chartbook import sharing
+
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        out = work / "out"
+        sharing.export(FolderStore(store.root), "acme/rates", out, None)
+        real = out / "snapshots" / "acme+rates"
+        shutil.move(str(real), str(work / "elsewhere"))
+        real.symlink_to(work / "elsewhere", target_is_directory=True)
+        done = sharing.import_snapshots(FolderStore(work / "other"), out)
+        assert done.copied == [] and len(done.refused) == 3
+        assert all(why == "its record, or a folder holding it or the snapshot it builds on, is a link" for _, why in done.refused), done.refused
+        assert not any(p.is_file() and p.name != "store.json" and p.name != "README.txt" for p in (work / "other").rglob("*"))
+
+    def test_a_snapshots_folder_name_is_its_own_in_its_pipeline_across_both_trees(self, work):
+        target = FolderStore(work / "s")
+        commit, source = "a" * 40, work / "f.bin"
+        source.write_bytes(b"x")
+        first = target.begin("acme/rates", commit, OLD)
+        first.put(source, place="d/f.bin")
+        record = first.write({"schema": "chartbook/snapshot/v2", "root": "acme/rates", "made_at": OLD, "code": {"commit": commit}, "records": []})
+        name = Path(record).parent.parent.name
+        second = target.begin("acme/rates", commit, OLD, builds_on=name)
+        second.put(source, place="d/f.bin")
+        assert second.name is not None and second.name != name  # the next free second: never the name of the one it builds on
+        second.discard()
+        with pytest.raises(store_module.StoreError) as refused:
+            target.begin("acme/rates", commit, OLD, builds_on="not a snapshot's folder")
+        assert "cannot be kept as an increment on" in str(refused.value)
+        assert store_module.is_snapshot_folder(name) and not store_module.is_snapshot_folder(name + "\n")
+
+    def test_an_increment_that_says_it_builds_on_its_own_name_is_not_followed(self, unpinned, store):
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        record = increments[0] / "_chartbook" / "snapshot.json"
+        document = json.loads(record.read_text(encoding="utf-8"))
+        document["stored"] = {"builds_on": increments[0].name}
+        os.chmod(record, stat.S_IWRITE | stat.S_IREAD)
+        record.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+        store_module._read_records.clear()
+        fresh = FolderStore(store.root)
+        (kept,) = [one for one in fresh.records() if one.folder == increments[0]]
+        assert kept.builds_on == "" and fresh.holes_of(kept.path) != [] and fresh.verify() != []
+
+    def test_an_increment_is_built_only_on_a_complete_snapshot_read_and_hashed_in_this_run(self, unpinned, work, store):
+        """The target has the complete one with other bytes at the right size: it is refused, and the increments are written complete from what was sent."""
+        from chartbook import sharing
+
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        out, other = work / "out", work / "other"
+        sharing.export(FolderStore(store.root), "acme/rates", out, [json.loads((complete / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))["code"]["commit"] + "@" + OLDER])
+        sharing.import_snapshots(FolderStore(other), out)
+        damaged = other / "snapshots" / "acme+rates" / complete.name / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        whole = work / "whole"
+        sharing.export(FolderStore(store.root), "acme/rates", whole, None)
+        done = sharing.import_snapshots(FolderStore(other), whole)
+        assert len(done.refused) == 1 and len(done.copied) == 2  # the complete one is not whole here; the two others are copied
+        fresh = FolderStore(other)
+        for record in fresh.records():
+            if record.folder.name != complete.name:
+                assert not record.increment and fresh.verify_snapshot(record.path) == []  # complete, every file its own
+
+    def test_increments_sent_without_their_complete_one_keep_their_form_where_the_store_has_it_whole(self, unpinned, work, store):
+        import shutil
+
+        from chartbook import sharing
+
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        out, other = work / "out", work / "other"
+        sharing.export(FolderStore(store.root), "acme/rates", out, None)
+        sharing.import_snapshots(FolderStore(other), out)
+        for folder in (other / "increments" / "acme+rates").iterdir():  # the store has the complete one alone
+            if folder.is_dir():
+                shutil.rmtree(folder, onerror=lambda function, path, _: (os.chmod(path, stat.S_IWRITE | stat.S_IREAD), function(path)))
+        shutil.rmtree(out / "snapshots", onerror=lambda function, path, _: (os.chmod(path, stat.S_IWRITE | stat.S_IREAD), function(path)))
+        store_module._read_records.clear()
+        done = sharing.import_snapshots(FolderStore(other), out)
+        assert done.refused == [] and len(done.copied) == 2
+        assert _form(other) == _form(store.root) and FolderStore(other).verify() == []
+        own = sum(p.stat().st_size for folder in increments for p in folder.rglob("*") if p.is_file() and p.name not in ("snapshot.json", "INCREMENT.txt"))
+        assert done.size_bytes == own  # each file counted once
+
+    def test_gc_an_hour_on_leaves_every_increments_line_for_a_person(self, kept, store):
+        complete, increments, _, _ = kept
+        _aged(store.root)
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0, result.output
+        assert all((folder / "_chartbook" / "INCREMENT.txt").is_file() for folder in increments)
+
+    def test_the_same_snapshot_in_both_folders_is_left_alone_by_gc_and_the_complete_one_is_read(self, three, work, store):
+        import shutil
+
+        taken, readers = three
+        shutil.copytree(store.root, work / "copy")
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        doubled = increments[0]
+        shutil.copytree(work / "copy" / "snapshots" / "acme+rates" / doubled.name, complete.parent / doubled.name)
+        store_module._read_records.clear()
+        before = _files(doubled)
+        _aged(store.root)
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0 and _files(doubled) == before, result.output  # its files count as used: a person decides
+        (index,) = [i for i, one in enumerate(taken) if _folder_of(one).name == doubled.name]
+        assert Path(data.path("acme/rates:treasury", project_dir=readers[index])).is_relative_to(complete.parent / doubled.name)
+
+    def test_store_ls_says_increment_of_one_none_of_whose_files_is_in_the_complete_one(self, rates, store):
+        snapshot.make(rates, store=FolderStore(store.root), made_at=OLDER)
+        _table(rates, 9)
+        _part(rates, 2020)
+        pl.DataFrame({"year": [1999], "rate": [1.0]}).write_parquet(rates / "_data" / "parts" / "2020.parquet")
+        _chart(rates, "two")
+        (rates / "README.md").write_text("# acme/rates, again\n", encoding="utf-8", newline="\n")
+        manifest = rates / "chartbook.toml"
+        manifest.write_text(manifest.read_text(encoding="utf-8") + "\n# a word more\n", encoding="utf-8", newline="\n")
+        _commit(rates)
+        assert snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).made
+        complete, (increment,) = with_increments(store.root, "newest")["acme+rates"]
+        (record,) = [one for one in FolderStore(store.root).records() if one.folder == increment]
+        assert record.increment and all(file.location.is_relative_to(increment) for asset in record.assets for file in asset.files)
+        result = CliRunner().invoke(main, ["store", "ls"])
+        (line,) = [line for line in result.output.splitlines() if line.split()[:1] == [increment.name]]
+        assert line.split()[5] == "increment", line

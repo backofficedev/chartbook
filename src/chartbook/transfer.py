@@ -38,7 +38,7 @@ def _complete_first(taken_and_where):
     return (asked is not None and asked(taken.path) is not None, taken.made_at)
 
 
-def _builds_on_there(taken, source, target):
+def _builds_on_there(taken, source, target, whole):
     """The folder name, in the target, of the complete snapshot that a snapshot kept as an increment in the source builds on; None where the target has none, or keeps no increments, and it is written complete there."""
     asked = getattr(source, "builds_on", None)
     complete = asked(taken.path) if asked is not None else None
@@ -50,16 +50,22 @@ def _builds_on_there(taken, source, target):
         return None  # gone from the source: every file of the increment that is left is copied, complete
     for record in target.records():
         if record.readable and not record.increment and (record.pipeline, record.commit, record.made_at) == (on.pipeline, on.commit, on.made_at):
+            # Only on a complete one written in this run, or read and hashed in it: never on files taken on trust
+            if str(record.path) not in whole and not target.verify_snapshot(record.path):
+                whole.add(str(record.path))
+            if str(record.path) not in whole:
+                return None
             return record.folder.name
     return None
 
 
-def copy_snapshot(taken, source, target, complete=False):
+def copy_snapshot(taken, source, target, complete=False, whole=None):
     """Copy one snapshot into another store, each file checked by its hash as it is written; its record there.
 
     One the target has already is left as it is, and is there only if its
     own files are whole, read and hashed (:class:`NotWholeThere` otherwise).
     """
+    whole = whole if whole is not None else set()  # the complete snapshots in the target that this run wrote, or read and hashed
     existing = [snapshot.read(p) for p in target.all_snapshot_files() + target.pinned_snapshot_files()]
     for held in existing:
         if (held.pipeline, held.commit, held.made_at) == (taken.pipeline, taken.commit, taken.made_at):
@@ -77,11 +83,12 @@ def copy_snapshot(taken, source, target, complete=False):
             problems = target.verify_snapshot(held.path, taken.hashes())
             if problems:
                 raise NotWholeThere(taken, target, held.path, problems)
+            whole.add(str(held.path))
             return held.path
     document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
     # It keeps its form: an increment in the source is one in the target, on the same complete snapshot,
     # where the target has that one; where it has not, it is written complete, every file being at hand
-    on = None if complete else _builds_on_there(taken, source, target)
+    on = None if complete else _builds_on_there(taken, source, target, whole)
     pending = target.begin(
         taken.pipeline, taken.commit, taken.made_at, made_by=document.get("made_by", "snapshot"),
         **({"builds_on": on} if on is not None else {}),
@@ -112,9 +119,11 @@ def copy_snapshot(taken, source, target, complete=False):
         except BuiltOnGoneError:
             # What it builds on went from the target meanwhile: written complete
             pending.discard()
-            return copy_snapshot(taken, source, target, complete=True)
+            return copy_snapshot(taken, source, target, complete=True, whole=whole)
         for origin in source.origins(taken.commit, snapshot.record_name(taken.subdirectory)):
             target.note_origin(taken.commit, snapshot.record_name(taken.subdirectory), origin)
+        if on is None:
+            whole.add(str(path))
         return path
     except BaseException:
         pending.discard()
@@ -176,10 +185,11 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
     if dry_run:
         return sum(len(t) for _, t in sources), total
     # Copy and verify every snapshot and note before removing anything.
+    whole: set = set()
     for entry, chosen in sources:
         for taken in sorted(chosen, key=lambda taken: _complete_first((taken, entry.store))):
             try:
-                copy_snapshot(taken, entry.store, target)
+                copy_snapshot(taken, entry.store, target, whole=whole)
             except NotWholeThere as error:
                 raise StoreError(
                     f"{error}. Nothing was removed from where it came from. If a sync is still bringing it, wait "
