@@ -97,7 +97,8 @@ The catalog's site is behind your stores: 3 snapshots are not in it yet. Build i
 - **A site that was never built is asked for the same way,** where the command stopped with `Catalog docs not found`. Where nothing can ask, that is still an error, and it names `chartbook catalog build`.
 - **Behind is worked out when you ask,** by comparing the snapshots the site was built from (the `index.json` beside it) with those in the catalog's stores now: ones the site does not show yet, and ones it shows that are gone. So a snapshot that came through a synced folder from another machine counts, and nothing has to be left behind by a run.
 - **Where nothing can ask,** it opens what there is and says how far behind it is, on stderr.
-- In Python: `chartbook.versions.behind(catalog_toml)` gives a `Behind` (`built`, `missing`, `gone`; false when the site shows what the stores have), and `Behind.said()` the sentence.
+- **What is only away is not called gone.** With a store that is not there now, a record that cannot be read, or an ID two repositories claim, nothing is asked: a build then would take pages out of the site. It says it cannot tell, and opens the site as it is.
+- In Python: `chartbook.versions.behind(catalog_toml)` gives a `Behind` (`built`, `missing`, `gone`, and `unknown`, why it cannot be told; false when the site shows what the stores have), and `Behind.said()` the sentence.
 
 ### Added — What a pipeline reads that is not in your store: the list, in the order to build it
 

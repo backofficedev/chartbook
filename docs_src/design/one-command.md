@@ -425,7 +425,15 @@ its build writes: `chartbook docs open`.
 - **No is not a refusal to open.** `n` opens the site as it is. With no site at all, `n` opens
   nothing and exits 0; where nothing can ask, no site is an error that names `chartbook catalog
   build`, as before.
-- **A store that cannot be read now** does not stop the command: it opens what there is.
+- **What is only away is not called gone.** *(Found by review: with a drive away the site was
+  "behind" by every snapshot it showed, and Enter at the question built a site without them.)*
+  Where the site shows snapshots that are not in the stores now and a store is not there, a
+  record cannot be read, or the build would stop on an ID two repositories claim, nothing is
+  asked: it says that it cannot tell, and opens what there is.
+- **Left as it is: a snapshot that was not all in the store when the site was built.** Its page
+  says so, and the open does not ask again for it once it has arrived. Telling whether it has
+  means laying it out, which is the build's work; counting it without telling would ask on every
+  open for one that never arrives.
 - **What the site was built from is the `index.json` beside it,** which every build writes. No
   new file, and nothing a run has to leave behind.
 

@@ -387,9 +387,10 @@ Opening /Users/x/.chartbook/docs/index.html
 Enter builds it, as `chartbook catalog build` does, and opens it; `n` opens it as it is. A site that was never built is asked for the same way (`The catalog's site has not been built yet. Build it before opening? [Y/n]`), and `n` there opens nothing.
 
 - **Behind is worked out, not remembered.** The snapshots the site was built from (the `index.json` beside it) are compared with those in the catalog's stores now. A mark left by a run would miss a snapshot that came through a synced folder from another machine, and one that was cleared there.
-- **It counts both ways:** snapshots the stores have that the site does not show, and snapshots the site shows that the stores no longer have (`1 snapshot is not in it yet, and 2 it shows are no longer in them`).
+- **It counts both ways:** snapshots the stores have that the site does not show, and snapshots the site shows that the catalog no longer lists, because they were cleared from its stores or their pipeline was disabled in `catalog.toml` (`1 snapshot is not in it yet, and 2 it shows are no longer in the catalog`).
 - **Where nothing can ask** (a script, a pipe, CI), it opens the site as it is and says how far behind it is, on stderr: `… Opening it as it is: `chartbook catalog build` brings it up to date.` With no site at all it exits `1` and names `chartbook catalog build`.
-- **A store that cannot be read now** (a drive that is away) is no reason to stop: the site is opened as it is, and the next build says what is wrong.
+- **What is only away is not called gone.** Where the site shows snapshots that are not in the stores now, and a store is not there (a drive that is away), a snapshot's record cannot be read (a sync part-way), or two repositories claim one ID (which stops the build until `catalog.toml` says which), nothing is asked: a build then would take those pages out of the site. It says `Whether the catalog's site is behind your stores cannot be told now: the store at … is not there now. Opening it as it is.`
+- **A snapshot that was not all in the store when the site was built** has a page that says so, and is not counted again: `chartbook catalog build` makes its pages once it has arrived.
 
 The catalog shows snapshots. Work that is not committed yet is on the pipeline's own site, which its build writes: {ref}`chartbook docs open <chartbook-docs>`.
 
