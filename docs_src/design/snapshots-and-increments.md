@@ -150,8 +150,9 @@ Snapshot made: 5 files, 23 MB.
   ~/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4
 ```
 
-**5a. A script does both at once.** `chartbook run --snapshot` is a run and then a snapshot, by
-the same rule, and takes `--complete` too.
+**5a. A script does both at once.** `chartbook run --snapshot` builds and then makes a snapshot,
+choosing which kind by the same rule, and takes `--complete` too. It is not the two commands
+typed one after the other: {doc}`one-command` has a table of how they differ.
 
 **6. Looking at the store.**
 
@@ -315,8 +316,10 @@ second row. That row is its price.
 **`--complete` makes a complete one.** *Decided 2026-11-20, in place of "typed, the word means a
 complete one" (2026-11-19), which went with a run that made snapshots by itself.* `chartbook
 snapshot --complete` ends with a complete snapshot whatever the rule would choose. `chartbook run
---snapshot` is a run and then `chartbook snapshot`, by the same rule, and takes `--complete`
-too; it stays the strict form it is in {doc}`one-command`. Nothing is renamed.
+--snapshot` chooses the kind of its snapshot by the same rule, and takes `--complete` too; it
+stays the strict form it is in {doc}`one-command`, which says how it differs from `chartbook
+snapshot` typed after a run (what it does with an uncommitted lockfile, which store it asks,
+what its record says of the build). Nothing is renamed.
 
 - **Where the newest snapshot is an increment of these same files, `--complete` makes a new,
   complete one.** *Proposed by Claude (found by review), and decided 2026-11-19 for a typed
