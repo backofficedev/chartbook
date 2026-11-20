@@ -1380,6 +1380,16 @@ class Store(abc.ABC):
         """
         return []
 
+    def builds_on(self, record: Path) -> Optional[Path]:
+        """The record of the complete snapshot that the snapshot with this record builds on, for one kept as an increment; None for a complete snapshot.
+
+        An increment's folder holds the files that one complete snapshot of
+        its pipeline does not have, and its record names that one. Only a
+        folder store of this layout keeps any; ``store gc`` keeps a complete
+        snapshot while an increment that stays builds on it.
+        """
+        return None
+
     def holes_left(self, without: Iterable[Path]) -> dict[str, tuple[Path, str, int]]:
         """Of the pipelines that have a snapshot among the records *without*, which ``store gc`` would remove: each one of whose other snapshots has a hole (:meth:`holes_of`).
 
@@ -2118,6 +2128,9 @@ class FolderStore(Store):
                 f"{self._not_this_users_remedy()}"
             ) from None
         _read_records.pop(str(path), None)
+        # With an increment's record goes its line for a person, which is ChartBook's own note and no file of the snapshot
+        with contextlib.suppress(OSError):
+            (path.parent / INCREMENT_FILE).unlink()
         try:
             (path.parent / CLEARED_FILE).write_text(
                 f"Cleared by `chartbook store gc` on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC.\n"
@@ -2204,7 +2217,12 @@ class FolderStore(Store):
         # two is in the records, and one that is still being made is in the notes
         folders, noted = self._notes()
         self._forget()
-        here = [record for record in self.records() if record.path.parent.parent.parent == pipeline_path]
+        # With the pipeline's increments, where this is its folder of complete snapshots: each keeps files in one of them
+        here = [
+            record for record in self.records()
+            if record.path.parent.parent.parent == pipeline_path
+            or (record.increment and pipeline_path == self.pipelines_path() / record.path.parent.parent.parent.name)
+        ]
         doubt = next((record for record in here if not record.readable or not record.whole), None)
         if doubt is not None:
             import warnings
@@ -3095,6 +3113,13 @@ class FolderStore(Store):
             for _, said in what_is_wrong_in(asset)
         ]
 
+    def builds_on(self, record: Path) -> Optional[Path]:
+        """The record of the complete snapshot that the snapshot with this record builds on, where it is kept as an increment (:meth:`Store.builds_on`)."""
+        kept = read_kept_record(Path(record))
+        if not (kept.readable and kept.increment and kept.builds_on):
+            return None
+        return self.pipelines_path() / kept.folder.parent.name / kept.builds_on / OWN_DIR / RECORD_FILE
+
     def holes_left(self, without: Iterable[Path]) -> dict[str, tuple[Path, str, int]]:
         """Each pipeline with a snapshot among the records *without* one of whose other snapshots has a hole (:meth:`Store.holes_left`)."""
         gone = {str(path) for path in without}
@@ -3128,11 +3153,13 @@ class FolderStore(Store):
         self.check_writable()
         if not dry_run:
             self._tidy_tmp()
-        try:
-            names = sorted(os.listdir(self.root / self._places().pipelines))
-        except (FileNotFoundError, NotADirectoryError):
-            return []
-        return self._tidy_folders(names, list(keep), dry_run)
+        names: set = set()
+        for tree in self._trees():
+            try:
+                names.update(os.listdir(tree))
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+        return self._tidy_folders(sorted(names), list(keep), dry_run)
 
     def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from one pipeline's folder (:meth:`sweep`); what was removed, each with its size.
@@ -3148,11 +3175,12 @@ class FolderStore(Store):
         """Sweep the pipelines' folders of these names; raise :class:`TidyError` once all are swept, if some of it could not be removed."""
         removed, failed = [], []
         for name in names:
-            folder = self.root / self._places().pipelines / name
-            if name != UNOWNED_DIR and folder.is_dir() and not folder.is_symlink():
-                gone, stuck = self.sweep(folder, keep=keep, dry_run=dry_run)
-                removed += [(path.relative_to(self.root).as_posix(), size) for path, size in gone]
-                failed += [(path.relative_to(self.root).as_posix(), why) for path, why in stuck]
+            for tree in self._trees():  # a pipeline's complete snapshots, and its increments
+                folder = tree / name
+                if name != UNOWNED_DIR and folder.is_dir() and not folder.is_symlink():
+                    gone, stuck = self.sweep(folder, keep=keep, dry_run=dry_run)
+                    removed += [(path.relative_to(self.root).as_posix(), size) for path, size in gone]
+                    failed += [(path.relative_to(self.root).as_posix(), why) for path, why in stuck]
         if failed and not dry_run:
             name, why = failed[0]
             more = f" (and {len(failed) - 1} more)" if len(failed) > 1 else ""

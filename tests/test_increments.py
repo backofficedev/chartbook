@@ -177,3 +177,56 @@ class TestReads:
             assert [path.name for path in parts] == sorted(f"{year}.parquet" for year in (2020, 2021, 2022))[: taken.index(one) + 1]
             assert all(path.is_file() and path.parents[2] in (folder, complete) for path in parts)
             assert data.load("acme/rates:parts", project_dir=reader).collect().height == taken.index(one) + 1
+
+
+@pytest.fixture
+def unpinned(rates, store):
+    """Three snapshots of rates that nothing pins, each with a part more and another chart, all older than a week; oldest first."""
+    taken = []
+    for made_at, year, text in ((OLDER, 2020, "one"), (OLD, 2021, "two"), (OLDISH, 2022, "three")):
+        _part(rates, year)
+        _chart(rates, text)
+        taken.append(snapshot.make(rates, store=FolderStore(store.root), made_at=made_at).snapshot)
+    return taken
+
+
+def _files(root: Path) -> list[str]:
+    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
+
+
+class TestGc:
+    """An increment that goes, goes whole and takes nothing of the one it builds on; a complete one stays while an increment that stays builds on it."""
+
+    @pytest.mark.parametrize("arguments", [[], ["--aggressive"], ["--keep-lineage"]])
+    def test_the_oldest_complete_stays_for_the_newest_which_builds_on_it(self, unpinned, store, arguments):
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        middle, newest = increments
+        before = _files(complete)
+        dry = CliRunner().invoke(main, ["store", "gc", "--dry-run", *arguments])
+        assert dry.exit_code == 0 and "Would remove 1 snapshot(s)" in dry.output, dry.output
+        assert "1 because an increment that stays builds on it" in dry.output, dry.output
+        result = CliRunner().invoke(main, ["store", "gc", "--yes", *arguments])
+        assert result.exit_code == 0 and result.output.splitlines()[-1].startswith("Removed 1 snapshot(s) and "), result.output
+        assert not middle.exists() and newest.is_dir() and _files(complete) == before
+        fresh = FolderStore(store.root)
+        assert [record.folder for record in fresh.records()] == [complete, newest] and fresh.verify() == []
+        assert CliRunner().invoke(main, ["store", "gc", "--yes", *arguments]).output.splitlines()[-1] == "Nothing to remove."
+
+    def test_with_the_newest_complete_the_older_increments_go_and_it_stays_whole(self, unpinned, store):
+        complete, increments = with_increments(store.root, "newest")["acme+rates"]
+        before = _files(complete)
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0 and result.output.splitlines()[-1].startswith("Removed 2 snapshot(s) and "), result.output
+        assert not any(folder.exists() for folder in increments) and _files(complete) == before
+        fresh = FolderStore(store.root)
+        assert [record.folder for record in fresh.records()] == [complete] and fresh.verify() == []
+
+    def test_what_it_says_it_frees_is_what_goes(self, unpinned, store):
+        from chartbook.cli import _format_bytes
+
+        complete, increments = with_increments(store.root, "newest")["acme+rates"]
+        size = sum(path.stat().st_size for folder in increments for path in folder.rglob("*") if path.is_file() and path.name not in ("snapshot.json", "INCREMENT.txt"))
+        plan = lock.plan_gc(FolderStore(store.root))
+        assert plan.freed_bytes == size
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.output.splitlines()[-1].endswith(f", {_format_bytes(size)}."), result.output

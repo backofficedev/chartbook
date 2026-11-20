@@ -499,7 +499,7 @@ class TestTheWayOutGcNames:
             snapshot.plan_removals, snapshot._keep_lineage, snapshot._keep_repositories_whole, snapshot._holding_labelled,
             lock._plan_gc, lock._keep_what_only_they_hold, lock._plan_pinned,
         ))
-        found = {lock.HELD_BACK, lock.HELD_BACK_OTHER_BYTES}
+        found = {lock.HELD_BACK, lock.HELD_BACK_OTHER_BYTES, lock.BUILT_ON}
         for pattern in (
             r'\bwhy = f?"([^"]+)"',
             r'keep_noted\(root, "([^"]+)"',
@@ -525,6 +525,7 @@ class TestTheWayOutGcNames:
             "it names the address of a kept snapshot's first commit": "ties to their repository",
             "it is the newest that names its repository": "once a newer snapshot of its pipeline names its repository",
             lock.HELD_BACK: "is whole again, or has gone",
+            lock.BUILT_ON: "once the increments that build on it have gone",
         }
         assert set(ways) <= set(reasons) and len(reasons) >= 20, reasons
         for why, way in ways.items():

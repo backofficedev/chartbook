@@ -4497,6 +4497,7 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     plan.snapshots_delete = snapshots.remove
     plan.kept_versions = snapshots.kept_versions
     _keep_what_only_they_hold(plan, keep)
+    _keep_what_an_increment_builds_on(store, plan)
     _plan_pinned(store, plan, keep, recent_seconds)
     _hold_back_where_one_that_stays_has_a_hole(store, plan, keep)
     named_by_snapshots = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept + plan.pinned_kept))
@@ -4573,6 +4574,32 @@ def _keep_what_only_they_hold(plan: "GcPlan", keep: set) -> None:
             plan.snapshots_delete.remove((taken, why))
             plan.snapshots_kept.append((taken, "a lockfile pins bytes it alone holds"))
             held[taken.pipeline] |= taken.hashes()
+
+
+#: Why ``store gc`` keeps a complete snapshot that nothing else keeps: an increment's files are in two folders, its own and this one
+BUILT_ON = "an increment that stays builds on it"
+
+
+def _keep_what_an_increment_builds_on(store: Store, plan: "GcPlan") -> None:
+    """Keep a complete snapshot while an increment that stays builds on it (:meth:`chartbook.store.Store.builds_on`).
+
+    An increment that goes, goes whole, and takes nothing of the one it
+    builds on. An increment never builds on another, so one pass is enough.
+    """
+    asked = getattr(type(store), "builds_on", None)
+    if asked is None:
+        return  # several stores read as one are planned as before
+    going = {str(taken.path) for taken, _ in plan.snapshots_delete}
+    needed = set()
+    for taken, _ in plan.snapshots_kept + plan.snapshots_delete:
+        if str(taken.path) not in going:
+            complete = asked(store, taken.path)
+            if complete is not None:
+                needed.add(str(complete))
+    for taken, why in list(plan.snapshots_delete):
+        if str(taken.path) in needed:
+            plan.snapshots_delete.remove((taken, why))
+            plan.snapshots_kept.append((taken, BUILT_ON))
 
 
 def _held_by_pipeline(kept: list) -> dict:
@@ -4789,7 +4816,8 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
     still_removable = {taken.path for taken, _ in now.snapshots_delete}
     removed_snapshots = 0
     kept_back: set[str] = set()  # what a record that could not be removed still names
-    for taken, _ in plan.snapshots_delete:
+    # Increments first: what one builds on is there for as long as it is
+    for taken, _ in sorted(plan.snapshots_delete, key=lambda pair: getattr(store, "builds_on", lambda record: None)(pair[0].path) is None):
         if taken.path not in still_removable:
             continue
         try:

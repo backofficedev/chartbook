@@ -4553,6 +4553,8 @@ def _note_path(the_store, name: str) -> str:
 
 def _when_it_goes(why: str) -> str:
     """When a snapshot that `store gc` keeps for *why* goes, in the words of the plan's own reasons: the way out for one that has lost a file for good."""
+    if "builds on it" in why:
+        return "once the increments that build on it have gone, each for its own reason (`chartbook store gc --dry-run` says which stay, and why)"
     if "was made from" in why:
         return "once the snapshot that was made from it goes, or with a `chartbook store gc` without `--keep-lineage`"
     if "newest that names its repository" in why:
