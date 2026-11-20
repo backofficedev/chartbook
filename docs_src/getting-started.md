@@ -209,20 +209,29 @@ both hashes change with it.
 
 ## The five commands
 
-You did each step by hand above, to see what it is. In a project with a build script, which
-`chartbook init` makes for you, most days need only these:
+You did each step by hand above, to see what it is. Five commands cover most of what people do
+after that:
 
 | You type | It does |
 |---|---|
-| `chartbook init` | Starts a project from the template |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build, checks what it wrote, and makes its snapshot when everything is committed |
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
 | `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
-| `chartbook catalog open` | Opens everything that has been built, in your browser |
-| `chartbook install agents` | Teaches your coding agent ChartBook |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
 
-`chartbook run` is steps 3 to 5 in one: it runs the build, looks for everything the manifest
-declares, and takes the snapshot when your work is committed. The rest is in the
-{doc}`reference/cli`.
+`chartbook run` runs the script the manifest names as `build`. A project `chartbook init` makes
+has one; this pipeline gets one with two more lines in `chartbook.toml`:
+
+```toml
+[scripts]
+build = "python src/build_chart.py"
+```
+
+Then `chartbook run` is steps 3 and 5 in one: it runs the script, looks for everything the
+manifest declares, and takes the snapshot when your work is committed. The site of step 4 is
+still `chartbook docs build`, unless your build script renders it too, as the template's does.
+The rest is in the {doc}`reference/cli`.
 
 ## Next
 

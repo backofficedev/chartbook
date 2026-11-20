@@ -91,9 +91,9 @@ $ chartbook --help
 …
 Start with these:
   chartbook init            Start a project from the template
-  chartbook run             Pin, build, check and snapshot this pipeline
-  chartbook pin --update    Take the newest snapshot of each pipeline it reads
-  chartbook catalog open    Look at everything that was built, in a browser
+  chartbook run             Pin, build and snapshot this pipeline
+  chartbook pin --update    Take the newest snapshot of what it reads
+  chartbook catalog open    Browse every snapshot in your stores
   chartbook install agents  Teach your coding agent ChartBook
 
 More:
@@ -101,7 +101,7 @@ More:
   …
 ```
 
-Twenty-one commands in one alphabetical list said nothing of which matter ({design}`one-command`). The README, the Quickstart, the CLI reference, the Claude Code skill and `llms.txt` each have the same five in a section of their own, and a test holds them to the help. Every command is still listed, under "More", and still documented.
+Twenty-one commands in one alphabetical list said nothing of which matter ({design}`one-command`). The README, the docs' front page, the Quickstart, the CLI reference, the Claude Code skill and the llms files each have the same five in a section of their own, with one table, and a test holds its words in every one of them. Every other command is still listed, under "More", and every command is still documented.
 
 ### Added — `chartbook install agents`: one command for every coding agent
 

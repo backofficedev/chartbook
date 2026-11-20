@@ -24,15 +24,15 @@ ChartBook is a developer platform for data science teams to discover, document, 
 
 ## The five commands
 
-What a person types on most days, in a pipeline's folder. Reach for these first, and for the long list below only when one of these does not do it:
+Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. Reach for these first, and for the long list below only when one of these does not do it. Two of them are a person's: `chartbook init` asks its questions at a terminal, and `chartbook catalog open` opens a browser. As an agent, read the catalog with `chartbook ls --json` and `chartbook get-docs ID`, and build its site with `chartbook catalog build`:
 
 | You type | It does |
 |---|---|
-| `chartbook init` | Starts a project from the template |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build, checks what it wrote, and makes its snapshot when everything is committed |
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
 | `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
-| `chartbook catalog open` | Opens everything that has been built, in your browser |
-| `chartbook install agents` | Teaches your coding agent ChartBook |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
 
 ## Key CLI Commands
 

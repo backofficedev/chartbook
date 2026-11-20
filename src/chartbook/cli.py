@@ -78,9 +78,9 @@ def _reads_as_an_argument(word: str) -> bool:
 #: the README and the skill teach them first; a test holds each to a command there is.
 THE_FIVE = (
     ("chartbook init", "Start a project from the template"),
-    ("chartbook run", "Pin, build, check and snapshot this pipeline"),
-    ("chartbook pin --update", "Take the newest snapshot of each pipeline it reads"),
-    ("chartbook catalog open", "Look at everything that was built, in a browser"),
+    ("chartbook run", "Pin, build and snapshot this pipeline"),
+    ("chartbook pin --update", "Take the newest snapshot of what it reads"),
+    ("chartbook catalog open", "Browse every snapshot in your stores"),
     ("chartbook install agents", "Teach your coding agent ChartBook"),
 )
 

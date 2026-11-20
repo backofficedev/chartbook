@@ -471,14 +471,20 @@ what that step changes. *Proposed by Claude, 2026-11-19.*
 - **`chartbook --help`** opens with "Start with these": the five, each as it is typed, with one
   line of what it is for. "More" lists the rest by name. `init` and `run` are all there in the
   first list and are not said twice; `pin`, `catalog` and `install` have more to them and are.
-- **The README, the Quickstart, the reference, the skill and `llms.txt`** each have a section
-  "The five commands" with the same table, and a test holds the five in each to the five in the
-  help.
+- **The README, the docs' front page, the Quickstart, the reference, the skill and the llms
+  files** each have a section "The five commands" with one table, and a test holds its words in
+  every one of them, and the help's five lines, to what is written in the test. *(Found by
+  review: the first test held the names and nothing of what each line said.)*
+- **Each line says what is so.** *(Found by review.)* `chartbook catalog open` shows snapshots,
+  not "everything that was built": work that is not committed is not in it. `chartbook run`
+  looks for what the manifest declares, which is less than checking it. `init` and `install
+  agents` are typed once, not on most days, and `init` makes a new folder. And `chartbook run`
+  needs a `build` script: the README and the Quickstart give the two lines that name one.
 - **Not done here: the Quickstart's walk-through itself,** which goes step by step (a script run
   by hand, `chartbook docs build`, `chartbook snapshot`) and has a recorded terminal beside it.
   Rewriting it around `chartbook run` means recording that again, and its closing lines are the
-  ones the store's new layout changes. It says, after its steps, that `chartbook run` is those
-  steps in one.
+  ones the store's new layout changes. It says, after its steps, which of them `chartbook run`
+  does in one (the build and the snapshot, not the site).
 
 ## Later
 
