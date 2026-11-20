@@ -154,6 +154,14 @@ OWN_DIR = "_chartbook"
 #: A snapshot's record, its dictionary, in its folder's ``_chartbook/``.
 RECORD_FILE = "snapshot.json"
 
+#: Where a folder store of this layout keeps the snapshots that are increments: each holds the files
+#: that one complete snapshot of its pipeline, under ``snapshots/``, does not have
+#: (``docs_src/design/snapshots-and-increments.md``).
+INCREMENTS_DIR = "increments"
+
+#: The one line in an increment's ``_chartbook/`` that tells a person where the rest of its files are.
+INCREMENT_FILE = "INCREMENT.txt"
+
 #: What a snapshot's ``_chartbook/`` holds once ``store gc`` has cleared its
 #: record, until its folder is gone. In a store of 0.5 the folder stays while
 #: later snapshots use files in it. In this layout nothing does: one is there
@@ -271,6 +279,8 @@ class Layout:
     writes: bool
     readme: str
     cleared: str
+    #: The folder of the pipelines' folders for the snapshots kept as increments; empty where the layout has none
+    increments: str = ""
 
 
 #: The layout of ChartBook 0.5: read as it is, and never written with data.
@@ -304,6 +314,7 @@ V3_LAYOUT = Layout(
         "This folder is no snapshot any more. `chartbook store gc` removes what is left of it once no\n"
         "snapshot uses a file in it: one being made, or one whose _chartbook/snapshot.json names it.\n"
     ),
+    increments=INCREMENTS_DIR,
 )
 
 #: How long a note of a snapshot being made keeps the files it uses from
@@ -1605,6 +1616,11 @@ class KeptRecord:
     stamp: tuple = ()
     whole: bool = True
     mentioned: frozenset = frozenset()
+    #: For an increment (a snapshot under ``increments/``), the folder name of the one complete snapshot of
+    #: its pipeline that keeps the rest of its files, as its record's ``stored`` says; empty for a complete one
+    builds_on: str = ""
+    #: Whether its folder is under ``increments/``
+    increment: bool = False
 
     @property
     def folder(self) -> Path:
@@ -1624,12 +1640,20 @@ def _record_stamp(path: Path) -> Optional[tuple]:
     return (seen.st_mtime_ns, seen.st_size, seen.st_ino)
 
 
-def _kept_files(stored: object, pipeline_folder: Path, own: str) -> Optional[tuple[str, bool, tuple[KeptFile, ...]]]:
+def _kept_files(
+    stored: object, pipeline_folder: Path, own: str, increment: Optional[tuple] = None
+) -> Optional[tuple[str, bool, tuple[KeptFile, ...]]]:
     """Where an asset's files are, from its ``stored`` in a record; None if it says nothing a store could follow.
 
     A record may come from anyone who can write to a store, and each of its
     paths becomes a path in it: only plain relative paths are followed, and
     a folder named as a snapshot's is.
+
+    :param increment: For a record under ``increments/``: the folder name
+        of the complete snapshot it builds on (empty if it names none) and
+        that pipeline's folder under ``snapshots/``. Each of its files is
+        then in one of two folders, its own or that one, and a file it says
+        is anywhere else is not followed.
     """
     if not isinstance(stored, dict) or not isinstance(stored.get("files"), list):
         return None
@@ -1657,7 +1681,10 @@ def _kept_files(stored: object, pipeline_folder: Path, own: str) -> Optional[tup
             _split_hash(content_hash)
         except ValueError:
             return None
-        files.append(KeptFile(relative, path, size, content_hash, pipeline_folder.joinpath(kept_in, *kept_parts)))
+        folder = _folder_kept_in(kept_in, pipeline_folder, own, increment)
+        if folder is None:
+            return None
+        files.append(KeptFile(relative, path, size, content_hash, folder.joinpath(*kept_parts)))
     if not files or (single and len(files) != 1):
         return None
     return at, single, tuple(files)
@@ -1677,7 +1704,15 @@ def _makes(single: bool, files: tuple) -> str:
     return hashing.hash_listing(hashing.FileEntry(f.relative, f.size_bytes, f.content_hash) for f in files).content_hash
 
 
-def _mentioned(stored: object, pipeline_folder: Path, own: str) -> set[str]:
+def _folder_kept_in(kept_in: str, pipeline_folder: Path, own: str, increment: Optional[tuple]) -> Optional[Path]:
+    """The snapshot's folder a record's file is kept in, by the name its entry gives: for an increment, its own or the one it builds on, and no other."""
+    if increment is None or kept_in == own:
+        return pipeline_folder / kept_in
+    builds_on, complete = increment
+    return complete / kept_in if builds_on and kept_in == builds_on else None
+
+
+def _mentioned(stored: object, pipeline_folder: Path, own: str, increment: Optional[tuple] = None) -> set[str]:
     """Every file a part's dictionary names, as a path, whether this machine follows it or not.
 
     A name another system takes (a ``:`` on Windows) is still a file that
@@ -1695,8 +1730,27 @@ def _mentioned(stored: object, pipeline_folder: Path, own: str) -> set[str]:
         parts = kept_as.split("/")
         if any(part in ("", ".", "..") or "\0" in part for part in parts):
             continue
-        found.add(str(pipeline_folder.joinpath(kept_in, *parts)))
+        folder = _folder_kept_in(kept_in, pipeline_folder, own, increment)
+        if folder is not None:
+            found.add(str(folder.joinpath(*parts)))
     return found
+
+
+def _increment_of(folder: Path, document: dict) -> Optional[tuple]:
+    """For a snapshot's folder under ``increments/``: the folder name of the complete snapshot its record says it builds on (empty if it names none), and that pipeline's folder under ``snapshots/``; None for any other folder.
+
+    What it builds on is said where the record says how the store keeps
+    the snapshot (``stored``, at the top of the record), and not among
+    what the snapshot is: the same snapshot kept complete in another store
+    has the same record less ``stored``.
+    """
+    tree = folder.parent.parent
+    if tree.name != INCREMENTS_DIR:
+        return None
+    kept = document.get("stored") if isinstance(document.get("stored"), dict) else {}
+    builds_on = kept.get("builds_on")
+    named = builds_on if isinstance(builds_on, str) and is_snapshot_folder(builds_on) else ""
+    return named, tree.parent / V3_LAYOUT.pipelines / folder.parent.name
 
 
 def read_kept_record(path: Path) -> KeptRecord:
@@ -1732,6 +1786,9 @@ def read_kept_record(path: Path) -> KeptRecord:
         found = KeptRecord(path, readable=False, stamp=stamp or ())
         _read_records[str(path)] = found
         return found
+    # An increment, by the folder it is in: each of its files is in its own folder or in the one complete
+    # snapshot of its pipeline that its record's own `stored` names, under snapshots/
+    increment = _increment_of(folder, document)
     assets, named, mentioned, whole = [], set(), set(), True
     for part in parts:
         content_hash = part.get("content_hash")
@@ -1744,8 +1801,8 @@ def read_kept_record(path: Path) -> KeptRecord:
         named.add(content_hash)
         if part.get("stored") is None:
             continue
-        mentioned |= _mentioned(part.get("stored"), folder.parent, folder.name)
-        kept = _kept_files(part.get("stored"), folder.parent, folder.name)
+        mentioned |= _mentioned(part.get("stored"), folder.parent, folder.name, increment)
+        kept = _kept_files(part.get("stored"), folder.parent, folder.name, increment)
         if kept is not None and _makes(kept[1], kept[2]) == content_hash:
             # Only files whose hashes make the asset's: a record may be anyone's, and a
             # dictionary of other files under a hash would hand a reader other bytes
@@ -1756,6 +1813,7 @@ def read_kept_record(path: Path) -> KeptRecord:
     found = KeptRecord(
         path, pipeline, commit, subdirectory, made_at, made_by if made_by in ("snapshot", "pin") else "snapshot",
         named=frozenset(named), stamp=stamp or (), whole=whole, mentioned=frozenset(mentioned),
+        builds_on=increment[0] if increment else "", increment=increment is not None,
     )
     found = dataclasses.replace(
         found, assets=tuple(KeptAsset(content_hash, found, at, single, files) for content_hash, at, single, files in assets)
