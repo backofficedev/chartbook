@@ -224,7 +224,7 @@ def test_one_bucket_is_one_store_but_another_endpoint_is_not(tmp_path):
 
 
 def test_move_whose_source_cannot_be_tidied_still_routes(tmp_path, monkeypatch):
-    from chartbook.store import MIGRATE_JOURNAL, StoreError, TMP_DIR
+    from chartbook.store import StoreError
     from chartbook.transfer import move
     folder = pipeline(tmp_path)
     source = FolderStore(tmp_path / "one")
@@ -232,8 +232,16 @@ def test_move_whose_source_cannot_be_tidied_still_routes(tmp_path, monkeypatch):
     (tmp_path / "two").mkdir()
     configure(tmp_path, monkeypatch, {"one": {"url": str(source)}, "two": {"url": str(tmp_path / "two")}})
     stores = Stores.configured()
-    (source.root / TMP_DIR).mkdir(exist_ok=True)
-    (source.root / TMP_DIR / MIGRATE_JOURNAL).write_text("")
+    # Its tidy is refused, as for a store whose move from 0.2 has not finished (a tmp/ at the top of a store of this
+    # layout is refused whole now, before anything is copied: tests/test_migrate_0_5.py)
+    real = FolderStore._check_migrated
+
+    def not_finished(self):
+        if self.root == source.root:
+            raise StoreError(f"The store at {self} has not finished moving.")
+        return real(self)
+
+    monkeypatch.setattr(FolderStore, "_check_migrated", not_finished)
     with pytest.raises(StoreError, match="Moved 1 snapshot.*left behind"):
         move("acme/upstream", stores, "two")
     assert "acme/upstream" in Stores.configured().named("two").pipelines
