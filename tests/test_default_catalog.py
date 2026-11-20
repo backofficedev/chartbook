@@ -12,7 +12,7 @@ from click.testing import CliRunner
 from chartbook import cli, config, snapshot
 from chartbook.cli import main
 from chartbook.store import FolderStore, default_store
-from tests.snapshot_lines import made_at, said_made
+from tests.snapshot_lines import COMPLETE, made_at, said_made
 from tests.test_several_stores import configure, pipeline
 
 
@@ -66,7 +66,7 @@ class TestWhereNothingCanAsk:
         result = CliRunner().invoke(main, ["snapshot"])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
-        assert made_at(lines) is not None and made_at(lines) < lines.index(_made_line())
+        assert made_at(lines, COMPLETE) is not None and made_at(lines, COMPLETE) < lines.index(_made_line())  # a pipeline's first: complete
         assert "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it." in lines
         assert config.get_global_catalog_path().is_file()
 
@@ -169,7 +169,7 @@ class TestWhatTheReviewFound:
         monkeypatch.chdir(folder)
         result = CliRunner().invoke(main, ["snapshot"])
         assert result.exit_code == 0, result.output
-        assert said_made(result.output)
+        assert said_made(result.output, COMPLETE)  # a pipeline's first: complete
         assert "Note: no catalog to show it in:" in result.output and "chartbook catalog migrate" in result.output
         assert not config.get_global_catalog_path().exists()
 

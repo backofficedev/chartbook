@@ -731,24 +731,35 @@ class TestAnotherPipelinesVersion:
             }
 
         def another(note: str) -> Path:
-            """One more snapshot of the pipeline, of a commit that changes its README; where it keeps the model."""
+            """One more snapshot of the pipeline, of a commit that changes its README; where it keeps the model.
+
+            Complete, so that it has a copy of the model of its own: which
+            snapshot's copy a read is handed is what this is about, and one
+            kept as an increment would keep the model in an earlier one's
+            folder, the very file handed out before it was made.
+            """
             (forecast / "README.md").write_text(f"# Forecast, {note}\n", encoding="utf-8", newline="\n")
             _commit(forecast)
-            assert snapshot.make(forecast).made
-            return _kept(max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at))
+            assert snapshot.make(forecast, complete=True).made
+            newest = max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)
+            assert _kept(newest).is_relative_to(Path(newest.path).parent.parent)
+            return _kept(newest)
 
         made = [_kept(taken) for taken in sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)]
         oldest, pinned = made[0], made[2]
+        assert oldest != pinned  # two files: the two versions
         stays = ("forecast:m", "forecast:m@challenger")  # the pinned snapshot's own copy: it holds the second version itself
         of_the_second = (f"forecast:m@{second}", "m@challenger", f"m@{second}")
         of_the_first = ("forecast:m@champion", f"forecast:m@{first}", "m@champion", f"m@{first}")
         assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, pinned), **dict.fromkeys(of_the_first, oldest)}
         # A fourth snapshot, which holds the second version again
         fourth = another("with a word more")
+        assert fourth not in (oldest, pinned)  # its own copy, another file than the pinned snapshot's
         assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, fourth), **dict.fromkeys(of_the_first, oldest)}
         # And a fifth, in which the model is the first version again: the pinned snapshot does not hold that one
         (forecast / "_models" / "m.json").write_bytes(b"weights-1")
         fifth = another("and the model as it first was")
+        assert fifth not in (oldest, pinned, fourth)
         assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, fourth), **dict.fromkeys(of_the_first, fifth)}
         assert (serve / lock.LOCK_FILE).read_bytes() == pins  # and no pin has moved
 

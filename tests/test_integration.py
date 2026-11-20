@@ -19,7 +19,7 @@ import pytest
 from chartbook.build_docs import generate_docs
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
 from tests.fixtures import remove_tree
-from tests.snapshot_lines import said_made
+from tests.snapshot_lines import INCREMENT, said_made
 
 # Path to mock data fixtures for example projects
 MOCK_DATA_DIR = Path(__file__).parent / "fixtures" / "mock_fred_data"
@@ -473,7 +473,8 @@ class TestExampleProjects:
             assert "chartbook.lock is unchanged." in run("chartbook", "pin", "--update").stdout
 
             # Its owner makes a snapshot. Now this pipeline is told, and stays put.
-            assert said_made(self._snapshot(yield_curve_path, env).stdout)
+            # One table of it was rewritten and the rest is as it was: kept as an increment
+            assert said_made(self._snapshot(yield_curve_path, env).stdout, INCREMENT)
             pin = run("chartbook", "pin")
             assert "changed upstream" in pin.stdout, pin.stdout + pin.stderr
             assert Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()) == pinned_path
