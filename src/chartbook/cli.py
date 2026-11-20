@@ -3367,6 +3367,22 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     from chartbook.store import ReadOnlyStoreError, StoreError
 
     project_dir = resolve_project_dir(project_dir)
+    here = _in_its_folder(project_dir)
+    try:
+        snapshots.code_of(project_dir)
+    except ValueError:
+        # A folder reached by another spelling than the disk's own (--project-dir in another letter case, on
+        # a disk that takes either), which a run's last line may have handed over: where it is in its
+        # repository cannot be told, and pathlib's own words for that help nobody
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"{project_dir} is named otherwise than the disk names it, so where it is in its repository cannot be "
+            f"told. `cd` into the folder, and `chartbook snapshot` again.",
+            err=True,
+        )
+        raise SystemExit(1)
+    except Exception:  # noqa: BLE001 - whatever else is wrong with the folder is the snapshot's to say, below
+        pass
     try:
         report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
@@ -3374,25 +3390,29 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
         # Nothing of it is there to take: each thing, and why, since the run that built it said only
         # that this command makes a snapshot. A reason may run to several lines (an engine's own
         # message): its first says it
-        for name, why in list(getattr(e, "not_built", None) or ())[:10]:
+        not_built = list(getattr(e, "not_built", None) or ())
+        for name, why in not_built[:10]:
             click.echo(f"  not built: {name} ({(str(why).splitlines() or [''])[0]})", err=True)
+        if len(not_built) > 10:
+            click.echo(f"  and {len(not_built) - 10} more", err=True)
         if isinstance(e, ReadOnlyStoreError) and not store_names:
             # A class's store listed ahead of one's own stops every snapshot of a pipeline the catalog
             # sends nowhere, until the catalog says where this one goes: the way out, where there is one
             sent = _a_store_to_send_it_to(project_dir)
             if sent is not None:
-                pipeline, other = sent
+                way, other = sent
                 click.echo(
                     f"  It is the catalog's first store, where a pipeline the catalog sends nowhere is written.\n"
-                    f"  To send this one to {other}: `pipelines = [\"{pipeline}\"]` under [stores.{other}] in catalog.toml.",
+                    f"  {way}\n"
+                    f"  Or, for this one snapshot: `chartbook snapshot --store {other}{here}`.",
                     err=True,
                 )
         if _only_the_lockfile_is_uncommitted(project_dir, e):
             # A run wrote it. Its owner commits it. At a commit somebody else pinned, a commit would be one
             # nobody else has, and a snapshot of that meets no pin: there the run that passes over the lockfile
             click.echo(
-                "  Only chartbook.lock is not committed: commit it. Or, at a commit somebody else pinned, "
-                "`chartbook run --snapshot`, which builds and takes its snapshot with the lockfile as it is.",
+                f"  Only chartbook.lock is not committed: commit it. Or, at a commit somebody else pinned, "
+                f"`chartbook run --snapshot{here}`, which builds and takes its snapshot with the lockfile as it is.",
                 err=True,
             )
         raise SystemExit(1)
@@ -3403,7 +3423,7 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
 
 
 def _a_store_to_send_it_to(project_dir):
-    """For a snapshot refused because the catalog sends its pipeline nowhere and its first store may only be read: the pipeline's ID and the name of the first store that may be written; None otherwise.
+    """For a snapshot refused because the catalog sends its pipeline nowhere and its first store may only be read: the sentence that says how to send it to the first store that may be written (:func:`chartbook.run.way_out_said`), and that store's name; None otherwise.
 
     A catalog's first store is where everything goes that it sends nowhere
     by name (a pin's copies, a lockfile's note, a snapshot), so a class's
@@ -3419,11 +3439,16 @@ def _a_store_to_send_it_to(project_dir):
     except Exception:  # noqa: BLE001 - only to say more of an error already said
         return None
     other = runner._a_store_to_send_it_to(None, pipeline)
-    return (pipeline, other) if other is not None else None
+    return (runner.way_out_said(None, pipeline), other) if other is not None else None
 
 
 def _only_the_lockfile_is_uncommitted(project_dir, error) -> bool:
-    """Whether a snapshot was refused for uncommitted work, and this pipeline's own lockfile is all of it."""
+    """Whether a snapshot was refused for uncommitted work, and this pipeline's own lockfile, written, is all of it.
+
+    Its own: asked of git by its path in the pipeline's folder, so not a
+    file of that name in a folder below. Written: a lockfile that was
+    removed is not one to commit, nor one a run would build "as it is".
+    """
     from chartbook import lock
     from chartbook import snapshot as snapshots
 
@@ -3431,7 +3456,8 @@ def _only_the_lockfile_is_uncommitted(project_dir, error) -> bool:
         return False
     try:
         every = snapshots.uncommitted(project_dir)
-        return bool(every) and every == snapshots.uncommitted(project_dir, only=lock.LOCK_FILE)
+        own = snapshots.uncommitted(project_dir, only=lock.LOCK_FILE)
+        return bool(every) and every == own and all("D" not in line[:2] for line in own)
     except Exception:  # noqa: BLE001 - only to say more of an error already said
         return False
 
@@ -3537,7 +3563,7 @@ def lineage_command(project_dir, check, rehash, as_json):
     "--snapshot",
     "make_snapshot",
     is_flag=True,
-    help="Build, then make a snapshot: refuse to build with anything uncommitted, and fail unless the build ends with a snapshot",
+    help="Build, then make a snapshot: refuse to build with anything uncommitted but chartbook.lock, and fail unless the build ends with a snapshot",
 )
 @click.option(
     "--frozen",
@@ -3614,10 +3640,12 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
 
     Run this in a pipeline. A catalog lists stored snapshots and runs no code.
 
-    --snapshot is the build and `chartbook snapshot` in one command, for
-    a script that must end with a snapshot. It refuses to build with
-    anything uncommitted, and fails where no snapshot can be made. Its
-    snapshot records that the build ran in the same command.
+    --snapshot is the build and a snapshot in one command, for a script
+    that must end with one. It refuses to build with anything uncommitted
+    but chartbook.lock, which its own pin is about to write, and where the
+    catalog says the store its snapshot goes to may only be read; and it
+    fails where no snapshot can be made. Its snapshot records that the
+    build ran in the same command.
 
     \b
     Examples:
@@ -3844,10 +3872,12 @@ def _in_its_folder(folder) -> str:
     Quoted as this system's shell takes it, as the list of what is not in
     a store quotes a folder, so that the command can be pasted.
     """
+    import os
+
     from chartbook.missing import _quoted
 
     try:
-        if Path(folder).resolve() == Path.cwd().resolve():
+        if os.path.samefile(folder, Path.cwd()):  # however either is spelled
             return ""
     except OSError:
         pass
@@ -3937,8 +3967,8 @@ def _run_script(
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
-    if report.snapshots and (snapshot or upstream):
-        # Once the run is over, for the catalog that shows them
+    if report.snapshots:
+        # Once the run is over, for the catalog that shows them: a run makes one only where it was asked to
         _say_where_a_snapshot_shows()
     # A run makes no snapshot of what it was asked to build, in whatever state the folder is: said
     # last, where it is seen, and the same every time, with no look at git or at the store. Most runs

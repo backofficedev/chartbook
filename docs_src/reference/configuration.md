@@ -732,7 +732,7 @@ build = "doit"      # the same as [scripts] build = "doit"
 
 **Scripts are not tasks.** One does not depend on another, and there is no order among them. What is out of date *inside* a pipeline is for the pipeline's own tool to decide: doit, Make, Snakemake.
 
-A catalog has no `[scripts]`. `chartbook run` in a catalog runs each of its pipelines' own.
+A catalog has no `[scripts]`, and runs no code: `chartbook run` in a catalog's folder says so and stops.
 
 ## Custom Site Pages
 

@@ -565,7 +565,12 @@ No new snapshot: the same bytes and the same pins as the one made 2026-10-13 18:
 
 A snapshot records what the pipeline was pinned to, so after `chartbook pin --update` it is made again with the same bytes: a pipeline that pins this one then reads where they came from. And it records each dataframe's rows, which a snapshot made by a ChartBook from before 0.6.0 does not: the same bytes as such a one make a new snapshot, once, and the command says why: `The same files as the snapshot made 2026-11-04 05:46 UTC, which says nothing of the rows of 1 dataframe: this one records them, so that a rebuild can meet a pin of it.` (A table whose rows cannot be hashed is not counted there: `rows not hashed: …` says why it has none.) Two checkouts of one pipeline that share a store and pin differently (a lockfile git ignores) each make their own when they snapshot, and the newest is the one a pin takes.
 
-An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
+An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make, and the refusal names each thing that is not there (`not built: ftsfr/fed_yield_curve:treasury_rates (./_data/treasury_rates.parquet)`, ten of them and then how many more).
+
+**Where it refuses, it says the way on.** Two cases have a line of their own:
+
+- **Only `chartbook.lock` is not committed.** A run wrote it, and its owner commits it. In a clone at a commit somebody else pinned, a commit would be one nobody else has, and a snapshot of that meets no pin; there the line names `chartbook run --snapshot`, which passes over the lockfile.
+- **The catalog's first store may only be read,** and the catalog sends this pipeline nowhere by name: a class's store listed ahead of your own. The lines say which store can be written and how to send the pipeline there (add its ID to `pipelines` under that store in `catalog.toml`), or `chartbook snapshot --store NAME` for this one snapshot.
 
 **A dataframe's rows.** Beside the hash of each dataframe's file, a snapshot records its rows: the last date in it (`as_of`, the data's own and never the clock's) and a hash of the rows of each calendar year up to that date, a year over 128 MB by month and such a month by day. A pin copies them, and they are what lets a build of someone else's own meet the pin ({ref}`chartbook pin <a-build-of-your-own>`). They are dated by the dataframe's `date_col`; with none, the table has one hash of all its rows. The table is read a little at a time, never whole, so the memory this takes is set by a period and not by the table. A new snapshot says what each dataframe's rows did beside the snapshot before it:
 
@@ -607,7 +612,7 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook pin -
 Ran build in 1 pipeline(s).
 ```
 
-1. It checks that everything is committed **before** it builds, so nothing is built for an hour and then left without a snapshot. `chartbook.lock` does not count: the pin before the build is about to write that file, and the snapshot records what it says; commit the lockfile after.
+1. It checks that everything is committed **before** it builds, so nothing is built for an hour and then left without a snapshot. `chartbook.lock` does not count: the pin before the build is about to write that file, and the snapshot records what it says; commit the lockfile after. It also refuses here where the catalog says the store its snapshot goes to may only be read, with the way out `chartbook snapshot` gives. (A store that is away, or a folder the system will not let you write, is found by the snapshot, after the build.)
 2. It builds, and looks for what `chartbook.toml` declares.
 3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot. So does a build that makes a commit.
 4. It makes the snapshot, and records in it that the build ran in the same command.

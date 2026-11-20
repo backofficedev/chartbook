@@ -164,6 +164,19 @@ class TestARunMakesNoSnapshot:
         # Nothing of what it built is put in a store, and no store or catalog is made for it
         assert not store.root.exists() and not config.get_global_catalog_path().exists()
 
+    def test_it_waits_for_nobody(self, demo, store, monkeypatch):
+        """Builds that end in a snapshot of one folder take turns. A plain run ends in none, and takes no turn."""
+        waited = []
+        real = run._alone_while_built
+
+        def watched(step, echo, snapshotted):
+            waited.append(bool(snapshotted))
+            return real(step, echo, snapshotted)
+
+        monkeypatch.setattr(run, "_alone_while_built", watched)
+        assert _run().exit_code == 0 and waited == [False]
+        assert _run("--snapshot", "--no-gc-reminder").exit_code == 0 and waited == [False, True]
+
     def test_however_often_it_is_run(self, demo, store):
         for _ in range(3):
             assert _after_the_run(_run()) == _closing()
@@ -466,17 +479,69 @@ class TestASnapshotIsTyped:
             "  Only chartbook.lock is not committed: commit it. Or, at a commit somebody else pinned, `chartbook run "
             "--snapshot`, which builds and takes its snapshot with the lockfile as it is.",
         ]
+        assert refused.output.splitlines()[-1] in refused.stderr and "Only chartbook.lock" not in refused.stdout
         assert [taken.pipeline for taken in _snapshots(store)] == ["acme/up"]
         # With anything else beside it, that is not the advice
         (demo / "notes.txt").write_text("to do\n", encoding="utf-8", newline="\n")
         both = _snapshot()
         assert both.exit_code == 1 and "Only chartbook.lock" not in both.output
         (demo / "notes.txt").unlink()
+        # Typed from another folder, the command it names says which pipeline
+        os.chdir(demo.parent)
+        try:
+            elsewhere = _snapshot("--project-dir", str(demo))
+        finally:
+            os.chdir(demo)
+        assert f"`chartbook run --snapshot --project-dir {missing._quoted(demo)}`, which builds" in elsewhere.output.splitlines()[-1]
         _committed(demo)
         made = _snapshot()
         assert made.exit_code == 0 and MADE in made.output.splitlines()
         (taken,) = [taken for taken in _snapshots(store) if taken.pipeline == "acme/demo"]
         assert [entry["id"] for entry in taken.inputs] == ["acme/up"] and _ran(demo) == 1
+
+    def test_a_lockfile_that_was_removed_is_not_one_to_commit(self, demo, store, upstream):
+        """Found by review: "commit it" committed the deletion, and the run it named pinned again from nothing."""
+        _snapshot_of(upstream, store)
+        _depends_on_upstream(demo)
+        assert _run().exit_code == 0
+        _committed(demo)
+        (demo / "chartbook.lock").unlink()
+        result = _snapshot()
+        assert result.exit_code == 1 and "   D chartbook.lock" in result.output.splitlines()
+        assert "Only chartbook.lock" not in result.output
+
+    def test_a_file_of_that_name_in_a_folder_below_is_not_the_lockfile(self, demo, store):
+        (demo / "sub").mkdir()
+        (demo / "sub" / "chartbook.lock").write_text("x\n", encoding="utf-8", newline="\n")
+        assert _run().exit_code == 0
+        result = _snapshot()
+        assert result.exit_code == 1 and "  ?? sub/chartbook.lock" in result.output.splitlines()
+        assert "Only chartbook.lock" not in result.output
+
+    def test_more_than_ten_things_not_built_are_ten_and_a_count(self, work, store, monkeypatch):
+        directory = _folder(work / "many", {
+            "project": {"id": "acme/many"},
+            "dataframes": {f"t{number:02}": {"path": f"./_data/t{number:02}.csv", "docs": "d"} for number in range(12)},
+        })
+        monkeypatch.chdir(_committed(directory))
+        said = _snapshot().output.splitlines()
+        assert said[1:] == [*(f"  not built: acme/many:t{number:02} (./_data/t{number:02}.csv)" for number in range(10)), "  and 2 more"]
+
+    def test_a_folder_named_in_another_letter_case_is_said_in_words(self, demo, store, work, monkeypatch):
+        """Found by review: a run named so handed over `chartbook snapshot --project-dir …/DEMO`, which answered in pathlib's words."""
+        other = work / "DEMO"
+        if not other.is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        assert _run().exit_code == 0
+        monkeypatch.chdir(work)
+        result = _snapshot("--project-dir", str(other))
+        assert result.exit_code == 1 and result.output.splitlines() == [
+            f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
+            f"`cd` into the folder, and `chartbook snapshot` again."
+        ]
+        # And from inside the folder, however it was spelled, a run's last line names no folder
+        monkeypatch.chdir(demo)
+        assert _after_the_run(_run("--project-dir", str(other))) == _closing()
 
     def test_a_lockfile_that_git_ignores_holds_nothing_up(self, demo, store, upstream):
         """A project that keeps its lockfile out of git has chosen that: the snapshot records what it was built from all the same."""
@@ -578,9 +643,25 @@ class TestAFirstStoreThatIsOnlyRead:
         assert result.output.splitlines() == [
             self.READ_ONLY,
             "  It is the catalog's first store, where a pipeline the catalog sends nowhere is written.",
-            '  To send this one to second: `pipelines = ["acme/demo"]` under [stores.second] in catalog.toml.',
+            # "Add", and not what the line is to be: the store may be sent other pipelines already
+            f'  To send this one to second: add "acme/demo" to `pipelines` under [stores.second] in {work / "home" / "catalog.toml"}.',
+            "  Or, for this one snapshot: `chartbook snapshot --store second`.",
         ]
-        # Done as it says, the snapshot is made, there
+        # Typed from another folder, the command it names says which pipeline
+        os.chdir(work)
+        try:
+            elsewhere = _snapshot("--project-dir", str(demo))
+        finally:
+            os.chdir(demo)
+        assert elsewhere.output.splitlines()[-1] == (
+            f"  Or, for this one snapshot: `chartbook snapshot --store second --project-dir {missing._quoted(demo)}`."
+        )
+        # The second of those, as it is given
+        once = _snapshot("--store", "second")
+        assert once.exit_code == 0 and MADE in once.output.splitlines(), once.output
+        assert _stored(work, "first") == [] and _stored(work, "second") == ["acme/demo"]
+        (demo / "out.csv").write_text("c,d\n", encoding="utf-8", newline="\n")
+        # Done as the first says, the snapshot is made, there
         stores(
             first={"url": str(work / "first"), "read_only": True},
             second={"url": str(work / "second"), "pipelines": ["acme/demo"]},
@@ -588,7 +669,7 @@ class TestAFirstStoreThatIsOnlyRead:
         again = _snapshot()
         assert again.exit_code == 0, again.output
         assert MADE in again.output.splitlines() and "Stores: second" in again.output.splitlines()
-        assert _stored(work, "first") == [] and _stored(work, "second") == ["acme/demo"]
+        assert _stored(work, "first") == [] and _stored(work, "second") == ["acme/demo", "acme/demo"]
 
     def test_a_store_it_is_sent_to_that_is_only_read_is_not_told_to_be_sent(self, stores, demo, work):
         stores(first={"url": str(work / "first"), "read_only": True, "pipelines": ["acme/demo"]}, second={"url": str(work / "second")})
@@ -612,7 +693,8 @@ class TestAFirstStoreThatIsOnlyRead:
         assert result.output.splitlines() == [
             "Error: acme/demo cannot have a snapshot: Store 'first' is read-only, and it is the catalog's first, where a "
             "pipeline the catalog sends nowhere is written.",
-            '  To send this one to second: `pipelines = ["acme/demo"]` under [stores.second] in catalog.toml. Nothing was built.',
+            f'  To send this one to second: add "acme/demo" to `pipelines` under [stores.second] in {work / "home" / "catalog.toml"}. '
+            f"Nothing was built.",
         ]
         assert _ran(demo) == 0
         # Done as it says, the run builds, and its snapshot is made, there
@@ -636,7 +718,7 @@ class TestAFirstStoreThatIsOnlyRead:
         result = _run("--upstream")
         assert result.exit_code == 1 and _ran(upstream) == 0 and _ran(demo) == 0
         assert "Error: acme/up cannot have a snapshot: Store 'first' is read-only, and it is the catalog's first" in result.output
-        assert '`pipelines = ["acme/up"]` under [stores.second] in catalog.toml. Nothing was built.' in result.output
+        assert f'add "acme/up" to `pipelines` under [stores.second] in {work / "home" / "catalog.toml"}. Nothing was built.' in result.output
 
     def test_a_store_that_is_away_is_left_to_the_snapshot_as_it_was(self, stores, demo, work):
         """Only a store that may only be read is found before the build: one that is away may be back by its end."""
@@ -800,3 +882,46 @@ class TestWhatWasDeclared:
             "Nothing after it was run."
         ) in result.output
         assert _snapshots(store) == [] and _ran(demo) == 0
+
+
+class TestNothingSaysARunMakesASnapshot:
+    """The day a run ended with one left its words in some forty files. Each is read, with its lines joined, for the phrases that said so."""
+
+    SAID_SO = [
+        r"ends with a snapshot whenever", r"makes? a snapshot when everything", r"makes? its snapshot when",
+        r"not snapshotted:", r"[Ss]eldom needed \(`chartbook run`", r"[Ss]eldom type this(: `chartbook run`| command)", r"THE command",
+        r"one command of a working day", r"takes the snapshot (when|once)", r"strict form of `chartbook run`",
+        r"[Tt]he five commands", r"Five commands cover", r"WHEN_COMMITTED", r"not_snapshotted",
+        r"`chartbook run` again\b(?! (after|once))", r"a build of committed work ends with",
+    ]
+
+    def test_in_no_file_a_person_or_an_assistant_learns_from(self):
+        import re
+
+        from tests.test_removed_commands import ROOT, _taught
+
+        found = []
+        for path in _taught():
+            try:
+                joined = " ".join(path.read_text(encoding="utf-8").split())
+            except UnicodeDecodeError:
+                continue
+            found += [f"{path.relative_to(ROOT).as_posix()}: {phrase}" for phrase in self.SAID_SO if re.search(phrase, joined)]
+        assert found == []
+
+    @pytest.mark.parametrize("arguments", [["--help"], ["run", "--help"], ["snapshot", "--help"], ["pin", "--help"]])
+    def test_in_no_help(self, arguments):
+        import re
+
+        said = " ".join(CliRunner().invoke(main, arguments, prog_name="chartbook").output.split())
+        assert [phrase for phrase in self.SAID_SO if re.search(phrase, said)] == []
+        if arguments[0] in ("run", "snapshot"):
+            assert "no snapshot" in said  # each says it of a run, in so many words
+
+    def test_the_section_for_agents_says_who_asks_for_one(self):
+        from chartbook import agents
+
+        said = " ".join(agents.section().split())
+        assert "`chartbook snapshot`, once everything is committed. A run does not do it." in said
+        assert "do it when the person asks for it" in said
+

@@ -238,7 +238,7 @@ def depending(p):
               sub=["what they built at that", "commit, declared ready"])
     s += card(680, y, bw, bh, p, "rate_forecast", "pipeline", label="your folder", sub=["chartbook.lock pins it;", "data.load() reads the copy"])
     s += arrow(20 + bw + 4, y + bh / 2, 350 - 6, y + bh / 2, p, "snapshot")
-    s += arrow(350 + bw + 4, y + bh / 2, 680 - 6, y + bh / 2, p, "chartbook pin")
+    s += arrow(350 + bw + 4, y + bh / 2, 680 - 6, y + bh / 2, p, "pin")
     s += arrow(120, y + bh + 6, 780, y + bh + 6, p, "never: one pipeline reads another's folder", warn=True, dashed=True, curve=(450, 262))
     s += caption(w, h - 12, ["A newer snapshot moves nothing until you run ", "chartbook pin --update",
                              "; a ", "git diff", " of the lockfile shows the move."], p)

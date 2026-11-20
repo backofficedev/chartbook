@@ -392,31 +392,44 @@ def _a_store_to_send_it_to(store: Optional[Store], pipeline: str) -> Optional[st
     return next((entry.name for entry in entries if not entry.read_only), None)
 
 
-def only_read_said(error: Exception, store: Optional[Store], pipeline: str) -> str:
-    """A store's refusal of a snapshot because it may only be read, with the way out where there is one.
+def way_out_said(store: Optional[Store], pipeline: str) -> str:
+    """How to send a pipeline to a store that can be written, where the catalog's first store refused its snapshot because it may only be read: one sentence, or nothing where there is no such way.
 
-    What ``chartbook snapshot`` says after its error, and what a run that
-    is asked for a snapshot says before it builds: which store, and how
-    to send this pipeline to one that can be written.
+    Said by ``chartbook snapshot`` after its error, and by a run that is
+    asked for a snapshot before it builds. It says to add the pipeline to
+    the store's ``pipelines``, and not what the line is to be: the store
+    may be sent other pipelines already, and a line pasted over that one
+    would send them back. The catalog's file is named whole.
     """
-    said = str(error).rstrip(".")
     other = _a_store_to_send_it_to(store, pipeline)
     if other is None:
+        return ""
+    try:
+        catalog = getattr(store if store is not None else default_store(), "catalog", None)
+    except Exception:  # noqa: BLE001 - only to say more of an error already had
+        catalog = None
+    return f'To send this one to {other}: add "{pipeline}" to `pipelines` under [stores.{other}] in {catalog or "catalog.toml"}.'
+
+
+def only_read_said(error: Exception, store: Optional[Store], pipeline: str) -> str:
+    """A store's refusal of a snapshot because it may only be read, with the way out where there is one: what a run that is asked for a snapshot says before it builds."""
+    said = str(error).rstrip(".")
+    way = way_out_said(store, pipeline)
+    if not way:
         return said + "."
-    return (
-        f"{said}, and it is the catalog's first, where a pipeline the catalog sends nowhere is written.\n"
-        f"  To send this one to {other}: `pipelines = [\"{pipeline}\"]` under [stores.{other}] in catalog.toml."
-    )
+    return f"{said}, and it is the catalog's first, where a pipeline the catalog sends nowhere is written.\n  {way}"
 
 
 def _no_store_to_write(store: Optional[Store], pipeline: str) -> str:
     """Why a snapshot of a pipeline would be refused by a store that may only be read, asked before anything is built; empty where it would not be.
 
     Asked of the catalog's stores as the snapshot asks it
-    (``Stores.for_writing``), and only for this: a store that may only be
-    read is how the catalog is written, and an hour of building mends
-    nothing. A store that is away may be back by the end of a build, and
-    is the snapshot's to say then, as it was.
+    (``Stores.for_writing``), and only for this: a store that the catalog
+    says may only be read is how the catalog is written, and an hour of
+    building mends nothing. A store that is away may be back by the end
+    of a build, and is the snapshot's to say then, as it was. So is a
+    folder that the system will not let this user write, which no catalog
+    says: nothing here tries a write.
     """
     try:
         stores = store if store is not None else default_store()
@@ -1155,7 +1168,7 @@ def run(
     echo: Callable[[str], None] = print,
     on_pin: Optional[Callable] = None,
     force: bool = False,
-    snapshot: Union[bool, str] = False,
+    snapshot: bool = False,
     frozen: bool = False,
     on_verify: Optional[Callable] = None,
     on_snapshot: Optional[Callable] = None,
