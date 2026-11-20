@@ -378,7 +378,9 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
 - **No command moves the pipeline's own repository.** *(Found by review: in a repository of
   several pipelines the list said `git checkout`, and its last command then built the pipeline
   itself as it was at that commit.)* What is wanted there at another commit is built in a
-  worktree of that commit, and the reader's checkout stays on its branch.
+  worktree of that commit, and the reader's checkout stays on its branch. A worktree of that
+  name is used only where git says it is one, on that commit. *(Found by the third pass: a
+  leftover folder of the name was taken for it.)*
 - **An address is one only if it is a plain web address,** which is all a snapshot records.
   *(Found by review: one that began with `--upload-pack=` was refused by the fetch and printed in
   a `git clone` to paste.)* A pipeline's name is one only if it is an ID. Everything shown is
@@ -418,7 +420,15 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   second pass: the only manifest of a repository was taken for whatever pipeline was asked of
   it, so an entry that named another pipeline's repository was told to build that one, for
   ever.)* Asked of the pipeline itself, it is left to the pin's own words; further up, its line
-  says it was not found and gives no command.
+  says it was not found and gives no command. *(Found by the third pass: a manifest that could
+  not be read, and one past the two hundredth of its repository, were said not to be there.
+  The first is its folder's all the same; the second line says how far the search went.)*
+- **A clone that lacks its commit is fetched, and built in the folder the clone has the pipeline
+  in now.** *(Found by the third pass: after the fetch the list said to build at the top of the
+  clone.)* The line says that the folder is a guess.
+- **On Windows the lines are for `cmd.exe` at its prompt:** `cd /d`, and a `%` as it is. *(Found
+  by the third pass, by reading: a bare `cd` does not change the drive, and a doubled `%` is one
+  only in a batch file. Nothing here was run on Windows.)*
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
   entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
   is as the command left it.

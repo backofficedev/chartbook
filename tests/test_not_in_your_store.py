@@ -198,7 +198,7 @@ def _follow(work: Path, result, monkeypatch, start: Path = None):
         **os.environ, "PATH": f"{shim}{os.pathsep}{os.environ['PATH']}",
         "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.org",
     }
-    commands = [line.strip() for line in _said(result) if line.startswith("     ") and not line.startswith("     What ")]
+    commands = [line.strip() for line in _said(result) if line.startswith("     ") and not line.startswith(("     What ", "     It could not "))]
     assert commands and commands[-1].endswith("&& chartbook run")
     for command in commands:
         done = subprocess.run(command, shell=True, cwd=start or work / "report", env=environment, capture_output=True, text=True)
@@ -589,6 +589,25 @@ class TestALine:
         assert said[1] == "2. acme/mid    https://example.org/acme/mid; reads 1 above"
         assert said[0].startswith("1. acme/rates at ")  # as mid's own lockfile pins it
 
+    def test_of_one_whose_manifest_cannot_be_read_where_its_place_gives_its_id(self, work, theirs, mine, monkeypatch):
+        """Found by the third pass: a slip pushed to the tip, and its repository was said to hold no such pipeline.
+
+        A manifest that cannot be read is still its folder's. Its line says where to build, and its own run says what is wrong.
+        """
+        mid = _pipeline(work, "mid")
+        (mid / "chartbook.toml").write_text('[project\nid = "acme/mid"\n', encoding="utf-8", newline="\n")
+        _git(mid, "commit", "--quiet", "-am", "A slip")
+        _pipeline(work, "report", {"acme/mid": {"repository": "https://example.org/acme/mid"}})
+        _away(work, "mid")
+        mine()
+        said = _said(_run(work, monkeypatch, "run"))
+        at = said.index("1. acme/mid    https://example.org/acme/mid")
+        assert said[at + 1 : at + 3] == [
+            f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
+            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",
+        ]
+        assert said[at + 3].startswith("     What it reads in turn is not known: its chartbook.toml cannot be read (")
+
     def test_of_one_whose_address_the_store_knows(self, work, theirs, mine, monkeypatch):
         """Found by review: an entry at a commit the store lacks was "not recorded", with the address in the store's other snapshots of it."""
         mid = _pipeline(work, "mid")
@@ -599,8 +618,8 @@ class TestALine:
         _away(work, "mid")
         result = _run(work, monkeypatch, "run")  # against their store, which has mid at its first commit only
         assert _numbered(result) == [f"1. acme/mid at {wanted[:7]}    https://example.org/acme/mid"]
-        # The commit as the entry gives it: all that is known of it here
-        assert f"     cd {_q(work / 'mid')} && git checkout {wanted[:10]} && chartbook run --snapshot" in _said(result)
+        # Twelve digits of the commit the entry's ten resolved to (found by the third pass: an entry's seven stayed seven)
+        assert f"     cd {_q(work / 'mid')} && git checkout {wanted[:12]} && chartbook run --snapshot" in _said(result)
 
     def test_of_a_pipeline_in_a_folder_of_its_repository(self, work, theirs, mine, monkeypatch):
         commit = _ready(_pipeline(work, "mid", within="pipelines/mid"), theirs)
@@ -686,10 +705,35 @@ class TestALine:
         said = _said(_run(work, monkeypatch, "run"))
         assert f"2. acme/mid at {commit[:7]}    https://example.org/acme/mid; reads 1 above" in said
         assert f"     git -C {_q(work / 'mid')} checkout {commit[:12]} && cd {_q(work / 'mid' / 'pipelines' / 'mid')} && chartbook run --snapshot" in said
-        # Of very many manifests, so many are read: one past them is not found, and the line says where it may be
-        monkeypatch.setattr(missing, "MOST_MANIFESTS", 0)
-        result = _run(work, monkeypatch, "run")
-        assert "cannot be built yet" not in result.output and "acme/mid: 1 lost" in _said(result)
+        # Of very many manifests, so many are read. One past them is not called absent (found by the third pass: it
+        # was said to hold no such pipeline): its line says how far the search went, and where it may be
+        monkeypatch.setattr(missing, "MOST_MANIFESTS", 1)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid" in said
+        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:12]} && chartbook run --snapshot" in said
+        assert (
+            f"     What it reads in turn is not known: its chartbook.toml was not found among the first 1 of the 3 in its "
+            f"repository at {commit[:7]}; if it is not at the top of its repository, `cd` to its folder there first. Its own "
+            "`chartbook run` says."
+        ) in said
+
+    def test_a_clone_that_has_the_commit_is_not_fetched_where_its_manifest_was_not_found(self, work, theirs, mine, monkeypatch):
+        """A fetch is for a clone that lacks the commit, and not for one whose manifests were not all read."""
+        mid = _pipeline(work, "mid", within="pipelines/mid")
+        top = work / "mid"
+        (top / "chartbook.toml").write_text('[project]\nid = "acme/all"\n', encoding="utf-8", newline="\n")
+        _git(top, "add", "-A")
+        _git(top, "commit", "--quiet", "-m", "Another at its top")
+        commit = _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        mine()
+        monkeypatch.setattr(missing, "MOST_MANIFESTS", 1)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert said[3:5] == [
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a clone of https://example.org/acme/mid)",
+            f"     cd {_q(top)} && git checkout {commit[:12]} && chartbook run --snapshot",
+        ]
+        assert "was not found among the first 1 of the 2 in its repository" in said[5]
 
     def test_of_a_pipeline_with_no_build_script(self, work, theirs, mine, monkeypatch):
         """It commits what it declares: nothing to run, and a snapshot to make."""
@@ -833,6 +877,45 @@ class TestACloneOnThisMachine:
             f"     What it reads in turn is not known: its clone, {work / 'mid'}, does not have the commit {commit[:7]}; "
             f"if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says.",
         ]
+
+    def test_one_that_lacks_the_commit_is_built_in_the_folder_the_clone_has_it_in(self, work, theirs, mine, monkeypatch):
+        """Found by the third pass: after the fetch the list said to build at the top of the clone, where no pipeline is."""
+        mid = _pipeline(work, "mid", within="pipelines/mid")
+        top = work / "mid"
+        _git(top, "commit", "--quiet", "--allow-empty", "-m", "On")
+        commit = _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        # A clone of it from before that commit was made
+        top.rename(work / "newer")
+        _git(work, "clone", "--quiet", "--single-branch", str(work / "newer"), "mid")
+        _git(top, "remote", "set-url", "origin", "https://example.org/acme/mid.git")
+        _git(top, "update-ref", "-d", "refs/remotes/origin/main")
+        _git(top, "reset", "--quiet", "--hard", "HEAD~1")
+        _git(top, "reflog", "expire", "--expire=now", "--all")
+        _git(top, "gc", "--quiet", "--prune=now")
+        mine()
+        said = _said(_run(work, monkeypatch, "run"))
+        assert said[4:7] == [
+            f"     git -C {_q(top)} fetch",
+            f"     git -C {_q(top)} checkout {commit[:12]} && cd {_q(top / 'pipelines' / 'mid')} && chartbook run --snapshot",
+            f"     What it reads in turn is not known: its clone, {top}, does not have the commit {commit[:7]}; "
+            "its folder is where the clone has it now. Its own `chartbook run` says.",
+        ]
+
+    def test_a_folder_in_a_shallow_repository_is_told_to_deepen_it(self, work, theirs, mine, monkeypatch):
+        """Found by the third pass: a `path` entry's folder there was still told a plain `git fetch`, which does not deepen it."""
+        mid = _pipeline(work, "mid")
+        commit = _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
+        _git(mid, "commit", "--quiet", "--allow-empty", "-m", "On")
+        mid.rename(work / "whole")
+        _git(work, "clone", "--quiet", "--depth", "1", (work / "whole").as_uri(), "mid")
+        mine()
+        said = _said(_run(work, monkeypatch, "run"))
+        assert (
+            f"     What it reads in turn is not known: {mid} does not have its chartbook.toml at {commit[:7]} "
+            "(`git fetch --unshallow` there, if the commit is not in it). Its own `chartbook run` says."
+        ) in said
 
     def test_a_shallow_one_is_deepened(self, work, theirs, mine, monkeypatch):
         """Found by the second pass: a plain `git fetch` does not deepen a shallow clone, and the list repeated."""
@@ -1007,8 +1090,33 @@ class TestInThePipelinesOwnRepository:
             f"     cd {_q(tree / 'b')} && chartbook run --snapshot",
         ]
         # And one that is there already is not added again
-        tree.mkdir()
+        _git(top, "worktree", "add", "--quiet", str(tree), commit[:12])
         assert not any("worktree add" in line for line in _said(CliRunner().invoke(main, ["run"])))
+
+    def test_a_folder_of_the_worktrees_name_that_is_not_it_is_passed_by(self, work, theirs, mine, monkeypatch):
+        """Found by the third pass: a leftover folder of that name was taken for the worktree, and the `cd` into it failed every time."""
+        top, commit = self._made(work, theirs, {"acme/mid": {"path": "../mid"}})
+        mine()
+        monkeypatch.chdir(top / "report")
+        tree = work / f"mono-at-{commit[:12]}"
+        tree.mkdir()  # a leftover
+        second = work / f"mono-at-{commit[:12]}-2"
+        result = CliRunner().invoke(main, ["run"])
+        assert _said(result)[4:6] == [
+            f"     git -C {_q(top)} worktree add {_q(second)} {commit[:12]}",
+            f"     cd {_q(second / 'mid')} && chartbook run --snapshot",
+        ]
+        assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch, start=top / "report").stdout
+
+    def test_nor_is_a_worktree_of_that_name_that_somebody_moved(self, work, theirs, mine, monkeypatch):
+        """It would have been built as it stands, at another commit, under the pinned one's line."""
+        top, commit = self._made(work, theirs, {"acme/mid": {"path": "../mid"}})
+        mine()
+        monkeypatch.chdir(top / "report")
+        tree = work / f"mono-at-{commit[:12]}"
+        _git(top, "worktree", "add", "--quiet", "--detach", str(tree), "HEAD")  # of that name, on the reader's commit
+        said = _said(CliRunner().invoke(main, ["run"]))
+        assert said[4] == f"     git -C {_q(top)} worktree add {_q(work / f'mono-at-{commit[:12]}-2')} {commit[:12]}"
 
     def test_where_this_repository_is_the_clone_wanted_and_lacks_the_commit(self, work, theirs, mine, monkeypatch):
         """Found by the second pass: the list said `git fetch && git checkout` in the reader's own repository, and its last command built the other pipeline there."""
@@ -1135,12 +1243,20 @@ class TestWhoseTextThisIs:
         ("C:\\work\\rates", "C:\\work\\rates"),
         ("C:\\my work\\rates", '"C:\\my work\\rates"'),
         ("https://example.org/acme/x&calc.exe", '"https://example.org/acme/x&calc.exe"'),
-        ("https://example.org/acme/%USERNAME%", '"https://example.org/acme/%%USERNAME%%"'),
+        ("https://dev.azure.com/org/My%20Project/_git/rates", '"https://dev.azure.com/org/My%20Project/_git/rates"'),
         ('a"b', '"a""b"'),
     ])
     def test_for_cmd_a_word_with_anything_it_reads_is_in_double_quotes(self, word, typed):
-        """Found by the second pass (not run on Windows): `&` ends a command there, and the address that held one was printed bare."""
+        """Found by the second pass (not run on Windows): `&` ends a command there, and the address that held one was printed bare.
+
+        And by the third: a `%` was doubled, which is right in a batch file and wrong at a prompt, where these are pasted.
+        """
         assert missing._quoted(word, windows=True) == typed
+
+    def test_for_cmd_a_folder_is_entered_whatever_drive_it_is_on(self):
+        """Found by the third pass (not run on Windows): a bare `cd` there does not change the drive, and the build ran where the prompt was."""
+        assert missing._cd("D:\\class\\my rates", windows=True) == 'cd /d "D:\\class\\my rates"'
+        assert missing._cd("/work/my rates", windows=False) == "cd '/work/my rates'"
 
     def test_a_folder_with_a_space_in_its_name_is_one_word_of_the_command(self, work, theirs, monkeypatch):
         spaced = work / "my rates"
@@ -1174,7 +1290,7 @@ class TestARepositoryThatDoesNotHoldIt:
         said = missing.said(listing, here=work)
         assert said[3:6] == [
             "1. acme/beta at aaaaaaa    https://example.org/acme/rates, which holds no pipeline of that ID at aaaaaaa",
-            "     What it reads in turn is not known: it could not be found, so no command is given for it. Its own `chartbook run` says.",
+            "     It could not be found there, so no command is given for it.",
             "2. acme/mid at bbbbbbb    https://example.org/acme/mid; reads 1 above",
         ]
 
@@ -1485,6 +1601,11 @@ class TestTheOtherCommands:
 
 
 class TestWhereAClonGoes:
+    def test_every_name_the_list_may_give_a_clone_is_looked_at_the_next_time(self, work):
+        """Found by the third pass: with nine names taken it said `NAME-clone`, and did not know that clone afterwards."""
+        names = missing._clone_folders(work, "mid")
+        assert names[0] == work / "mid" and names[1] == work / "mid-2" and names[-1] == work / "mid-clone" and len(names) == 10
+
     def test_beside_the_pipelines_own_repository(self, work, theirs):
         report = _pipeline(work, "report", within="pipelines/report")
         assert missing._beside(report) == work
