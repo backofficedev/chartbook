@@ -529,7 +529,7 @@ class MissingSourceFilesError(Exception):
 class VersionNotFoundError(LookupError):
     """Raised when a reference names a version of an asset that cannot be found.
 
-    A version is made by a snapshot (``chartbook run --snapshot``) and is
+    A version is made by a snapshot (``chartbook snapshot``) and is
     named by the start of its content hash, ``model/x@7f3a9c2e41b0``, or by a
     label the manifest gives it, ``model/x@champion``.
 

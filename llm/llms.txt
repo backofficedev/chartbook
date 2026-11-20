@@ -4,14 +4,15 @@
 
 A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declares what it makes (dataframes, charts, models, files, notebooks, notes). A **snapshot** is everything one pipeline built at one commit, by hash, kept in a **store**; another pipeline **pins** it in `chartbook.lock` and reads it by name. A **catalog** is one site over every snapshot in its stores. Every page is also published as Markdown: `guide/agents.html` is `guide/agents.md`.
 
-## The five commands
+## Start with these
 
-Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. `chartbook --help` lists them first:
+Six commands cover most of what people do. The middle four are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. `chartbook --help` lists them first:
 
 | You type | It does |
 |---|---|
 | `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
+| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
 | `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
 | `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
 | `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
@@ -28,7 +29,7 @@ Five commands cover most of what people do. The middle three are typed in a pipe
 ## Guides
 
 - [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, notebooks, notes, models and files in `chartbook.toml`; `[files]` for files that are not tables (archives, text, PDFs, images, arrays)
-- [Depending on Another Pipeline](docs_src/guide/depending-on-pipelines.md): snapshots, pins and the lockfile; `chartbook run --snapshot` (them), `chartbook pin` / `pin --update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
+- [Depending on Another Pipeline](docs_src/guide/depending-on-pipelines.md): snapshots, pins and the lockfile; `chartbook snapshot` (them), `chartbook pin` / `pin --update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
 - [Keeping Costly Outputs](docs_src/guide/keeping-costly-outputs.md): `keep = true` on an output that cost money or compute (a paid API run's output, a trained model): every version stays in the store, `chartbook restore` puts it back, `chartbook run` stops before remaking it (`--remake`); the doit recipe
 - [Reading and Writing Data](docs_src/guide/reading-and-writing-data.md): write your outputs by name (`data.path("x")` makes the folder; a folder dataset is written with `partition_by`); read any pipeline's data with `data.load()` / `data.sql()`; another pipeline's folder or glob has files and no path (`NoSinglePathError`): `data.files()`, `assets.gathered()` for a loader that takes a directory; `data.scratch()` and `[project] scratch` for throwaway files
 - [Catalogs and Stores](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`; every snapshot of every pipeline is its own site under `versions/`, listed on the catalog's Versions page; a `[pipelines]` entry with no path shows a pipeline from the store alone; `chartbook store ls` says which snapshots are standalone or shared; remove snapshots with `chartbook store gc`, never by hand
@@ -50,7 +51,7 @@ Five commands cover most of what people do. The middle three are typed in a pipe
 chartbook init            # Scaffold a new pipeline project
 chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
 chartbook docs build      # Render the HTML documentation website
-chartbook run             # THE command: pin what has no pin, run [scripts] build, fail if a declared output was not written, and make a snapshot when everything is committed
+chartbook run             # Build: pin what has no pin, run [scripts] build, fail if a declared output was not written. Makes no snapshot
 chartbook docs build -f   # Force overwrite existing docs
 chartbook docs build -f --watch  # Rebuild incrementally on every file change
 chartbook docs open          # Open the generated site
@@ -71,15 +72,15 @@ chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between
 # data.ref("df") is a dataframe's name in SQL; data.connect("source") the raw connection. [sources] in chartbook.toml.
 chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook run --snapshot     # The strict form of `chartbook run`, for a script that must end with a snapshot: refuses before building with anything uncommitted, exits 1 where no snapshot can be made
-chartbook snapshot           # Seldom needed (`chartbook run` ends with one): a build already on disk into the store, labelled with the commit; refuses unless its pins account for every dependency
+chartbook run --snapshot     # The build and `chartbook snapshot` in one command, for a script that must end with a snapshot: refuses before building with anything uncommitted, exits 1 where no snapshot can be made
+chartbook snapshot           # What other pipelines read, which a run does not make: the build on disk into the store, labelled with the commit; builds nothing; refuses with anything uncommitted, and unless its pins account for every dependency
 chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets back on disk from its snapshots; with no names, every `keep = true` asset that is missing; never over a file
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C; a bare name (rates) writes the one stored ID ending in it, else nothing
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
 chartbook pin --check        # Write nothing; exit 1 unless the lockfile is complete and every pin is met: its file is in the store, or a build of your own of the pinned commit holds the same rows up to the pin's last date (no shared store: `git checkout <commit>` in the upstream, `chartbook run --snapshot`) (CI, read-only shared store: a folder; a store in a bucket is not available in 0.6.0)
 chartbook pin --update [dep...]    # Move pins forward to each dependency's newest snapshot; says of each dataframe whether it gained rows or its earlier rows changed
-chartbook run [script]       # Run a [scripts] entry here (default: build). For build: pin what has no pin, run it, exit 1 if it did not write something chartbook.toml declares with a path (or the file of a DuckDB source), then make a snapshot when everything in the folder is committed, chartbook.lock too (else exit 0 and a last line `not snapshotted: N files are not committed`: commit, run again). At a terminal, a build that reads a pipeline [dependencies] does not declare is offered `chartbook add` of it, and built again. Where pipelines it reads are not in the store, it builds nothing and lists them in the order to build, each with the commands to paste (`chartbook pin` prints the same list). Never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
+chartbook run [script]       # Run a [scripts] entry here (default: build). For build: pin what has no pin, run it, exit 1 if it did not write something chartbook.toml declares with a path (or the file of a DuckDB source). It makes no snapshot, and its last lines say to commit and then `chartbook snapshot`. At a terminal, a build that reads a pipeline [dependencies] does not declare is offered `chartbook add` of it, and built again. Where pipelines it reads are not in the store, it builds nothing and lists them in the order to build, each with the commands to paste (`chartbook pin` prints the same list). Never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
 chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
 chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --repository, --list, --forget)

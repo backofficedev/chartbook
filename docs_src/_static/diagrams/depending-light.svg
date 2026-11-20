@@ -20,11 +20,11 @@
 <text x='780.0' y='103' text-anchor='middle' fill='#526077' font-size='12.5'>chartbook.lock pins it;</text>
 <text x='780.0' y='122' text-anchor='middle' fill='#526077' font-size='12.5'>data.load() reads the copy</text>
 <line x1='224' y1='96.5' x2='344' y2='96.5' stroke='#1f6feb' stroke-width='1.6' marker-end='url(#a)'/>
-<rect x='227.9' y='85.5' width='112.2' height='22' rx='11' fill='#e8f0fe'/>
-<text x='284.0' y='100.5' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook run</text>
+<rect x='246.4' y='85.5' width='75.2' height='22' rx='11' fill='#e8f0fe'/>
+<text x='284.0' y='100.5' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>snapshot</text>
 <line x1='554' y1='96.5' x2='674' y2='96.5' stroke='#1f6feb' stroke-width='1.6' marker-end='url(#a)'/>
-<rect x='557.9' y='85.5' width='112.2' height='22' rx='11' fill='#e8f0fe'/>
-<text x='614.0' y='100.5' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook pin</text>
+<rect x='594.9' y='85.5' width='38.2' height='22' rx='11' fill='#e8f0fe'/>
+<text x='614.0' y='100.5' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>pin</text>
 <path d='M 120 169 Q 450 262 780 169' fill='none' stroke='#c2410c' stroke-width='1.6' stroke-dasharray='6 5' marker-end='url(#w)'/>
 <rect x='286.6' y='204.5' width='326.8' height='22' rx='11' fill='#fff1e6'/>
 <text x='450.0' y='219.5' text-anchor='middle' fill='#c2410c' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>never: one pipeline reads another's folder</text>

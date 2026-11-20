@@ -2,7 +2,8 @@
 
 This project is a ChartBook pipeline. `chartbook.toml` declares what it builds (dataframes, charts, notebooks, models) and which other pipelines it reads. `chartbook.lock` pins what it reads, and is committed. `chartbook --help` lists every command.
 
-- **Build:** `chartbook run`. It pins what has no pin yet, runs the `build` script of `[scripts]`, fails if the build did not write something `chartbook.toml` declares, and makes a snapshot when everything is committed. To build the pipeline, run this, not the build script by itself.
+- **Build:** `chartbook run`. It pins what has no pin yet, runs the `build` script of `[scripts]`, and fails if the build did not write something `chartbook.toml` declares. To build the pipeline, run this, not the build script by itself.
+- **Let other pipelines read the build:** `chartbook snapshot`, once everything is committed. A run does not do it. It writes to the store, which other people may read from: do it when the person asks for it.
 - **Check, building nothing:** `chartbook run --check`.
 - **Read another pipeline's data:** in Python, `from chartbook import data`, then `data.load("owner/pipeline:name")` for a table or `data.path("owner/pipeline:name")` for its file. The pipeline is declared in `[dependencies]` (`chartbook add owner/pipeline` writes the entry). Never read its files by a path into its folder.
 - **Take newer data of what it reads:** `chartbook pin --update`. Never edit `chartbook.lock` by hand.

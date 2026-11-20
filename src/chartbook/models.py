@@ -16,7 +16,7 @@ Every function here takes a model and nothing else, as
 general module.
 
 **Versions.** A version of a model is made by a snapshot
-(``chartbook run --snapshot``): the first snapshot that holds new bytes for
+(``chartbook snapshot``): the first snapshot that holds new bytes for
 the model. It is named by the start of its content hash, so the name is
 the same on every machine and every branch, and a label in the manifest
 gives it a name people use::

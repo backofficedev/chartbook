@@ -263,11 +263,35 @@ What step 2 built for a plain run's own snapshot is taken out again: the lines `
 …`, each with its reason; the rule that an uncommitted `chartbook.lock` holds a plain run's
 snapshot up; and the rule that a commit checked out by its hash gets none. Two things it built
 are kept and moved *(found by review, 2026-11-20: the first draft dropped them)*: where a
-catalog's first store may only be read, the way out (`pipelines = ["acme/rates"]` under the store
-to send it to) is now said by `chartbook snapshot`, and by `chartbook run --snapshot` and
+catalog's first store may only be read, the way out (add the pipeline to `pipelines` under the
+store to send it to) is now said by `chartbook snapshot`, and by `chartbook run --snapshot` and
 `--upstream` before anything is built, since the list of scenario 5 has a whole class type that
 command; and a run that is asked for a snapshot still asks nothing about where it goes. The
 other half of step 2 stands: a run looks for what was declared (item 5).
+
+*Built 2026-11-20* (`chartbook.cli`, `chartbook.run`), with what building it settled:
+
+- **The way out of a store that may only be read says "add",** and names the catalog's file:
+  `add "acme/rates" to pipelines under [stores.mine] in ~/.chartbook/catalog.toml`. *(Found by
+  the review of the code: `pipelines = ["acme/rates"]` read as the whole line, and pasted over
+  one that sent other pipelines there it sent them back.)* `chartbook snapshot` also names
+  `--store`, for the one snapshot.
+- **Only what the catalog says may only be read is found before a build.** A folder the system
+  will not let this user write, and a store that is away, are found by the snapshot, after it.
+  Nothing tries a write to find out. *(Found by the review of the code, and left.)*
+- **The line for a lockfile that is all that is not committed is not said of one that was
+  removed,** and its command carries `--project-dir` where the snapshot was given it. *(Found by
+  the review of the code: "commit it" committed the deletion, and the command, typed where the
+  person stood, built and snapshotted another pipeline.)*
+- **A folder named in another letter case than the disk's is refused, in words** (`cd` into the
+  folder), by `chartbook snapshot` and by `chartbook run --snapshot`. *(Found by the review of
+  the code: pathlib's own words had come back where the repository's folder was the one spelled
+  otherwise; and where a folder inside it was, the snapshot recorded that spelling as the
+  pipeline's place, and a pipeline that read the folder by its real name pinned an older one
+  without a word. That was older than this step, and a run's last line now hands the spelling
+  over.)*
+- **A git dependency the run builds is not told of snapshots.** *(Found by a mutant no test
+  caught.)*
 
 ### What it costs
 
@@ -705,6 +729,6 @@ changes.
 10. The first screen: `--help`, the Quickstart, the README, the skill. *Built 2026-11-19, but for
     the Quickstart's walk-through (see "The first screen").*
 11. `chartbook run` builds and `chartbook snapshot` records: a run ends by saying what makes a
-    snapshot, and makes none; the first screen has six commands. *Decided 2026-11-20; to be built.* Which
+    snapshot, and makes none; the first screen has six commands. *Built 2026-11-20.* Which
     kind of snapshot `chartbook snapshot` makes, and `--complete`, are in the order of work of
     {doc}`snapshots-and-increments`.

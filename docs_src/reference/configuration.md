@@ -536,11 +536,10 @@ A model in another pipeline is read the same way as its data: `models.path("fore
 (model-versions)=
 ### Versions and labels
 
-**A version of a model is made by a snapshot.** Retrain twenty times in an afternoon while you edit, and there are no new versions: a run of work that is not committed makes no snapshot. Commit and `chartbook run`, and if the model's bytes are new, that is a version:
+**A version of a model is made by a snapshot.** Retrain twenty times in an afternoon and there are no new versions: a build makes no snapshot. Commit and `chartbook snapshot`, and if the model's bytes are new, that is a version:
 
 ```console
-$ chartbook run
-ftsfr/rate_forecast: build
+$ chartbook snapshot
 ftsfr/rate_forecast at 4f2a91c: 1 asset(s) in the store
   model/rate_forecaster: new version 7f3a9c2e41b0
 Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
@@ -733,7 +732,7 @@ build = "doit"      # the same as [scripts] build = "doit"
 
 **Scripts are not tasks.** One does not depend on another, and there is no order among them. What is out of date *inside* a pipeline is for the pipeline's own tool to decide: doit, Make, Snakemake.
 
-A catalog has no `[scripts]`. `chartbook run` in a catalog runs each of its pipelines' own.
+A catalog has no `[scripts]`, and runs no code: `chartbook run` in a catalog's folder says so and stops.
 
 ## Custom Site Pages
 

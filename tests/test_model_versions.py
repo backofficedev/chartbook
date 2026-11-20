@@ -226,7 +226,7 @@ class TestNamingAVersion:
         assert e.value.reason == "no_such_version"
         assert str(e.value) == (
             f"No version 000000000000 of model/m is on this machine. Its versions here "
-            f"are: {name}. A version is made by a snapshot: `chartbook run --snapshot`."
+            f"are: {name}. A version is made by a snapshot: `chartbook snapshot`."
         )
 
     def test_another_algorithm_is_not_a_version(self, forecast):

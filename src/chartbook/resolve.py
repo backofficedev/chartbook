@@ -1437,7 +1437,7 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
             "no_such_version",
             f"No version {wanted} of {local} is on this machine{pointing}. Its "
             f"versions here are: {known}. A version is made by a snapshot: "
-            f"`chartbook run --snapshot`.",
+            f"`chartbook snapshot`.",
         )
     if len(matches) > 1:
         raise VersionNotFoundError(

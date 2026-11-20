@@ -1275,7 +1275,7 @@ class TestCommands:
         assert result.output.splitlines()[:7] == [
             "Wrote chartbook.lock.",
             f"acme/user cannot be pinned yet: 1 pipeline it reads is not in the store at {default_store()}.",
-            "Build it first. It ends with a snapshot, which is what this one reads.",
+            "Build it first, with the commands below. They end with a snapshot, which is what this one reads.",
             "",
             f"1. acme/maker    {os.path.join('..', 'maker')} (a folder on this machine, built already)",
             f"     cd {shlex.quote(str(maker))} && chartbook snapshot",

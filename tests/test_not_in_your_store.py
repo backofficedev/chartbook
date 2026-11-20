@@ -32,8 +32,8 @@ from tests.test_lock_by_kind import _git
 
 #: The list's last line: the other way on
 SHARED = "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has {}, or wait for its sync to finish."
-ONE = ["Build it first. It ends with a snapshot, which is what this one reads.", ""]
-SEVERAL = ["Build them in this order. Each ends with a snapshot, which is what the next one reads.", ""]
+ONE = ["Build it first, with the commands below. They end with a snapshot, which is what this one reads.", ""]
+SEVERAL = ["Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.", ""]
 NO_ORDER = "Error: acme/report: these pipelines depend on each other, so there is no order to build in."
 
 
@@ -796,7 +796,7 @@ class TestWhateverCommitACloneWasLeftOn:
             f"     git -C {_q(clone)} checkout {now[:12]} && cd {_q(clone / 'gamma')} && chartbook run --snapshot",
         ]
         done = _follow(work, result, monkeypatch)
-        assert "not snapshotted" in done.stdout or "Ran build in 1 pipeline(s)." in done.stdout
+        assert "Ran build in 1 pipeline(s)." in done.stdout
 
     def test_a_folder_that_is_built_is_not_called_so_once_a_line_above_moves_it(self, work, theirs, mine, monkeypatch):
         top = _several(work, "multi", {"old": None})

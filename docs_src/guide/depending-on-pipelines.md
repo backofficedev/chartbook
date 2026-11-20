@@ -22,13 +22,13 @@ rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy, read 
 ```
 
 ```{image} ../_static/diagrams/depending-light.svg
-:alt: their folder, a snapshot in the store, your folder: run, then pin; never read the folder directly
+:alt: their folder, a snapshot in the store, your folder: snapshot, then pin; never read the folder directly
 :class: only-light
 :align: center
 ```
 
 ```{image} ../_static/diagrams/depending-dark.svg
-:alt: their folder, a snapshot in the store, your folder: run, then pin; never read the folder directly
+:alt: their folder, a snapshot in the store, your folder: snapshot, then pin; never read the folder directly
 :class: only-dark
 :align: center
 ```
@@ -69,22 +69,23 @@ disk. When the two pipelines are in one repository, name the other by its folder
 `chartbook run --check` warns while a dependency is declared and not pinned. Dependencies form a directed
 acyclic graph: every command that would pin or build a cycle refuses and says who depends on whom.
 
-## They build, and the build is in the store
+## They build, and declare the build ready
 
 In the other pipeline's folder, with everything committed:
 
 ```console
-$ chartbook run                 # build it, and copy what it built into the store, labelled with the commit
+$ chartbook run                 # build it
 …
+$ chartbook snapshot            # copy what it built into the store, labelled with the commit
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
-That is a snapshot, and it is what of theirs you read. Their folder is never read. A run while
-they are still editing builds and makes none, and its last line says so (`not snapshotted: 2 files
-are not committed`): what you can read of theirs is always something a commit describes.
+That is a snapshot, and it is what of theirs you read. Their folder is never read, and a build
+by itself changes nothing you read: a snapshot is made when they ask for one, of work a commit
+describes. (`chartbook run --snapshot` is the two in one command.)
 
-Run it again and nothing new is written: a snapshot is the hash of every file the build made, and
+Snapshot again and nothing new is written: a snapshot is the hash of every file the build made, and
 the same bytes and the same pins at the same commit are the snapshot already there (`No new
 snapshot: the same bytes and the same pins as the one made …`). New data at the same commit makes a
 new one, holding only the files that changed.
@@ -108,7 +109,7 @@ and how `data.load`, `data.sql` and `data.files` read it.
 
 | Who | Does | When |
 |---|---|---|
-| The other pipeline's owner | `chartbook run`, with everything committed | Whenever they build |
+| The other pipeline's owner | `chartbook snapshot`, with everything committed | When a build is ready for others |
 | You | `chartbook pin`, once | To start depending on it |
 | You | `chartbook pin --update` | When you want their newer snapshot |
 
@@ -196,7 +197,7 @@ on the list reads in turn is on it too, before it:
 $ chartbook run
 Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
 ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/x/.chartbook/store.
-Build them in this order. Each ends with a snapshot, which is what the next one reads.
+Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela

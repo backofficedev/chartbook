@@ -1024,14 +1024,15 @@ def demo(work, store, monkeypatch):
 
 @posix
 class TestARunWhoseStoreIsOf05:
-    def test_a_run_builds_and_says_why_there_is_no_snapshot(self, demo, store):
+    def test_a_run_builds_as_anywhere_since_it_makes_no_snapshot(self, demo, store):
+        """A plain run puts nothing of what it built in any store, so how this one is laid out is nothing to it. The snapshot it names says so."""
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 0, result.output
         assert result.output.splitlines() == [
             "acme/demo: build",
             "Ran build in 1 pipeline(s).",
-            f"acme/demo: not snapshotted: the store at {store} has the layout of ChartBook 0.5.",
-            "  `chartbook store migrate` moves it. An earlier ChartBook will not read it afterwards.",
+            "acme/demo: built.",
+            "  For other pipelines and the catalog: commit, then `chartbook snapshot`.",
         ]
         assert (demo / "out.csv").read_text(encoding="utf-8") == "a,b\n"
         assert _tree(store.root) == ["store.json"]

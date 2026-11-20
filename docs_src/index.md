@@ -72,14 +72,15 @@ Many pipelines become one catalog: a searchable website for your team, and an in
 
 ::::
 
-## The five commands
+## Start with these
 
-Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`:
+Six commands cover most of what people do. The middle four are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`:
 
 | You type | It does |
 |---|---|
 | `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
+| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
 | `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
 | `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
 | `chartbook install agents` | Once per project: teaches your coding agent ChartBook |

@@ -134,10 +134,10 @@ class TestAtATerminal:
         # And the build again, which reads what was pinned
         assert said.count("acme/report: build") == 2 and _built(report) == 1
         assert "Ran build in 1 pipeline(s)." in said and "Error" not in result.output
-        # The manifest has just changed, and the lockfile is new: this run makes no snapshot, and says so
+        # It ends as any run does: built, with the command that makes a snapshot, and nothing of what is not committed
         assert said[-2:] == [
-            "acme/report: not snapshotted: 2 files are not committed (`git status` lists them).",
-            "  A snapshot is of a commit: commit, and `chartbook run` again.",
+            "acme/report: built.",
+            "  For other pipelines and the catalog: commit, then `chartbook snapshot`.",
         ]
 
     def test_enter_is_yes(self, work, store, monkeypatch, at_a_terminal):
@@ -204,7 +204,7 @@ class TestAtATerminal:
         result = CliRunner().invoke(main, ["run", "--force", "--remake", "--upstream"], input="y\n")
         assert result.exit_code == 0, result.output
         first, again = seen
-        assert first == {"force": True, "frozen": False, "remake": True, "upstream": True, "snapshot": run.WHEN_COMMITTED}
+        assert first == {"force": True, "frozen": False, "remake": True, "upstream": True, "snapshot": False}
         assert again == {**first, "force": False}
 
     @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a file read-only to its owner's write on Windows")
