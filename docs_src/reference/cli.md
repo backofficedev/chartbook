@@ -512,7 +512,7 @@ Error: ftsfr/fed_yield_curve has changes that are not committed:
 A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.
 ```
 
-**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time, holding only the files that changed, since the store keeps each file once. If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
+**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time, and complete: its folder holds every file, those that did not change too (a bucket, which keeps each file once, holds only the ones that changed). If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
 
 ```console
 $ chartbook snapshot
@@ -1260,7 +1260,13 @@ The store at /Users/x/.chartbook/store has the layout of ChartBook 0.5, which th
 
 A plain `chartbook run` there builds as usual, and its last lines say why there is no snapshot. `chartbook run --snapshot` stops before it builds, and its message ends `Nothing was built.`
 
-A folder with no `store.json` in which `pipelines/` holds a snapshot's folder, or `roots/` the note of a lockfile, is such a store whose `store.json` has not arrived yet (a sync brings folders before files) or was removed: it is read and refused in the same way, and no store is made over it. A folder whose `store.json` says this version's layout while `pipelines/` holds snapshots is neither read nor written, and the message says how to part the two.
+A folder with no `store.json` in which `pipelines/` holds a snapshot's folder, or `roots/` the note of a lockfile, is taken for such a store whose `store.json` has not arrived yet (a sync brings folders before files): it is read as one, a pin's note is written where 0.5 kept them, and no store is made over it. A command that would write data to it stops with a message of its own, which says what was found and the way out:
+
+```text
+The store at /shared/store has no store.json, and holds a roots/ folder with notes in it: what a store of ChartBook 0.5 holds, whose store.json may not have arrived yet (a sync that has not finished). Until it has, the folder is read as that store, and no data is written to it or removed from it. If it is no store of ChartBook 0.5 any more, remove roots/ from it and try again.
+```
+
+A folder with both layouts in it is neither read nor written: a `store.json` that says this version's layout over a `pipelines/` folder with snapshots in it, or one that says the layout of 0.5 over a `snapshots/` folder with snapshots in it, most likely a store of 0.5 that this version wrote into before its `store.json` had arrived. Every command that reads the store says so, and how to part the two, the store of 0.5 staying where every machine expects it: move `snapshots/` and `_chartbook/` out into a folder of their own, beside a `store.json` that holds `{"schema": "chartbook/store/v3"}`, and see that the `store.json` left behind holds `{"schema": "chartbook/store/v2"}`.
 
 **A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), or at one bucket (`s3://bucket/prefix`, with `pip install chartbook[s3]`; see {doc}`configuration`), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A dependency named by its ID (`"acme/rates" = {}`) is pinned and updated from the store alone, with no folder of it on that machine. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `_chartbook/roots/` writable for everyone (`roots/` in a store that ChartBook 0.5 laid out; for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `chartbook run --frozen` writes nothing but, where it can, this machine's note for `store gc`, and is what CI should run to build; `chartbook pin --check` checks, and writes nothing to the project or the store. Under CI with no `CHARTBOOK_MACHINE_ID`, every note names the lockfile's path alone, so each run at the same checkout path replaces the last one's. Each machine's notes are its own (they name the machine, from `~/.chartbook/machine-id`, as well as the lockfile's path, since two machines can have a project at the same path), and `store gc` keeps what another machine's lockfiles recorded at their last pin. It is best run by the store's owner, from the machine the snapshots were made on: a label another machine gave is known here only through the snapshots that recorded it.
 
@@ -1325,16 +1331,17 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and one that is missing there, or has other bytes, is said with the snapshot's name, though another snapshot has the same bytes:
+In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and every one that is missing there, or has other bytes, is said with the snapshot's name, a snapshot's files together, though another snapshot has the same bytes:
 
 ```console
 $ chartbook store verify
-sha256:9a41c7e2…: _data/treasury.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
+sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
+sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
 
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-A `chartbook run` or `chartbook snapshot` in that pipeline's folder, with the same file built, puts it back; until then `store gc` keeps a snapshot that has the only whole copy.
+Nothing puts a file back into a snapshot: its folder is not changed once its record is written. A read of it is handed another snapshot's copy of the same asset while one has it whole, and `store gc` removes no snapshot of that pipeline while a snapshot that stays lacks a file. A `chartbook run` that would otherwise say `No new snapshot` of the one with the hole makes a new one, whole, and says which file the other lacks.
 
 **Why an object can change.** The store never moves or copies a file if it can avoid it. It tries four ways to hold one, cheapest first:
 
@@ -1373,9 +1380,18 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest holding a version of an asset marked `keep = true` (with `--aggressive` too) | Every version `acme/docs` ever built of `embeddings`, the output of a paid API run ({doc}`../guide/keeping-costly-outputs`). The command says what the marks keep: `Kept for \`keep = true\`: 3 version(s) of acme/docs:embeddings, 4.2 GB, in 3 snapshot(s)` |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
-| A snapshot that stays has lost a file that this one has whole | Each snapshot's folder holds its own copy of every file, and the newest snapshot of `rates` has lost its `treasury.parquet` (a sync that has not brought it). An older snapshot with the same file is kept until a run puts it back: `chartbook store verify` says which file |
+| A snapshot of its pipeline that stays has lost a file | Each snapshot's folder holds its own copy of every file, and the newest snapshot of `rates` lacks its `treasury.parquet` (a sync that has not brought it, a file removed by hand). No snapshot of `rates` is removed meanwhile: a read of the one with the hole is handed another's copy |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, and the ones a tag or a label names.
+
+Where a snapshot that stays lacks a file of its own, `gc` says which, and what to do:
+
+```text
+Nothing of acme/rates is removed: its snapshot 2026-11-19T140200Z_4f2a91c0e1b2, which stays, lacks _data/treasury.parquet.
+  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. A snapshot that has lost a file for good goes once nothing pins it any more.
+```
+
+A snapshot that is itself to be removed holds nothing back, whatever it has lost, and the same bytes in another pipeline never count.
 
 It lists what it would remove and asks before removing anything:
 
@@ -1393,7 +1409,7 @@ Remove them? [y/N]: y
 Removed 6 snapshot(s) and 5 object(s), 2.1 GB.
 ```
 
-The size is of everything that goes, and is the same before the question and after: the objects that nothing names, and each removed snapshot's own copy of a file that a kept snapshot has too. With no snapshot to remove the line is `Would remove 5 object(s), 2.1 GB, that nothing names.`
+The size before the question is of everything that would go: the objects that nothing names, and each removed snapshot's own copy of a file that a kept snapshot has too. With no snapshot to remove the line is `Would remove 5 object(s), 2.1 GB, that nothing names.` The last line says what was removed and freed, after a line for each thing that was kept after all, with why: `Kept after all: ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: a lockfile pins it`.
 
 | Option | Effect |
 |--------|--------|
