@@ -667,6 +667,16 @@ def _can_ask() -> bool:
     return _stdin_is_a_terminal() and _stderr_is_a_terminal()
 
 
+def _let_ctrl_c_end_a_read() -> None:
+    """Make a read at the terminal end at Ctrl-C, whatever a library loaded since has done to the signal."""
+    import signal
+
+    try:
+        signal.siginterrupt(signal.SIGINT, True)
+    except (AttributeError, ValueError, OSError):  # no such call on Windows; not the main thread
+        pass
+
+
 def _confirm(question: str, default: bool) -> bool:
     """Ask a yes-or-no question that comes after work has run, on stderr; `click.Abort` at Ctrl-C or the end of input.
 
@@ -678,12 +688,8 @@ def _confirm(question: str, default: bool) -> bool:
     question before it was shown: what was typed before is discarded.
     """
     import os
-    import signal
 
-    try:
-        signal.siginterrupt(signal.SIGINT, True)
-    except (AttributeError, ValueError, OSError):  # no such call on Windows; not the main thread
-        pass
+    _let_ctrl_c_end_a_read()
     try:
         if _stdin_is_a_terminal():
             if os.name == "nt":
@@ -5246,6 +5252,7 @@ def install_claude_skill(force, project):
             click.echo(f"The skill in {shown} is this version's, with files changed since it was installed.")
         else:
             click.echo(f"Skill files already exist in {shown}, naming no ChartBook version.")
+        _let_ctrl_c_end_a_read()  # found by review: Ctrl-C at this question did nothing until Enter
         if not click.confirm(f"Replace them with ChartBook {__version__}'s?"):
             raise SystemExit(0)
 
@@ -5276,7 +5283,7 @@ def install_claude_skill(force, project):
     "--force",
     is_flag=True,
     default=False,
-    help="Replace skill files, and a ChartBook section of AGENTS.md, that were changed by hand, without asking",
+    help="Replace skill files, and a ChartBook section of AGENTS.md, that were changed by hand or are a newer ChartBook's, without asking",
 )
 @click.pass_context
 def install_agents(ctx, force):
@@ -5291,9 +5298,10 @@ def install_agents(ctx, force):
     The section stands between two marker lines. Run again after an
     upgrade, the command replaces what is between them with this
     version's and leaves the rest of the file alone, so notes of your own
-    go outside those lines. A section changed by hand since this version
-    wrote it is replaced when you say so, or with --force. Commit
-    AGENTS.md: it is for everyone who works in the repository.
+    go outside those lines. A section somebody has written in is replaced
+    only when you say so, or with --force, and a newer ChartBook's is
+    left as it is. Commit AGENTS.md: it is for everyone who works in the
+    repository.
 
     Anywhere else it installs the skill and says the AGENTS.md half is
     for a project.
@@ -5313,18 +5321,35 @@ def install_agents(ctx, force):
         click.echo(click.style("Error: ", fg="red", bold=True) + said, err=True)
         raise SystemExit(1)
 
+    from chartbook import claude_skill
+
     failed = False
+    yours = claude_skill.user_dir()
     try:
-        ctx.invoke(install_claude_skill, force=force, project=False)
-    except SystemExit as stopped:  # declined at its question, or no skill in the package: the other half is still done
-        failed = bool(stopped.code)
-    except click.Abort:  # its question, where nobody could answer it
-        click.echo("", err=True)
-        click.echo("The skill was left as it is: `chartbook install claude-skill` installs it, and asks.", err=True)
-        failed = True
-    except (OSError, RuntimeError) as e:  # a folder that cannot be written; no input to ask of
-        click.echo(click.style("Error: ", fg="red", bold=True) + f"the skill could not be installed: {_explain_os_error(e)}", err=True)
-        failed = True
+        newer = claude_skill.version_of(yours) if claude_skill.relation(yours) == "newer" else None
+    except OSError:
+        newer = None  # a copy that cannot be read: the skill's own half says so
+    if newer and not force:
+        # As for the section below: two environments on two versions do not take turns, and neither fails for it
+        click.echo(
+            f"The skill in {claude_skill.shown(yours)} is for ChartBook {newer}, newer than this one, {__version__}. "
+            "Left as it is (--force installs this version's)."
+        )
+    else:
+        try:
+            ctx.invoke(install_claude_skill, force=force, project=False)
+        except SystemExit as stopped:  # declined at its question, or no skill in the package: the other half is still done
+            failed = bool(stopped.code)
+        except click.Abort:
+            if _can_ask():
+                raise  # a person at the question, with Ctrl-C: the command ends, and nothing more is written
+            # Its question, where nobody could answer it
+            click.echo("", err=True)
+            click.echo("The skill was left as it is: `chartbook install claude-skill` installs it, and asks.", err=True)
+            failed = True
+        except (OSError, RuntimeError) as e:  # a folder that cannot be written; no input to ask of
+            click.echo(click.style("Error: ", fg="red", bold=True) + f"the skill could not be installed: {_explain_os_error(e)}", err=True)
+            failed = True
 
     project = agents.project_folder()
     if project is None:
@@ -5343,6 +5368,8 @@ def install_agents(ctx, force):
     to = ""
     if file.is_symlink():
         real = Path(os.path.realpath(file))
+        if real.is_dir():
+            stop(f"{shown} is a link to {real}, which is a folder. Nothing was written.")
         if not real.is_file():
             stop(f"{shown} is a link to {real}, which is not there. Nothing was written.")
         if project.resolve() not in real.parents:
@@ -5350,8 +5377,10 @@ def install_agents(ctx, force):
         to = f" (a link to {display_path(real, relative_to=project.resolve())})"
     try:
         existed = file.exists()
-        text = file.read_bytes().decode("utf-8") if existed else ""
-        found = agents.read(text)
+        was = file.read_bytes() if existed else None
+        found = agents.read(was.decode("utf-8") if existed else "")
+    except agents.Unclosed as e:
+        stop(f"{shown}: {e}. Nothing was written to it: close the fence, and run this again.")
     except agents.Malformed as e:
         stop(f"{shown}: {e}. Nothing was written to it: put its marker lines right, or take them out, and run this again.")
     except (OSError, ValueError) as e:
@@ -5369,9 +5398,13 @@ def install_agents(ctx, force):
         )
         raise SystemExit(1 if failed else 0)
     if standing == "by hand" and not force:
+        # Which lines, and how many would go: a yes is given knowing what it is to
+        where = f"lines {found.first} to {found.last}"
+        between = found.last - found.first - 1
         said = (
-            f"The ChartBook section of {shown} was changed since ChartBook {found.version} wrote it." if found.hashed and found.version
-            else f"The ChartBook section of {shown} is not one that `chartbook install agents` wrote."
+            f"The ChartBook section of {shown} ({where}) was changed since ChartBook {found.version} wrote it."
+            if found.hashed and claude_skill._parsed(found.version) is not None
+            else f"The ChartBook section of {shown} ({where}) is not one that `chartbook install agents` wrote."
         )
         if not _can_ask():
             stop(
@@ -5380,7 +5413,7 @@ def install_agents(ctx, force):
             )
         click.echo(f"{said} Notes of your own go outside its two marker lines.", err=True)
         try:
-            agreed = _confirm("Replace what is between them?", default=False)
+            agreed = _confirm(f"Replace what is between them ({between} line{'' if between == 1 else 's'})?", default=False)
         except click.Abort:  # Ctrl-C, or the end of input
             click.echo("", err=True)
             agreed = False
@@ -5388,7 +5421,9 @@ def install_agents(ctx, force):
             click.echo(f"{shown} was left as it is.")
             raise SystemExit(1 if failed else 0)
     try:
-        agents.write(file, agents.written(found))
+        agents.write(file, agents.written(found), was=was)
+    except agents.NotWritten as e:
+        stop(f"{shown} was not written: {e}.")
     except OSError as e:
         stop(f"{shown} could not be written, and is as it was: {_explain_os_error(e)}")
     if not existed:

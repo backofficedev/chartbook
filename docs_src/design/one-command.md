@@ -378,7 +378,9 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
 - **No command moves the pipeline's own repository.** *(Found by review: in a repository of
   several pipelines the list said `git checkout`, and its last command then built the pipeline
   itself as it was at that commit.)* What is wanted there at another commit is built in a
-  worktree of that commit, and the reader's checkout stays on its branch.
+  worktree of that commit, and the reader's checkout stays on its branch. A worktree of that
+  name is used only where git says it is one, on that commit. *(Found by the third pass: a
+  leftover folder of the name was taken for it.)*
 - **An address is one only if it is a plain web address,** which is all a snapshot records.
   *(Found by review: one that began with `--upload-pack=` was refused by the fetch and printed in
   a `git clone` to paste.)* A pipeline's name is one only if it is an ID. Everything shown is
@@ -418,7 +420,15 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   second pass: the only manifest of a repository was taken for whatever pipeline was asked of
   it, so an entry that named another pipeline's repository was told to build that one, for
   ever.)* Asked of the pipeline itself, it is left to the pin's own words; further up, its line
-  says it was not found and gives no command.
+  says it was not found and gives no command. *(Found by the third pass: a manifest that could
+  not be read, and one past the two hundredth of its repository, were said not to be there.
+  The first is its folder's all the same; the second line says how far the search went.)*
+- **A clone that lacks its commit is fetched, and built in the folder the clone has the pipeline
+  in now.** *(Found by the third pass: after the fetch the list said to build at the top of the
+  clone.)* The line says that the folder is a guess.
+- **On Windows the lines are for `cmd.exe` at its prompt:** `cd /d`, and a `%` as it is. *(Found
+  by the third pass, by reading: a bare `cd` does not change the drive, and a doubled `%` is one
+  only in a batch file. Nothing here was run on Windows.)*
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
   entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
   is as the command left it.
@@ -477,20 +487,34 @@ with what building it settled:
 - **Nothing a person wrote is replaced unasked.** *(Found by review: only a section naming
   exactly this version was protected; a newer one, an older one written in, and markers typed by
   hand were all replaced without a word.)* The opening marker names the version, as the skill's
-  `SKILL.md` does, and carries a hash of the section's text. A section that is as some ChartBook
-  left it is replaced when it is an older one, and left when it is a newer one, as the skill
-  is. Any other is replaced at a yes or with `--force`, and where nothing can ask the command
-  stops and says that notes go outside the two lines.
+  `SKILL.md` does, and carries a hash of the section: its two marker lines and the text between
+  them. A section that is as some ChartBook left it is replaced when it is an older one, and
+  left when it is a newer one, as the skill is. Any other is replaced at a yes or with
+  `--force`, and where nothing can ask the command stops and says that notes go outside the two
+  lines. *(Found by the second pass: the hash was of the text alone, so words written into a
+  marker's own comment went unasked; the question did not say which lines would go; and a
+  section somebody had written in was called stale at every command, for ever.)*
 - **A marker is a whole line, from its first column, outside a code fence.** *(Found by review:
   a line that mentioned a marker was taken for one, and the project's text between two of them
   was replaced.)* A marker line with other text on it, and marker lines that do not hold one
   section, are an error that says which lines, and nothing is written.
+- **A fence is as Markdown takes one,** and a file that ends inside one is refused. *(Found by
+  the second pass: any line that began with three backticks opened or closed a fence. Inline
+  code at the start of a line, or a fence never closed, hid the section below it, and the
+  command added another section at every run.)*
 - **The rest of the file is kept byte for byte, and the file is written whole or not at all.**
   *(Found by review: blank lines were cut, one CRLF turned the section to CRLF, a byte-order mark
-  hid the section, and a write that failed part-way left the project's notes cut short.)*
+  hid the section, and a write that failed part-way left the project's notes cut short.)* The
+  file is replaced by a move, which asks nothing of the file it replaces, so three things are
+  looked at first. *(Found by the second pass: a read-only file was written; a hard link was
+  broken with no word; and what somebody else saved while the question waited was lost.)* Each
+  is refused, and the command says which.
 - **A link is written through only to a file of the project that is there.**
 - **Both halves are done** where the skill's question was answered no, could not be answered, or
-  its folder could not be written. *(Found by review: only the first of those.)*
+  its folder could not be written. *(Found by review: only the first of those.)* Ctrl-C at the
+  skill's question ends the command, and a newer ChartBook's skill is left as it is and is no
+  error. *(Found by the second pass: Ctrl-C was taken for a question nobody could answer, and
+  from the older of two environments the command failed every time.)*
 - **The section sends an agent to nothing that writes over a person's files.** *(Found by
   review: it named `chartbook docs build`, which asks before it replaces `docs/`, and told the
   agent to do what a message says.)* It names what only reads, and says to show a stopped
