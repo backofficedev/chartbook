@@ -68,7 +68,8 @@ def path(
     hash, or ``models.path("rate_forecaster@champion")``, by a label of
     ``[models.rate_forecaster.aliases]``. That path is in the store, is
     read-only, and does not change. A model that is a folder has files
-    there and no one path, since the store keeps each file once:
+    there and no one path, since a store may keep each file once (a bucket
+    does, and a store that ChartBook 0.5 laid out):
     :func:`chartbook.assets.files` lists them, and
     :func:`chartbook.assets.gathered` lays them out in a temporary folder
     for a loader that takes a directory.

@@ -246,7 +246,8 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never
   resolves to the other pipeline's working directory, and is read-only. An asset of
   several files (a Hive folder, a glob, a model that is a folder) has no one path there,
-  since the store keeps each file once: `data.files(...)`, `assets.files(...)` and
+  since a store may keep each file once (a bucket, a store ChartBook 0.5 laid out):
+  `data.files(...)`, `assets.files(...)` and
   `chartbook path REF --files` list the files where they are kept, `data.load`/`data.sql`
   read them, and `assets.gathered(...)` lays them out in a temporary folder for a loader.
 - A `git` dependency (`{ git = "https://…", rev = "v1.2" }`; `rev` optional) is

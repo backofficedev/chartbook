@@ -250,8 +250,8 @@ last = data.as_of("fed_yield_curve:treasury_rates")           # the pin's last d
 files = data.files("news_headlines:articles")                 # a Hive folder or glob: its files, wherever kept
 chart = assets.path("fed_yield_curve:chart/curve_today")      # any kind of asset
 mine = data.load("my_data")                                   # this pipeline's own, live
-# Another pipeline's dataset of several files has NO one path: the store keeps each file once,
-# so its files may sit in several snapshots' folders. data.path() raises
+# Another pipeline's dataset of several files has NO one path: a store may keep each file once
+# (a bucket, a store ChartBook 0.5 laid out), its files in several snapshots' folders. data.path() raises
 # NoSinglePathError; data.load()/data.sql() read the files where they are, data.files() lists
 # them (for a dodo.py file_dep). A model that is a folder: `with assets.gathered(ref) as folder:`.
 # ChartBook NEVER selects columns or rows. "my_data#col" is an address for

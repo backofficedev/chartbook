@@ -1258,7 +1258,9 @@ url = "/a/bigger/disk/chartbook-store"
 The store at /Users/x/.chartbook/store has the layout of ChartBook 0.5, which this ChartBook reads and does not write. `chartbook store migrate` moves it to this version's; an earlier ChartBook will not read it afterwards.
 ```
 
-A plain `chartbook run` there builds as usual, and its last lines say why there is no snapshot.
+A plain `chartbook run` there builds as usual, and its last lines say why there is no snapshot. `chartbook run --snapshot` stops before it builds, and its message ends `Nothing was built.`
+
+A folder with no `store.json` in which `pipelines/` holds a snapshot's folder, or `roots/` the note of a lockfile, is such a store whose `store.json` has not arrived yet (a sync brings folders before files) or was removed: it is read and refused in the same way, and no store is made over it. A folder whose `store.json` says this version's layout while `pipelines/` holds snapshots is neither read nor written, and the message says how to part the two.
 
 **A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), or at one bucket (`s3://bucket/prefix`, with `pip install chartbook[s3]`; see {doc}`configuration`), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A dependency named by its ID (`"acme/rates" = {}`) is pinned and updated from the store alone, with no folder of it on that machine. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `_chartbook/roots/` writable for everyone (`roots/` in a store that ChartBook 0.5 laid out; for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `chartbook run --frozen` writes nothing but, where it can, this machine's note for `store gc`, and is what CI should run to build; `chartbook pin --check` checks, and writes nothing to the project or the store. Under CI with no `CHARTBOOK_MACHINE_ID`, every note names the lockfile's path alone, so each run at the same checkout path replaces the last one's. Each machine's notes are its own (they name the machine, from `~/.chartbook/machine-id`, as well as the lockfile's path, since two machines can have a project at the same path), and `store gc` keeps what another machine's lockfiles recorded at their last pin. It is best run by the store's owner, from the machine the snapshots were made on: a label another machine gave is known here only through the snapshots that recorded it.
 
@@ -1323,6 +1325,17 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
+In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and one that is missing there, or has other bytes, is said with the snapshot's name, though another snapshot has the same bytes:
+
+```console
+$ chartbook store verify
+sha256:9a41c7e2…: _data/treasury.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
+
+1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
+```
+
+A `chartbook run` or `chartbook snapshot` in that pipeline's folder, with the same file built, puts it back; until then `store gc` keeps a snapshot that has the only whole copy.
+
 **Why an object can change.** The store never moves or copies a file if it can avoid it. It tries four ways to hold one, cheapest first:
 
 | Way | Cost | Can it change after it is stored? |
@@ -1360,6 +1373,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest holding a version of an asset marked `keep = true` (with `--aggressive` too) | Every version `acme/docs` ever built of `embeddings`, the output of a paid API run ({doc}`../guide/keeping-costly-outputs`). The command says what the marks keep: `Kept for \`keep = true\`: 3 version(s) of acme/docs:embeddings, 4.2 GB, in 3 snapshot(s)` |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
+| A snapshot that stays has lost a file that this one has whole | Each snapshot's folder holds its own copy of every file, and the newest snapshot of `rates` has lost its `treasury.parquet` (a sync that has not brought it). An older snapshot with the same file is kept until a run puts it back: `chartbook store verify` says which file |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, and the ones a tag or a label names.
 
@@ -1372,12 +1386,14 @@ Kept: 14 object(s), named by 3 lockfile(s) or a kept snapshot
   /work/rate_forecast/chartbook.lock
   /Volumes/usb/old_project/chartbook.lock  (not found; its pins are kept)
 Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 7 days
-Would remove 6 snapshot(s):
+Would remove 6 snapshot(s) and 5 object(s) that nothing names, 2.1 GB:
   ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 7 days
   …
-Would remove 5 object(s), 2.1 GB, that nothing names.
-Remove them? [y/N]:
+Remove them? [y/N]: y
+Removed 6 snapshot(s) and 5 object(s), 2.1 GB.
 ```
+
+The size is of everything that goes, and is the same before the question and after: the objects that nothing names, and each removed snapshot's own copy of a file that a kept snapshot has too. With no snapshot to remove the line is `Would remove 5 object(s), 2.1 GB, that nothing names.`
 
 | Option | Effect |
 |--------|--------|
