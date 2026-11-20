@@ -28,9 +28,13 @@ def _commit(repository: Path, message: str = "Work") -> None:
 
 
 @pytest.fixture
-def catalog(tmp_path):
+def catalog(tmp_path, request):
     """A catalog of `pipeline_a` and `pipeline_b` in one repository; `pipeline_b` depends on
-    `pipeline_a`. `pipeline_a` has two snapshots, and `pipeline_b` pins the first."""
+    `pipeline_a`. `pipeline_a` has two snapshots, and `pipeline_b` pins the first.
+
+    The second is kept as the store chooses (as an increment on the first,
+    where only the data changed); a test that asks for it indirectly, with
+    True, has it made complete."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
     (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8", newline="\n")
@@ -45,7 +49,7 @@ def catalog(tmp_path):
     data = next((a / "_data").rglob("*.parquet"))
     pl.DataFrame({"date": ["2025-01-01"], "value": [9.9]}).write_parquet(data)
     _commit(repository, "New data")
-    second = snapshot.make(a).snapshot
+    second = snapshot.make(a, complete=getattr(request, "param", False)).snapshot
     from tests.fixtures import publish_catalog
     publish_catalog(root)
     return root, first, second
@@ -468,6 +472,8 @@ class TestLinksFollowPins:
 
 
 class TestGcClearsTheKeptSites:
+    # The second complete, so that the first is built on by nothing and is one gc removes once nothing pins it
+    @pytest.mark.parametrize("catalog", [True], indirect=True, ids=["the second complete"])
     def test_a_removed_snapshot_takes_its_kept_site_with_it(self, catalog, monkeypatch):
         root, first, second = catalog
         _build(root, monkeypatch)

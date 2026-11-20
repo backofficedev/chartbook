@@ -49,7 +49,8 @@ def _builds_on_there(taken, source, target, whole):
     except (snapshot.SnapshotError, OSError):
         return None  # gone from the source: every file of the increment that is left is copied, complete
     for record in target.records():
-        if record.readable and not record.increment and (record.pipeline, record.commit, record.made_at) == (on.pipeline, on.commit, on.made_at):
+        # A complete one by what its record is: not one that keeps files in other folders (0.5's kind, copied in by hand)
+        if record.complete and (record.pipeline, record.commit, record.made_at) == (on.pipeline, on.commit, on.made_at):
             # Only on a complete one written in this run, or read and hashed in it: never on files taken on trust
             if str(record.path) not in whole and not target.verify_snapshot(record.path):
                 whole.add(str(record.path))
@@ -59,11 +60,19 @@ def _builds_on_there(taken, source, target, whole):
     return None
 
 
-def copy_snapshot(taken, source, target, complete=False, whole=None):
+def copy_snapshot(taken, source, target, complete=False, whole=None, decides=False):
     """Copy one snapshot into another store, each file checked by its hash as it is written; its record there.
 
     One the target has already is left as it is, and is there only if its
     own files are whole, read and hashed (:class:`NotWholeThere` otherwise).
+
+    :param complete: Write it complete, whatever it is in the source.
+    :param decides: For a snapshot that is being made and sent to several
+        stores (:func:`chartbook.snapshot.make`): the target decides for
+        itself whether it keeps it complete or as an increment, from its
+        own snapshots, by the one rule
+        (:func:`chartbook.snapshot.to_be_kept`). Without it a copy keeps
+        the form it has in the source (``store move``).
     """
     whole = whole if whole is not None else set()  # the complete snapshots in the target that this run wrote, or read and hashed
     existing = [snapshot.read(p) for p in target.all_snapshot_files() + target.pinned_snapshot_files()]
@@ -86,12 +95,17 @@ def copy_snapshot(taken, source, target, complete=False, whole=None):
             whole.add(str(held.path))
             return held.path
     document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
-    # It keeps its form: an increment in the source is one in the target, on the same complete snapshot,
+    # Where the target decides, its kind is said once every file of it is put, as for the store it was made in
+    by_rule = (
+        decides and not complete and document.get("made_by", "snapshot") == "snapshot"
+        and getattr(target, "increments_path", lambda: None)() is not None
+    )
+    # Otherwise it keeps its form: an increment in the source is one in the target, on the same complete snapshot,
     # where the target has that one; where it has not, it is written complete, every file being at hand
-    on = None if complete else _builds_on_there(taken, source, target, whole)
+    on = None if complete or by_rule else _builds_on_there(taken, source, target, whole)
     pending = target.begin(
         taken.pipeline, taken.commit, taken.made_at, made_by=document.get("made_by", "snapshot"),
-        **({"builds_on": on} if on is not None else {}),
+        **({"builds_on": on} if on is not None else {}), **({"undecided": True} if by_rule else {}),
     )
     try:
         parts = list(document.get("records", [])) + [document.get("documents"), document.get("index")]
@@ -114,6 +128,10 @@ def copy_snapshot(taken, source, target, complete=False, whole=None):
             if result.content_hash != part["content_hash"]:
                 raise StoreError(f"Copy of {part.get('id', 'documents')} failed hash verification")
             part["stored"] = result.stored
+        if by_rule:
+            decided = snapshot.to_be_kept(target, taken)
+            if decided.increment:
+                pending.keep_as_increment(decided.builds_on, decided.increments_bytes)
         try:
             path = pending.write(document)
         except BuiltOnGoneError:
@@ -122,7 +140,7 @@ def copy_snapshot(taken, source, target, complete=False, whole=None):
             return copy_snapshot(taken, source, target, complete=True, whole=whole)
         for origin in source.origins(taken.commit, snapshot.record_name(taken.subdirectory)):
             target.note_origin(taken.commit, snapshot.record_name(taken.subdirectory), origin)
-        if on is None:
+        if getattr(pending, "builds_on", None) is None:
             whole.add(str(path))
         return path
     except BaseException:

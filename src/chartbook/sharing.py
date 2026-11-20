@@ -211,7 +211,8 @@ def _builds_on_there(record: KeptRecord, into: Store, whole: set) -> Optional[st
     source = record.folder.parent.parent.parent / V3_LAYOUT.pipelines / record.folder.parent.name / record.builds_on / OWN_DIR / RECORD_FILE
     on = read_kept_record(source) if os.path.isfile(_any_length(source)) else None
     for kept in into.records():
-        if not kept.readable or kept.increment or kept.pipeline != record.pipeline:
+        # A complete one by what its record is: not one that keeps files in other folders (0.5's kind, copied in by hand)
+        if not kept.complete or kept.pipeline != record.pipeline:
             continue
         same = (kept.commit, kept.made_at) == (on.commit, on.made_at) if on is not None and on.readable else kept.folder.name == record.builds_on
         if same:

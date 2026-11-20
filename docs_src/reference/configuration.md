@@ -542,7 +542,8 @@ A model in another pipeline is read the same way as its data: `models.path("fore
 $ chartbook snapshot
 ftsfr/rate_forecast at 4f2a91c: 1 asset(s) in the store
   model/rate_forecaster: new version 7f3a9c2e41b0
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 4 files, 2.4 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 **A version is named by the start of its content hash**, as git names a commit. The name is worked out from the model's bytes and nothing else, so it is the same on every machine and every branch, and two branches that each retrain never fight over a number.

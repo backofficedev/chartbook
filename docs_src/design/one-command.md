@@ -67,7 +67,8 @@ build left on disk.
 ```text
 $ git add -A && git commit -m "Yields through October" && chartbook snapshot
 acme/rates at 4f2a91c: 3 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 5 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 Typed at a terminal where there is no catalog yet, it also asks whether to make the one that

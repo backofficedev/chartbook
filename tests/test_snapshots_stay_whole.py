@@ -1,9 +1,12 @@
 """A snapshot that has lost a file of its own: what the writer, ``store verify``, ``store gc`` and ``store move`` do.
 
-In a store of this layout each snapshot holds its own copy of every file
-(``docs_src/design/snapshots-and-increments.md``), so the same bytes sit in
-several folders, and one folder can lose a file that another still has: a
-sync that has not brought it, a file removed by hand, a disk's fault.
+In a store of this layout each complete snapshot holds its own copy of
+every file (``docs_src/design/snapshots-and-increments.md``), so the same
+bytes sit in several folders, and one folder can lose a file that another
+still has: a sync that has not brought it, a file removed by hand, a
+disk's fault. The snapshots here whose own copy matters are made complete
+(``_complete``); what is done where an increment, or the snapshot it
+builds on, loses a file is in ``tests/test_increments.py``.
 
 Three rules, each the plainest that holds, after two reviews of the layout
 (2026-11-19 and 2026-11-20):
@@ -167,18 +170,39 @@ def _lose(path: Path, long_ago: bool = False) -> None:
         os.utime(path.parent, (then, then))
 
 
-def _whole(taken) -> None:
-    """See that a snapshot's own folder holds every file its record names, each with the bytes the record says."""
-    folder = _folder_of(taken)
+def _whole(taken, own: bool = False) -> None:
+    """See that a snapshot holds every file its record names, each with the bytes the record says, where the store says it keeps it.
+
+    That is the snapshot's own folder, or, for one kept as an increment,
+    the complete snapshot it builds on.
+
+    :param own: See that every one of them is in its own folder: a complete snapshot.
+    """
+    store_module._read_records.clear()
+    record = store_module.read_kept_record(Path(taken.path))
     document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
     parts = [*document["records"], document["index"], document["documents"]]
-    entries = [entry for part in parts for entry in part["stored"]["files"]]
-    assert entries
-    for entry in entries:
-        assert entry["kept_in"] == folder.name and "kept_as" not in entry
-        own = folder.joinpath(*entry["path"].split("/"))
-        assert own.is_file(), f"{folder.name} has lost {entry['path']}"
-        assert hashing.hash_file(own).content_hash == entry["content_hash"], f"{entry['path']} in {folder.name}"
+    listed = sorted(entry["path"] for part in parts for entry in part["stored"]["files"])
+    files = [file for asset in record.assets for file in asset.files]
+    assert listed and record.whole and sorted(file.path for file in files) == listed
+    for file in files:
+        assert file.location.is_file(), f"{record.folder.name} has lost {file.path}"
+        assert hashing.hash_file(file.location).content_hash == file.content_hash, f"{file.path} in {record.folder.name}"
+        assert not own or file.location.is_relative_to(record.folder), f"{file.path} is not in {record.folder.name}"
+
+
+def _complete(folder: Path, store, made_at: str):
+    """Make a snapshot that is complete: its folder holds its own copy of every file.
+
+    What a test here needs of a later snapshot whose own copy of a file an
+    earlier one has too is lost, damaged or counted, or of one that an
+    earlier snapshot must not be held for. Left to itself the store keeps
+    a later snapshot where little changed as an increment, whose copy of
+    an unchanged file is the earlier one's (``tests/test_increments.py``
+    has what is done where an increment, or the one it builds on, loses a
+    file).
+    """
+    return snapshot.make(folder, store=FolderStore(store.root), made_at=made_at, complete=True)
 
 
 def _counted(monkeypatch, name: str) -> list:
@@ -208,10 +232,22 @@ class TestAnEarlierCopyThatIsDamaged:
     def test_the_next_snapshot_is_made_with_the_documents_as_the_pipeline_has_them(self, rates, store):
         """A document is put from a folder staged for the snapshot, which is still there when the record is written."""
         self._damaged(rates, store)
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+        second = _complete(rates, store, NOW)
         assert second.made
         assert (_folder_of(second.snapshot) / "README.md").read_bytes() == b"# Rates\n"
-        _whole(second.snapshot)
+        _whole(second.snapshot, own=True)
+
+    def test_an_increment_takes_the_file_where_the_one_it_builds_on_has_it_at_its_size(self, rates, store):
+        """Left to the store, the next one is an increment, and a file of the right size in the snapshot it builds on is not read to make it: `store verify` is what reads, and names the file once for each snapshot that keeps it there."""
+        first = self._damaged(rates, store)
+        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+        assert second.made and second.kept.increment and second.kept.builds_on == _folder_of(first).name
+        assert not (_folder_of(second.snapshot) / "README.md").exists()
+        fresh = FolderStore(store.root)
+        assert fresh.holes_of(second.snapshot.path) == []  # by its size, nothing is missing
+        for taken in (first, second.snapshot):
+            (problem,) = fresh.verify_snapshot(taken.path)
+            assert problem.message.startswith("README.md is no longer what its record says")
 
     def test_and_so_is_the_one_after_it(self, rates, store):
         self._damaged(rates, store)
@@ -227,7 +263,7 @@ class TestAnEarlierCopyThatIsDamaged:
         os.chmod(theirs, 0)
         try:
             _chart(rates, "the curve, drawn again")
-            second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+            second = _complete(rates, store, NOW)
         finally:
             os.chmod(theirs, 0o444)
         assert second.made
@@ -244,7 +280,7 @@ class TestAnEarlierCopyThatIsDamaged:
         (folder / "README.md").write_text("# Warehouse\n", encoding="utf-8", newline="\n")
         _git(folder, "add", "-A")
         _git(folder, "commit", "--quiet", "-m", "A README")
-        second = snapshot.make(folder, store=FolderStore(store.root), made_at=NOW)
+        second = _complete(folder, store, NOW)
         assert second.made
         assert (_folder_of(second.snapshot) / "_chartbook" / "tables" / written.name).read_bytes() == was
 
@@ -273,10 +309,10 @@ def _warehouse(folder: Path, tables: tuple) -> Path:
 
 @pytest.fixture
 def holed(rates, store):
-    """Two snapshots of ``acme/rates`` with the same table, the older old enough to go; the newer has lost its copy of the table."""
+    """Two snapshots of ``acme/rates`` with the same table, the older old enough to go; the newer, a complete one, has lost its copy of the table."""
     first = snapshot.make(rates, store=store, made_at=OLD).snapshot
     _chart(rates, "the curve, drawn again")
-    second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+    second = _complete(rates, store, NOW).snapshot
     lost = _folder_of(second) / "_data" / "treasury.parquet"
     _lose(lost)
     return first, second, lost
@@ -304,7 +340,10 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
             f"  The same files as the snapshot made 2026-11-19 14:02 UTC ({_folder_of(second).name}), which lacks "
             f"_data/treasury.parquet in the store: this one is whole, and that one is left as it is."
         )
-        assert "Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`." in lines
+        # The older one is whole, so the new one is an increment on it: its chart and its index are its own
+        assert lines[2].startswith("Snapshot made, kept as an increment: 2 of 5 files, ")
+        assert lines[2].endswith(". The rest is in the snapshot made 2026-01-01 09:15 UTC.")
+        assert lines[3] == "A pipeline that depends on this one gets it with `chartbook pin --update`."
         assert not lost.exists()
 
     def test_the_run_after_it_stands_on_the_new_one(self, holed, rates, store):
@@ -335,7 +374,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
         """The run stands on the newest, which is whole: nothing is copied to find out, run after run."""
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot
         lost = _folder_of(first) / "_data" / "treasury.parquet"
         _lose(lost)
         before = _state(_folder_of(first))
@@ -348,7 +387,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
     def test_a_file_at_another_size_in_an_older_snapshot_is_left_and_the_run_still_ends(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "again")
-        snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+        _complete(rates, store, NOW)
         short = _folder_of(first) / "_data" / "treasury.parquet"
         _writable(short)
         short.write_bytes(b"other")
@@ -425,7 +464,7 @@ class TestStoreVerify:
         folder = _parted(work / "parted", "acme/parted", (2020, 2021))
         first = snapshot.make(folder, store=store, made_at=OLD).snapshot
         _chart(folder, "two")
-        second = snapshot.make(folder, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(folder, store, NOW).snapshot
         parts = first.content()["parts"]
         for year in (2020, 2021):
             _lose(_folder_of(second) / "_data" / "parts" / f"year={year}" / "part-0.parquet")
@@ -468,7 +507,7 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
     def test_a_file_of_the_wrong_size_is_lacking_too_and_the_first_of_several_is_named(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "the curve, drawn again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot
         short = _folder_of(second) / "_data" / "treasury.parquet"
         _writable(short)
         short.write_bytes(short.read_bytes()[:10])  # a sync that has brought the first bytes of it
@@ -481,7 +520,7 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
     def test_one_that_is_itself_to_go_holds_nothing_back(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "the curve, drawn again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot
         _lose(_folder_of(first) / "_data" / "treasury.parquet", long_ago=True)
         plan = lock.plan_gc(FolderStore(store.root))
         assert [taken for taken, _ in plan.snapshots_delete] == [first] and plan.held_back == {}
@@ -495,7 +534,7 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
         other = _parted(work / "parted", "acme/parted", (2020,))
         old = snapshot.make(other, store=FolderStore(store.root), made_at=OLD).snapshot
         _chart(other, "two")
-        new = snapshot.make(other, store=FolderStore(store.root), made_at=NOW).snapshot
+        new = _complete(other, store, NOW).snapshot
         plan = lock.plan_gc(FolderStore(store.root))
         assert [taken for taken, _ in plan.snapshots_delete] == [old] and list(plan.held_back) == ["acme/rates"]
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
@@ -506,7 +545,7 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
         """Another pipeline keeps the pinned table's bytes as one file of a folder dataset: no copy a read of the pin is handed."""
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot
         assert lock.pin(reader, FolderStore(store.root)).problems == []  # pins the second
         bundle = _parted(work / "bundle", "acme/bundle", (2021,))
         (bundle / "_data" / "parts" / "year=2020").mkdir()
@@ -530,9 +569,9 @@ class TestGcWhereASnapshotThatStaysLacksAFile:
         )
         first = snapshot.make(folder, store=store, made_at=OLDER).snapshot
         _chart(folder, "two")
-        second = snapshot.make(folder, store=FolderStore(store.root), made_at=OLD).snapshot
+        second = _complete(folder, store, OLD).snapshot
         _chart(folder, "three")
-        third = snapshot.make(folder, store=FolderStore(store.root), made_at=NOW).snapshot
+        third = _complete(folder, store, NOW).snapshot
         assert lock.pin(reads, FolderStore(store.root)).problems == []  # pins the third
         _lose(_folder_of(third) / "_data" / "parts" / "year=2020" / "part-0.parquet")
         _lose(_folder_of(second) / "_data" / "parts" / "year=2021" / "part-0.parquet")
@@ -551,10 +590,10 @@ class TestAHoleNoRunCanFill:
     def stuck(self, rates, reader, store):
         first = snapshot.make(rates, store=store, made_at=OLDER).snapshot
         _chart(rates, "drawn again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
+        second = _complete(rates, store, OLD).snapshot
         assert lock.pin(reader, FolderStore(store.root)).problems == []  # the reader pins the second
         _table(rates, 4)
-        third = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        third = _complete(rates, store, NOW).snapshot  # which the second, then, is not held for
         assert len({first.path, second.path, third.path}) == 3
         _lose(_folder_of(second) / "_data" / "treasury.parquet", long_ago=True)
         return first, second, third
@@ -596,7 +635,7 @@ class TestWhatGcSaysAfterTheYes:
     def test_a_hole_that_appears_between_the_plan_and_the_yes(self, rates, store, monkeypatch):
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot
         only_its = len(first.hashes() - second.hashes())
         real = lock.carry_out_gc
 
@@ -623,7 +662,7 @@ class TestWhatGcSaysAfterTheYes:
         lockfile = (reader / "chartbook.lock").read_bytes()
         (reader / "chartbook.lock").unlink()
         _chart(rates, "again")
-        snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+        _complete(rates, store, NOW)  # so that the first is one gc would remove, and not one the newest builds on
         real = lock.carry_out_gc
 
         def after_the_yes(plan, the_store=None):
@@ -645,13 +684,13 @@ class TestEachKeptSnapshotsOwnFilesAfterAGc:
         _chart(rates, "the curve, drawn again")
         snapshot.make(rates, store=FolderStore(store.root), made_at=OLD)
         _chart(rates, "and again")
-        third = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        third = _complete(rates, store, NOW).snapshot
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.exit_code == 0, result.output
         assert "Removed 2 snapshot(s)" in result.output.splitlines()[-1]
         fresh = FolderStore(store.root)
         assert snapshot.all_snapshots(fresh) == [third]
-        _whole(third)
+        _whole(third, own=True)
         assert sorted(p.name for p in store.pipeline_path("acme/rates").iterdir()) == sorted(["README.txt", _folder_of(third).name])
         assert fresh.verify() == []
 
@@ -665,7 +704,7 @@ class TestGcWhileASnapshotIsBeingMade:
         _table(rates, 4)
         second = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
         _chart(rates, "again")
-        third = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        third = _complete(rates, store, NOW).snapshot  # so that the two before it are ones gc removes
         assert len({first.path, second.path, third.path}) == 3
         # The table goes back to what only the first snapshot had, and a fourth snapshot is begun
         table.write_bytes(was)
@@ -697,7 +736,7 @@ class TestWhatGcSaysBeforeItAsks:
     def test_a_snapshot_whose_files_a_kept_one_has_too(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot
         own = _format_bytes(sum(p.stat().st_size for p in _folder_of(first).rglob("*") if p.is_file() and p.name != "snapshot.json"))
         only_its = len(first.hashes() - second.hashes())
         header = f"Would remove 1 snapshot(s) and {only_its} object(s) that nothing names, {own}:"
@@ -741,7 +780,7 @@ class TestWhatGcSaysBeforeItAsks:
         """Where something stayed, the line says what went: the objects, and the removed snapshots' own copies."""
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         _chart(rates, "again")
-        snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+        _complete(rates, store, NOW)
         own = sum(p.stat().st_size for p in _folder_of(first).rglob("*") if p.is_file() and p.name != "snapshot.json")
         fresh = FolderStore(store.root)
         plan = lock.plan_gc(fresh)

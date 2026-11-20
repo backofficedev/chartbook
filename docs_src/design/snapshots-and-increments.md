@@ -104,7 +104,7 @@ is in {doc}`one-command`.
 ```text
 $ chartbook snapshot
 acme/rates at 4f2a91c: 3 asset(s) in the store
-Snapshot made: 5 files, 23 MB.
+Snapshot made: 5 files, 23.0 MB.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
@@ -114,7 +114,7 @@ the table is the same file.
 ```text
 $ chartbook snapshot
 acme/rates at 9b1e22d: 3 asset(s) in the store
-Snapshot made, kept as an increment: 2 of 5 files, 0.4 MB. The rest is in the snapshot made 2026-11-16 09:15 UTC.
+Snapshot made, kept as an increment: 2 of 5 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
@@ -123,7 +123,7 @@ A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```text
 $ chartbook snapshot
 acme/rates at c07d3e1: 3 asset(s) in the store
-Snapshot made: 5 files, 23 MB. The increments since the last complete one had added up to its size.
+Snapshot made: 5 files, 23.0 MB. The increments since the last complete one had added up to its size.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
@@ -146,7 +146,7 @@ is.
 ```text
 $ chartbook snapshot --complete
 acme/rates at 9b1e22d: 3 asset(s) in the store
-Snapshot made: 5 files, 23 MB.
+Snapshot made: 5 files, 23.0 MB.
   ~/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4
 ```
 

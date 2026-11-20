@@ -1,10 +1,13 @@
-"""The store's layout on disk: ``snapshots/`` and ``_chartbook/``, every snapshot complete, and a store of ChartBook 0.5 read as it is.
+"""The store's layout on disk: ``snapshots/`` and ``_chartbook/``, a complete snapshot's folder, and a store of ChartBook 0.5 read as it is.
 
 ``docs_src/design/snapshots-and-increments.md``: "The layout", "What the
-store promises" and "Moving a store to this layout". This is the first half
-of step 2 of its order of work: every snapshot is written complete, and a
-store of 0.5 is not moved yet. It is read, its notes of lockfiles are
-written, and nothing else is written to it or removed from it.
+store promises" and "Moving a store to this layout". This was the first
+half of step 2 of its order of work, when every snapshot was written
+complete. A store now keeps a later snapshot as an increment where little
+changed (``tests/test_snapshot_decides.py``, ``tests/test_increments.py``),
+so a test here that is of a complete snapshot as such asks for one. A
+store of 0.5 is read, its notes of lockfiles are written, and nothing else
+is written to it or removed from it.
 
 The pipeline is the one of the design's example: ``acme/rates``, a table, a
 chart and a README. A store of 0.5 is laid out by hand
@@ -112,6 +115,12 @@ def _folder_of(taken) -> Path:
     return Path(taken.path).parent.parent
 
 
+def _where(store, taken, asset: str, name: str = None) -> Path:
+    """Where the store keeps the one file of a snapshot's asset, asked of the store: the snapshot's own folder, or, for one kept as an increment, the complete snapshot it builds on."""
+    held = FolderStore(store.root).files(taken.content()[asset], taken.pipeline, name=name, snapshot=(taken.commit, taken.made_at))
+    return held.one.location
+
+
 def _entries(taken) -> list:
     """Every file a snapshot's record says where it keeps, as the record's own entries."""
     document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
@@ -207,7 +216,8 @@ class TestEverySnapshotIsComplete:
     def test_a_second_snapshot_repeats_the_file_that_did_not_change(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
         _chart(rates, "the curve on the 19th")  # the chart is drawn again, and the table is the same file
-        second = snapshot.make(rates, store=store, made_at=SECOND).snapshot
+        # Complete: this is of a complete snapshot as such, which repeats what the one before it has
+        second = snapshot.make(rates, store=store, made_at=SECOND, complete=True).snapshot
         assert second.path != first.path and second.content()["treasury"] == first.content()["treasury"]
         table = Path("_data") / "treasury.parquet"
         assert (_folder_of(second) / table).read_bytes() == (_folder_of(first) / table).read_bytes() == (rates / table).read_bytes()
@@ -345,14 +355,17 @@ class TestThePathOfAPinnedFile:
     the store and whole.
     """
 
-    def test_it_stays_where_it_is_while_neither_the_pin_nor_the_bytes_move(self, rates, reader, store):
+    @pytest.mark.parametrize("complete", [False, True], ids=["kept as the store chooses", "kept complete"])
+    def test_it_stays_where_it_is_while_neither_the_pin_nor_the_bytes_move(self, rates, reader, store, complete):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
         assert lock.pin(reader, store).problems == []
         before = data.path("acme/rates:treasury", project_dir=reader)
         assert before == _folder_of(first) / "_data" / "treasury.parquet"
         _chart(rates, "the chart alone is drawn again")  # the table's bytes do not change, and the reader does not pin again
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND).snapshot
-        assert second.path != first.path and (_folder_of(second) / "_data" / "treasury.parquet").is_file()
+        second = snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND, complete=complete).snapshot
+        # The later one has the table too: in its own folder where it is complete, and in the first one's where it is an increment
+        kept = _where(store, second, "treasury", "treasury.parquet")
+        assert second.path != first.path and kept.is_file() and (kept != before) is complete
         assert data.path("acme/rates:treasury", project_dir=reader) == before
         result = CliRunner().invoke(main, ["path", "acme/rates:treasury", "--project-dir", str(reader)])
         assert result.exit_code == 0 and result.output.splitlines() == [str(before)]
@@ -361,16 +374,18 @@ class TestThePathOfAPinnedFile:
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
         assert lock.pin(reader, store).problems == []
         _chart(rates, "the chart alone is drawn again")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND).snapshot
+        # Complete: another snapshot's own copy of the table is what this is about (an increment's is the first one's)
+        second = snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND, complete=True).snapshot
         own = _folder_of(first) / "_data" / "treasury.parquet"
         own.chmod(0o644)
         own.unlink()
         assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(second) / "_data" / "treasury.parquet"
         assert data.load("acme/rates:treasury", project_dir=reader).collect().shape == (3, 2)
-        # Where the pinned one has lost it, the newest of the pipeline that has it whole: the one `store gc` keeps
+        # Where the pinned one has lost it, the newest of the pipeline that has it whole: the one `store gc` keeps,
+        # read where that one keeps the table
         _chart(rates, "and again")
         third = snapshot.make(rates, store=FolderStore(store.root), made_at=THIRD).snapshot
-        assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(third) / "_data" / "treasury.parquet"
+        assert data.path("acme/rates:treasury", project_dir=reader) == _where(store, third, "treasury", "treasury.parquet")
 
     @pytest.fixture
     def with_parts(self, rates):
@@ -413,7 +428,8 @@ class TestThePathOfAPinnedFile:
         first = snapshot.make(with_parts, store=store, made_at=FIRST).snapshot
         assert lock.pin(reader, FolderStore(store.root)).problems == []
         _chart(with_parts, "the chart alone is drawn again")
-        second = snapshot.make(with_parts, store=FolderStore(store.root), made_at=SECOND).snapshot
+        # Complete: one other folder that holds the whole dataset is what this is about (an increment's parts are the first one's)
+        second = snapshot.make(with_parts, store=FolderStore(store.root), made_at=SECOND, complete=True).snapshot
         lost = _folder_of(first) / "_data" / "parts" / "year=2021" / "part-0.parquet"
         lost.chmod(0o644)
         lost.unlink()
@@ -490,8 +506,46 @@ class TestThePathOfAPinnedFile:
         for text, made_at in (("two", SECOND), ("three", THIRD)):
             (folder / "_output" / "curve.html").write_text(f"<p>{text}</p>\n", encoding="utf-8", newline="\n")
             made.append(snapshot.make(folder, store=FolderStore(store.root), made_at=made_at).snapshot)
+            # Where the newest keeps it: its own folder, or, kept as an increment, the complete one it builds on
+            assert models.path(f"m@{version}", project_dir=folder) == _where(store, made[-1], "model/m", "m.json")
+        # Here the two later ones are increments on the first, since the chart alone was drawn again: the model is
+        # kept once, in the first one's folder, which the newest builds on
+        assert [FolderStore(store.root).builds_on(taken.path) is not None for taken in made] == [False, True, True]
+        # And that is the copy gc keeps: with nothing kept for being new, the second goes, the first stays for
+        # the newest, and the path stays
+        before = models.path(f"m@{version}", project_dir=folder)
+        assert before == _folder_of(first) / "_output" / "m.json"
+        plan = lock.plan_gc(FolderStore(store.root), keep_days=0)
+        assert sorted(taken.made_at for taken, _ in plan.snapshots_delete) == [SECOND]
+        lock.run_gc(plan, FolderStore(store.root))
+        assert before.is_file() and models.path(f"m@{version}", project_dir=folder) == before
+
+    def test_a_version_of_a_model_is_read_from_the_newest_complete_snapshot_that_holds_it(self, work, store):
+        """The same, where each snapshot is complete and has its own copy: the path moves to the newest, and that is the one gc keeps."""
+        from chartbook import models
+
+        folder = work / "forecast"
+        (folder / "_output").mkdir(parents=True)
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "acme/forecast"},
+                "models": {"m": {"path": "./_output/m.json"}},
+                "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        (folder / ".gitignore").write_text("/_output/\n", encoding="utf-8", newline="\n")
+        (folder / "_output" / "m.json").write_text('{"weights": [1, 2, 3]}\n', encoding="utf-8", newline="\n")
+        _git(folder, "init", "--quiet", "-b", "main")
+        _git(folder, "add", "-A")
+        _git(folder, "commit", "--quiet", "-m", "Work")
+        version, made = None, []
+        for text, made_at in (("one", FIRST), ("two", SECOND), ("three", THIRD)):
+            (folder / "_output" / "curve.html").write_text(f"<p>{text}</p>\n", encoding="utf-8", newline="\n")
+            # Complete: each then has its own copy of the model, which is what this is about
+            made.append(snapshot.make(folder, store=FolderStore(store.root), made_at=made_at, complete=True).snapshot)
+            version = version or made[0].content()["model/m"].split(":", 1)[1][:12]
             assert models.path(f"m@{version}", project_dir=folder) == _folder_of(made[-1]) / "_output" / "m.json"
-        # And that is the one gc keeps: with nothing kept for being new, the two older ones go and the path stays
         before = models.path(f"m@{version}", project_dir=folder)
         plan = lock.plan_gc(FolderStore(store.root), keep_days=0)
         assert sorted(taken.made_at for taken, _ in plan.snapshots_delete) == [FIRST, SECOND]
@@ -527,10 +581,15 @@ def _record(pending, commit: str, **stored) -> dict:
 class TestRemovingASnapshot:
     @pytest.fixture
     def two(self, rates, store):
-        """Two snapshots of ``acme/rates``: the first old enough to go, the second the newest, with the same table."""
+        """Two snapshots of ``acme/rates``: the first old enough to go, the second the newest, with the same table.
+
+        Both complete: these are of a complete snapshot's whole folder
+        going, and one that an increment builds on stays
+        (``tests/test_increments.py``).
+        """
         first = snapshot.make(rates, store=store, made_at="2026-01-01T00:00:00.000000Z").snapshot
         _chart(rates, "the curve, drawn again")
-        second = snapshot.make(rates, store=store).snapshot
+        second = snapshot.make(rates, store=store, complete=True).snapshot
         return first, second
 
     def test_gc_removes_its_whole_folder(self, two, store):
@@ -612,7 +671,8 @@ class TestStoreLs:
     def test_every_snapshot_is_listed_as_complete(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
         _chart(rates, "the curve on the 19th")
-        second = snapshot.make(rates, store=store, made_at=SECOND).snapshot
+        # Complete: this is of the line of a complete snapshot (tests/test_increments.py has an increment's)
+        second = snapshot.make(rates, store=store, made_at=SECOND, complete=True).snapshot
         result = CliRunner().invoke(main, ["store", "ls", "acme/rates"])
         assert result.exit_code == 0, result.output
 
@@ -633,7 +693,8 @@ class TestExportAndImport:
     def test_an_export_is_laid_out_as_a_store_and_is_taken_in_by_another(self, rates, store, work, monkeypatch):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
         _chart(rates, "the curve on the 19th")
-        second = snapshot.make(rates, store=store, made_at=SECOND).snapshot
+        # Complete: this is of an export of complete snapshots (tests/test_increments.py has one that keeps an increment's form)
+        second = snapshot.make(rates, store=store, made_at=SECOND, complete=True).snapshot
         out = work / "for-alice"
         result = CliRunner().invoke(main, ["store", "export", "acme/rates", "--to", str(out)])
         assert result.exit_code == 0, result.output
@@ -1404,7 +1465,8 @@ class TestAPipelineNamedAsACommitIs:
         _git(folder, "commit", "--quiet", "-m", "Work")
         first = snapshot.make(folder, store=store, made_at="2026-01-01T00:00:00.000000Z").snapshot
         _table(folder, 4)
-        second = snapshot.make(folder, store=FolderStore(store.root), made_at=SECOND).snapshot
+        # Complete, so that nothing builds on the first and gc has a snapshot to remove
+        second = snapshot.make(folder, store=FolderStore(store.root), made_at=SECOND, complete=True).snapshot
         assert _folder_of(first).parent == store.root / "snapshots" / name
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.exit_code == 0, result.output
@@ -1437,7 +1499,10 @@ class TestAPipelineOf05CopiedByHandIntoAStoreOfThisLayout:
         monkeypatch.setenv(config.STORE_ENV_VAR, str(new.root))
         assert len(snapshot.all_snapshots(FolderStore(new.root))) == 2 and FolderStore(new.root).verify() == []
         _chart(rates, "the curve today")
-        third = snapshot.make(rates, store=FolderStore(new.root), made_at=SECOND).snapshot
+        # Complete: what follows clears the first of the two by hand, which gc never does to a snapshot an increment
+        # builds on. (Left to the store, this one is an increment on that first, the one of the two whose folder
+        # holds every file of it: tests/test_snapshot_decides.py)
+        third = snapshot.make(rates, store=FolderStore(new.root), made_at=SECOND, complete=True).snapshot
         folder = _folder_of(third)
         assert _tree(folder) == [
             "README.md", "_chartbook/index.json", "_chartbook/snapshot.json", "_data/treasury.parquet", "_output/curve.html",

@@ -507,7 +507,7 @@ The report reads the files the manifest names, so in a folder you have not trust
 ## chartbook snapshot
 
 ```console
-chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep] [--store NAME] [--no-gc-reminder]
+chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep] [--store NAME] [--complete] [--no-gc-reminder]
 ```
 
 Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a **snapshot**.
@@ -522,7 +522,8 @@ ftsfr/fed_yield_curve: built.
 $ git add -A && git commit -m "Yields through October"
 $ chartbook snapshot       # and say it is ready
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 6 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 Or both in one command, where the work is committed before the build: `chartbook run --snapshot`. See {ref}`below <run-then-snapshot>`.
@@ -540,6 +541,29 @@ Error: acme/forecast cannot have a snapshot: its pins do not account for every d
 
 After a snapshot, one line on stderr says what `chartbook store gc` would clear, if anything, as {ref}`catalog build <chartbook-catalog>` says it; `--no-gc-reminder` silences it. Nothing is removed unless you ask. The first snapshot of a pipeline leaves a `README.txt` in the pipeline's folder of the store, for whoever finds the folder: each folder there is a complete snapshot, and one is removed with `chartbook store gc` and never by hand ({ref}`store ls <chartbook-store>`).
 
+(snapshot-complete-or-increment)=
+**Complete, or kept as an increment.** The first snapshot of a pipeline is **complete**: its folder in the store, under `snapshots/`, holds every file of it. A later one where little changed is kept in less room, as an **increment**: its folder, under `increments/`, holds only the files that the complete snapshot before it does not have, and the rest are read from that one. The last lines say which was made:
+
+```console
+$ chartbook snapshot
+ftsfr/fed_yield_curve at 9b1e22d: 3 asset(s) in the store
+Snapshot made, kept as an increment: 2 of 6 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
+```
+
+Nothing changes for whoever reads or pins it: a pin names a snapshot, and one kept as an increment is pinned and read as any other. The store decides by itself, and nobody has to choose: a snapshot is kept as an increment until the increments since the last complete snapshot, with this one, add up to the size of a complete one, and then it is a complete one (`Snapshot made: 6 files, 23.0 MB. The increments since the last complete one had added up to its size.`). So no more is copied than complete snapshots every time would copy, and a pipeline that changes a little copies a little. A file is told by its bytes, whatever its name, and a count of files is of the files the snapshot's record lists: each asset's, the documents and the index. Where a snapshot goes to several stores, each decides for itself, and a line names a store that keeps it the other way (`Store team keeps it complete: 6 files, 23.0 MB.`).
+
+`--complete` makes a complete one whatever the store would choose, and says where its folder is: for a folder that stands by itself, to look at, to copy or to hand to somebody.
+
+```console
+$ chartbook snapshot --complete
+ftsfr/fed_yield_curve at 9b1e22d: 3 asset(s) in the store
+Snapshot made: 6 files, 23.0 MB.
+  /Users/you/.chartbook/store/snapshots/ftsfr+fed_yield_curve/2026-11-20T101500Z_9b1e22d7a0c4
+```
+
+Where the newest snapshot of these same files is an increment, `--complete` makes a new, complete one beside it, and the increment is left as it is: nothing in the store is changed once it is written. In a script, `--complete` copies every file each time; without it the store decides. A table that grows by date is better written as a folder partitioned by year than as one file ({doc}`../guide/depending-on-pipelines`).
+
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
 
 Three rules:
@@ -556,7 +580,7 @@ Error: ftsfr/fed_yield_curve has changes that are not committed:
 A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.
 ```
 
-**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time, and complete: its folder holds every file, those that did not change too (a bucket, which keeps each file once, holds only the ones that changed). If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
+**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time. Where little changed it is kept as an increment, whose folder holds the files that changed ({ref}`above <snapshot-complete-or-increment>`). If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
 
 ```console
 $ chartbook snapshot
@@ -580,7 +604,8 @@ $ chartbook snapshot
 ftsfr/fed_yield_curve at f321fcb: 2 asset(s) in the store
   Beside the snapshot before it, of f321fcb, made 2026-11-17 09:41 UTC:
     ftsfr/fed_yield_curve:treasury_yields: 24 new rows, through 2026-11-11; earlier rows unchanged
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made, kept as an increment: 2 of 5 files, 4.1 MB. The rest is in the snapshot made 2026-11-17 09:41 UTC.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new rows, through 2026-11-12` when the source has revised its past, and `the same rows, in other bytes` when only the writer changed. The one before is named by its commit as well as its time, since it may be another branch's. Nothing in telling this stops a snapshot, and a store that is not a folder on this machine is not read for it. Three more lines may follow the first, each for one dataframe:
@@ -597,7 +622,8 @@ or `earlier rows changed: the rows of 2025-09-26 to 2025-12-31 differ; 2 new row
 $ chartbook snapshot
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
   index not recorded: Chart 'curve' has no 'dataframe' key linking it to a dataframe in the [dataframes] section. The bytes and the documents are in the store; `chartbook run --check` says what a docs build would refuse.
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 5 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 A snapshot made by an earlier ChartBook carries neither; making one again at the same commit adds them, even when the bytes have not changed.
@@ -609,7 +635,8 @@ A snapshot made by an earlier ChartBook carries neither; making one again at the
 $ chartbook run --snapshot
 ftsfr/fed_yield_curve: build
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 6 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 Ran build in 1 pipeline(s).
 ```
 
@@ -958,7 +985,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [--check [--within DAYS] [--policy PATH]] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot [--complete]] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [--check [--within DAYS] [--policy PATH]] [--project-dir PATH]
 ```
 
 Build this pipeline. It pins what the pipeline reads, runs its build, and looks for what the build was to make. A {ref}`snapshot <chartbook-snapshot>`, which is what your other pipelines read and the catalog shows, is a command of its own: a run makes none, and its last lines name the command.
@@ -1088,7 +1115,7 @@ Upstream with no snapshot to pin, built and snapshotted first:
   ftsfr/fed_yield_curve    in /work/fed_yield_curve
 ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Snapshot made, for what depends on it in this run to pin.
+Snapshot made: 6 files, 23.0 MB, for what depends on it in this run to pin.
 ftsfr/rate_forecast: pinning what it depends on
 ...
 ```
@@ -1144,7 +1171,7 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 `run` stays at the commit in `chartbook.lock`. A `git` dependency that commits its data and has no `build` script is not built and not mentioned.
 
-**Build, and snapshot: `--snapshot`.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command: it refuses to build with anything uncommitted, and it fails where no snapshot can be made. For a nightly job, and for building somebody's pipeline at the commit a lockfile names ({ref}`a build of your own <a-build-of-your-own>`). After its snapshot, one line says what `chartbook store gc` would clear, as `chartbook snapshot` says it (`--no-gc-reminder` silences it).
+**Build, and snapshot: `--snapshot`.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command: it refuses to build with anything uncommitted, and it fails where no snapshot can be made. For a nightly job, and for building somebody's pipeline at the commit a lockfile names ({ref}`a build of your own <a-build-of-your-own>`). After its snapshot, one line says what `chartbook store gc` would clear, as `chartbook snapshot` says it (`--no-gc-reminder` silences it). The store keeps its snapshot complete or as an increment, as it does one that `chartbook snapshot` makes, and the line says which ({ref}`complete, or kept as an increment <snapshot-complete-or-increment>`); `chartbook run --snapshot --complete` keeps it complete and says where its folder is. `--complete` goes with `--snapshot`: a plain run makes no snapshot, and refuses the option (``--complete goes with --snapshot: `chartbook run --snapshot --complete`.``).
 
 **Check without building: `--check`.** `chartbook run --check` runs nothing: it checks the manifest and the folder, for CI, and has {ref}`a section of its own <chartbook-check>`. It goes with `--within`, `--policy` and `--project-dir`, and with no script but `build` and none of the options above.
 
@@ -1317,7 +1344,7 @@ url = "/a/bigger/disk/chartbook-store"
 
 `chartbook store info` says which one this machine uses, and what set it.
 
-**What is in the folder.** `snapshots/` holds one folder for each pipeline, and in it one folder for each snapshot, complete: every file of that version, in its own place. `_chartbook/` holds ChartBook's own notes (of the lockfiles that pin what is here, of the folders snapshots were made from, and what is being written). `store.json` says which layout this is, and `README.txt` says all of this to whoever opens the folder.
+**What is in the folder.** `snapshots/` holds one folder for each pipeline, and in it one folder for each complete snapshot: every file of that version, in its own place. `increments/` holds, pipeline by pipeline, the snapshots that are kept as increments: each folder there holds the files that one complete snapshot of its pipeline does not have, and its `_chartbook/INCREMENT.txt` names that one. `_chartbook/` holds ChartBook's own notes (of the lockfiles that pin what is here, of the folders snapshots were made from, and what is being written). `store.json` says which layout this is, and `README.txt` says all of this to whoever opens the folder.
 
 **A store that ChartBook 0.5 laid out** has `pipelines/` at the top, and keeps each file once. This ChartBook reads it as it is: `chartbook pin`, `chartbook pin --update`, every read, the catalog, `store ls`, `store info` and `store verify` work in it, and the notes of lockfiles are written where it keeps them. It makes no snapshot in it and removes nothing from it. `chartbook snapshot`, `chartbook run --snapshot`, `chartbook store gc`, and a `store move` or `store import` that would write to it or remove from it, stop and say:
 
@@ -1363,20 +1390,18 @@ What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `
 chartbook store ls [PIPELINE] [--store NAME]
 ```
 
-List the snapshots in the store, one line each, newest last within its pipeline: the folder's name (when it was made and the commit), that it is **complete**, and how much its folder holds.
+List the snapshots in the store, one line each, newest last within its pipeline: the folder's name (when it was made and the commit), whether it is **complete** or an **increment**, and how much its folder holds.
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (3 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  complete   2.4 GB here
-  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  complete   2.7 GB here
-A complete snapshot's folder holds every file of its version, and can be read or copied as it is. Remove snapshots with `chartbook store gc`, never by hand.
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  increment  611.9 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
+A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
 ```
 
-Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and its folder holds every one of them, each in its own place, so the folder can be read, copied or sent as it is. A dataset costs its whole size at each snapshot. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it: `chartbook store gc` removes snapshots, each with its whole folder. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder.
-
-A snapshot is listed as **complete** where its folder holds every file of its version, and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
+Every snapshot is a whole version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and says of each which folder keeps it. A snapshot is listed as **complete** where its folder holds every file of its version, each in its own place, so that the folder can be read, copied or sent as it is; and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. Which of the two `chartbook snapshot` makes, it decides by itself and says ({ref}`chartbook snapshot <snapshot-complete-or-increment>`); `chartbook snapshot --complete` makes a complete one. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it, and an increment may keep its files there: `chartbook store gc` removes snapshots, an increment with its own folder, and a complete one once no increment that stays builds on it. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
@@ -1513,11 +1538,16 @@ chartbook store export PIPELINE --to FOLDER [--latest | --snapshot COMMIT[OPTION
 ```
 
 Write one pipeline's snapshots into a folder, to send to a collaborator. The folder is laid out as
-a store is, `FOLDER/snapshots/<pipeline>/`: a folder for each snapshot, complete, the pipeline's
-files at their own paths, and each snapshot's record. Every snapshot the pipeline's owner
+a store is, `FOLDER/snapshots/<pipeline>/`: a folder for each complete snapshot, the pipeline's
+files at their own paths, and each snapshot's record. A snapshot the store keeps as an increment
+keeps its form: its folder is under `FOLDER/increments/<pipeline>/`, beside the complete one it
+builds on. Every snapshot the pipeline's owner
 made is written; with `--latest`, the newest alone; with `--snapshot`, each one named,
-by its commit (or its start) and, where one commit has several, `@` and when it was made. Each is
-readable without ChartBook. Only what
+by its commit (or its start) and, where one commit has several, `@` and when it was made. One
+written without the snapshot it builds on is written complete, so `--latest` is one complete
+snapshot, readable without ChartBook. The last line says what to send: `FOLDER/snapshots` where
+every snapshot in it is complete, and `FOLDER` itself where one is an increment, whose files are
+in both of its folders. Only what
 a snapshot's record names goes: its data, its documents and its index, never anything that runs.
 A folder that holds an export or a store of ChartBook 0.5 is not added to: export into another.
 
@@ -1532,7 +1562,9 @@ chartbook store import FOLDER
 Copy the snapshots a folder holds into this machine's store: what `chartbook store export` wrote,
 a store, or one pipeline's folder copied by hand out of one. They go in oldest first, each file
 hashed as it is copied and checked against its record: a snapshot with a file that is not what its
-record says is refused, said, and the rest go in. Each snapshot is written complete, a snapshot
+record says is refused, said, and the rest go in. Each snapshot is written as it came, complete,
+or as an increment on the complete snapshot it builds on where that one is whole in the store
+(and complete where it is not), a snapshot
 the store has already is left as it is, and nothing is written over. An export or a pipeline's
 folder that ChartBook 0.5 wrote (`pipelines/<pipeline>/`, each file once) is taken in too, each of
 its snapshots written complete. A pipeline then
