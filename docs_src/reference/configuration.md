@@ -162,7 +162,7 @@ url = { unix = "/shared/chartbook", windows = "T:/chartbook" }
 pipelines = ["acme/rates"]
 
 [stores.archive]
-url = "s3://acme-archive/chartbook?anonymous=true"
+url = "/mnt/archive/chartbook-store"
 read_only = true
 
 [pipelines."acme/hidden"]
@@ -789,7 +789,7 @@ The store is a folder of files kept under the hash of their content. It is where
 - **Each machine's lockfiles are noted apart.** A note under `_chartbook/roots/` names its machine as well as the lockfile's path, since your two machines may have a project at the same path. A machine's name is made once, at random, and kept in `~/.chartbook/machine-id` beside what the operating system calls the machine, so a home folder that reaches another machine (a migration, a restored backup) gets a name of its own there. A cloned virtual machine or an image is told apart the same way if its operating system made its identity anew (`/etc/machine-id`, or Windows' sysprep). Machines are told apart by that identity, or by `CHARTBOOK_MACHINE_ID`, and by nothing else: a note records the host name and a hardware address for you to read, and nothing goes by them. So a clone that kept the operating system's identity, with a copied home, is not told apart from its original: they share a name and one note per path. Each machine that lasts needs an identity of its own, or a `CHARTBOOK_MACHINE_ID` of its own. Never copy `machine-id` between machines, and never keep `~/.chartbook` itself in a synced folder. `CHARTBOOK_MACHINE_ID` also names a machine that comes and goes with a fresh home folder, such as a CI runner, which should check its project out at the same path every run. A note records the snapshots its lockfile pinned, and `chartbook store gc` on one machine keeps those, and their objects, for another machine's lockfile, `--forget-missing` or not; it never opens another machine's path. A note from before notes named their machine is kept the same way until you remove it, since it may be any machine's, except in your own store under `~/.chartbook`, where it can only be this machine's: there its lockfile is read, and `--forget-missing` forgets it when the lockfile is gone. Run `gc` from the machine the snapshots are made on: a label given on another machine is known there only once a snapshot has recorded it.
 - **Anyone who can write to the folder can put snapshots in it**, and the store keeps every snapshot until `gc` removes it. What a user put there is theirs to remove where the folder's permissions say so: `store gc` run by another user removes what it can, lists what it could not remove with what to do, and exits `1`.
 
-**A store in S3.** `pip install chartbook[s3]`, and
+**A store in S3 is not available in ChartBook 0.6.0.** It has not been brought to this version's store layout yet, and is on the {doc}`roadmap <../roadmap>`: a command that meets one stops and says so, and says to use a store in a folder (one on a network drive or in a synced folder is shared between machines). The bucket is as it was, and ChartBook 0.5 still reads and writes it. What it was in 0.5, and will be again: `pip install chartbook[s3]`, and
 
 ```toml
 [store]

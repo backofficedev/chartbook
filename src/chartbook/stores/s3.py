@@ -1,4 +1,15 @@
-"""A store in an S3 bucket: ``[store] url = "s3://bucket/prefix"``.
+"""A store in an S3 bucket: ``[store] url = "s3://bucket/prefix"``. Withdrawn in ChartBook 0.6.
+
+**Not available in 0.6.** This version lays a folder store out anew (complete
+snapshots and increments, ``chartbook/store/v3``), and a bucket has not been
+brought to that layout yet: it is on the roadmap. A URL that names a bucket
+is refused where it would become a store
+(:func:`chartbook.store.store_for_url`,
+:class:`chartbook.store.StoreNotAvailableError`), so nothing here is reached
+through a setting, a catalog or a command. The class stays, with its entry
+point and its tests, which make it directly and keep it from rotting until
+it is brought to the layout; ChartBook 0.5 still reads and writes a bucket.
+What follows describes it as it is.
 
 Needs boto3 1.35 or newer, which ``pip install chartbook[s3]`` installs.
 The bucket is laid out exactly as a folder store of ChartBook 0.5 is

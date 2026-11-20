@@ -34,9 +34,11 @@ from three pipelines you clone and build:
 ## A store is a folder
 
 Your own store is a folder on this machine. A store a team shares is a folder a sync service keeps
-in step between machines, Google Drive, Dropbox or OneDrive, or a folder on a shared disk, or an S3
-bucket. Point each machine at the same folder and a snapshot made on one is there for the others
-once the sync has finished. Nothing in ChartBook moves snapshots between machines; the folder does.
+in step between machines, Google Drive, Dropbox or OneDrive, or a folder on a shared disk.
+Point each machine at the same folder and a snapshot made on one is there for the others
+once the sync has finished. Nothing in ChartBook moves snapshots between machines; the folder does. A store in an S3 bucket is not available in ChartBook 0.6.0: it has not been brought to this
+version's store layout yet, and is on the {doc}`roadmap <../roadmap>`; a bucket that 0.5 wrote is as it
+was, and 0.5 still reads and writes it.
 
 Inside, the layout is made to be read by a person:
 
@@ -81,12 +83,12 @@ url = "~/data/chartbook"
 url = "~/Google Drive/chartbook-store-team"
 pipelines = ["acme/news_headlines"]
 
-[stores.public]
-url = "s3://acme-data/chartbook?anonymous=true"
+[stores.archive]
+url = "/mnt/archive/chartbook-store"
 read_only = true
 ```
 
-A store is a folder, a `file://` URL, an S3 bucket, or a scheme a plugin provides. `chartbook store
+A store is a folder, a `file://` URL, or a scheme a plugin provides (a store in an S3 bucket is not available in 0.6.0; see the {doc}`roadmap <../roadmap>`). `chartbook store
 add NAME URL` adds one and lists the pipelines it finds; `store remove NAME` removes the entry and
 leaves the files; `store move ID --to NAME` moves a pipeline's snapshots to another store, verifies
 the copies, and removes them from the source. One Drive folder per collaborator, each a store, is

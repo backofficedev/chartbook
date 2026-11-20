@@ -266,15 +266,19 @@ class TestTheFactory:
         with pytest.raises(ValueError, match="is a gs:// store, and nothing provides one.*entry point named 'gs'"):
             store_module.store_for_url("gs://bucket/prefix")
 
-    def test_the_s3_store_is_found_by_its_entry_point(self, tmp_path, monkeypatch):
+    def test_the_s3_store_is_still_at_its_entry_point_and_a_url_no_longer_opens_it(self, tmp_path, monkeypatch):
+        """Withdrawn in 0.6: the class and its entry point stay, and a URL that names a bucket is refused (tests/test_bucket_withdrawn.py)."""
         pytest.importorskip("boto3")
         from chartbook.stores.s3 import S3Store
 
         store_module._plugin_store_class.cache_clear()
+        assert store_module._plugin_store_class("s3") is S3Store
+        with pytest.raises(store_module.StoreNotAvailableError):
+            store_module.store_for_url("s3://chartbook-test/anywhere")
         monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
         with mocked_s3(monkeypatch):
-            found = store_module.store_for_url("s3://chartbook-test/anywhere")
-        assert isinstance(found, S3Store) and str(found) == "s3://chartbook-test/anywhere"
+            found = S3Store("s3://chartbook-test/anywhere")  # made directly, as its own tests make it
+        assert str(found) == "s3://chartbook-test/anywhere"
         assert found.cache == tmp_path / "cache" / "s3" / "chartbook-test" / "anywhere"
 
     def test_a_plugin_is_found_by_its_scheme(self, monkeypatch):

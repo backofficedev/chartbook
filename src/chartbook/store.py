@@ -364,6 +364,10 @@ class BuiltOnGoneError(StoreError):
     """Raised when an increment is about to be written and the complete snapshot it builds on has gone from the store: whoever writes it has every file at hand, and writes it complete."""
 
 
+class StoreNotAvailableError(StoreError):
+    """Raised for a store of a kind this version of ChartBook does not open, with why and what to do: a store in a bucket, withdrawn in 0.6 until it is brought to this version's layout."""
+
+
 class EarlierLayoutError(StoreError):
     """Raised when a store laid out as ChartBook 0.5 laid one out is asked to take a snapshot or an object, or to let go of anything.
 
@@ -4254,6 +4258,16 @@ def store_for_url(url: str) -> Store:
     from chartbook.config import folder_of_store_url, shown_store_url, store_kind
 
     kind = store_kind(url)
+    if kind == "s3":
+        # Withdrawn in 0.6: a bucket still has the layout of 0.5, which this version reads in a folder and does not
+        # write. Refused here, the one place a URL becomes a store, before anything of it is loaded or contacted
+        raise StoreNotAvailableError(
+            f"The store {shown_store_url(url)} is a store in a bucket, and a store in a bucket is not available in "
+            f"ChartBook 0.6: it has not been brought to this version's store layout yet, and is on the roadmap. Use a "
+            f"store in a folder ([store] url in your settings, or CHARTBOOK_STORE; in a catalog, that store's url): one "
+            f"on a network drive or in a synced folder is shared between machines. Nothing is lost: the bucket is as it "
+            f"was, and ChartBook 0.5 still reads and writes it."
+        )
     if kind == "folder":
         return FolderStore(folder_of_store_url(url))
     plugin = _plugin_store_class(kind)
@@ -4261,8 +4275,7 @@ def store_for_url(url: str) -> Store:
         raise ValueError(
             f"The store {shown_store_url(url)!r} is a {kind}:// store, and nothing provides one: only a folder "
             f"store is built in, and no installed package has a `{STORE_PLUGIN_GROUP}` entry "
-            f"point named {kind!r}. An S3 bucket, s3://bucket/prefix, is a store ChartBook brings, "
-            f"with `pip install chartbook[s3]`; see the design page on stores and backends for the rest."
+            f"point named {kind!r}; see the design page on stores and backends."
         )
     return plugin(url)
 

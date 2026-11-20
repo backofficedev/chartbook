@@ -286,6 +286,18 @@ def test_relative_store_is_relative_to_catalog_not_cwd(tmp_path, monkeypatch):
     assert Stores.configured().default().root == path.parent.parent / "storage"
 
 
+def test_a_dependency_that_names_a_bucket_as_its_store_is_refused_with_the_line(tmp_path, monkeypatch):
+    """A store in a bucket is withdrawn in ChartBook 0.6, for a dependency's own store as for any."""
+    from chartbook import lock
+    from chartbook.store import StoreNotAvailableError
+    configure(tmp_path, monkeypatch, {"mine": {"url": str(tmp_path / "local")}})
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    (consumer / "chartbook.toml").write_text('[project]\nid="acme/consumer"\n[dependencies]\n"acme/upstream"={store="s3://chartbook-public-test/data"}\n')
+    with pytest.raises(StoreNotAvailableError, match="a store in a bucket is not available in ChartBook 0.6"):
+        lock.pin(consumer, clone_missing=False)
+
+
 def test_dependency_store_is_read_only_and_frozen_reads_it(tmp_path, monkeypatch):
     import boto3
     from moto import mock_aws
@@ -297,6 +309,11 @@ def test_dependency_store_is_read_only_and_frozen_reads_it(tmp_path, monkeypatch
     with mock_aws():
         client = boto3.client("s3", region_name="us-east-1")
         client.create_bucket(Bucket="chartbook-public-test")
+        # Withdrawn in 0.6 and refused by its URL: made directly here, as the class's own tests make it, until a
+        # bucket is brought to this version's layout
+        from chartbook import multi_store
+        opened = multi_store.store_for_url
+        monkeypatch.setattr(multi_store, "store_for_url", lambda url: S3Store(url, client=client) if str(url).startswith("s3://") else opened(url))
         remote = S3Store("s3://chartbook-public-test/data", client=client)
         snapshot.make(folder, remote)
         before = {o["Key"] for o in client.list_objects_v2(Bucket="chartbook-public-test")["Contents"]}

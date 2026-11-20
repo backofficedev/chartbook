@@ -21,6 +21,14 @@ def mocked_s3(monkeypatch):
     Yields a boto3 client for the bucket. Inside, ``boto3.client("s3")``
     made anywhere in the process, as the store makes its own, talks to the
     same mock.
+
+    A store in a bucket is withdrawn in ChartBook 0.6: a URL that names
+    one is refused where it would become a store. The tests of the class,
+    which keep its code from rotting until a bucket is brought to this
+    version's layout, make the class directly; inside this block a bucket's
+    URL makes it too, as it will again then, so that the class is still
+    driven by a pin, a snapshot and a read as well as by its own methods.
+    The refusal itself is held by ``tests/test_bucket_withdrawn.py``.
     """
     boto3 = pytest.importorskip("boto3")
     moto = pytest.importorskip("moto")
@@ -32,4 +40,15 @@ def mocked_s3(monkeypatch):
     with moto.mock_aws():
         client = boto3.client("s3", region_name="us-east-1")
         client.create_bucket(Bucket=BUCKET)
+        from chartbook import multi_store
+        from chartbook import store as store_module
+        from chartbook.stores.s3 import S3Store
+
+        opened = store_module.store_for_url
+
+        def made_directly(url):
+            return S3Store(url) if str(url).startswith("s3://") else opened(url)
+
+        monkeypatch.setattr(store_module, "store_for_url", made_directly)
+        monkeypatch.setattr(multi_store, "store_for_url", made_directly)
         yield client

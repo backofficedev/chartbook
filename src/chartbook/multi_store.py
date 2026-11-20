@@ -11,7 +11,7 @@ from pathlib import Path
 
 import tomli
 
-from chartbook.store import (FolderStore, ObjectNotFoundError, ReadOnlyStoreError, StoreError,
+from chartbook.store import (FolderStore, ObjectNotFoundError, ReadOnlyStoreError, StoreError, StoreNotAvailableError,
                             StoreUnreachableError, store_for_url)
 
 
@@ -97,7 +97,15 @@ class Stores:
             from chartbook.identity import validate_pipeline_id
             for pipeline in pipelines:
                 validate_pipeline_id(pipeline)
-            entries.append(NamedStore(name, url, store_for_url(url), read_only, tuple(pipelines), not entries))
+            try:
+                opened = store_for_url(url)
+            except StoreNotAvailableError as error:
+                # Every command stops with the line, and says which store of the catalog it is and how to take it out
+                raise StoreNotAvailableError(
+                    f"{error} It is the store {name!r} of the catalog {path}: `chartbook store remove {name}` takes it out "
+                    f"of the catalog, and leaves the bucket as it is."
+                ) from None
+            entries.append(NamedStore(name, url, opened, read_only, tuple(pipelines), not entries))
         if entries:
             from chartbook.config import get_store_setting
             _, origin = get_store_setting()

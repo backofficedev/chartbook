@@ -88,6 +88,16 @@ THE_FIVE = (
 class _Main(_Group):
     renamed = {"browse": "docs open"}
 
+    def invoke(self, ctx):
+        """Run the command; a store that this version does not open (one in a bucket) is said in one line, by whichever command meets it."""
+        from chartbook.store import StoreNotAvailableError
+
+        try:
+            return super().invoke(ctx)
+        except StoreNotAvailableError as error:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+            raise SystemExit(1)
+
     def format_commands(self, ctx, formatter):
         """The five commands everyone learns, as they are typed, and then the rest by name.
 
@@ -4220,12 +4230,14 @@ def store_info(store_name):
     except ValueError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + without_credentials(str(e)), err=True)
         raise SystemExit(1)
-    # The store of that kind, as the first pin or read would make it: a bucket
-    # needs its library, and this is where to hear that it is missing, not then
+    # The store of that kind, as the first pin or read would make it: one that is not available in this
+    # version (a bucket), or of a kind nothing provides, is said here, and not only then
+    from chartbook.store import StoreError
+
     try:
         store_for_url(url)
         not_usable = None
-    except ValueError as e:
+    except (ValueError, StoreError) as e:
         not_usable = e
     said_by = {
         "environment": f"set by {STORE_ENV_VAR}",

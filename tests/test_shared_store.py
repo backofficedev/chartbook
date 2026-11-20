@@ -589,33 +589,28 @@ class TestStoreInfo:
         assert result.exit_code == 0
         assert "\n  a folder, set by CHARTBOOK_STORE" in result.output
 
-    def test_a_bucket_on_a_machine_without_boto3_is_told_so_here(self, monkeypatch):
-        """Found by a reviewer: `store info` printed the bucket and exited 0, and the
-        `pip install chartbook[s3]` error came only at the first pin or read."""
+    def test_a_bucket_is_said_here_to_be_withdrawn_whether_its_library_is_installed_or_not(self, monkeypatch):
+        """A store in a bucket is withdrawn in ChartBook 0.6: `store info` says the store and the line, makes no client, and exits 1.
+
+        (Until 0.6 this is where a machine heard that boto3 was missing, or
+        that the bucket was a store it could use.)
+        """
         import sys
 
-        monkeypatch.setenv("CHARTBOOK_STORE", "s3://bkt/p")
-        monkeypatch.setitem(sys.modules, "boto3", None)
-        result = CliRunner().invoke(main, ["store", "info"])
-        assert result.exit_code == 1
-        assert "Store: s3://bkt/p" in result.output and "an S3 bucket, set by CHARTBOOK_STORE" in result.output
-        assert "needs boto3, which is not installed: pip install chartbook[s3]" in result.output
-        assert "Cache:" not in result.output and "Traceback" not in result.output
-
-    def test_a_bucket_with_its_library_is_a_store_the_machine_can_use(self, monkeypatch):
-        pytest.importorskip("botocore")
-        import sys
-
-        class FakeBoto3:
+        class NoClient:
             @staticmethod
             def client(service, **arguments):
-                return object()
+                raise AssertionError("a client was made for a store that is not opened")
 
         monkeypatch.setenv("CHARTBOOK_STORE", "s3://bkt/p")
-        monkeypatch.setitem(sys.modules, "boto3", FakeBoto3)
-        result = CliRunner().invoke(main, ["store", "info"])
-        assert result.exit_code == 0, result.output
-        assert "an S3 bucket, set by CHARTBOOK_STORE" in result.output and "Cache:" in result.output
+        for boto3 in (None, NoClient):
+            monkeypatch.setitem(sys.modules, "boto3", boto3)
+            result = CliRunner().invoke(main, ["store", "info"])
+            assert result.exit_code == 1
+            assert "Store: s3://bkt/p" in result.output and "an S3 bucket, set by CHARTBOOK_STORE" in result.output
+            assert "a store in a bucket is not available in ChartBook 0.6" in result.output.replace("\n", " ")
+            assert "Cache:" not in result.output and "Traceback" not in result.output and "pip install" not in result.output
+
 
     def test_a_kind_nothing_provides_is_said(self, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_STORE", "gs://bkt/p")

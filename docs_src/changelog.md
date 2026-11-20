@@ -38,6 +38,10 @@ In order:
 
 A dataframe whose file has the column pandas makes of an index with no name is told of at step 2, and is worth mending there (`to_parquet(index=False)`): with it, no later build has the pinned rows.
 
+### Withdrawn for now — a store in a bucket (breaking)
+
+- **Breaking: a store in an S3 bucket cannot be opened in this version.** 0.6.0 lays a store out anew (complete snapshots and increments, below), and a bucket has not been brought to that layout yet; it is on the {doc}`roadmap <roadmap>`. Wherever a store's URL names one (`CHARTBOOK_STORE`, `[store] url` in a settings file, a store of a catalog, a dependency's `store`), the command or the read stops with one line and contacts nothing: `The store s3://team-bucket/chartbook is a store in a bucket, and a store in a bucket is not available in ChartBook 0.6: it has not been brought to this version's store layout yet, and is on the roadmap. Use a store in a folder ([store] url in your settings, or CHARTBOOK_STORE; in a catalog, that store's url): one on a network drive or in a synced folder is shared between machines. Nothing is lost: the bucket is as it was, and ChartBook 0.5 still reads and writes it.` In a catalog of several stores every command stops with that line, which names the store and says `chartbook store remove NAME` takes it out. What to do: use a store in a folder, or stay on 0.5 for a pipeline whose store is a bucket. `chartbook[s3]` still installs, and `chartbook.stores.s3.S3Store` is still there for code that makes one directly. In Python: `store.StoreNotAvailableError` (a `StoreError`).
+
 ### Changed — the store: `snapshots/` and `_chartbook/`, and every snapshot complete (breaking)
 
 The first step of a store a person can read ({design}`snapshots-and-increments`): a folder store this version makes has two names at its top for a person, and each snapshot's folder holds every file of it.
