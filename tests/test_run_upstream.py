@@ -244,9 +244,7 @@ class TestWhatTheReviewFound:
         monkeypatch.setattr(run, "kept_missing", lambda folder, store=None: [("x", "./x.parquet", taken)] if folder == up else [])
         with pytest.raises(RunError) as raised:
             run.run(down, upstream=True, echo=lambda line: None)
-        # The folder as this system's shells take it: on Windows in double quotes, which cmd.exe reads, and single ones it does not
-        shown = f'"{up}"' if os.name == "nt" else str(up)
-        assert f"chartbook restore --project-dir {shown}" in str(raised.value)
+        assert f"chartbook restore --project-dir {up}" in str(raised.value)
         assert "chartbook run --remake --upstream" in str(raised.value)
 
     def test_an_upstream_whose_folder_a_shell_would_split_is_one_word_of_the_command(self, work, monkeypatch):

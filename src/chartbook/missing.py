@@ -988,7 +988,9 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
     - PowerShell and Git Bash a ``$`` (a variable, and with a parenthesis
       a command to run) and a backtick. A ``$`` that ends the word, or
       comes before a slash of either kind, is text to both: a share that
-      is not listed is named so (``\\\\server\\home$\\work``).
+      is not listed is named so (``\\\\server\\home$\\work``). One that
+      comes after a backslash is not: Git Bash takes the two for a ``$``
+      that is text, and the folder is then another.
     - Git Bash a ``!``, for a command typed before, and a ``\\"``, which it
       takes for a quote that is text, so that the next one ends the word.
     - PowerShell a ``"`` of the kind a word processor writes, which ends
@@ -997,6 +999,10 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
       text only where it begins the two digits a web address writes a
       sign with (``%20``), and no name between two of them is a variable
       of this machine, or one cmd.exe fills in by itself (``%CD%``).
+    - ``cmd.exe`` again, behind PowerShell: a word with no space in it is
+      handed on without its quotes, and where the command is a batch file
+      (a shim of pyenv's is one) cmd.exe reads its ``&``, ``|``, ``<``,
+      ``>`` and ``^``. A word with a space keeps its quotes.
 
     No one spelling keeps any of them as text in all three, so a line with
     one is given no command. A folder may be named so, and an address or a
@@ -1016,8 +1022,11 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
         for sign in ("`", '"', "!", *_QUOTES):
             if sign in word:
                 return "a backtick" if sign == "`" else f"a `{sign}`"
-        if re.search(r"\$(?![\\/]|$)", word):
+        if re.search(r"\\\$|\$(?![\\/]|$)", word):
             return "a `$`"
+        behind = None if re.search(r"\s", word) else re.search(r"[&|<>^]", word)
+        if behind:
+            return f"a `{behind[0]}`"
         # As cmd.exe reads a line at its prompt: from a `%` to the next is a name (up to a `:`, which
         # begins what to take of it); one that is no variable is left as text, and its second `%` may begin another
         start = word.find("%")
@@ -1138,7 +1147,7 @@ def said(
 
     for number, line in enumerate(wanted, 1):
         held.clear()
-        before = (dict(cloned), dict(worktrees), set(moved))
+        before = (dict(cloned), dict(worktrees))
         pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
         at = f" at {line.commit[:7]}" if pinned else ""
         # In a command, enough of a commit that a large repository has no two of it: of the commit it was read
@@ -1232,8 +1241,10 @@ def said(
                 f"No command is given for it: one would hold {read}, which a shell on Windows reads even inside quotes.",
                 f"By hand: `{make}` in its folder{', at ' + commit if commit and pinned else ''}.",
             ]
-            # Nothing of it was typed: no clone was made by it, no worktree, and no repository moved
-            for kept, was in zip((cloned, worktrees, moved), before):
+            # Nothing of it was typed: no clone was made by it, and no worktree. A repository it would have
+            # moved stays counted as moved, since by hand it may well be: a checkout too many costs nothing,
+            # and a folder taken for built on a commit it is no longer on would be labelled with another's files
+            for kept, was in zip((cloned, worktrees), before):
                 kept.clear()
                 kept.update(was)
         reads = f"; reads {_counted(line.reads)} above" if line.reads else ""

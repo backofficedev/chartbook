@@ -2118,9 +2118,11 @@ def _warn_working(asset: AssetRef, location: Location, folder: Path, why: str) -
 
 def _read_working(asset: AssetRef, folder: Path, why: str) -> Location:
     """A working read requires an explicit consumer-local link."""
+    from chartbook.missing import _quoted  # the folder is a manifest's `path`: one word of the command, as any shell takes it
+
     raise AssetNotPinnedError(
         str(asset), "no_snapshot",
-        f"{asset} has no snapshot: {why}. Run `chartbook snapshot` in {folder}, or explicitly link it with `chartbook link {asset.pipeline_id} {folder}`.",
+        f"{asset} has no snapshot: {why}. Run `chartbook snapshot` in {folder}, or explicitly link it with `chartbook link {asset.pipeline_id} {_quoted(folder)}`.",
     )
 
 

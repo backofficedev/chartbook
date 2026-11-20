@@ -1330,7 +1330,8 @@ class TestWhoseTextThisIs:
         ("C:/work/rates", "C:/work/rates"),
         ("https://example.org/acme/rates", "https://example.org/acme/rates"),
         ("rates-2_a.b", "rates-2_a.b"),
-        ("https://example.org/acme/x&calc.exe", '"https://example.org/acme/x&calc.exe"'),
+        ("https://example.org/acme/x&calc.exe", missing.NOT_TEXT),  # behind PowerShell a batch file reads its `&`
+        ("C:\\work\\R&D team\\x", '"C:\\work\\R&D team\\x"'),  # a word with a space keeps its quotes
         ("https://dev.azure.com/org/My%20Project/_git/rates", '"https://dev.azure.com/org/My%20Project/_git/rates"'),
         ("C:\\it's (old) & co\\rates", '"C:\\it\'s (old) & co\\rates"'),
     ])
@@ -1357,11 +1358,13 @@ class TestWhoseTextThisIs:
     def test_a_folder_a_message_tells_to_type_is_written_by_the_one_function(self):
         """Found by the second pass: two messages wrote a folder after `--project-dir` their own way (a Python repr; double quotes of their own, and bare on Windows)."""
         source = Path(missing.__file__).parent
+        told = r"(?:--project-dir|safe\.directory|migrate_toml_v2\.py|chartbook path|chartbook link \{[^{}]*\}) \{([^{}]*)\}"
         written = [
             (file.name, found[1]) for file in sorted(source.rglob("*.py"))
-            for found in re.finditer(r"--project-dir \{([^{}]*)\}", file.read_text(encoding="utf-8"))
+            for found in re.finditer(told, file.read_text(encoding="utf-8"))
         ]
-        assert len(written) >= 5
+        # And by the third pass: `chartbook link ID FOLDER`, of a manifest's `path`, and three of the user's own words
+        assert len(written) >= 10 and {"resolve.py", "scaffold.py", "lock.py", "run.py", "cli.py", "missing.py", "manifest.py"} <= {name for name, _ in written}
         assert [(name, how) for name, how in written if "_quoted(" not in how] == []
 
     def test_no_other_code_quotes_a_command_for_a_posix_shell_alone(self):
@@ -1459,7 +1462,7 @@ class TestWhoseTextThisIs:
     def test_for_windows_every_sign_a_shell_reads_puts_a_word_in_double_quotes(self):
         """Found by review: four signs were held by a test, and a rule that left any other bare passed them all."""
         bare = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:-")
-        read = set('$`"!%')  # even inside them: such a word is not written at all
+        read = set('$`"!%&|<>^')  # even inside them, or in a word that loses them: such a word is not written at all
         for sign in map(chr, range(0x20, 0x7F)):
             word = f"a{sign}b"
             typed = word if sign in bare else missing.NOT_TEXT if sign in read else f'"{word}"'
@@ -1506,6 +1509,13 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         (["\\\\server\\c$"], ""),
         (["//server/home$/work"], ""),
         (["C:\\work\\a$ b"], "a `$`"),
+        # Found by the third pass:
+        (["C:\\work\\$\\x"], "a `$`"),  # Git Bash takes a backslash and a `$` for a `$` that is text: another folder
+        (["C:\\work\\x\\$"], "a `$`"),
+        (["C:\\work\\R&D\\report"], "a `&`"),  # with no space, PowerShell hands it on without its quotes
+        (["C:\\work\\x^y"], "a `^`"),
+        (["a|b"], "a `|`"), (["a<b"], "a `<`"), (["a>b"], "a `>`"),
+        (["C:\\work\\R&D team\\x^y"], ""),
         ([Path("C:\\work\\$x")], "a `$`"),
     ])
     def test_what_is_read(self, words, said):
@@ -1577,6 +1587,27 @@ class TestWhatAShellOnWindowsReadsInQuotes:
             f"     git clone https://example.org/acme/mono {mono}",
             f"     git -C {mono} checkout {self.COMMIT[:12]}",
             f"     chartbook run --snapshot --project-dir {missing._quoted(work / 'mono' / 'b', windows=True)}",
+        ]
+
+    def test_a_repository_a_line_with_no_command_would_have_moved_is_still_taken_for_moved(self, work):
+        """Found by the third pass: by hand it may well be moved, and the folder beside it, "built already", was then given `chartbook snapshot` for files of the commit it had been on."""
+        top = work / "multi"
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/b", self.COMMIT, folder=top / "b!", top=top),
+            missing.Wanted("acme/c", None, folder=top / "c", top=top, built=True, read_at="d" * 40),
+        ])
+        windows = missing.said(listing, here=work / "report", windows=True)
+        assert windows[4].startswith("     No command is given for it: one would hold a `!`")
+        assert windows[6:9] == [
+            f"2. acme/c    {os.path.join('..', 'multi', 'c')} (a folder on this machine)",
+            f"     git -C {missing._quoted(top, windows=True)} checkout {'d' * 12}",
+            f"     chartbook run --snapshot --project-dir {missing._quoted(top / 'c', windows=True)}",
+        ]
+        # As the POSIX list has it, where the line above is given its commands
+        assert missing.said(listing, here=work / "report", windows=False)[6:9] == [
+            f"2. acme/c    {os.path.join('..', 'multi', 'c')} (a folder on this machine)",
+            f"     git -C {shlex.quote(str(top))} checkout {'d' * 12}",
+            f"     chartbook run --snapshot --project-dir {shlex.quote(str(top / 'c'))}",
         ]
 
     def test_the_last_line_is_read_too(self, work):

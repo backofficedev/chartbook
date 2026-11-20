@@ -561,13 +561,15 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   command as `C:workrates`.)*
   The same function now quotes every command a message prints with a folder or a word of the
   user's in it (`chartbook restore --project-dir …`, `chartbook pin --update …`, the line that
-  says where to `chartbook pin`, `chartbook catalog migrate`): `shlex`, which most of them used,
-  writes for a POSIX shell alone, and `cmd.exe` read its single quotes as part of the folder's
-  name. *(Found by the second pass of the review: two of them wrote the folder their own way, a
-  Python repr and double quotes of their own.)* Two tests read the source, for another use of
-  `shlex` and for a folder after `--project-dir` that the function did not write. The `cruft
-  link` line of `chartbook init` is left: its answers are JSON, which no one spelling gives to
-  `cmd.exe` and PowerShell alike.
+  says where to `chartbook pin`, `chartbook catalog migrate`, `chartbook link ID FOLDER`,
+  `chartbook path REF --files`, the two lines that name `migrate_toml_v2.py`, and git's
+  `safe.directory`): `shlex`, which some of them used, writes for a POSIX shell alone, and
+  `cmd.exe` read its single quotes as part of the folder's name. *(Found by the second and
+  third passes of the review: the others wrote the folder their own way, or bare. One of them,
+  `chartbook link`, names the folder of a manifest's `path`.)* Two tests read the source, for
+  another use of `shlex` and for a folder in one of those commands that the function did not
+  write. The `cruft link` line of `chartbook init` is left: its answers are JSON, which no one
+  spelling gives to `cmd.exe` and PowerShell alike.
   What it costs *(the first of these as its review found it, 2026-11-20, by typing whole lists
   into a shell; the page had said less)*:
   - *A line no longer stops at its first failure.* `git checkout … && chartbook run --snapshot`
@@ -600,12 +602,21 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     `„`, which ends the word as the plain quote does; `cmd.exe` a `%NAME%`. *(The last three by
     the second pass, which made a file from a folder's name in bash; and it found the word was
     read as it was given, where what is pasted is what is printed, without the signs that print
-    as nothing.)* A line whose commands would hold one is given no command there, and says so,
-    with what to make by hand and no word of how: a `git checkout` by hand may be of the
-    reader's own repository. Nothing such a line would have made is counted on by the lines
-    after it. The last line is read the same way.
-    A `$` that ends a name or comes before a slash is text to both shells (`\\server\home$\…`,
-    the one common `$` in a Windows path). A `%` is text only where it begins the two digits a
+    as nothing.)* And `cmd.exe` once more, behind PowerShell, which hands a word with no space
+    in it to a command without its quotes: where the command is a batch file, as a shim of
+    pyenv's is, `cmd.exe` reads the word's `&`, `|`, `<`, `>` and `^`. *(Found by the third
+    pass, by reading. A word with a space keeps its quotes, so `R&D team` is given and `R&D` is
+    not: the cost of it is a Windows folder with a `&` and no space, which gets no command.)*
+    A line whose commands would hold one is given no command there, and says so, with what to
+    make by hand and no word of how: a `git checkout` by hand may be of the reader's own
+    repository. No clone or worktree such a line would have made is counted on by the lines
+    after it; a repository it would have moved is still taken for moved, since by hand it may
+    well be *(the third pass: a folder beside it, "built already", was given `chartbook
+    snapshot` for files of the commit it had been on)*. The last line is read the same way.
+    A `$` at the end of a longer name, before a slash or the end of the word, is text to both
+    shells (`\\server\home$\…`, the one common `$` in a Windows path); a folder named `$`
+    alone is not, since Git Bash takes the backslash before it and the `$` for one sign. A `%`
+    is text only where it begins the two digits a
     web address writes a sign with (`%20`), and where no name between two of them is a variable
     of this machine or one `cmd.exe` fills in by itself (`%CD%`). What that leaves: a variable
     whose name begins, and is followed, as such digits (`%DB_PASSWORD%2F`), set in the window

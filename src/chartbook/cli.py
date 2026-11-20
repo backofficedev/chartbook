@@ -1491,8 +1491,10 @@ def path_command(ref, kind, project_dir, list_files):
     try:
         found = resolver(ref, kind=kind, project_dir=project_dir or Path.cwd())
     except NoSinglePathError as e:
+        from chartbook.missing import _quoted
+
         click.echo(
-            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {ref} --files` prints them, one per line.",
+            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {_quoted(ref)} --files` prints them, one per line.",
             err=True,
         )
         raise SystemExit(1)
@@ -1990,9 +1992,11 @@ def _load_raw_catalog(catalog_toml_path):
     with open(catalog_toml_path, "rb") as f:
         data = tomli.load(f)
     if detect_v1_format(data):
+        from chartbook.missing import _quoted
+
         raise click.UsageError(
             f"{catalog_toml_path} uses the old v1 format. "
-            f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
+            f"Run: python scripts/migrate_toml_v2.py {_quoted(catalog_toml_path.parent)}"
         )
     if catalog_toml_path.name == "catalog.toml":
         data.setdefault("project", {}).setdefault("type", "catalog")
