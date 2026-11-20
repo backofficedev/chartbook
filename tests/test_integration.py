@@ -515,7 +515,11 @@ class TestExampleProjects:
             env=env, encoding="utf-8", errors="replace"
         )
         assert built.returncode == 0, f"run failed: {built.stderr}\n{built.stdout}"
-        assert built.stdout.rstrip().endswith("Ran build in 1 pipeline(s).")
+        # A run builds, and ends by naming the command that makes a snapshot: it makes none itself
+        said = built.stdout.rstrip().splitlines()
+        assert said[-3] == "Ran build in 1 pipeline(s)." and said[-2].endswith(": built.")
+        assert said[-1] == "  For other pipelines and the catalog: commit, then `chartbook snapshot`."
+        assert not (tmp_path / "store").exists()
         self._snapshot(yield_curve_path, env)
 
         self._clean_example_dirs(example_path)

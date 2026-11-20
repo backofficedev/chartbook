@@ -215,8 +215,8 @@ def behind(catalog: Path) -> Behind:
 
     The snapshots the site was built from, which the ``index.json`` beside
     it lists, are compared with those in the catalog's stores, as its
-    build would list them. Nothing is kept between a run and this: a mark
-    left by ``chartbook run`` would miss a snapshot that arrived through a
+    build would list them. Nothing is kept between a snapshot and this: a mark
+    left by the command that makes one would miss a snapshot that arrived through a
     synced folder from another machine, and one that ``store gc`` cleared
     there.
 

@@ -76,10 +76,11 @@ def _reads_as_an_argument(word: str) -> bool:
 #: What everyone learns (``docs_src/design/one-command.md``): the words to type, and what each is
 #: for, in the order a person meets them. `chartbook --help` shows these first; the Quickstart,
 #: the README and the skill teach them first; a test holds each to a command there is.
-THE_FIVE = (
+TO_KNOW = (
     ("chartbook init", "Start a project from the template"),
-    ("chartbook run", "Pin, build and snapshot this pipeline"),
-    ("chartbook pin --update", "Take the newest snapshot of what it reads"),
+    ("chartbook run", "Build this pipeline, pinning what it reads"),
+    ("chartbook snapshot", "Make this build what other pipelines read"),
+    ("chartbook pin --update", "Take newer snapshots of what this one reads"),
     ("chartbook catalog open", "Browse every snapshot in your stores"),
     ("chartbook install agents", "Teach your coding agent ChartBook"),
 )
@@ -89,15 +90,15 @@ class _Main(_Group):
     renamed = {"browse": "docs open"}
 
     def format_commands(self, ctx, formatter):
-        """The five commands everyone learns, as they are typed, and then the rest by name.
+        """The commands everyone learns, as they are typed, and then the rest by name.
 
         A command that is all there under its own name above (`init`,
-        `run`) is not listed again; one that has more to it than the form
-        above (`pin`, `catalog`, `install`) is.
+        `run`, `snapshot`) is not listed again; one that has more to it
+        than the form above (`pin`, `catalog`, `install`) is.
         """
         with formatter.section("Start with these"):
-            formatter.write_dl(list(THE_FIVE))
-        said_whole = {words.split()[1] for words, _ in THE_FIVE if len(words.split()) == 2}
+            formatter.write_dl(list(TO_KNOW))
+        said_whole = {words.split()[1] for words, _ in TO_KNOW if len(words.split()) == 2}
         more = [
             (name, command) for name in self.list_commands(ctx)
             if (command := self.get_command(ctx, name)) is not None and not command.hidden and name not in said_whole
@@ -2976,7 +2977,7 @@ def pin(names, project_dir, moving, check_only):
     chartbook pin --check             can everything pinned be read here?
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
-    owner built at a commit (`chartbook run`). The content hash of each of
+    owner built at a commit (`chartbook snapshot`). The content hash of each of
     its dataframes and models is written to chartbook.lock. Commit that
     file: a change to what the project depends on then shows in a diff.
 
@@ -3062,7 +3063,7 @@ def _explain_os_error(error):
 
     if isinstance(error, ReadOnlyStoreError):
         return _said(
-            f"{error} This had to write it: a git dependency's first pin and a "
+            f"{str(error).rstrip('.')}. This had to write it: a git dependency's first pin and a "
             f"snapshot both put files into the store. Do it where the store can be written; or, "
             f"if the store already has what the lockfile names, use `run --frozen` (or `pin --check` to only check)."
         )
@@ -3346,11 +3347,12 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     says "this is what that commit built", and with uncommitted changes it
     would not be true. What git ignores, such as built data, does not count.
 
-    You seldom type this: `chartbook run` ends with a snapshot whenever
-    everything is committed. This command is for a build that is already
-    on disk and was not made by `chartbook run` (doit by hand, a notebook,
-    a long job): it does not run the build, and takes your word that what
-    is on disk was built by the commit you are on.
+    `chartbook run` builds and makes no snapshot: you type this when a
+    build is one that others should read. It does not run the build. It
+    takes what is on disk, however it was built (`chartbook run`, doit by
+    hand, a notebook, a long job), and takes your word that the commit
+    you are on built it. `chartbook run --snapshot` is the two in one
+    command, and needs nobody's word.
 
     A pipeline that depends on this one keeps the snapshot it pinned,
     however many you make after it. It gets a newer one with
@@ -3358,22 +3360,80 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
 
     \b
     Examples:
-        doit && chartbook snapshot
+        chartbook snapshot
         chartbook snapshot --project-dir ../fed_yield_curve
     """
     from chartbook import snapshot as snapshots
-    from chartbook.store import StoreError
+    from chartbook.store import ReadOnlyStoreError, StoreError
 
     project_dir = resolve_project_dir(project_dir)
     try:
         report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        # Nothing of it is there to take: each thing, and why, since the run that built it said only
+        # that this command makes a snapshot. A reason may run to several lines (an engine's own
+        # message): its first says it
+        for name, why in list(getattr(e, "not_built", None) or ())[:10]:
+            click.echo(f"  not built: {name} ({(str(why).splitlines() or [''])[0]})", err=True)
+        if isinstance(e, ReadOnlyStoreError) and not store_names:
+            # A class's store listed ahead of one's own stops every snapshot of a pipeline the catalog
+            # sends nowhere, until the catalog says where this one goes: the way out, where there is one
+            sent = _a_store_to_send_it_to(project_dir)
+            if sent is not None:
+                pipeline, other = sent
+                click.echo(
+                    f"  It is the catalog's first store, where a pipeline the catalog sends nowhere is written.\n"
+                    f"  To send this one to {other}: `pipelines = [\"{pipeline}\"]` under [stores.{other}] in catalog.toml.",
+                    err=True,
+                )
+        if _only_the_lockfile_is_uncommitted(project_dir, e):
+            # A run wrote it. Its owner commits it. At a commit somebody else pinned, a commit would be one
+            # nobody else has, and a snapshot of that meets no pin: there the run that passes over the lockfile
+            click.echo(
+                "  Only chartbook.lock is not committed: commit it. Or, at a commit somebody else pinned, "
+                "`chartbook run --snapshot`, which builds and takes its snapshot with the lockfile as it is.",
+                err=True,
+            )
         raise SystemExit(1)
 
     _echo_snapshot(report)
     _say_where_a_snapshot_shows()
     _remind_of_gc(no_gc_reminder)
+
+
+def _a_store_to_send_it_to(project_dir):
+    """For a snapshot refused because the catalog sends its pipeline nowhere and its first store may only be read: the pipeline's ID and the name of the first store that may be written; None otherwise.
+
+    A catalog's first store is where everything goes that it sends nowhere
+    by name (a pin's copies, a lockfile's note, a snapshot), so a class's
+    read-only store listed ahead of one's own stops every snapshot until
+    the catalog says where this pipeline goes. Where no store of the
+    catalog may be written, there is nowhere to send it, and nothing to say.
+    """
+    from chartbook import run as runner
+    from chartbook import snapshot as snapshots
+
+    try:
+        pipeline = snapshots.pipeline_in(project_dir)
+    except Exception:  # noqa: BLE001 - only to say more of an error already said
+        return None
+    other = runner._a_store_to_send_it_to(None, pipeline)
+    return (pipeline, other) if other is not None else None
+
+
+def _only_the_lockfile_is_uncommitted(project_dir, error) -> bool:
+    """Whether a snapshot was refused for uncommitted work, and this pipeline's own lockfile is all of it."""
+    from chartbook import lock
+    from chartbook import snapshot as snapshots
+
+    if not isinstance(error, snapshots.SnapshotError) or "has changes that are not committed" not in str(error):
+        return False
+    try:
+        every = snapshots.uncommitted(project_dir)
+        return bool(every) and every == snapshots.uncommitted(project_dir, only=lock.LOCK_FILE)
+    except Exception:  # noqa: BLE001 - only to say more of an error already said
+        return False
 
 
 def _lineage_line(node) -> str:
@@ -3477,7 +3537,7 @@ def lineage_command(project_dir, check, rehash, as_json):
     "--snapshot",
     "make_snapshot",
     is_flag=True,
-    help="Refuse to build with anything uncommitted, and fail unless the build ends with a snapshot (a build of committed work ends with one anyway)",
+    help="Build, then make a snapshot: refuse to build with anything uncommitted, and fail unless the build ends with a snapshot",
 )
 @click.option(
     "--frozen",
@@ -3517,7 +3577,7 @@ def lineage_command(project_dir, check, rehash, as_json):
     help="With --check: check required fields against the [policy] of this catalog (its catalog.toml, or its folder) instead of the pipeline's own",
 )
 def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder, check_only, within_days, policy_path):
-    """Build this pipeline: pin what it reads, run its build, look for what it made, make a snapshot.
+    """Build this pipeline: pin what it reads, run its build, look for what it made.
 
     \b
     What `chartbook run` does, in order:
@@ -3527,15 +3587,14 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
       3. Looks for what chartbook.toml declares. Something with a path
          that the build did not write, or the file of a DuckDB source,
          fails the run.
-      4. Makes a snapshot, which is what other pipelines read, when
-         everything in the folder is committed (chartbook.lock too) and
-         a branch is checked out. When not, the build is still a good
-         one: the last line says why there is no snapshot. Commit, and
-         run again.
+
+    It makes no snapshot, which is what other pipelines read of this one
+    and what the catalog shows: its last lines name the command that
+    does, `chartbook snapshot`, typed once the work is committed.
 
     SCRIPT is a name from [scripts] in chartbook.toml, `build` unless you
-    name another. Another script is only run: nothing is pinned for it,
-    looked for after it, or snapshotted.
+    name another. Another script is only run: nothing is pinned for it or
+    looked for after it.
 
     \b
         [scripts]
@@ -3555,10 +3614,10 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
 
     Run this in a pipeline. A catalog lists stored snapshots and runs no code.
 
-    --snapshot is for a script that must end with a snapshot. It refuses to
-    build with anything uncommitted, where a plain run builds and tells
-    you, and it fails where no snapshot can be made. It also makes one of
-    a commit checked out by its hash, which a plain run leaves alone.
+    --snapshot is the build and `chartbook snapshot` in one command, for
+    a script that must end with a snapshot. It refuses to build with
+    anything uncommitted, and fails where no snapshot can be made. Its
+    snapshot records that the build ran in the same command.
 
     \b
     Examples:
@@ -3581,7 +3640,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     a license's date) and builds nothing. Whether what is pinned is in the
     store is `chartbook pin --check`.
 
-    --frozen pins nothing, makes no snapshot, and writes nothing before
+    --frozen pins nothing, and writes nothing before
     the build but, where the store can be written, its note that this
     machine reads these pins: not the lockfile, no object, and no git
     dependency is fetched or built. The build runs only if the lockfile is
@@ -3626,14 +3685,12 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
     if not refused:
         _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
-    from chartbook import run as runner
-
     _run_script(
         project_dir,
         script,
         force=force,
-        # Told nothing, a build ends with a snapshot where everything is committed, and says why where it does not
-        snapshot=True if make_snapshot else runner.WHEN_COMMITTED,
+        # Told nothing, a build makes no snapshot: its last line names the command that does
+        snapshot=make_snapshot,
         frozen=frozen,
         remake=remake,
         upstream=upstream,
@@ -3781,6 +3838,21 @@ def _offer_to_add(project_dir, report, strict, frozen, added):
     return found
 
 
+def _in_its_folder(folder) -> str:
+    """`` --project-dir FOLDER`` for a pipeline that is not in the folder the command was typed in, to follow a command a message names; else empty.
+
+    Quoted as a shell takes it, so that the command can be pasted.
+    """
+    import shlex
+
+    try:
+        if Path(folder).resolve() == Path.cwd().resolve():
+            return ""
+    except OSError:
+        pass
+    return " --project-dir " + shlex.quote(str(folder))
+
+
 def _run_script(
     project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
     upstream=False, no_gc_reminder=False, added=(),
@@ -3835,7 +3907,7 @@ def _run_script(
         raise SystemExit(1)
 
     if report.failed is not None:
-        now_declared = _offer_to_add(project_dir, report, strict=snapshot is True, frozen=frozen, added=added)
+        now_declared = _offer_to_add(project_dir, report, strict=snapshot, frozen=frozen, added=added)
         if now_declared is not None:
             # Declared and pinned: the build again, which asks again if its code reads another. Not
             # --force a second time: what it rebuilds was rebuilt a moment ago, before the build that stopped
@@ -3850,7 +3922,7 @@ def _run_script(
             # The command to come back with, as it was typed
             again = "chartbook run" + "".join(
                 f" {flag}" for flag, given in (
-                    ("--force", force), ("--snapshot", snapshot is True), ("--remake", remake), ("--upstream", upstream),
+                    ("--force", force), ("--snapshot", snapshot), ("--remake", remake), ("--upstream", upstream),
                 ) if given
             )
             for line in missing.said(report.not_in_store, again=again):
@@ -3864,13 +3936,19 @@ def _run_script(
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
-    if report.snapshots and (snapshot is True or upstream):
-        # Once the run is over, for the catalog that shows them. Not after a plain run, which asks nothing
-        # and makes nothing but its snapshot: the catalog is made when it is looked at
+    if report.snapshots and (snapshot or upstream):
+        # Once the run is over, for the catalog that shows them
         _say_where_a_snapshot_shows()
-    for step, why in report.not_snapshotted:
-        # A build of work in progress is a build: said last, where it is seen, and no failure
-        click.echo(f"{step.id}: not snapshotted: {why}.")
+    # A run makes no snapshot of what it was asked to build, in whatever state the folder is: said
+    # last, where it is seen, and the same every time, with no look at git or at the store. Most runs
+    # are of work that is not committed yet, so it always says to commit; and the catalog shows only
+    # snapshots, so it names the catalog too. Not under --frozen, which is for CI and for a store one
+    # may only read: a snapshot is not what comes next there
+    for step in () if frozen else report.to_snapshot:
+        click.echo(f"{step.id}: built.")
+        click.echo(
+            f"  For other pipelines and the catalog: commit, then `chartbook snapshot{_in_its_folder(step.directory)}`."
+        )
 
 
 @main.command("restore")

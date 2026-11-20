@@ -55,14 +55,14 @@ lists the files for a build tool. The store says in plain words which snapshot f
 alone and which share files, and `store gc` is the one way to remove them. The guide is
 rewritten around what a person is trying to do.
 
-## 0.6.0: pins a rebuild can meet, and one command to know
+## 0.6.0: pins a rebuild can meet, and fewer commands to know
 
 Two things, both being built. Where no store is shared, each person builds the pipelines they
 depend on themselves, and what they build now meets a pin: a lockfile holds dataframes and models
 only, and a dataframe is pinned by its rows as well as its file ({design}`pins-and-rebuilds`). And
-the commands are fewer to learn: `chartbook run` builds, checks what it built and makes a snapshot
-of committed work; `chartbook pin --update` takes newer data; `chartbook catalog open` shows it all
-({design}`one-command`).
+the commands are fewer to learn: `chartbook run` builds and checks what it built; `chartbook
+snapshot` puts the build in your store, for other pipelines; `chartbook pin --update` takes newer
+data; `chartbook catalog open` shows it all ({design}`one-command`).
 
 ## Experimental: Databricks
 

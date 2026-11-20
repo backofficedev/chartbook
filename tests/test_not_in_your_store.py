@@ -32,8 +32,8 @@ from tests.test_lock_by_kind import _git
 
 #: The list's last line: the other way on
 SHARED = "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has {}, or wait for its sync to finish."
-ONE = ["Build it first. It ends with a snapshot, which is what this one reads.", ""]
-SEVERAL = ["Build them in this order. Each ends with a snapshot, which is what the next one reads.", ""]
+ONE = ["Build it first, with the commands below. They end with a snapshot, which is what this one reads.", ""]
+SEVERAL = ["Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.", ""]
 NO_ORDER = "Error: acme/report: these pipelines depend on each other, so there is no order to build in."
 
 

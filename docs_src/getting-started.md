@@ -151,7 +151,6 @@ chartbook snapshot
 ```text
 my_pipeline at ad2f29a: 2 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
-Stores: default
 No catalog yet, to show it in.
 Create one over your store at /Users/you/.chartbook/store? [Y/n]:
 ```
@@ -207,15 +206,16 @@ again and nothing is written: the same bytes at the same commit are the snapshot
 Change the seed in `build_chart.py`, run it again and rebuild the site: the chart, the glimpse and
 both hashes change with it.
 
-## The five commands
+## Start with these
 
-You did each step by hand above, to see what it is. Five commands cover most of what people do
+You did each step by hand above, to see what it is. Six commands cover most of what people do
 after that:
 
 | You type | It does |
 |---|---|
 | `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
+| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
 | `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
 | `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
 | `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
@@ -228,10 +228,10 @@ has one; this pipeline gets one with two more lines in `chartbook.toml`:
 build = "python src/build_chart.py"
 ```
 
-Then `chartbook run` is steps 3 and 5 in one: it runs the script, looks for everything the
-manifest declares, and takes the snapshot when your work is committed. The site of step 4 is
-still `chartbook docs build`, unless your build script renders it too, as the template's does.
-The rest is in the {doc}`reference/cli`.
+Then `chartbook run` is step 3: it runs the script, and looks for everything the manifest
+declares. Step 5 is `chartbook snapshot`, as you typed it, once your work is committed; and the
+site of step 4 is still `chartbook docs build`, unless your build script renders it too, as the
+template's does. The rest is in the {doc}`reference/cli`.
 
 ## Next
 

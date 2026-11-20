@@ -1,12 +1,16 @@
-"""The first screen: ``chartbook --help`` and the pages a person reads first open with the five commands (``docs_src/design/one-command.md``).
+"""The first screen: ``chartbook --help`` and the pages a person reads first open with the commands to start with (``docs_src/design/one-command.md``).
 
 Twenty-one commands in one alphabetical list say nothing of which matter.
-Five are what most people type: ``chartbook init``, ``chartbook run``,
-``chartbook pin --update``, ``chartbook catalog open`` and ``chartbook
-install agents``. The help lists them first, as they are typed; the
-README, the Quickstart, the reference, the skill and ``llms.txt`` each
-have them in a section of their own; and these tests hold the words of
-all of it, as they are written here, and each of the five to the CLI.
+Six are what most people type: ``chartbook init``, ``chartbook run``,
+``chartbook snapshot``, ``chartbook pin --update``, ``chartbook catalog
+open`` and ``chartbook install agents``. The help lists them first, as
+they are typed; the README, the Quickstart, the reference, the skill and
+``llms.txt`` each have them in a section of their own; and these tests
+hold the words of all of it, as they are written here, and each of the
+six to the CLI.
+
+They were five until 2026-11-20, while a run ended with a snapshot. The
+section's heading names no number, so that the next change is of a row.
 """
 
 import re
@@ -20,13 +24,14 @@ from chartbook import cli
 from chartbook.cli import main
 
 ROOT = Path(__file__).parent.parent
-FIVE = [words for words, _ in cli.THE_FIVE]
-#: The help's five lines, as a terminal of eighty columns shows them. Written here, and not read from
+KNOWN = [words for words, _ in cli.TO_KNOW]
+#: The help's six lines, as a terminal of eighty columns shows them. Written here, and not read from
 #: the code: what each line says is held, and not only which command it names
 HELP = [
     "  chartbook init            Start a project from the template",
-    "  chartbook run             Pin, build and snapshot this pipeline",
-    "  chartbook pin --update    Take the newest snapshot of what it reads",
+    "  chartbook run             Build this pipeline, pinning what it reads",
+    "  chartbook snapshot        Make this build what other pipelines read",
+    "  chartbook pin --update    Take newer snapshots of what this one reads",
     "  chartbook catalog open    Browse every snapshot in your stores",
     "  chartbook install agents  Teach your coding agent ChartBook",
 ]
@@ -35,7 +40,8 @@ TABLE = """\
 | You type | It does |
 |---|---|
 | `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
+| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
 | `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
 | `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
 | `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
@@ -80,8 +86,17 @@ def _section(lines: list[str], heading: str) -> list[str]:
 
 
 class TestTheHelp:
-    def test_the_five_are_what_they_are(self):
-        assert FIVE == ["chartbook init", "chartbook run", "chartbook pin --update", "chartbook catalog open", "chartbook install agents"]
+    def test_they_are_what_they_are(self):
+        assert KNOWN == [
+            "chartbook init", "chartbook run", "chartbook snapshot", "chartbook pin --update", "chartbook catalog open",
+            "chartbook install agents",
+        ]
+
+    def test_no_line_says_that_a_run_makes_a_snapshot(self):
+        """A run builds, and a snapshot is typed: the line for `run` says nothing of one, and `snapshot` has a line of its own."""
+        said = dict(cli.TO_KNOW)
+        assert "snapshot" not in said["chartbook run"].lower()
+        assert "other pipelines read" in said["chartbook snapshot"]
 
     def test_it_opens_with_them_as_they_are_typed(self):
         lines = _help()
@@ -93,13 +108,13 @@ class TestTheHelp:
         assert all(len(line) <= 72 for line in HELP)
         assert _section(_help_in_a_terminal_of(80), "Start with these:") == HELP
         assert _section(_help_in_a_terminal_of(200), "Start with these:") == HELP
-        assert len(_section(_help_in_a_terminal_of(60), "Start with these:")) > 5  # and this does see a narrower one
+        assert len(_section(_help_in_a_terminal_of(60), "Start with these:")) > 6  # and this does see a narrower one
 
     def test_the_rest_are_all_there_by_name(self):
-        """`init` and `run` are whole in the first list; a command with more to it than its form there is listed again."""
+        """`init`, `run` and `snapshot` are whole in the first list; a command with more to it than its form there is listed again."""
         more = [line.split()[0] for line in _section(_help(), "More:")]
         listed = sorted(name for name, command in main.commands.items() if not command.hidden)
-        assert more == [name for name in listed if name not in ("init", "run")]
+        assert more == [name for name in listed if name not in ("init", "run", "snapshot")]
         assert {"pin", "catalog", "install"} <= set(more)
 
     def test_a_command_that_is_hidden_stays_hidden(self):
@@ -107,8 +122,8 @@ class TestTheHelp:
         said = "\n".join(_help())
         assert all(not re.search(rf"^  {re.escape(name)}\b", said, re.M) for name in hidden)
 
-    @pytest.mark.parametrize("words", FIVE)
-    def test_each_of_the_five_is_a_command_there_is(self, words):
+    @pytest.mark.parametrize("words", KNOWN)
+    def test_each_is_a_command_there_is(self, words):
         group = main
         for word in words.split()[1:]:
             if word.startswith("--"):
@@ -127,22 +142,29 @@ class TestTheHelp:
 
 class TestThePagesReadFirst:
     @pytest.mark.parametrize("page", FIRST_PAGES)
-    def test_each_has_the_five_in_a_section_of_their_own_word_for_word(self, page):
+    def test_each_has_them_in_a_section_of_their_own_word_for_word(self, page):
         """Found by review: the names were held, and a row could say anything of its command."""
         text = (ROOT / page).read_text(encoding="utf-8")
-        found = re.search(r"^## The five commands\n(.*?)(?=^## )", text, re.M | re.S)
-        assert found, f"{page} has no section `## The five commands`"
+        found = re.search(r"^## Start with these\n(.*?)(?=^## )", text, re.M | re.S)
+        assert found, f"{page} has no section `## Start with these`"
         assert TABLE in found.group(1), f"{page}: its table is not the one every first page has"
-        assert re.findall(r"^\| `(chartbook [^`]+)` \|", found.group(1), re.M) == FIVE
+        assert re.findall(r"^\| `(chartbook [^`]+)` \|", found.group(1), re.M) == KNOWN
 
-    def test_the_table_and_the_help_are_of_the_same_five(self):
-        assert re.findall(r"^\| `(chartbook [^`]+)` \|", TABLE, re.M) == FIVE == [line[2:26].strip() for line in HELP]
+    def test_the_table_and_the_help_are_of_the_same_commands(self):
+        assert re.findall(r"^\| `(chartbook [^`]+)` \|", TABLE, re.M) == KNOWN == [line[2:26].strip() for line in HELP]
+
+    @pytest.mark.parametrize("page", FIRST_PAGES)
+    def test_no_page_counts_them_wrong(self, page):
+        """The sentence over the table says how many, and which are typed in a pipeline's folder."""
+        text = (ROOT / page).read_text(encoding="utf-8")
+        assert "The five commands" not in text and "Five commands cover" not in text
+        assert "Six commands cover most of what people do" in text
 
     @pytest.mark.parametrize("page", FIRST_PAGES)
     def test_that_section_comes_before_the_long_list(self, page):
-        """The first screen is the five. Whatever lists every command comes after."""
+        """The first screen is these. Whatever lists every command comes after."""
         text = (ROOT / page).read_text(encoding="utf-8")
-        five = text.index("## The five commands")
+        first = text.index("## Start with these")
         for later in ("## Key CLI Commands", "## More commands", "## CLI Reference", "## Get started", "## A pipeline, in three files", "## Next"):
             if later in text:
-                assert five < text.index(later), f"{page}: `{later}` comes before the five"
+                assert first < text.index(later), f"{page}: `{later}` comes before the commands to start with"

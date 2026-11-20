@@ -947,8 +947,9 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
             f" not in the store at {_plain(listing.stores[0])}." if len(listing.stores) == 1
             else f" not in your stores ({', '.join(_plain(shown) for shown in listing.stores)})."
         ),
-        "Build it first. It ends with a snapshot, which is what this one reads." if one
-        else "Build them in this order. Each ends with a snapshot, which is what the next one reads.",
+        # "With the commands below": a build by itself ends with no snapshot, and these do
+        "Build it first, with the commands below. They end with a snapshot, which is what this one reads." if one
+        else "Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.",
         "",
     ]
     #: What the commands above a line have made or moved: clones, worktrees, and repositories now on another commit

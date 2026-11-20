@@ -343,11 +343,11 @@ class TestWhatAMarkerIs:
     @pytest.mark.parametrize("text, why", [
         (OWN + agents.section().rsplit(agents.END, 1)[0], "its `chartbook:start` line (line 4) has no `chartbook:end` line after it"),
         (OWN + agents.END + " -->\n", "its `chartbook:end` line (line 4) has no `chartbook:start` line before it"),
-        (agents.section() + agents.section(), "it has `chartbook:start` on lines 1 and 16 and `chartbook:end` on lines 15 and 30, and one section is one of each, in that order"),
+        (agents.section() + agents.section(), "it has `chartbook:start` on lines 1 and 17 and `chartbook:end` on lines 16 and 32, and one section is one of each, in that order"),
         (agents.END + " -->\n" + agents.START + " -->\n", "it has `chartbook:start` on line 2 and `chartbook:end` on line 1, and one section is one of each, in that order"),
         (
             agents.section().replace(agents.END + " -->", agents.END + " --> See also docs/agents.md for our own rules."),
-            "its `chartbook:end` line (line 15) has other text on it, which replacing the section would take with it: a marker line holds the marker and nothing else",
+            "its `chartbook:end` line (line 16) has other text on it, which replacing the section would take with it: a marker line holds the marker and nothing else",
         ),
         (
             agents.section().replace("lines. -->\n", "lines. --> NOTE: ask Ana before deploying\n"),
@@ -355,7 +355,7 @@ class TestWhatAMarkerIs:
         ),
     ])
     def test_marker_lines_that_do_not_hold_one_section_are_an_error_that_says_which_line(self, project, text, why):
-        assert len(agents.section().splitlines()) == 15
+        assert len(agents.section().splitlines()) == 16
         (project / "AGENTS.md").write_text(text, encoding="utf-8", newline="\n")
         result = _install("--force")
         assert result.exit_code == 1
