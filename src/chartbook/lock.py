@@ -4662,15 +4662,17 @@ def _holders_with_other_bytes(store: Store, plan: "GcPlan", keep: frozenset) -> 
         staying.setdefault(taken.pipeline, []).append(taken)
     found: dict = {}
     read: dict = {}
+    files_read: dict = {}  # each file's hash as read, by where it is: two increments may name one file of the snapshot they build on
     for going, _ in plan.snapshots_delete + plan.pinned_delete:
         if going.pipeline in plan.held_back or going.pipeline in found:
             continue
         for content_hash in sorted(going.hashes() & keep):
-            holders = [taken for taken in staying.get(going.pipeline, []) if content_hash in taken.hashes()]
-            for holder in {str(taken.path): taken for taken in holders[:1] + [t for t in holders if t.commit == going.commit][:1]}.values():
+            # Every snapshot of the pipeline that stays and names it: a read by its name, by its commit or
+            # by neither is handed one of them, and which is not for a plan to guess. Each file is read once
+            for holder in (taken for taken in staying.get(going.pipeline, []) if content_hash in taken.hashes()):
                 asked = (str(holder.path), content_hash)
                 if asked not in read:
-                    read[asked] = check(store, holder.path, [content_hash], only=True)
+                    read[asked] = check(store, holder.path, [content_hash], only=True, read=files_read)
                 if read[asked] and going.pipeline not in found:
                     found[going.pipeline] = (holder.path, read[asked][0].message, len(read[asked]))
     return found
@@ -4735,14 +4737,17 @@ class GcError(LockError):
             what it is, and the store's words on why and what to do.
     """
 
-    def __init__(self, removed_snapshots: int, removed: int, size_bytes: int, failures: list[tuple[str, str]]):
+    def __init__(self, removed_snapshots: int, removed: int, size_bytes: int, failures: list[tuple[str, str]], pinned: int = 0):
+        #: How many snapshots a pin made from a repository were removed
+        self.pinned = pinned
         self.removed_snapshots = removed_snapshots
         self.removed = removed
         self.size_bytes = size_bytes
         self.failures = failures
         said = "\n".join(f"  {what}: {why}" for what, why in failures)
         super().__init__(
-            f"{len(failures)} thing(s) could not be removed; {removed_snapshots} snapshot(s) and {removed} "
+            f"{len(failures)} thing(s) could not be removed; {removed_snapshots} snapshot(s)"
+            f"{f', {pinned} snapshot(s) a pin made from a repository' if pinned else ''} and {removed} "
             f"object(s) were:\n{said}"
         )
 
@@ -4808,7 +4813,7 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         keep_days=plan.keep_days,
         keep_lineage=plan.keep_lineage,
         aggressive=plan.aggressive,
-        hashed=plan.hashed,
+        hashed=True,  # whatever plan it is handed: nothing is removed on what was not read
     )
     from chartbook import versions
 
@@ -4900,7 +4905,7 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         except (StoreError, OSError) as error:
             failures.append((f"the note of the lockfile {lockfile}", str(error)))
     if failures:
-        raise GcError(removed_snapshots, removed, size_bytes, failures)
+        raise GcError(removed_snapshots, removed, size_bytes, failures, pinned=removed_pinned)
     why_now = {taken.path: why for taken, why in now.snapshots_kept + now.pinned_kept}
     kept_after_all = [(taken, why_now[taken.path]) for taken, _ in plan.snapshots_delete + plan.pinned_delete if taken.path in why_now]
     return GcDone(

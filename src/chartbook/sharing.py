@@ -44,10 +44,12 @@ from chartbook.store import (
     INCREMENTS_DIR,
     _any_length,
     _increment_of,
+    _not_followed,
     _kept_files,
     is_snapshot_folder,
     pipeline_folder,
     read_kept_record,
+    what_is_wrong_in,
 )
 
 
@@ -126,11 +128,24 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             wrong = into.verify_snapshot(here.path, [asset.content_hash for asset in here.assets])
             if wrong:
                 more = f" (and {len(wrong) - 1} more of its files)" if len(wrong) > 1 else ""
+                # The way out is named only on what was looked at: what is being imported is read too, each
+                # file of that snapshot where it is, at its size and hash
+                theirs = [f"its record does not say where {gap[:19]}… is" for gap in _not_followed(record)]
+                theirs += [said for asset in record.assets for _, said in what_is_wrong_in(asset)]
+                if theirs:
+                    way = (
+                        f"What is being imported does not hold it whole either ({theirs[0]}): keep that snapshot's "
+                        f"folder, {here.folder}, as it is, and import from a copy that is whole. If a sync is still "
+                        f"bringing either, import again when it has"
+                    )
+                else:
+                    way = (
+                        f"If a sync is still bringing the file, import again when it has. If the file is lost, remove "
+                        f"that snapshot's folder, {here.folder}, and import again: what is imported holds it whole"
+                    )
                 done.refused.append((what, (
                     f"the store has it already, in {here.folder.name}, and not whole: {wrong[0].message}{more}. Nothing "
-                    f"was imported over it. If a sync is still bringing the file, import again when it has. If the "
-                    f"file is lost, remove that snapshot's folder, {here.folder}, and import again: what is "
-                    f"imported holds it whole"
+                    f"was imported over it. {way}"
                 )))
             else:
                 done.there.append(moment)

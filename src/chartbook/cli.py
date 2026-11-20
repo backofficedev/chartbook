@@ -4605,7 +4605,10 @@ def _when_it_goes(why: str) -> str:
     if "branch or tag" in why or "label points" in why:
         return "once a newer snapshot takes its place for that name, or with `chartbook store gc --aggressive`, which lets names keep nothing"
     if "keep = true" in why:
-        return "once that asset is no longer marked `keep = true` in its pipeline's chartbook.toml"
+        return (
+            "once the mark `keep = true` is taken out of its pipeline's chartbook.toml, that is committed, and a "
+            "snapshot is made since (`chartbook run` in its folder)"
+        )
     if "days" in why:
         return "once it is older than that"
     return "once that is no longer so"
@@ -4748,8 +4751,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             return lock.carry_out_gc(plan, the_store)
         except lock.GcError as e:
             # Everything else went: say so, then each thing that stayed and what to do
-            if e.removed_snapshots or e.removed:
-                click.echo(f"Removed {e.removed_snapshots} snapshot(s) and {e.removed} object(s), {_format_bytes(e.size_bytes)}.")
+            if e.removed_snapshots or e.removed or e.pinned:
+                by_pins = f", {e.pinned} snapshot(s) a pin made from a repository" if e.pinned else ""
+                click.echo(f"Removed {e.removed_snapshots} snapshot(s){by_pins} and {e.removed} object(s), {_format_bytes(e.size_bytes)}.")
             click.echo(click.style("Error: ", fg="red", bold=True) + f"{len(e.failures)} thing(s) could not be removed:", err=True)
             for _, why in e.failures:
                 click.echo(f"  {_printable(_said(why))}", err=True)  # the store's words name the thing and say what to do
@@ -4882,7 +4886,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     done = carry_out()
     # What the plan made again at the yes keeps, each with why: pinned meanwhile only where it was
     for taken, why in done.kept_after_all:
-        click.echo(f"Kept after all: {taken.pipeline} at {taken.commit[:7]}, made {_when(taken.made_at)}: {why}")
+        made = "which a pin made" if any(taken.path == pinned.path for pinned, _ in plan.pinned_delete) else "made"
+        click.echo(f"Kept after all: {taken.pipeline} at {taken.commit[:7]}, {made} {_when(taken.made_at)}: {why}")
     if done.objects_kept:
         click.echo(f"Kept after all: {done.objects_kept} object(s), which a lockfile or a snapshot names or uses now")
     say_held_back(

@@ -1299,7 +1299,9 @@ class Store(abc.ABC):
         """
         return all(self.has(content_hash) for content_hash in content_hashes)
 
-    def verify_snapshot(self, record: Path, content_hashes: Iterable[str], only: bool = False) -> list["StoreProblem"]:
+    def verify_snapshot(
+        self, record: Path, content_hashes: Iterable[str], only: bool = False, read: Optional[dict] = None
+    ) -> list["StoreProblem"]:
         """What is wrong with the snapshot with this record, reading every byte of its own files: empty when it is whole.
 
         Asked before another store's copy of the same snapshot is removed
@@ -3115,13 +3117,17 @@ class FolderStore(Store):
                     return True
         return not wanted
 
-    def verify_snapshot(self, record: Path, content_hashes: Iterable[str] = (), only: bool = False) -> list[StoreProblem]:
+    def verify_snapshot(
+        self, record: Path, content_hashes: Iterable[str] = (), only: bool = False, read: Optional[dict] = None
+    ) -> list[StoreProblem]:
         """Every file of one snapshot that is missing or has other bytes, read where its record says it is (:meth:`Store.verify_snapshot`).
 
         Each of *content_hashes* must be an asset the record says where to
         find, and so must every hash the record names (:func:`_not_followed`):
         a record that names what it gives no place for is not whole. With
-        *only*, no other asset's files are read.
+        *only*, no other asset's files are read. With *read*, a dictionary
+        the caller keeps, a file read for one snapshot is not read again
+        for another that names it where it is.
         """
         kept = read_kept_record(Path(record))
         wanted = set(content_hashes)
@@ -3135,7 +3141,7 @@ class FolderStore(Store):
         return problems + [
             StoreProblem(asset.content_hash, kept.folder, said)
             for asset in kept.assets if not only or asset.content_hash in wanted
-            for _, said in what_is_wrong_in(asset)
+            for _, said in what_is_wrong_in(asset, read)
         ]
 
     def builds_on(self, record: Path) -> Optional[Path]:
@@ -3349,6 +3355,12 @@ class FolderStore(Store):
         for record in self.records():
             if not record.readable:
                 continue
+            # What it names and gives no place for: a hole for a run, for gc and for a move, which send a person here
+            for content_hash in _not_followed(record):
+                problems.append(StoreProblem(
+                    content_hash, record.folder,
+                    f"its record does not say where {content_hash[:19]}… is (the snapshot {record.folder.name})",
+                ))
             for asset in record.assets:
                 held.add(asset.content_hash)
                 for wrong in what_is_wrong_in(asset, read):
