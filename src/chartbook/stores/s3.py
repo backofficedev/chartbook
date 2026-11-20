@@ -1844,7 +1844,7 @@ class S3Store(Store):
         cached = self._unowned_cache(content_hash).joinpath(*parts)
         return cached.is_file() and _hash_once(cached) == content_hash
 
-    def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list[StoreProblem]:
+    def verify(self, content_hashes: Optional[Iterable[str]] = None, pipeline: Optional[str] = None) -> list[StoreProblem]:
         """Download every asset again, into a temporary folder, and report each that is not what its record or name says.
 
         The cache is left as it is: what this machine read and checked

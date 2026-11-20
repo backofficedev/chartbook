@@ -1225,8 +1225,8 @@ class Store(abc.ABC):
         """How many seconds ago an object was put in the store."""
 
     @abc.abstractmethod
-    def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
-        """Hash objects again, and report each that is not what its name says."""
+    def verify(self, content_hashes: Optional[Iterable[str]] = None, pipeline: Optional[str] = None) -> list["StoreProblem"]:
+        """Hash objects again, and report each that is not what its name says; with *pipeline*, as that pipeline's own snapshots hold them."""
 
     def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
         """Whether a put of the same bytes would add a file the store's object lacks under one of these names.
@@ -3137,7 +3137,7 @@ class FolderStore(Store):
         yield from sorted(self.held_hashes() | set(self.unowned_hashes()))
 
     def verify(
-        self, content_hashes: Optional[Iterable[str]] = None
+        self, content_hashes: Optional[Iterable[str]] = None, pipeline: Optional[str] = None
     ) -> list[StoreProblem]:
         """Hash assets again, and report each that is not what its record says.
 
@@ -3155,7 +3155,8 @@ class FolderStore(Store):
         said once.
 
         With hashes named, whether the store has each of those assets
-        intact in some snapshot: what a read of it is handed.
+        intact in some snapshot, of *pipeline* where one is named: what a
+        read of it is handed.
 
         :param content_hashes: The assets to check; by default, every
             snapshot's own files, and every object no pipeline owns.
@@ -3165,7 +3166,7 @@ class FolderStore(Store):
             return self._verify_every_snapshot()
         problems = []
         for content_hash in content_hashes:
-            held = self._held(content_hash)
+            held = self._held(content_hash, pipeline)
             if held:
                 message = None
                 for asset in held:

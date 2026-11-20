@@ -27,7 +27,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import config, data, lock, models, sharing, snapshot, transfer
+from chartbook import config, data, lineage, lock, models, sharing, snapshot, transfer
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotPinnedError
@@ -504,3 +504,35 @@ class TestAStoreThatIsRefusedAmongSeveral:
         listed = CliRunner().invoke(main, ["ls", "versions"])
         assert listed.exception is None or isinstance(listed.exception, SystemExit), repr(listed.exception)
         assert listed.exit_code == 1 and listed.output.startswith("Error: The store at") and "a snapshots/ folder that holds" in listed.output
+
+
+class TestWhatLineageCountsAsThere:
+    """`chartbook lineage` asks each snapshot's own pipeline: another pipeline's copy of the same bytes is not what a read is handed."""
+
+    @pytest.fixture
+    def pinned(self, rates, work, store):
+        """rates, pinned by a reader, and a mirror that publishes the same table: the pinned snapshot, and the reader's folder."""
+        taken = snapshot.make(rates, store=store, made_at=NOW).snapshot
+        reader = _reader(work / "reader", "acme/rates", "../rates")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        snapshot.make(_pipeline(work / "mirror", "acme/mirror"), store=FolderStore(store.root), made_at=NOW)
+        assert lineage.walk(reader, FolderStore(store.root), rehash=True).gaps() == []
+        return taken, reader
+
+    def test_a_file_lost_from_its_pipeline_is_a_gap_though_another_pipeline_has_the_bytes(self, pinned, store):
+        taken, reader = pinned
+        _lose(_folder_of(taken) / "_data" / "treasury.parquet")
+        table = taken.content()["treasury"]
+        assert FolderStore(store.root).has(table) and not FolderStore(store.root).has(table, "acme/rates")
+        gaps = [(node.pipeline, said) for node, said in lineage.walk(reader, FolderStore(store.root)).gaps()]
+        assert ("acme/rates", f"holds {table[:19]}…, which the store does not have") in gaps, gaps
+
+    def test_a_damaged_copy_is_found_though_another_pipeline_has_the_bytes_intact(self, pinned, store):
+        taken, reader = pinned
+        damaged = _folder_of(taken) / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))  # the same size, other bytes
+        store_module._found_whole.clear()
+        assert lineage.walk(reader, FolderStore(store.root)).gaps() == []  # nothing is read without --rehash
+        ((node, said),) = lineage.walk(reader, FolderStore(store.root), rehash=True).gaps()
+        assert node.pipeline == "acme/rates" and "which is not what its name says" in said

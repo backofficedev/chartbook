@@ -3711,7 +3711,7 @@ def _pin_asset(
             stored = None  # a store this user cannot write, or the file gone: said as before
         if stored is not None and isinstance(store, _PutLater):
             # Put once the lockfile may be written, and said restored then if that makes it whole
-            store.recheck[stored.content_hash] = (asset_id, had)
+            store.recheck[stored.content_hash] = (asset_id, had, of)
         elif stored is not None:
             unsynced = _incomplete(store, had, of)
             if not unsynced:
@@ -3884,8 +3884,8 @@ class _PutLater:
         self.held = {}
         rechecked, self.recheck = self.recheck, {}
         restored = {
-            asset_id for stand_in, (asset_id, record) in rechecked.items()
-            if stand_in in stored and not _incomplete(self._store, record)
+            asset_id for stand_in, (asset_id, record, of) in rechecked.items()
+            if stand_in in stored and not _incomplete(self._store, record, of)
         }
         if restored:
             report.events[:] = [

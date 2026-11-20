@@ -270,7 +270,7 @@ class Stores:
     def roots(self):
         return self._collect("roots")
 
-    def verify(self, content_hashes=None):
+    def verify(self, content_hashes=None, pipeline=None):
         if content_hashes is None:
             problems = []
             for entry in self._available():
@@ -283,14 +283,14 @@ class Stores:
         problems, unheld, first = [], set(wanted), None
         for entry in self._available():
             try:
-                held = [content_hash for content_hash in wanted if entry.store.has(content_hash)]
+                held = [content_hash for content_hash in wanted if entry.store.has(content_hash, pipeline)]
             except (StoreUnreachableError, OSError) as error:
                 self._unreachable(entry, error)
                 continue
             first = first or entry.store
             unheld.difference_update(held)
             if held:
-                problems.extend(entry.store.verify(held))
+                problems.extend(entry.store.verify(held) if pipeline is None else entry.store.verify(held, pipeline))
         if unheld and first is not None:
             problems.extend(first.verify([content_hash for content_hash in wanted if content_hash in unheld]))
         return problems

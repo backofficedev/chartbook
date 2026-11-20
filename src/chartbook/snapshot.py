@@ -1519,7 +1519,7 @@ def label_records(
                 why = f"no snapshot of {where} in the store names such a version"
             elif len(named) > 1:
                 why = f"{len(named)} versions share that start"
-            elif not store.has(named[0][0]):
+            elif not store.has(named[0][0], newest.pipeline):
                 why = "a snapshot names it, and its bytes are not in the store"
             else:
                 why = ""
@@ -3469,7 +3469,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             if (record.get("location") or {}).get("kind") == "file":
                 report.from_index.append(record["id"])
             continue  # shown from the index; a table or query is dealt with below
-        why = _place_asset(record, store, folder)
+        why = _place_asset(record, store, folder, taken)
         if why is not None:
             report.left_out.append((record["id"], why))
             continue
@@ -3536,8 +3536,8 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     return report
 
 
-def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = None) -> Optional[str]:
-    """Copy one asset's bytes from the store to its path under *folder*; why it was not, if it was not.
+def _place_asset(record: dict, store: Store, folder: Path, of: Snapshot, at: Optional[str] = None) -> Optional[str]:
+    """Copy one asset's bytes from the store to its path under *folder*; why it was not, if it was not: the copy in the snapshot *of* which it is, or in the newest of its pipeline that holds it whole.
 
     The path is the record's, or *at*, the path the manifest declares now,
     for :func:`restore`; either is judged as a record's is
@@ -3566,7 +3566,9 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
         )
     single = not is_glob_pattern(plain) and not record.get("files")
     try:
-        kept = store.files(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None)
+        kept = store.files(
+            record["content_hash"], of.pipeline, name=Path(plain).name if single else None, snapshot=(of.commit, of.made_at),
+        )
     except StoreError as error:
         # A file of it is a link, or not synced yet: the rest of the version is laid out
         return f"the store does not give it: {str(error).rstrip('.')}"
@@ -3701,7 +3703,7 @@ def restore(
             report.left.append((name, why))
             continue
         record = holder.assets[name]
-        placed = _place_asset(record, store, directory, at=path)
+        placed = _place_asset(record, store, directory, holder, at=path)
         if placed is not None:
             report.left.append((name, placed))
             continue

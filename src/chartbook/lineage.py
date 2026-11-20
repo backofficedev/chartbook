@@ -403,7 +403,7 @@ class _Walker:
                 "so whether its inputs are complete cannot be checked"
             )
         try:
-            kept = self.store.files(documents["content_hash"]).by_relative()
+            kept = self.store.files(documents["content_hash"], taken.pipeline, snapshot=(taken.commit, taken.made_at)).by_relative()
             manifest = kept.get("chartbook.toml")
             if manifest is None:
                 raise StoreError("its documents keep no chartbook.toml")
@@ -478,7 +478,7 @@ class _Walker:
                 options = []
                 for content_hash in sorted(named_hashes):
                     try:
-                        if not self.store.has(content_hash):
+                        if not self.store.has(content_hash, taken.pipeline):
                             continue
                     except (StoreError, OSError, ValueError):
                         continue
@@ -501,28 +501,34 @@ class _Walker:
         return self._listed
 
     def check_objects(self, lineage: Lineage, rehash: bool) -> None:
-        """Each walked snapshot's assets, and each label version pinned: in the store, and with ``rehash``, still what their names say."""
-        owners: dict[str, list[Node]] = {}
+        """Each walked snapshot's assets, and each label version pinned: in the store, and with ``rehash``, still what their names say.
+
+        Asked of each snapshot's own pipeline: an asset of a pipeline is
+        read from that pipeline's own snapshots, never from another's copy
+        of the same bytes, so another's copy does not make it present here.
+        """
+        owners: dict[tuple, list[Node]] = {}
         for node in self.visited.values():
             for content_hash in sorted(node.hashes):
-                owners.setdefault(content_hash, []).append(node)
-        present = []
-        for content_hash, nodes in sorted(owners.items()):
+                owners.setdefault((node.pipeline or "", content_hash), []).append(node)
+        present: dict[str, list] = {}
+        for (pipeline, content_hash), nodes in sorted(owners.items()):
             try:
-                there = self.store.has(content_hash)
+                there = self.store.has(content_hash, pipeline or None)
             except (StoreError, OSError, ValueError):
                 there = False
             if there:
-                present.append(content_hash)
+                present.setdefault(pipeline, []).append(content_hash)
                 continue
             for node in nodes:
                 node.gaps.append(f"holds {content_hash[:19]}…, which the store does not have")
         if not rehash:
             return
-        for problem in self.store.verify(present):
-            for node in owners.get(problem.content_hash, []):
-                node.gaps.append(f"holds {problem.content_hash[:19]}…, which is not what its name says: {problem.message}")
-        lineage.rehashed = len(present)
+        for pipeline, hashes in sorted(present.items()):
+            for problem in (self.store.verify(hashes, pipeline) if pipeline else self.store.verify(hashes)):
+                for node in owners.get((pipeline, problem.content_hash), []):
+                    node.gaps.append(f"holds {problem.content_hash[:19]}…, which is not what its name says: {problem.message}")
+        lineage.rehashed = sum(len(hashes) for hashes in present.values())
 
 
 @dataclass
