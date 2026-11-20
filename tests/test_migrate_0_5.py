@@ -568,15 +568,6 @@ class TestFoundBeforeAnythingMoves:
         record.write_text(kept, encoding="utf-8", newline="\n")  # the way out: the record put right
         self._moves(root)
 
-    def test_a_folder_with_files_and_no_record_yet(self, of_0_5):
-        root, _ = of_0_5
-        arriving = root / "pipelines" / "acme+once" / "2026-06-01T091500Z_aaaaaaaaaaaa"
-        (arriving / "_data").mkdir(parents=True)
-        (arriving / "_data" / "t.parquet").write_bytes(b"a sync brings the record last")
-        self._refused(root, f"The folder {arriving} holds files and has no record")
-        _rmtree(arriving)  # left from a snapshot that was never finished: removed, as the message says
-        self._moves(root)
-
     def test_a_folder_this_user_may_not_write(self, of_0_5):
         root, _ = of_0_5
         if os.name == "nt" or os.geteuid() == 0:
@@ -612,6 +603,25 @@ class TestFoundBeforeAnythingMoves:
 
 
 class TestWhatDoesNotStopAMove:
+    def test_a_folder_with_files_and_no_record_is_taken_as_a_cleared_one_and_counted_and_named(self, of_0_5):
+        """It stopped the move, which said to move the folder out, until a real store had one that a later record kept its files in (2026-11-20): tests/test_migrate_0_5_found.py."""
+        root, _ = of_0_5
+        arriving = root / "pipelines" / "acme+once" / "2026-06-01T091500Z_aaaaaaaaaaaa"
+        (arriving / "_data").mkdir(parents=True)
+        (arriving / "_data" / "t.parquet").write_bytes(b"a sync brings the record last")
+        before = _listing(root)
+        dry = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
+        said = dry.output.replace("\n", " ")
+        assert dry.exit_code == 0 and _listing(root) == before, dry.output
+        # The one folder: the one `store gc` cleared, which has no record either, is not named
+        assert f"  1 folder(s) hold files and have no record: acme+once/{arriving.name} (1 file(s)). The files in such a folder that a record names are moved with that record, and the rest goes aside." in said
+        assert "If a sync may still be bringing a folder's record, wait for it and run this again: a record that arrives after the move goes aside, and that snapshot has to be made again." in said
+        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        assert result.exit_code == 0 and f"  1 folder(s) held files and had no record: acme+once/{arriving.name} (1 file(s))." in result.output, result.output
+        assert (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+once" / arriving.name / "_data" / "t.parquet").read_bytes() == b"a sync brings the record last"
+        store_module._read_records.clear()
+        assert not (root / "pipelines").exists() and FolderStore(root).verify() == []
+
     def test_a_file_that_was_missing_and_arrives_before_its_step_is_put_where_its_record_names_it(self, of_0_5):
         root, _ = of_0_5
         late = next(root.glob("pipelines/acme+once/*/_output/curve.html"))
@@ -763,16 +773,16 @@ class TestAHiddenFileIsContent:
 
 
 class TestTheWaysOutNeverSayToRemoveWhatARecordMayName:
-    def test_a_folder_with_files_and_no_record_and_a_link_are_waited_for_or_moved_out(self, of_0_5, work):
+    def test_a_folder_with_files_and_no_record_is_never_to_be_moved_out_and_a_link_is_waited_for_or_moved_out(self, of_0_5, work):
+        """A later record may keep files in a folder with no record, so no line says to take one out of the store: it stops nothing, and is named (tests/test_migrate_0_5_found.py)."""
         root, _ = of_0_5
         arriving = root / "pipelines" / "acme+once" / "2026-06-01T091500Z_aaaaaaaaaaaa"
         (arriving / "_data").mkdir(parents=True)
         (arriving / "_data" / "t.parquet").write_bytes(b"x")
-        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        result = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
         said = result.output.replace("\n", " ")
-        assert result.exit_code == 1 and "wait and run this again; if not, move that folder out of the store and run this again" in said
-        assert "remove" not in said
-        arriving.rename(work / "moved-out")  # the way out, as written
+        assert result.exit_code == 0 and f"1 folder(s) hold files and have no record: acme+once/{arriving.name} (1 file(s))." in said
+        assert "out of the store" not in said and "move that folder" not in said and "wait for it and run this again" in said
         if symlinks_work():  # a link is this user's to make: not so on Windows without Developer Mode
             link = root / "pipelines" / "acme+linked"
             link.symlink_to(work, target_is_directory=True)
@@ -780,6 +790,7 @@ class TestTheWaysOutNeverSayToRemoveWhatARecordMayName:
             assert "is a link to another place" in said and "move the link out of the store and run this again" in said and "remove" not in said
             link.rename(work / "the-link")
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
+        assert (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+once" / arriving.name / "_data" / "t.parquet").read_bytes() == b"x"
 
 
 class TestTheQuestionIsSkippedOnlyForThisMachinesJournal:
@@ -796,13 +807,21 @@ class TestTheQuestionIsSkippedOnlyForThisMachinesJournal:
 
 
 class TestWhatGoesAsideIsSaid:
-    def test_a_record_that_arrives_during_the_move_goes_aside_with_the_old_folder_and_is_named(self, of_0_5, work):
+    @pytest.mark.parametrize("arrival", ["another snapshot", "the same snapshot under another name"])
+    def test_a_record_that_arrives_during_the_move_goes_aside_with_the_old_folder_and_is_named(self, of_0_5, work, arrival):
+        """To be made again, where the store has no snapshot of its pipeline, commit and time; as a second record of one that was moved in, where it has."""
         import shutil
 
         root, _ = of_0_5
         source = next(root.glob("pipelines/acme+once/*/_chartbook/snapshot.json")).parent.parent
         shutil.copytree(source, work / "arrival")
         name = "2026-06-01T091500Z_" + source.name.split("_")[1]
+        if arrival == "another snapshot":
+            record = work / "arrival" / "_chartbook" / "snapshot.json"
+            document = json.loads(record.read_text(encoding="utf-8"))
+            document["made_at"] = "2026-06-01T09:15:00.000000Z"  # made when its folder's name says
+            os.chmod(record, stat.S_IWRITE | stat.S_IREAD)
+            record.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
         steps = migrate_0_5.plan(root).steps
         after = max(number for number, step in enumerate(steps, 1) if step.op in ("write", "note"))
 
@@ -811,7 +830,9 @@ class TestWhatGoesAsideIsSaid:
                 shutil.copytree(work / "arrival", root / "pipelines" / "acme+once" / name)
 
         done = migrate_0_5.run(root, after_step=arrives)
-        assert ("acme+once", name) in done.set_aside and (root / done.kept / "acme+once" / name / "_chartbook" / "snapshot.json").is_file()
+        named, not_named = (done.set_aside, done.second) if arrival == "another snapshot" else (done.second, done.set_aside)
+        assert named == [("acme+once", name)] and not_named == []
+        assert (root / done.kept / "acme+once" / name / "_chartbook" / "snapshot.json").is_file()
         store_module._read_records.clear()
         assert [record.folder.name for record in FolderStore(root).records() if record.pipeline == "acme/once"] == [source.name]
 
@@ -848,7 +869,9 @@ class TestOnAMovedStore:
             listing = _tree(root / "pipelines")
             result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
             assert result.exit_code == 0 and "pipelines/ goes aside whole: nothing under it is moved in." in result.output.replace("\n", " "), result.output
-            assert "1 snapshot(s) went aside without being moved in: acme+once/" in result.output and "Run that pipeline again with this ChartBook." in result.output
+            # The store has that snapshot: its record under pipelines/ is a second one, and nothing is to be made again
+            assert "1 second record(s) of a snapshot that was moved in went aside: acme+once/" in result.output
+            assert "without being moved in" not in result.output and "Run that pipeline again" not in result.output
             kept = root / "_chartbook" / "left-by-0.5" / ("pipelines" if number == 1 and not (root / "_chartbook" / "left-by-0.5" / "pipelines (2)").exists() else "pipelines (3)" if number == 2 else "pipelines (2)")
         aside = sorted(p.name for p in (root / "_chartbook" / "left-by-0.5").iterdir() if p.name.startswith("pipelines"))
         assert aside == ["pipelines", "pipelines (2)", "pipelines (3)"]  # the first move's, and one for each run again

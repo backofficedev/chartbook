@@ -30,7 +30,10 @@ Three rules hold it together.
 - Nothing that was true before a move stops it half way: :func:`check`
   finds it before the first step, and says it with what to do. A file a
   record names that is not there is no such thing. It was missing before,
-  it is counted and named, and its record goes on naming it.
+  it is counted and named, and its record goes on naming it. A folder
+  that holds files and has no record is no such thing either (a real
+  store had one that a later record kept its files in): it is taken as
+  one that ``store gc`` cleared, and is counted and named.
 - The folders are the truth. Every plan is made from the store as it is. The
   old records stay under ``pipelines/`` until the last step, so a plan made
   at any moment of a move sees all of them, and a rename whose file is
@@ -41,7 +44,20 @@ Three rules hold it together.
   the move wrote there), it merges the notes and moves ``pipelines/`` aside,
   whole. Nothing under it is moved in, an object no pipeline owns neither:
   the last lines name each snapshot there, to be made again with this
-  ChartBook.
+  ChartBook. A record that goes aside is named so only where the store
+  has no snapshot of its pipeline, its commit and its time: one that is a
+  second record of a snapshot that was moved in (a sync's copy of a
+  folder, ``<name> 2``) is said as that, and nothing is to be made again.
+
+What 0.5 could read, the moved store holds. ChartBook 0.5 found a file by
+its hash anywhere in its pipeline's folder, so a store was whole to it
+where a record named a place that did not hold its file while another
+record's place held the same bytes (a real store was so, 2026-11-20). A
+file that is not at its size where its record says, and not where it goes,
+is taken from such a place (:func:`_plan_pipeline`). That is a lookup
+every plan makes from the folders: it adds no kind of step, and nothing a
+later plan goes by (the journal carries the count of what it found, for
+the last lines to say with the dry run).
 
 Every rename goes through :func:`chartbook.replacing.replace_when_let`: on
 Windows a virus scanner, the indexer or a sync client holds a file or a
@@ -99,8 +115,8 @@ OLD_MARK = "0" * 40
 #: What ChartBook 0.5 kept at the top of a store, which a moved store has under ``_chartbook/`` or not at all.
 OLD_TOP = (V2_LAYOUT.pipelines, V2_LAYOUT.roots, V2_LAYOUT.origins, V2_LAYOUT.tmp)
 
-_COUNTS = ("renamed", "renamed_bytes", "copied", "copied_bytes", "aside")
-_LISTS = ("set_aside", "late", "in_place", "copied_as_is")
+_COUNTS = ("renamed", "renamed_bytes", "copied", "copied_bytes", "aside", "doubled", "elsewhere")
+_LISTS = ("set_aside", "second", "late", "in_place", "copied_as_is")
 
 
 class MoveError(StoreError):
@@ -137,11 +153,29 @@ class Plan:
         renamed, renamed_bytes: The files that change folder by rename.
         copied, copied_bytes: The files copied, which are read.
         aside: The files no record names, which go aside with the old folder.
+        doubled: The files a record names that go aside with it too, their
+            bytes being moved in from another place a record names: a
+            second copy that an older snapshot had in its own folder, and
+            half a file where the whole is elsewhere.
         missing: The files a record names that are not at their size where
             the moved record names them, each as ``(snapshot's folder,
-            path)``, sorted.
+            path)``, sorted: no record of the pipeline says a place that
+            holds them at their size.
+        elsewhere: How many files were not where their record says, and
+            are taken from where another record of their pipeline has the
+            same bytes; *elsewhere_first* is the first three, each as
+            ``(snapshot's folder, path)``.
+        no_record: The folders named as a snapshot's that hold files and
+            have no record, and were not cleared, each as ``(pipeline's
+            folder, folder, how many files)``. One is taken as a cleared
+            one is: the files in it that a record names move with that
+            record, and the rest goes aside.
         set_aside: The snapshots whose records go aside without having been
-            moved in, each as ``(pipeline's folder, snapshot's folder)``.
+            moved in, each as ``(pipeline's folder, snapshot's folder)``:
+            those the store has no snapshot of, to be made again.
+        second: The records that go aside and are a second record of a
+            snapshot that is moved in (its pipeline, its commit and its
+            time), each as ``(pipeline's folder, folder)``.
         late: The files of a snapshot that is moved which go aside with the
             old folder, by where they are once aside: one that arrived after
             its snapshot was moved, and one that found a file already where
@@ -164,8 +198,13 @@ class Plan:
     copied: int = 0
     copied_bytes: int = 0
     aside: int = 0
+    doubled: int = 0
     missing: list = field(default_factory=list)
+    elsewhere: int = 0
+    elsewhere_first: list = field(default_factory=list)
+    no_record: list = field(default_factory=list)
     set_aside: list = field(default_factory=list)
+    second: list = field(default_factory=list)
     late: list = field(default_factory=list)
     in_place: list = field(default_factory=list)
     copied_as_is: list = field(default_factory=list)
@@ -262,11 +301,52 @@ def _read(record: Path, name: str) -> tuple[dict, frozenset]:
             return json.loads(record.read_text(encoding="utf-8")), kept.named
         except (OSError, ValueError) as error:
             why = str(error)
+    # Its folder may keep files of other snapshots of the pipeline, which 0.5 kept once: asked of their records, and said
+    folder = record.parent.parent
+    others = {
+        file.location
+        for other in sorted(folder.parent.glob(f"*/{OWN_DIR}/{RECORD_FILE}")) if other != record
+        for asset in read_kept_record(other).assets for file in asset.files
+        if file.location.is_relative_to(folder) and _size(file.location) is not None
+    }
+    if others:
+        way_out = (
+            f"if it is no snapshot of yours, move that record out of the store and leave its folder where it is: "
+            f"{len(others)} file(s) in the folder are named by other snapshots of the pipeline, and are moved with those"
+        )
+    else:
+        way_out = (
+            "if it is no snapshot of yours, move its folder out of the store: no other snapshot's record names a file "
+            "in it"
+        )
     raise MoveError(
         f"The snapshot record {record} cannot be followed ({why}), so the store is not moved: where its files go is "
-        f"not known. If a sync is still bringing it, wait and run this again; if it is no snapshot of yours, move its "
-        f"folder out of the store. `chartbook store verify` says more."
+        f"not known. If a sync is still bringing it, wait and run this again; {way_out}. `chartbook store verify` says more."
     )
+
+
+def _moved_in(root: Path) -> set:
+    """The snapshots a store has in this layout's two trees, each by its pipeline, its commit and when it was made."""
+    kept = (
+        read_kept_record(record)
+        for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR) for record in (root / tree).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")
+    )
+    return {(one.pipeline, one.commit, one.made_at) for one in kept if one.readable}
+
+
+def _told_apart(records, moved_in: set) -> tuple[list, list]:
+    """Records that go aside without being moved in, each as ``(pipeline's folder, its own folder)``, in two lists: those of a snapshot the store will not have, to be made again; and those that are a second record of a snapshot that is moved in.
+
+    :param moved_in: The snapshots that are moved in, each by its pipeline,
+        its commit and when it was made. A record that cannot be read is
+        of none of them.
+    """
+    again, second = [], []
+    for record in records:
+        kept = read_kept_record(record)
+        is_second = kept.readable and (kept.pipeline, kept.commit, kept.made_at) in moved_in
+        (second if is_second else again).append((record.parent.parent.parent.name, record.parent.parent.name))
+    return again, second
 
 
 def _size(path: Path) -> Optional[int]:
@@ -304,8 +384,7 @@ def plan(root) -> Plan:
     ``pipelines/`` that is there again is moved in: it goes aside whole,
     and its snapshots are named.
 
-    :raises MoveError: For a record that cannot be followed, and a folder
-        that is no snapshot yet.
+    :raises MoveError: For a record that cannot be followed.
     """
     root = Path(root)
     found = Plan()
@@ -313,15 +392,20 @@ def plan(root) -> Plan:
     moved = marker_of(root) == FOLDER_SCHEMA
     if old.is_dir() and not old.is_symlink():
         kept = _aside_name(root)
-        named: set = set()
+        named, said_at = set(), set()
+        moved_in = _moved_in(root) if moved else set()
         for folder in sorted(old.iterdir()):
             if folder.is_symlink() or not folder.is_dir() or folder.name == UNOWNED_DIR:
                 continue
             if moved:
-                for record in sorted(folder.glob(f"*/{OWN_DIR}/{RECORD_FILE}")):
-                    found.set_aside.append((folder.name, record.parent.parent.name))
+                # Named to be made again, but for a second record of a snapshot the store has
+                again, second = _told_apart(sorted(folder.glob(f"*/{OWN_DIR}/{RECORD_FILE}")), moved_in)
+                found.set_aside += again
+                found.second += second
             else:
-                named |= _plan_pipeline(root, folder, found)
+                moved_from, places = _plan_pipeline(root, folder, found)
+                named, said_at = named | moved_from, said_at | places
+        with_record = set(found.set_aside) | set(found.second)
         if not moved and (old / UNOWNED_DIR).is_dir():
             # On the first move only: nothing under a pipelines/ that is there again is moved in, an object neither
             found.steps.append(Step("movedir", f"{V2_LAYOUT.pipelines}/{UNOWNED_DIR}", V3_LAYOUT.unowned))
@@ -336,8 +420,13 @@ def plan(root) -> Plan:
                 continue
             if path.name in ours or path.relative_to(root).as_posix() in named:
                 continue
+            if path.relative_to(root).as_posix() in said_at:
+                # A record names it, and its bytes are moved in from another place a record names: a second copy
+                # that an older snapshot had, or half a file where the whole is elsewhere. Counted apart
+                found.doubled += 1
+                continue
             of = (parts[0], parts[1]) if len(parts) > 2 else None
-            if moved and of in found.set_aside:
+            if moved and of in with_record:
                 continue  # a file of a snapshot that goes aside with its record, and is named with it
             if moved and of and any((root / tree / of[0] / of[1] / OWN_DIR / RECORD_FILE).is_file() for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR)):
                 # It arrived for a snapshot that is moved already: said, with where it will be
@@ -368,28 +457,39 @@ def plan(root) -> Plan:
     return found
 
 
-def _plan_pipeline(root: Path, folder: Path, found: Plan) -> set:
-    """Plan one pipeline of a store of 0.5; the files its records name, by where 0.5 kept them."""
+def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set]:
+    """Plan one pipeline of a store of 0.5; the places under ``pipelines/`` that the move takes a file from, and every place its records say a file is."""
     name = folder.name
     old = f"{V2_LAYOUT.pipelines}/{name}"
     documents: dict[str, tuple] = {}
+    passed: list = []
     for child in sorted(folder.iterdir()):
-        if not child.is_dir() or child.is_symlink() or not is_snapshot_folder(child.name):
+        if not child.is_dir() or child.is_symlink():
             continue
-        if (child / OWN_DIR / RECORD_FILE).is_file():
-            documents[child.name] = _read(child / OWN_DIR / RECORD_FILE, name)
-        elif not (child / OWN_DIR / CLEARED_FILE).is_file() and any(p.is_file() for p in child.rglob("*")):
-            raise MoveError(
-                f"The folder {child} holds files and has no record: a snapshot whose record a sync has not brought yet, "
-                f"or one that was never finished. The store is not moved. If a sync is still bringing it, wait and run "
-                f"this again; if not, move that folder out of the store and run this again: a file in it that a record "
-                f"names is then missing, as it would have been, and the move says which."
-            )
+        record = child / OWN_DIR / RECORD_FILE
+        if not is_snapshot_folder(child.name):
+            # No snapshot's folder by its name (a sync's second copy of one, "<name> 2"): passed over. It goes aside
+            # with the old folder, and its record, where it has one, is said
+            passed += [record] if record.is_file() else []
+        elif record.is_file():
+            documents[child.name] = _read(record, name)
+        elif not (child / OWN_DIR / CLEARED_FILE).is_file():
+            # Files and no record, and not cleared: a snapshot whose record a sync has not brought, or one never
+            # finished, which a later record may keep files in. Taken as a cleared folder is, and counted and named.
+            # What a desktop leaves in every folder (desktop.ini, .DS_Store) is no file of it
+            files = sum(1 for path in child.rglob("*") if path.is_file() and not hashing.is_ignored(path.name))
+            if files:
+                found.no_record.append((name, child.name, files))
+    # A record that is passed over is to be made again only where no snapshot of its pipeline, commit and time is moved in
+    again, second = _told_apart(passed, {(d["root"], d["code"]["commit"], d["made_at"]) for d, _ in documents.values()})
+    found.set_aside += again
+    found.second += second
     if not documents:
-        return set()
+        return set(), set()
     found.pipelines += 1
     found.snapshots += len(documents)
-    owners = sorted((d["made_at"], s) for s, (d, _) in documents.items() if d.get("made_by", "snapshot") != "pin")
+    by_pins = {s for s, (d, _) in documents.items() if d.get("made_by", "snapshot") == "pin"}
+    owners = sorted((documents[s][0]["made_at"], s) for s in documents if s not in by_pins)
     # The one the others build on does not change once a move has begun: of those its owner made, the one that has
     # a folder under snapshots/ already, its new record written or not; and else the newest. A snapshot that arrives
     # while a move is cut short is an increment on it like any other, however new it is
@@ -400,20 +500,81 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> set:
     def target_of(snapshot: str, tree: str, path: str) -> str:
         return f"{tree}/{name}/{snapshot}/{path}"
 
-    if base is not None:
-        for part in _followed(*documents[base]):
+    def named_by(snapshot: str):
+        """Each file a snapshot's record names, as 0.5 wrote it: its hash and size, its path, and where the record says it is."""
+        for part in _followed(*documents[snapshot]):
             for entry in part["stored"]["files"]:
-                kept_in, kept_as = entry.get("kept_in", base), entry.get("kept_as", entry["path"])
-                # The base has a file only where it will be there at its size: an increment keeps its own good copy otherwise
-                if _will(root, f"{old}/{kept_in}/{kept_as}", target_of(base, V3_LAYOUT.pipelines, entry["path"])) == entry["size_bytes"]:
-                    base_has.setdefault((entry["content_hash"], entry["size_bytes"]), entry["path"])
-    # Where each file is wanted, by where it is now: the complete one first, then the increments, then what a pin made
-    wanted: dict[str, list] = {}
-    order = sorted(documents, key=lambda s: (s != base, documents[s][0].get("made_by", "snapshot") == "pin", s))
+                place = f"{old}/{entry.get('kept_in', snapshot)}/{entry.get('kept_as', entry['path'])}"
+                yield (entry["content_hash"], entry["size_bytes"]), entry["path"], place
+
+    # ChartBook 0.5 found a file by its hash anywhere in its pipeline's folder, so what it could read the moved store
+    # holds: a file that is not where its record says is taken from where another record of the pipeline has the same
+    # bytes. It is a lookup, made by every plan from the folders as they are, in three tables. `said` is every place
+    # a record says a file's bytes are, by their hash and size. `own` is the places of the files that a snapshot keeps
+    # in its own folder (all of the one the others build on, all of one a pin made, and of an increment those that
+    # one lacks). `held` is those of `own` whose file is in such a folder at its size, or will be: by the hash and
+    # size, each a key of `wanted` below, which the copy of another is made from
+    said: dict = {}
+    for snapshot in documents:
+        for key, _, place in named_by(snapshot):
+            said.setdefault(key, set()).add(place)
+    own: set = set()
+    held: dict = {}
+    looked: dict = {}
+
+    def look(at: str) -> tuple:
+        """Whether anything is at a place of the store, and its size where it is a file: asked of the disk once a plan."""
+        if at not in looked:
+            looked[at] = (True, _size(root / at)) if os.path.lexists(root / at) else (False, None)
+        return looked[at]
+
+    def keeps(snapshot: str, tree: str, key: tuple, path: str, place: str) -> None:
+        """Note a file that a snapshot keeps in its own folder. Another's copy is made from it where it will be at its size where it goes: it is there already (a move cut short put it there, from this place or from another), or nothing is and it is at its old place."""
+        own.add(place)
+        target = target_of(snapshot, tree, path)
+        if (look(target)[1] if look(target)[0] else look(place)[1]) == key[1]:
+            held.setdefault(key, set()).add(place)
+
+    def source_of(key: tuple, place: str, target: str) -> str:
+        """Where a file that a snapshot keeps in its own folder is taken from, as a key of `wanted`: where its record says.
+
+        Where it is not there at its size, and nothing is where it goes:
+        where a snapshot that keeps the same bytes in its own folder has
+        them (`held`), which costs nothing more than a copy; and else
+        where the record of an older snapshot says they are, and they are,
+        that snapshot naming them in the one it builds on. The first in
+        order of each, so the same for the same folders. And where no
+        record's place holds them, where its record says: the file is
+        missing, as it was.
+
+        A plan made half way through a move chooses again, and ends in the
+        same tree. A file that was taken is where it goes, and is looked
+        for no more; and once any snapshot has the bytes in its own folder
+        the rest are copied from it, so that no second place of an older
+        snapshot is taken, which an uninterrupted move leaves to go aside.
+        """
+        if look(target)[0] or look(place)[1] == key[1]:
+            return place
+        others = sorted(held.get(key, ())) or sorted(at for at in said[key] - own if look(at)[1] == key[1])
+        return others[0] if others else place
+
+    for snapshot in ([base] if base is not None else []) + sorted(by_pins):
+        for key, path, place in named_by(snapshot):
+            keeps(snapshot, V3_LAYOUT.pipelines, key, path, place)
+    if base is not None:
+        for key, path, place in named_by(base):
+            target = target_of(base, V3_LAYOUT.pipelines, path)
+            # The base has a file only where it will be there at its size, from where its record says or from where
+            # another's does: an increment keeps its own good copy otherwise
+            if _will(root, place, target) == key[1] or source_of(key, place, target) != place:
+                base_has.setdefault(key, path)
+    # Each file a snapshot keeps in its own folder: the complete one's first, then the increments', then those of what a pin made
+    wants: list = []
+    order = sorted(documents, key=lambda s: (s != base, s in by_pins, s))
     for snapshot in order:
         document, taken = documents[snapshot]
         document = json.loads(json.dumps(document))
-        by_pin = document.get("made_by", "snapshot") == "pin"
+        by_pin = snapshot in by_pins
         increment = not by_pin and base is not None and snapshot != base
         tree = INCREMENTS_DIR if increment else V3_LAYOUT.pipelines
         for part in _followed(document, taken):
@@ -427,21 +588,37 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> set:
                         entry["kept_as"] = base_has[key]
                     continue
                 entry["kept_in"] = snapshot
-                wanted.setdefault(f"{old}/{kept_in}/{kept_as}", []).append((target_of(snapshot, tree, entry["path"]), *key, snapshot))
+                if increment:
+                    keeps(snapshot, tree, key, entry["path"], f"{old}/{kept_in}/{kept_as}")
+                wants.append((f"{old}/{kept_in}/{kept_as}", target_of(snapshot, tree, entry["path"]), *key, snapshot))
         document = {key: value for key, value in document.items() if key != "stored"}
-        own = f"{tree}/{name}/{snapshot}/{OWN_DIR}"
+        own_folder = f"{tree}/{name}/{snapshot}/{OWN_DIR}"
         if increment:
             document["stored"] = {"builds_on": base}
             found.increments += 1
         else:
             found.complete += 1
             found.by_pins += 1 if by_pin else 0
-        documents[snapshot] = (tree, own, document, increment)
+        documents[snapshot] = (tree, own_folder, document, increment)
+    # Where each file is wanted, by where it is taken from: once every snapshot's own files are known
+    wanted: dict[str, list] = {}
+    elsewhere: set = set()
+    for place, target, content_hash, size, snapshot in wants:
+        source = source_of((content_hash, size), place, target)
+        if source != place:
+            elsewhere.add((snapshot, target.split("/", 3)[3]))
+        wanted.setdefault(source, []).append((target, content_hash, size, snapshot))
+    found.elsewhere += len(elsewhere)
+    found.elsewhere_first = sorted(found.elsewhere_first + sorted(elsewhere)[:3])[:3]
     for source, targets in sorted(wanted.items()):
         if not os.path.lexists(root / source):
             # Renamed already, and by a plan that may have had another of these places first (a record arrived since,
             # or the one the others build on had no folder yet): the copies are made from where the file is
             targets.sort(key=lambda target: not os.path.lexists(root / target[0]))
+        elif _size(root / source) != targets[0][2]:
+            # At the old place, and not the file (half of it, as a sync left it), while one of these places may have
+            # the file at its size (from another record's place, or from a move elsewhere): the copies are made from that
+            targets.sort(key=lambda target: _size(root / target[0]) != target[2])
         # What the rename leaves at the first place, which the copies are made from: the file, by its size, or nothing
         first = _will(root, source, targets[0][0])
         in_place = os.path.lexists(root / source) and os.path.lexists(root / targets[0][0])  # said on its own, with both sizes
@@ -462,18 +639,18 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> set:
                 found.renamed_bytes += 0 if seen else first
             seen.append(target)
     for snapshot in sorted(documents):
-        tree, own, document, increment = documents[snapshot]
+        tree, own_folder, document, increment = documents[snapshot]
         if increment:
             found.steps.append(Step(
-                "write", target=f"{own}/{INCREMENT_FILE}",
+                "write", target=f"{own_folder}/{INCREMENT_FILE}",
                 text=f"The rest of this snapshot's files are in {V3_LAYOUT.pipelines}/{name}/{base}\n",
             ))
-        found.steps.append(Step("write", target=f"{own}/{RECORD_FILE}", text=json.dumps(document, indent=2, ensure_ascii=False) + "\n"))
+        found.steps.append(Step("write", target=f"{own_folder}/{RECORD_FILE}", text=json.dumps(document, indent=2, ensure_ascii=False) + "\n"))
     if any(not increment for _, _, _, increment in documents.values()):
         found.steps.append(Step("note", target=f"{V3_LAYOUT.pipelines}/{name}/{README_FILE}", text=V3_LAYOUT.readme))
     if any(increment for _, _, _, increment in documents.values()):
         found.steps.append(Step("note", target=f"{INCREMENTS_DIR}/{name}/{README_FILE}", text=INCREMENTS_README))
-    return set(wanted)
+    return set(wanted), set().union(*said.values())
 
 
 def _text(path: Path) -> Optional[str]:
@@ -608,6 +785,11 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
         for key in _LISTS:
             so_far[key] = list(carried.get(key, []))
             _add(so_far[key], getattr(found, key))
+        # What only the first plan of a move sees whole, a later one finding it part done: the first files taken
+        # from another record's place, and each folder with no record with the files it held then
+        so_far["elsewhere_first"] = list(carried.get("elsewhere_first") or [list(pair) for pair in found.elsewhere_first])
+        so_far["no_record"] = list(carried.get("no_record", []))
+        _add(so_far["no_record"], [item for item in found.no_record if list(item[:2]) not in [known[:2] for known in so_far["no_record"]]])
         so_far["kept"] = carried.get("kept", "")
         # How many snapshots this move moves in: where it moved any, its last lines say what is missing
         so_far["moved_in"] = max(carried.get("moved_in", 0), found.snapshots)
@@ -627,8 +809,14 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
                 _add(so_far["in_place"], taken)
                 _add(so_far["late"], [pair[0] for pair in taken])
                 known = {(p.parent.parent.parent.name, p.parent.parent.name) for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR) for p in (root / tree).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")}
-                arrived = ((p.parent.parent.parent.name, p.parent.parent.name) for p in sorted((root / V2_LAYOUT.pipelines).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")))
-                _add(so_far["set_aside"], [pair for pair in arrived if pair not in known])
+                arrived = [
+                    p for p in sorted((root / V2_LAYOUT.pipelines).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}"))
+                    if (p.parent.parent.parent.name, p.parent.parent.name) not in known
+                ]
+                # To be made again, but for a second record of a snapshot that was moved in
+                again, second = _told_apart(arrived, _moved_in(root))
+                _add(so_far["set_aside"], again)
+                _add(so_far["second"], second)
             said = _do(root, step)
             if said == "as it is":
                 _add(so_far["copied_as_is"], [step.target])
@@ -654,6 +842,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     for key in _COUNTS:
         setattr(done, key, so_far.get(key, 0))
     done.set_aside, done.in_place = ([tuple(pair) for pair in so_far.get(key, [])] for key in ("set_aside", "in_place"))
+    done.second, done.no_record, done.elsewhere_first = ([tuple(item) for item in so_far.get(key, [])] for key in ("second", "no_record", "elsewhere_first"))
     done.late, done.copied_as_is, done.kept = list(so_far.get("late", [])), list(so_far.get("copied_as_is", [])), so_far.get("kept", "")
     taken = {root / pair[1] for pair in done.in_place}  # each said on its own, with both sizes
     # And what the store holds now, from its folders: its snapshots, and after a move that moved any in, the files

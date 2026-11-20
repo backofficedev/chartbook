@@ -4476,6 +4476,11 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
             f"  What is left of pipelines/ {'goes' if verb == 'become' else 'went'} aside whole, under {aside}: its old records and "
             f"notes, and {found.aside} file(s) that no record names. Nothing is removed.",
         ]
+        if found.doubled:
+            lines.append(
+                f"  {found.doubled} file(s) that a record names {'go' if verb == 'become' else 'went'} aside with the old folder "
+                f"too: each is a second copy, or part of one, of bytes that {are} moved in from another place a record names."
+            )
         if found.missing:
             first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.missing[:3])
             lines.append(
@@ -4488,11 +4493,38 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                     "with the rest when `chartbook store migrate` is run again."
                 )
             )
+        if found.elsewhere:
+            first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.elsewhere_first[:3])
+            lines.append(
+                f"  {found.elsewhere} file(s) {are} not where their record says, and {are} taken from where another "
+                f"snapshot of their pipeline keeps the same bytes: {first}{' and more' if found.elsewhere > 3 else ''}."
+            )
+        if found.no_record:
+            named = ", ".join(f"{pipeline}/{folder} ({files} file(s))" for pipeline, folder, files in found.no_record[:3])
+            lines.append(
+                f"  {len(found.no_record)} folder(s) {'hold' if verb == 'become' else 'held'} files and "
+                f"{'have' if verb == 'become' else 'had'} no record: {named}{' and more' if len(found.no_record) > 3 else ''}. "
+                f"The files in such a folder that a record names {are} moved with that record, and the rest "
+                f"{'goes' if verb == 'become' else 'went'} aside. "
+                + (
+                    "If a sync may still be bringing a folder's record, wait for it and run this again: a record that "
+                    "arrives after the move goes aside, and that snapshot has to be made again."
+                    if verb == "become"
+                    else "A record that a sync brings for one now goes aside when `chartbook store migrate` is run again, "
+                    "and that snapshot has to be made again."
+                )
+            )
         if found.set_aside:
             named = ", ".join(f"{pipeline}/{snapshot}" for pipeline, snapshot in found.set_aside[:3])
             lines.append(
                 f"  {len(found.set_aside)} snapshot(s) {'go' if verb == 'become' else 'went'} aside without being moved in: {named}"
                 f"{' and more' if len(found.set_aside) > 3 else ''}. Run that pipeline again with this ChartBook."
+            )
+        if found.second:
+            named = ", ".join(f"{pipeline}/{folder}" for pipeline, folder in found.second[:3])
+            lines.append(
+                f"  {len(found.second)} second record(s) of a snapshot that {'is' if verb == 'become' else 'was'} moved in "
+                f"{'go' if verb == 'become' else 'went'} aside: {named}{' and more' if len(found.second) > 3 else ''}."
             )
         arrived = [path for path in found.late if path not in {pair[0] for pair in found.in_place}]
         if arrived:
