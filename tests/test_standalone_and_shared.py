@@ -87,7 +87,7 @@ class TestStoreLs:
         assert len(lines) == 2
         for taken, line in zip((first, second), lines):
             assert Path(taken.path).parent.parent.name in line and "  complete " in line and "other folders" not in line
-        assert "news (2 snapshot(s))" in result.output and "never by hand" in result.output
+        assert "news (2 snapshot(s))" in result.output and "an increment's holds what the one it builds on does not." in result.output
         assert "shared" not in result.output and "standalone" not in result.output
         # One pipeline, and none
         one = CliRunner().invoke(main, ["store", "ls", "news"]).output
@@ -110,7 +110,7 @@ class TestStoreLs:
         # The first year's part and the unchanged documents are kept in the first snapshot's folder
         assert Path(second.path).parent.parent.name in lines[1] and "  increment " in lines[1]
         assert re.search(r"[1-9]\d* file\(s\) in other folders", lines[1]), lines[1]
-        assert "news (2 snapshot(s))" in result.output and "never by hand" in result.output
+        assert "news (2 snapshot(s))" in result.output and "an increment's holds what the one it builds on does not." in result.output
         assert "standalone" not in result.output and "shared" not in result.output
         # One pipeline, and none
         one = CliRunner().invoke(main, ["store", "ls", "news"]).output

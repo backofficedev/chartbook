@@ -4072,17 +4072,9 @@ def store_ls(pipeline, store_name):
         if unreachable and unreachable == len(stores):
             raise SystemExit(1)
         return
-    if said_complete:
-        click.echo(
-            "A complete snapshot's folder holds every file of its version, and can be read or copied as it is. "
-            "Remove snapshots with `chartbook store gc`, never by hand."
-        )
-    if said_shared:
-        click.echo(
-            "An increment's folder holds the files that the complete snapshot it builds on does not have; the rest are "
-            "in that one's folder (in a store that ChartBook 0.5 laid out, in other snapshots' folders), which "
-            "`chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand."
-        )
+    if said_complete or said_shared:
+        # One line: the store's README says how snapshots are removed
+        click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
 
 
 def _stores_to_list(store_name):

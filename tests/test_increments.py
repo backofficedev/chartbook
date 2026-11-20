@@ -248,11 +248,7 @@ class TestStoreLs:
             (line,) = [line for line in lines if line.split()[:1] == [folder.name]]
             assert f"  increment  {_format_bytes(own)} here, " in line and line.endswith(f" file(s) in {complete.name}"), line
         assert lines[4:] == [
-            "A complete snapshot's folder holds every file of its version, and can be read or copied as it is. "
-            "Remove snapshots with `chartbook store gc`, never by hand.",
-            "An increment's folder holds the files that the complete snapshot it builds on does not have; the rest are "
-            "in that one's folder (in a store that ChartBook 0.5 laid out, in other snapshots' folders), which "
-            "`chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.",
+            "A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.",
         ]
 
 
@@ -490,3 +486,111 @@ class TestTheRestOfWhatReadsTheStore:
         fresh = FolderStore(store.root)
         assert fresh.holes_of(report.snapshot.path) == [] and fresh.verify_snapshot(report.snapshot.path) == []
         assert not fresh.builds_on(report.snapshot.path) and (made / "_data" / "treasury.parquet").is_file()
+
+
+class TestGcOnWhatAnIncrementKeeps:
+    def test_rule_b_through_the_command_with_an_increment_holed(self, unpinned, store):
+        """An increment that stays and lacks a file of its own holds its pipeline back, with its folder and the file named."""
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        middle, newest = increments
+        _lose(newest / "_output" / "curve.html")
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0 and middle.is_dir(), result.output
+        assert (
+            f"Nothing of acme/rates is removed: its snapshot {newest.name} lacks _output/curve.html, and stays because it is "
+            f"the newest of its pipeline."
+        ) in result.output.splitlines(), result.output
+
+    def test_the_check_by_hash_reads_a_file_two_increments_name_once_where_it_is(self, three, work, store, monkeypatch):
+        """Something that goes holds a pinned table; the increments that stay keep it in the one they build on: read there, once."""
+        taken, readers = three
+        monkeypatch.setattr(FolderStore, "age_of", lambda self, content_hash, now=None: 2.0 * lock.RECENT_SECONDS)
+        # A fourth snapshot of the same commit that nothing pins and is old: it goes, and holds the table the readers pin
+        _chart(work / "rates", "four")
+        snapshot.make(work / "rates", store=FolderStore(store.root), made_at="2025-11-01T09:15:00.000000Z")
+        complete, increments = with_increments(store.root, "newest")["acme+rates"]
+        opened: list = []
+        real = store_module.hashing.HashCache.file_hex
+
+        def counting(self, path, *args, **kwargs):
+            opened.append(Path(path))
+            return real(self, path, *args, **kwargs)
+
+        monkeypatch.setattr(store_module.hashing.HashCache, "file_hex", counting)
+        plan = lock.plan_gc(FolderStore(store.root), hashed=True)
+        assert len(plan.snapshots_delete) == 1 and plan.not_intact == set()
+        table = complete / "_data" / "treasury.parquet"
+        assert opened.count(table) == 1 and all(path.is_relative_to(store.root) for path in opened)
+        # And with other bytes there, at its size: every snapshot that keeps it there is held back with the pipeline
+        opened.clear()
+        os.chmod(table, stat.S_IWRITE | stat.S_IREAD)
+        table.write_bytes(bytes(table.stat().st_size))
+        store_module._found_whole.clear()
+        plan = lock.plan_gc(FolderStore(store.root), hashed=True)
+        assert plan.not_intact == {"acme/rates"} and plan.snapshots_delete == [] and opened.count(table) == 1
+
+
+class TestARunThatWritesToTwoStores:
+    def test_an_increment_with_a_hole_in_the_second_store_is_not_stood_on(self, unpinned, work, store):
+        """The two-store rule asks an increment's holes like any other's: a new complete snapshot is made, whole in both."""
+        import shutil
+
+        from chartbook.multi_store import NamedStore, Stores
+
+        there = work / "there"
+        shutil.copytree(store.root, there)
+        complete, increments = with_increments(there, "oldest")["acme+rates"]
+        newest = increments[-1]
+        _lose(newest / "_output" / "curve.html")
+        both = Stores([
+            NamedStore("here", str(store.root), FolderStore(store.root)),
+            NamedStore("there", str(there), FolderStore(there)),
+        ])
+        report = snapshot.make(work / "rates", store=both, store_names=["here", "there"], made_at="2026-03-01T09:15:00.000000Z")
+        assert report.made and report.not_whole[1] == ["_output/curve.html"] and str(report.not_whole[2]) == str(FolderStore(there))
+        (new,) = [record for record in FolderStore(there).records() if record.made_at == "2026-03-01T09:15:00.000000Z"]
+        assert not new.increment and FolderStore(there).verify_snapshot(new.path) == []
+
+
+class TestAPathUnderIncrementsThatIsTooLong:
+    def test_the_writer_checks_it_before_anything_is_written(self, work, monkeypatch):
+        """A path is one character longer under increments/ than under snapshots/ (two than under pipelines/): what fits there by one does not fit here."""
+        commit, place = "a" * 40, "d/" + "f" * 40 + ".bin"
+        target = FolderStore(work / "o")
+        source = work / "file.bin"
+        source.write_bytes(b"x")
+        name = store_module.snapshot_folder_name(OLD, commit)
+        under_snapshots = target.root / "snapshots" / "acme+rates" / name / place
+        under_increments = target.root / "increments" / "acme+rates" / name / place
+        assert len(str(under_increments)) == len(str(under_snapshots)) + 1
+        # As on Windows without long paths, with the limit at that path's own length
+        monkeypatch.setattr(store_module, "_ON_WINDOWS", True)
+        monkeypatch.setattr(store_module, "long_paths_enabled", lambda: False)
+        monkeypatch.setattr(store_module, "WINDOWS_PATH_LIMIT", len(str(under_increments)))
+        monkeypatch.setattr(store_module, "WINDOWS_FOLDER_LIMIT", len(str(under_increments)) + 100)
+        complete = target.begin("acme/rates", commit, OLD)
+        complete.put(source, place=place)  # fits, by one character
+        complete.discard()
+        increment = target.begin("acme/rates", commit, OLD, builds_on=name)
+        with pytest.raises(store_module.PathTooLongError) as refused:
+            increment.put(source, place=place)
+        assert "characters long, and Windows refuses a path of" in str(refused.value)
+        increment.discard()
+        assert not any(path.is_file() for path in (target.root / "increments").rglob("*")) if (target.root / "increments").exists() else True
+
+
+class TestRestore:
+    def test_a_file_and_a_dataset_in_parts_are_put_back_from_an_increments_two_folders(self, kept, rates, store, monkeypatch):
+        """`chartbook restore` takes the newest snapshot that holds the asset, whichever kind it is, and reads each file where it is kept."""
+        import shutil
+
+        complete, increments, taken, _ = kept
+        table = (rates / "_data" / "treasury.parquet").read_bytes()
+        parts = {path.name: path.read_bytes() for path in (rates / "_data" / "parts").iterdir()}
+        (rates / "_data" / "treasury.parquet").unlink()
+        shutil.rmtree(rates / "_data" / "parts")
+        monkeypatch.chdir(rates)
+        result = CliRunner().invoke(main, ["restore", "treasury", "parts"])
+        assert result.exit_code == 0, result.output
+        assert (rates / "_data" / "treasury.parquet").read_bytes() == table
+        assert {path.name: path.read_bytes() for path in (rates / "_data" / "parts").iterdir()} == parts
