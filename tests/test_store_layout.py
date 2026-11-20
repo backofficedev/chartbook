@@ -2,10 +2,9 @@
 
 ``docs_src/design/snapshots-and-increments.md``: "The layout", "What the
 store promises" and "Moving a store to this layout". This is the first half
-of step 2 of its order of work. Increments are not made yet, so every
-snapshot is complete, and a store of 0.5 is not moved yet: it is read, its
-notes of lockfiles are written, and nothing else is written to it or
-removed from it.
+of step 2 of its order of work: every snapshot is written complete, and a
+store of 0.5 is not moved yet. It is read, its notes of lockfiles are
+written, and nothing else is written to it or removed from it.
 
 The pipeline is the one of the design's example: ``acme/rates``, a table, a
 chart and a README. A store of 0.5 is laid out by hand
@@ -136,7 +135,7 @@ class TestTheTreeOfANewStore:
             f"{made}/_chartbook/index.json",
             f"{made}/_chartbook/snapshot.json",
         ])
-        # Two names at the top for a person, the marker, and one folder of ChartBook's own: no increments/ yet
+        # Two names at the top for a person, the marker, and one folder of ChartBook's own: nothing else, and no increments/
         assert sorted(p.name for p in store.root.iterdir()) == ["README.txt", "_chartbook", "snapshots", "store.json"]
         assert _folders(store.root / "_chartbook") == ["origins", "tmp"]
         assert list((store.root / "_chartbook" / "tmp").iterdir()) == []
@@ -656,6 +655,28 @@ class TestAStoreOf05IsNotWritten:
         assert result.output.splitlines() == [f"Error: {refusal(old)}"]
         assert _tree(old.root) == before
 
+    def test_a_snapshot_a_catalog_sends_to_it_and_to_another_store_is_written_to_neither(self, of_0_5, rates, work, monkeypatch):
+        """Found out before the first store is written: no snapshot is left in one store and missing from the other."""
+        old, second, cleared = of_0_5
+        monkeypatch.delenv(config.STORE_ENV_VAR, raising=False)
+        new = work / "new"
+        new.mkdir()
+        home = config.get_global_config_dir()
+        home.mkdir(parents=True, exist_ok=True)
+        (home / "catalog.toml").write_text(
+            tomli_w.dumps({"project": {"name": "Catalog"}, "stores": {
+                "new": {"url": str(new), "pipelines": ["acme/rates"]},
+                "old": {"url": str(old.root), "pipelines": ["acme/rates"]},
+            }}),
+            encoding="utf-8", newline="\n",
+        )
+        _chart(rates, "the curve on the 22nd")
+        before = _tree(old.root)
+        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates)])
+        assert result.exit_code == 1
+        assert result.output.splitlines() == [f"Error: {refusal(old)}"]
+        assert _tree(old.root) == before and list(new.iterdir()) == []
+
     def test_nothing_moves_out_of_it_or_into_it(self, of_0_5, rates, work, monkeypatch):
         from chartbook.multi_store import Stores
         from chartbook.transfer import move
@@ -767,6 +788,30 @@ class TestARunWhoseStoreIsOf05:
         assert result.exit_code == 1
         assert result.output.splitlines() == [f"Error: {refusal(store)}"]
         assert _tree(store.root) == ["store.json"]
+
+
+class TestStoreMigrateStillMovesAStoreOf02Alone:
+    """The move of a store of 0.5 to this layout is the next step: until it is there, the command says what it finds and moves nothing."""
+
+    def test_a_store_of_this_layout_has_nothing_to_move(self, rates, store):
+        snapshot.make(rates, store=store, made_at=FIRST)
+        before = _tree(store.root)
+        for arguments in (["store", "migrate"], ["store", "migrate", "--dry-run"], ["store", "migrate", "--yes"]):
+            result = CliRunner().invoke(main, arguments)
+            assert result.exit_code == 0, result.output
+            assert result.output.splitlines() == [f"The store at {store} has the layout of this version already: nothing to move."]
+        assert _tree(store.root) == before and FolderStore(store.root).verify() == []
+
+    def test_a_store_of_0_5_is_left_as_it_is(self, of_0_5):
+        old, second, cleared = of_0_5
+        before = _tree(old.root)
+        for arguments in (["store", "migrate"], ["store", "migrate", "--dry-run"], ["store", "migrate", "--yes"]):
+            result = CliRunner().invoke(main, arguments)
+            assert result.exit_code == 0, result.output
+            assert result.output.splitlines() == [
+                f"The store at {old} has the layout of ChartBook 0.5: there is nothing to move from 0.2."
+            ]
+        assert _tree(old.root) == before
 
 
 class TestAFolderWithPipelinesAndNoMarker:

@@ -2540,6 +2540,11 @@ def make(
                 from chartbook.catalog_config import route
                 route(pipeline, store_names, stores.catalog)
         targets = stores.for_writing(pipeline, store_names)
+        for target in targets:
+            # A store laid out as ChartBook 0.5 laid one out takes no snapshot: said before the first is written
+            check = getattr(target, "check_writable", None)
+            if check is not None:
+                check()
         # Validate every target before writing the first one. A partial fan-out
         # remains recoverable: repeating the command skips existing snapshots.
         # The lineage is checked in every store, where the pins were read

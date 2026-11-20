@@ -4449,7 +4449,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     is read here, or with --forget-missing once the lockfile is gone.
 
     What would be removed is listed, and nothing is removed until you say
-    yes. An object stored in the last hour is never removed: a pin puts
+    yes. An object stored in the last hour is never removed, but what only
+    a removed snapshot holds, which goes with its folder: a pin puts
     files in the store before it writes the lockfile that names them. In a
     store users share, what another user put there may be theirs alone to
     remove: gc removes what it can, says what it removed, lists each thing
