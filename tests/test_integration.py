@@ -543,7 +543,13 @@ class TestExampleProjects:
             assert pinning in said and itself in said, said
             assert said.index(pinning) < said.index(itself)
             assert "backofficedev/yield_curve: build" not in said
-            assert said.rstrip().endswith("Ran build in 1 pipeline(s).")
+            # It ends as every run does: built, and what makes a snapshot of it. It makes none
+            last = said.rstrip().splitlines()[-3:]
+            assert last[0].endswith("Ran build in 1 pipeline(s).")
+            assert last[1:] == [
+                "backofficedev/rate_forecast: built.",
+                "  For other pipelines and the catalog: commit, then `chartbook snapshot`.",
+            ]
 
             assert (yield_curve_path / "docs" / "index.html").exists()
             assert lockfile.exists()
