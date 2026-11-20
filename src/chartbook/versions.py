@@ -271,12 +271,8 @@ def behind(catalog: Path) -> Behind:
             # Several repositories claim it: its build stops and says so, until the catalog is told which
             refused = refused or str(error).strip().splitlines()[0].rstrip(".")
             continue
-        for taken in chosen:
-            try:
-                version_name(taken.commit, taken.made_at)
-            except ValueError:
-                continue  # a record no build makes a page of
-            now.add((pipeline, taken.commit, taken.made_at))
+        # Each has a commit and a time a page can be named by: a record that has not is not read at all
+        now.update((pipeline, taken.commit, taken.made_at) for taken in chosen)
     shown = set()
     if built:
         try:
