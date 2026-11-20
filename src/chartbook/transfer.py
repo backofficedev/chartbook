@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from chartbook import snapshot
-from chartbook.store import BuiltOnGoneError, StoreError, read_kept_record
+from chartbook.store import BuiltOnGoneError, PathTooLongError, StoreError
 
 
 class NotWholeThere(StoreError):
@@ -103,11 +103,11 @@ def copy_snapshot(taken, source, target, complete=False, whole=None, decides=Fal
     # Otherwise it keeps its form: an increment in the source is one in the target, on the same complete snapshot,
     # where the target has that one; where it has not, it is written complete, every file being at hand
     on = None if complete or by_rule else _builds_on_there(taken, source, target, whole)
-    # An increment that keeps its form keeps its count: the next snapshot in the target counts on from it
-    as_it_was = {"builds_on": on, "increments_bytes": read_kept_record(Path(taken.path)).increments_bytes or None} if on is not None else {}
+    # It carries no count of what the increments on that snapshot have added up to: that is of what snapshots
+    # made in the target copied, and the next one made there counts from what the target's own increments carry
     pending = target.begin(
         taken.pipeline, taken.commit, taken.made_at, made_by=document.get("made_by", "snapshot"),
-        **as_it_was, **({"undecided": True} if by_rule else {}),
+        **({"builds_on": on} if on is not None else {}), **({"undecided": True} if by_rule else {}),
     )
     try:
         parts = list(document.get("records", [])) + [document.get("documents"), document.get("index")]
@@ -145,6 +145,12 @@ def copy_snapshot(taken, source, target, complete=False, whole=None, decides=Fal
         if getattr(pending, "builds_on", None) is None:
             whole.add(str(path))
         return path
+    except PathTooLongError:
+        pending.discard()
+        if on is None:
+            raise  # it does not fit complete either
+        # A file of its own does not fit under increments/, one letter longer than snapshots/: written complete
+        return copy_snapshot(taken, source, target, complete=True, whole=whole)
     except BaseException:
         pending.discard()
         raise

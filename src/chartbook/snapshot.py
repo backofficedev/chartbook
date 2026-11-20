@@ -2640,7 +2640,11 @@ def _to_build_on(store: Store, taken: Snapshot, now: Optional[datetime] = None) 
     record, whatever the dates of the two (a machine whose clock is ahead
     or behind makes increments too, and one that had not been brought
     another's writes one that counts from less): 0 where there is none,
-    or where none carries one (those ``chartbook store migrate`` wrote).
+    or where none carries one. The count is of what snapshots made in this
+    store copied: an increment that ``chartbook store migrate`` wrote, or
+    that was copied in from another store (``store move``, ``store
+    import``), carries none, and the next snapshot counts from what this
+    store's own increments carry.
     """
     records = [
         record for record in store.records()
@@ -2958,6 +2962,31 @@ def _kept_as_an_increment(taken: Snapshot, store: Store, also: tuple = ()) -> bo
     return False
 
 
+def _complete_and_reads_right(taken: Snapshot, store: Store) -> bool:
+    """Whether the snapshot a store has is one ``--complete`` may name in place of making one: a complete snapshot of what its record says.
+
+    Complete by what its record is
+    (:attr:`chartbook.store.KeptRecord.complete`): not an increment, and
+    not one that keeps files in another snapshot's folder, as one that
+    ChartBook 0.5 laid out does. And each of its own files, read and
+    hashed, is what its record says
+    (:meth:`chartbook.store.Store.verify_snapshot`, as ``store move`` asks
+    before it takes a snapshot for there). So every byte of it is read:
+    only where a complete one was asked for, since the folder is then
+    named for a person to look at, to copy or to hand on.
+    """
+    from chartbook.store import FolderStore, read_kept_record
+
+    if taken.path is None:
+        return False
+    try:
+        if isinstance(store, FolderStore) and not read_kept_record(Path(taken.path)).complete:
+            return False
+        return not store.verify_snapshot(Path(taken.path), taken.hashes())
+    except (StoreError, OSError):
+        return False
+
+
 def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
           built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, staging: Optional[Path] = None,
           also: tuple = (), complete: bool = False) -> SnapshotReport:
@@ -3141,10 +3170,15 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             if part and (not store.has(part["content_hash"], same.pipeline) or store.incomplete(part["content_hash"], part.get("size_bytes"), pipeline=same.pipeline))
         ]
         # A file the store lacked (`placed`) is kept only if this snapshot is written
-        # Asked for complete, where the one it would stand on is kept as an increment (here, or in another
-        # store this run sends it to): a new, complete one is made, and that one is left as it is
-        wanted_complete = complete and _kept_as_an_increment(same, store, also)
-        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed and not wanted_complete:
+        # Asked for complete, the one there is stood on only where it is a complete snapshot of what its record
+        # says: complete by its record, each of its own files read and hashed. Where it is kept as an increment
+        # (here, or in another store this run sends it to), keeps files in another folder, or does not read
+        # right, a new, complete one is made, and that one is left as it is. Not asked, nothing is read
+        tells = says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed
+        wanted_complete = tells and complete and (
+            _kept_as_an_increment(same, store, also) or not _complete_and_reads_right(same, store)
+        )
+        if tells and not wanted_complete:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(

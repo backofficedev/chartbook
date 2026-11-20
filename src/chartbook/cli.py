@@ -3394,7 +3394,10 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
     this one in less room, as an increment: its folder there holds only
     the files that differ. To whatever reads or pins it, it is a snapshot
     like any other. --complete keeps it complete, a folder that stands by
-    itself and can be copied as it is, and says where that folder is.
+    itself and can be copied as it is, and says where that folder is. A
+    complete one of the same files that is there already is named only
+    once each of its files has been read and found to be what its record
+    says; otherwise a new one is made.
 
     \b
     Examples:
@@ -4884,7 +4887,8 @@ def store_verify():
     is missing there or has other bytes is said with the snapshot's name,
     though another snapshot has the same bytes. A file that snapshots kept
     as increments keep in the complete snapshot they build on is said
-    once, with that snapshot's name and how many of them keep it there.
+    once, under the name it has there, with that snapshot's name and how
+    many of them keep it there.
 
     Examples:
         chartbook store verify
@@ -5032,9 +5036,12 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     While a snapshot that stays lacks a file of its own (a sync that has
     not brought it, a file removed by hand), no snapshot of its pipeline is
     removed, since a read of the one with the hole is handed another's
-    copy. gc names the pipeline, the snapshot whose folder the file is
-    missing from, as `chartbook store verify` does, and the file. Wait for
-    the sync, or see `chartbook store verify`, which lists everything missing.
+    copy. gc names the pipeline, the snapshot and the file: the snapshot
+    whose folder the file is missing from, as `chartbook store verify`
+    names it, or, where that snapshot has itself gone from the store (one
+    that increments build on), the newest of those that kept the file
+    there, which verify names by the folder that has gone. Wait for the
+    sync, or see `chartbook store verify`, which lists everything missing.
     gc says why that snapshot stays, and so when one that has lost a file
     for good goes: once a newer one is made, once no lockfile pins it, or
     with the option that lets go of what keeps it.

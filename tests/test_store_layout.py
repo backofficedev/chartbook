@@ -348,7 +348,7 @@ class TestEverySnapshotIsComplete:
         mine.chmod(0o644)
         mine.unlink()
         (source / "_data" / "rates.csv").unlink()
-        with pytest.raises(StoreError, match="went from the store.*Make the snapshot again"):
+        with pytest.raises(StoreError, match="went from the store.*Run the command again"):
             third.write(_record(third, "c" * 40, rates=put))
         third.discard()
         assert sorted(_folders(store.pipeline_path("acme/rates"))) == sorted([first.name, second.name])

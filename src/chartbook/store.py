@@ -2152,14 +2152,16 @@ class FolderStore(Store):
 
     def begin(
         self, pipeline: str, commit: str, made_at: str, base: Optional[Union[str, Path]] = None, made_by: str = "snapshot",
-        builds_on: Optional[str] = None, undecided: bool = False, increments_bytes: Optional[int] = None,
+        builds_on: Optional[str] = None, undecided: bool = False,
     ) -> "PendingSnapshot":
         """Begin a snapshot (:meth:`Store.begin`); with *builds_on*, the folder name of a complete snapshot of the pipeline here, one kept as an increment on it.
 
         A copy of a pipeline from another store passes *builds_on*, so that
         it keeps its form (``store move``, ``store import``, ``store
-        export``), and with it *increments_bytes*, the count the record it
-        copies carries, so that the next snapshot here counts on from it.
+        export``). A copy carries no count of what the increments on that
+        snapshot have added up to: the count is of what snapshots made in
+        this store copied, and the next one made here counts from what this
+        store's own increments carry (:func:`chartbook.snapshot.to_be_kept`).
 
         :param undecided: Begin one whose kind is said once every file of
             it has been put, and before it is written: an increment
@@ -2173,7 +2175,7 @@ class FolderStore(Store):
         self._check_layout(create=True)
         self.check_writable()
         self._forget()
-        return _FolderPending(self, pipeline, commit, made_at, base, made_by, builds_on, undecided, increments_bytes)
+        return _FolderPending(self, pipeline, commit, made_at, base, made_by, builds_on, undecided)
 
     def remove_snapshot(self, path: Path) -> bool:
         """Clear one snapshot: its record goes, and ``_chartbook/CLEARED.txt`` says so until its folder has gone.
@@ -3434,7 +3436,7 @@ class FolderStore(Store):
         read: dict = {}
         said: dict = {}
         held: set = set()
-        #: For each file that is wrong, the snapshots kept as increments that keep it in the complete one they build on
+        #: For each place whose file is wrong, the snapshots kept as increments that keep it in the complete one they build on
         kept_there: dict = {}
         for record in self.records():
             if not record.readable:
@@ -3447,29 +3449,36 @@ class FolderStore(Store):
                 ))
             for asset in record.assets:
                 held.add(asset.content_hash)
-                for wrong in what_is_wrong_in(asset, read):
+                named = {file.location: file.path for file in asset.files}  # what this record calls each of its files
+                for place, message in what_is_wrong_in(asset, read):
                     # The snapshot's folder the file is in, or is missing from: the record's own; for an
                     # increment, perhaps the one it builds on; in a store of 0.5, perhaps an earlier snapshot's
                     where = record.folder
                     for tree in _trees_beside(record.folder.parent.parent):
                         of_pipeline = tree / record.folder.parent.name
                         try:
-                            where = of_pipeline / wrong[0].relative_to(of_pipeline).parts[0]
+                            where = of_pipeline / place.relative_to(of_pipeline).parts[0]
                             break
                         except (ValueError, IndexError):
                             continue
+                    wrong = (place, message)  # what is wrong with a record itself is that record's
+                    if place in named:
+                        # A wrong file is one place in the store, whatever name each record that keeps it there
+                        # has for it: said once, under the name it has in the folder it is in or missing from
+                        wrong = place
+                        if place.is_relative_to(where) and message.startswith(named[place] + " "):
+                            message = place.relative_to(where).as_posix() + message[len(named[place]):]
                     if record.increment and where != record.folder and where.name == record.builds_on:
                         kept_there.setdefault(wrong, set()).add(record.folder)
-                    # A file two records name is said once, with the snapshot whose folder it is in or missing from
-                    said.setdefault(wrong, (asset.content_hash, where))
-        for wrong, (content_hash, where) in said.items():
+                    said.setdefault(wrong, (asset.content_hash, where, message))
+        for wrong, (content_hash, where, message) in said.items():
             # And how many snapshots lack it with that one: those kept as increments on it, which keep the file there
             count = len(kept_there.get(wrong, ()))
             also = "" if not count else (
                 f", and {count} snapshots kept as increments on it keep it there" if count > 1
                 else ", and 1 snapshot kept as an increment on it keeps it there"
             )
-            problems.append(StoreProblem(content_hash, where, f"{wrong[1]} (the snapshot {where.name}){also}"))
+            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}"))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
         # The same snapshot in both folders: the complete one is the snapshot, and the other is named
@@ -3836,7 +3845,7 @@ class _FolderPending(PendingSnapshot):
 
     def __init__(
         self, store: FolderStore, pipeline: str, commit: str, made_at: str, base, made_by: str,
-        builds_on: Optional[str] = None, undecided: bool = False, increments_bytes: Optional[int] = None,
+        builds_on: Optional[str] = None, undecided: bool = False,
     ):
         from chartbook.identity import validate_pipeline_id
 
@@ -3865,7 +3874,7 @@ class _FolderPending(PendingSnapshot):
         #: Whether its kind is said once every file of it is put (:meth:`keep_as_increment`): its folder is claimed when its record is written
         self.undecided = undecided
         if builds_on is not None:
-            self._build_on(builds_on, increments_bytes)
+            self._build_on(builds_on)
         self.name: Optional[str] = None
         self.placed = False
         self._written = False
@@ -3928,10 +3937,12 @@ class _FolderPending(PendingSnapshot):
     def _claim(self) -> Path:
         """This snapshot's folder, made the first time it is needed: its time, the next free second if another has it, and its commit."""
         if self.name is None:
+            # Its length is checked before any folder is made for it, the pipeline's among them: a snapshot that
+            # does not fit under increments/ leaves no folder there. Every name it may be given is as long
+            _check_length(self.pipeline_path / snapshot_folder_name(self.made_at, self.commit) / OWN_DIR / f"{'0' * 12}.tmp")
             self.pipeline_path.mkdir(parents=True, exist_ok=True)
             for later in range(86400):
                 name = snapshot_folder_name(self.made_at, self.commit, later)
-                _check_length(self.pipeline_path / name / OWN_DIR / f"{'0' * 12}.tmp")
                 # Noted first, so that `store gc` never meets the folder without its note
                 self._note_line(FOLDER_MARK + (self.pipeline_path / name).relative_to(self.store.root).as_posix())
                 try:
@@ -4038,7 +4049,7 @@ class _FolderPending(PendingSnapshot):
                 raise StoreError(
                     f"{kept} went from the store, cannot be read, or is no longer what its record says, while a "
                     f"snapshot of {self.pipeline} was made, and {source} is not there to take it from, or has "
-                    f"changed{said}. Make the snapshot again."
+                    f"changed{said}. Run the command again."
                 )
         for entry, first in self._again:
             # The same file given twice is in the snapshot once: each entry of it says the one place
@@ -4194,8 +4205,9 @@ class _FolderPending(PendingSnapshot):
         size = os.stat(source).st_size
         if self.undecided:
             return self._keep_for_later(source, path, content_hash, size, links, used)
+        # Before a folder is claimed, and before anything of it is written, now or with the record
+        _check_length(self.pipeline_path.joinpath(snapshot_folder_name(self.made_at, self.commit), *path.split("/")))
         target = self._claim().joinpath(*path.split("/"))
-        _check_length(target)  # before anything of it is written, now or with the record
         if self._here.get(path) == content_hash:
             # The same file given twice, as one that is of two assets: it is in the folder once
             return {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
@@ -4421,10 +4433,11 @@ class _FolderPending(PendingSnapshot):
             )
             if not os.path.isfile(its_record):
                 # Its files are in its folder, so there is no writing it complete from here: said plainly, and
-                # whoever lets go of it leaves nothing of it. Made again, it is decided on what is there then
+                # whoever lets go of it leaves nothing of it. Run again (a snapshot, or a copy from another store), it is
+                # decided on what is there then
                 raise StoreError(
                     f"The snapshot {self.store._shown(on)}, which this one builds on, went from the store as this "
-                    f"snapshot was being written. Make the snapshot again."
+                    f"snapshot was being written. Run the command again."
                 )
         record = own / RECORD_FILE
         temporary = own / f"{uuid.uuid4().hex[:12]}.tmp"

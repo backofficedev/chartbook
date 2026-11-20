@@ -563,7 +563,7 @@ Snapshot made: 6 files, 23.0 MB.
   /Users/you/.chartbook/store/snapshots/ftsfr+fed_yield_curve/2026-11-20T101500Z_9b1e22d7a0c4
 ```
 
-Where the newest snapshot of these same files is an increment, `--complete` makes a new, complete one beside it, and the increment is left as it is: nothing in the store is changed once it is written. In a script, `--complete` copies every file each time; without it the store decides. A table that grows by date is better written as a folder partitioned by year than as one file ({doc}`../guide/depending-on-pipelines`).
+Where the newest snapshot of these same files is an increment, `--complete` makes a new, complete one beside it, and the increment is left as it is: nothing in the store is changed once it is written. Where it is a complete one already, that one is named and nothing is written, once each of its files has been read and found to be what its record says; one that does not read right (a copy damaged at the same size, which `store verify` finds), or that keeps files in another snapshot's folder, is left as it is too, and a new complete one is made from the files at hand. So the folder `--complete` names has been read. In a script, `--complete` copies every file each time; without it the store decides. A table that grows by date is better written as a folder partitioned by year than as one file ({doc}`../guide/depending-on-pipelines`).
 
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
 
@@ -1434,7 +1434,7 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-A file that snapshots kept as increments keep in the complete snapshot they build on is read once and said once, with that snapshot's name, since its folder is the one the file is in or missing from, and with how many of them keep it there:
+A file that snapshots kept as increments keep in the complete snapshot they build on is one place in the store: it is read once and said once, under the name it has in that folder whatever name each increment has for it, with that snapshot's name, and with how many of them keep it there:
 
 ```text
 sha256:4b1f9a0c…: _data/treasury.parquet is not in the store (the snapshot 2026-11-16T091500Z_4f2a91c0e1b2), and 2 snapshots kept as increments on it keep it there
@@ -1484,7 +1484,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, the ones a tag or a label names, and the complete snapshots that increments among them build on.
 
-Where a snapshot that stays lacks a file of its own, `gc` says which, why that snapshot stays, and what to do. The snapshot it names is the one whose folder the file is missing from, as `store verify` names it (where a complete snapshot has lost a file that increments keep in it, the complete one):
+Where a snapshot that stays lacks a file of its own, `gc` says which, why that snapshot stays, and what to do. The snapshot it names is the one whose folder the file is missing from, as `store verify` names it (where a complete snapshot has lost a file that increments keep in it, the complete one). Where that snapshot has itself gone from the store, `gc` names the newest increment that kept the file there, a snapshot the store still has, and `store verify` names the folder that has gone:
 
 ```text
 Nothing of acme/rates is removed: its snapshot 2026-11-19T140200Z_4f2a91c0e1b2 lacks _data/treasury.parquet, and stays because it is the newest of its pipeline.

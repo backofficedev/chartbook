@@ -465,8 +465,8 @@ class TestTheCount:
         assert [(one.increment, one.increments_bytes // UNIT) for one in kept] == [(True, 30), (True, 60), (True, 90), (False, 0)]
 
     @pytest.mark.parametrize("by", ["store move", "store import"])
-    def test_increments_copied_to_another_store_keep_what_they_had_added_up_to(self, store, work, by):
-        """A pipeline keeps its form in the other store, each complete snapshot and then the increments on it, and each increment's record its count: the next snapshot there counts on from it."""
+    def test_increments_copied_to_another_store_carry_no_count_and_the_next_counts_from_its_own(self, store, work, by):
+        """A pipeline keeps its form in the other store, each complete snapshot and then the increments on it. The count is of what snapshots made in a store copied: an increment copied in carries none, and the next snapshot made there counts from what that store's own increments carry."""
         from chartbook.sharing import copy_snapshots
         from chartbook.transfer import copy_snapshot
 
@@ -480,12 +480,38 @@ class TestTheCount:
                 copy_snapshot(snapshot.read(record.path), FolderStore(store.root), other, whole=whole)
         else:
             assert copy_snapshots(_records(store.root), other).refused == []
-        assert [(record.increment, record.increments_bytes // UNIT) for record in _records(other.root)] == [
-            (False, 0), (True, 30), (True, 60), (True, 90),
-        ]
-        # Where it came from the next one is complete, 90 and 30 more; and so it is where it was copied to
+        there = _records(other.root)
+        assert [(record.increment, record.increments_bytes) for record in there] == [(False, 0), (True, 0), (True, 0), (True, 0)]
+        # No count at all is in what a copy wrote: its record says what it builds on, and no more
+        base = there[0].folder.name
+        assert [_document(record).get("stored") for record in there] == [None] + [{"builds_on": base}] * 3
+        # Where it came from the next one is complete, 90 and 30 more. Where it was copied to, the count starts again:
+        # an increment that counts from its own, and the one after it counts on from that
         assert not _sized(FolderStore(store.root), files, _same_30(4), 4).increment
-        assert not _sized(FolderStore(other.root), files, _same_30(4), 4).increment
+        nxt = _sized(FolderStore(other.root), files, _same_30(4), 4)
+        assert nxt.increment and nxt.builds_on == base and nxt.increments_bytes == 30 * UNIT
+        assert _sized(FolderStore(other.root), files, _same_30(5), 5).increments_bytes == 60 * UNIT
+
+    def test_only_some_of_the_increments_copied_the_next_is_kept_by_what_this_store_has(self, store, work):
+        """`store export --snapshot` of the complete one and the last of three increments, then `store import`. The store imported into has one complete snapshot of 100 and one increment of 30, and the next changes the same 30: an increment, by the sizes of what is there (60 of 100) and by the count, which starts again in this store (30). With the count the last increment carried where it was made (90), it was made complete, and said to be so because the increments had added up, in a store where they had not."""
+        from chartbook import sharing
+
+        files = work / "files"
+        other = FolderStore(work / "source")
+        kept = [_sized(other, files, _same_30(k), k) for k in range(4)]
+        assert [one.increments_bytes // UNIT for one in kept] == [0, 30, 60, 90]
+        out = work / "out"
+        done = sharing.export(FolderStore(other.root), "acme/sized", out, [f"{COMMIT}@{_at(0)}", f"{COMMIT}@{_at(3)}"])
+        assert len(done.copied) == 2 and done.refused == []
+        assert sharing.import_snapshots(FolderStore(store.root), out).refused == []
+        there = _records(store.root)
+        assert [(record.increment, sum(_own(record).values()) // UNIT, record.increments_bytes) for record in there] == [(False, 100, 0), (True, 30, 0)]
+        (taken,) = [snapshot.read(record.path) for record in _records(other.root) if record.made_at == _at(3)]
+        decided = snapshot.to_be_kept(FolderStore(store.root), dataclasses.replace(taken, made_at=_at(4), path=None))
+        # In this store 30 bytes of increments were copied, and this one is 30 more of 100
+        assert decided.increment and not decided.added_up and decided.increments_bytes == 30 * UNIT
+        nxt = _sized(FolderStore(store.root), files, _same_30(4), 4)
+        assert nxt.increment and nxt.increments_bytes == 30 * UNIT
 
     def test_it_is_in_the_record_where_the_store_says_how_it_keeps_the_snapshot(self, store, work):
         files = work / "files"
@@ -926,7 +952,7 @@ class TestThePromise:
                 snapshot.make(rates, store=FolderStore(store.root), made_at=_at(3))
         assert not isinstance(stopped.value, store_module.BuiltOnGoneError)  # nothing of it is at hand to write it complete from
         assert second.kept.folder.name in str(stopped.value) and str(stopped.value).endswith(
-            ", which this one builds on, went from the store as this snapshot was being written. Make the snapshot again."
+            ", which this one builds on, went from the store as this snapshot was being written. Run the command again."
         )
         # The gc took its record, and left the files this one had noted it was using for a later gc to clear
         assert not (second.kept.folder / "_chartbook" / "snapshot.json").exists()
@@ -1044,6 +1070,18 @@ class TestAFileThatFitsUnderSnapshotsByOneCharacter:
         assert len(_records(store.root)) == 2 and not newest.increment
         assert _made(second) == [f"Snapshot made: 5 files, {_format_bytes(sum(_own(newest).values()))}.", PIN_LINE]
         assert FolderStore(store.root).verify() == [] and _unrecorded_folders(store.root) == [] and _left_in_tmp(store.root) == []
+
+    def test_written_complete_for_a_name_of_chartbooks_own_that_does_not_fit_it_leaves_no_folder_under_increments(self, store, work, monkeypatch):
+        """The README at the top says of `increments/`: "there once one is kept that way". Only ChartBook's own name in a snapshot's folder does not fit under it, by the one character: the snapshot is written complete, and no folder was made under increments/ before that was found."""
+        files = work / "files"
+        first = _of_files(store, files, [("big", "d/big.bin", b"B" * 400), ("a", "d/a.bin", b"a")], 0)
+        self._at_the_limit(store, monkeypatch, "acme+sized", "_chartbook/" + "0" * 12 + ".tmp")
+        second = _of_files(FolderStore(store.root), files, [("big", "d/big.bin", b"B" * 400), ("a", "d/a.bin", b"b")], 1)
+        assert not second.increment and first.folder.is_dir()
+        (record,) = [one for one in _records(store.root) if one.made_at == _at(1)]
+        assert snapshot.to_be_kept(FolderStore(store.root), snapshot.read(record.path)).increment  # by the rule, an increment
+        assert FolderStore(store.root).verify() == [] and _unrecorded_folders(store.root) == []
+        assert not (store.root / "increments").exists()
 
 
 @pytest.fixture
@@ -1378,7 +1416,7 @@ class TestACompleteSnapshotThatLostAFileIncrementsKeepInIt:
         assert line.endswith(
             f"_data/history.parquet is not in the store (the snapshot {base.name}), and 2 snapshots kept as increments on it keep it there"
         )
-        assert "is said once, with that snapshot's name and how many of them keep it there" in _help("store", "verify")
+        assert "is said once, under the name it has there, with that snapshot's name and how many of them keep it there" in _help("store", "verify")
         # With one increment on it, one is said
         assert fresh.remove_snapshot(made[2].snapshot.path)
         (problem,) = FolderStore(store.root).verify()
@@ -1443,6 +1481,58 @@ class TestACompleteSnapshotThatLostAFileIncrementsKeepInIt:
         moved = pin("--update")
         assert moved.exit_code == 0, moved.output
         assert data.path("acme/rates:history", project_dir=reader).read_bytes() == (steady / "_data" / "history.parquet").read_bytes() != good
+
+
+class TestVerifySaysAWrongFileOnce:
+    """A wrong file is one place in the store: `store verify` says it once, under the name it has in the folder it is in or missing from, and counts every increment that keeps it there, whatever name each has for it."""
+
+    def _renamed(self, steady, store) -> tuple:
+        """A complete snapshot, and an increment made after the upstream renamed one file of a files asset, its bytes the same: the increment keeps `c.txt` in the complete one, as `a.txt`."""
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        (steady / "_data" / "raw" / "a.txt").rename(steady / "_data" / "raw" / "c.txt")
+        (steady / "_data" / "raw" / "b.txt").write_bytes(b"beta 2\n")
+        second = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(1))
+        assert second.kept.increment and not (second.kept.folder / "_data" / "raw" / "c.txt").exists()
+        return first, second
+
+    def test_a_file_an_increment_keeps_there_under_another_name_is_said_once(self, steady, store):
+        """One file is missing from the store: `a.txt`, from the complete snapshot's folder. It was said twice, the second time as `c.txt`, a name the snapshot named never had."""
+        first, second = self._renamed(steady, store)
+        _lose(first.kept.folder / "_data" / "raw" / "a.txt")
+        problems = FolderStore(store.root).verify()
+        assert [problem.message for problem in problems] == [
+            f"_data/raw/a.txt is not in the store (the snapshot {first.kept.folder.name}), and 1 snapshot kept as an increment on it keeps it there"
+        ]
+        assert problems[0].path == first.kept.folder
+
+    def test_no_line_says_the_complete_snapshot_lacks_a_file_it_never_had(self, steady, store):
+        first, second = self._renamed(steady, store)
+        _lose(first.kept.folder / "_data" / "raw" / "a.txt")
+        said = CliRunner().invoke(main, ["store", "verify"])
+        assert said.exit_code == 1 and "_data/raw/c.txt" not in said.output  # the complete snapshot never had a c.txt
+        assert len([line for line in said.output.splitlines() if "is not in the store (the snapshot " in line]) == 1
+
+    def test_the_name_is_the_one_it_has_there_whichever_record_is_read_first(self, steady, store, monkeypatch):
+        """The increment's record read before the complete one's: the file is still said under the name the complete snapshot's folder has it by."""
+        first, second = self._renamed(steady, store)
+        _lose(first.kept.folder / "_data" / "raw" / "a.txt")
+        real = FolderStore.records
+        monkeypatch.setattr(FolderStore, "records", lambda self, *how: sorted(real(self, *how), key=lambda record: not record.increment))
+        (problem,) = FolderStore(store.root).verify()
+        assert problem.message.startswith(f"_data/raw/a.txt is not in the store (the snapshot {first.kept.folder.name})")
+
+    def test_how_many_keep_it_there_counts_every_increment_whatever_name_it_has_for_it(self, steady, store):
+        """Two increments keep the file in the complete one, one of them under another name: the line that names the file says 2."""
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        _drawn(steady, 1)
+        second = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(1))  # keeps a.txt there as a.txt
+        (steady / "_data" / "raw" / "a.txt").rename(steady / "_data" / "raw" / "c.txt")
+        third = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(2))  # keeps c.txt there as a.txt
+        assert second.kept.increment and third.kept.increment and third.kept.builds_on == first.kept.folder.name
+        _lose(first.kept.folder / "_data" / "raw" / "a.txt")
+        assert [problem.message for problem in FolderStore(store.root).verify()] == [
+            f"_data/raw/a.txt is not in the store (the snapshot {first.kept.folder.name}), and 2 snapshots kept as increments on it keep it there"
+        ]
 
 
 class TestWhereTheStoresCopyIsDamagedAtTheSameSize:
@@ -1518,20 +1608,24 @@ class TestWhatThePagesSay:
         assert "the complete snapshots that increments among them build on" in closing
 
     def test_the_words_are_met_where_the_vocabulary_says_and_never_in_a_pin_or_a_read(self, steady, work, store):
-        """Complete and increment are words of the store: the vocabulary and the design's "Words" say where they are met, and that a lockfile, a pin, a read and the catalog never say them."""
+        """Complete and increment are words of the store: the vocabulary and the design's "Words" say where they are met, and what is promised of the rest: a lockfile never says how a snapshot is kept, and nothing that `pin`, a read or the catalog prints says it of a snapshot. (The pages of a read do say where its files may sit, and name a snapshot kept as an increment there.)"""
         met = (
             "met in the store's folders, in `chartbook store ls`, in what `chartbook snapshot` and `chartbook store migrate` say, "
             "in the option `--complete`, in the help of `chartbook store export` and `chartbook store import`, in a reason "
             "`chartbook store gc` gives for keeping a snapshot, and in what `chartbook store verify` says of a file that "
             "increments keep in a complete snapshot"
         )
-        never = "They are never in a lockfile, a pin, a read or the catalog"
+        never = (
+            "A lockfile never says how a snapshot is kept, and nothing that `chartbook pin`, a read or the catalog prints says it "
+            "of a snapshot; the pages of a read say only where its files may sit"
+        )
         for page in (_page("docs_src", "guide", "vocabulary.md"), " ".join(_page("docs_src", "design", "snapshots-and-increments.md").split())):
             assert met in page and never in page and "nowhere else" not in page
+            assert "never in a lockfile, a pin, a read or the catalog" not in page  # the reference of a read names an increment, rightly
         # Each command named there says the word, in its help or in what it prints
         for command in (("snapshot",), ("store", "ls"), ("store", "migrate"), ("store", "export"), ("store", "import"), ("store", "gc"), ("store", "verify")):
             assert re.search(r"\bincrements?\b", _help(*command)), command
-        # And no command that pins, reads or shows a catalog does (a build that is "incremental" is another word)
+        # And no command that pins, reads or shows a catalog says it in its help (a build that is "incremental" is another word)
         for command in (("pin",), ("path",), ("add",), ("lineage",), ("catalog", "build"), ("docs", "build")):
             assert not re.search(r"\bincrements?\b", _help(*command)), command
         # A lockfile that pins one kept as an increment says nothing of how it is kept
@@ -1539,6 +1633,9 @@ class TestWhatThePagesSay:
         _three(steady, store, reader)
         pinned = (reader / lock.LOCK_FILE).read_text(encoding="utf-8")
         assert "acme/rates" in pinned and not re.search(r"increment|builds_on|kept_in|kept_as|stored", pinned)
+        # And what `pin` prints as it moves to one says nothing of it either
+        moved = CliRunner().invoke(main, ["pin", "--update", "--project-dir", str(reader)])
+        assert moved.exit_code == 0 and "acme/rates" in moved.output and not re.search(r"increment|builds on|complete", moved.output), moved.output
 
     def test_complete_says_where_the_folder_is_by_its_whole_path_as_the_pages_have_it(self, steady, work, monkeypatch):
         """Scenario 5 of the design page, and the changelog: the folder is printed whole, also where it is under the person's home."""
@@ -1596,3 +1693,323 @@ class TestWhatThePagesSay:
         assert [path.read_bytes() for path in listed] == [b"beta 2\n", b"alpha\n"]
         assert listed[0] == second.kept.folder / "_data" / "raw" / "b.txt"
         assert listed[1] == first.kept.folder / "_data" / "raw" / "a.txt"  # c.txt, under the name the complete one has it by
+
+
+def _damage(path: Path) -> None:
+    """Other bytes at the same size: a sync cut short, a disk's fault."""
+    size = path.stat().st_size
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+    path.write_bytes(b"\0" * size)
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+
+
+def _folder_named(result) -> Path:
+    """The folder `chartbook snapshot --complete` names: the line, two spaces in, that follows what it says of the snapshot."""
+    lines = _made(result)
+    assert len(lines) > 1 and lines[1].startswith("  ") and lines[1].strip(), result.output
+    return Path(lines[1].strip())
+
+
+class TestCompleteNamesAFolderThatHasBeenRead:
+    """Asked for complete, the snapshot already there is stood on only where it is complete by what its record is and each of its own files, read and hashed, is what the record says. Otherwise a new complete one is made, as over an increment. So a folder that `--complete` names is a complete snapshot of what its record says."""
+
+    def test_the_sentence_is_on_both_pages(self):
+        sentence = (
+            "`chartbook snapshot --complete` ends with a complete snapshot every file of which has been read and checked: it "
+            "writes every file again from bytes it has checked, or, where the snapshot of these same files that is there is "
+            "complete and reads right, names that one and writes nothing."
+        )
+        for page in (("docs_src", "design", "snapshots-and-increments.md"), ("docs_src", "changelog.md")):
+            assert sentence in " ".join(_page(*page).split()), page
+
+    def test_where_the_one_there_is_complete_and_reads_right_it_is_named_and_nothing_is_written(self, steady, store, monkeypatch):
+        """And every byte of it was read to say so, which no snapshot without the option does."""
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        before = _recorded(store.root)
+        read: list = []
+        real = store_module.what_is_wrong_in
+
+        def reading(asset, *how):
+            read.append(asset.content_hash)
+            return real(asset, *how)
+
+        monkeypatch.setattr(store_module, "what_is_wrong_in", reading)
+        plain = _snapshot()
+        assert plain.exit_code == 0 and _made(plain) == [f"No new snapshot: the same bytes and the same pins as the one made {_when(_at(0))}."]
+        assert read == []  # not asked for complete: no file of the store is read
+        asked = _snapshot("--complete")
+        assert asked.exit_code == 0 and _made(asked) == [
+            f"No new snapshot: the same bytes and the same pins as the one made {_when(_at(0))}.", f"  {first.kept.folder}",
+        ]
+        assert set(read) == first.snapshot.hashes()  # every asset of it, its index and its documents
+        assert _recorded(store.root) == before and len(_records(store.root)) == 1
+
+    def test_where_the_one_there_is_complete_and_damaged_at_the_same_size_a_new_one_is_made(self, steady, store):
+        """`store verify` has found a copy damaged at the same size in the one snapshot there is, a complete one, and nothing has changed in the pipeline. `--complete` said `No new snapshot`, and named the damaged folder as the complete one to look at or to hand to somebody."""
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        good = (steady / "_data" / "history.parquet").read_bytes()
+        _damage(first.kept.folder / "_data" / "history.parquet")
+        found = CliRunner().invoke(main, ["store", "verify"])
+        assert found.exit_code == 1 and "_data/history.parquet is no longer what its record says" in found.output
+        made = _snapshot("--complete")
+        assert made.exit_code == 0, made.output
+        folder = _folder_named(made)
+        assert _made(made)[0].startswith("Snapshot made: ") and folder.parent == first.kept.folder.parent and folder != first.kept.folder
+        (record,) = [one for one in _records(store.root) if one.folder == folder]
+        assert record.complete and FolderStore(store.root).verify_snapshot(record.path) == []
+        assert (folder / "_data" / "history.parquet").read_bytes() == good
+        # The damaged one is left as it is: nothing is written into a snapshot that is there
+        assert (first.kept.folder / "_data" / "history.parquet").read_bytes() == bytes(len(good))
+        # Asked again, the new one reads right: it is named, and nothing more is made
+        again = _snapshot("--complete")
+        assert _made(again)[0].startswith("No new snapshot: ") and _folder_named(again) == folder and len(_records(store.root)) == 2
+
+    def test_after_an_increment_on_the_damaged_one_it_writes_every_file_again(self, steady, store):
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        _damage(first.kept.folder / "_data" / "history.parquet")
+        _drawn(steady, 1)
+        assert "kept as an increment" in _snapshot().output
+        assert CliRunner().invoke(main, ["store", "verify"]).exit_code == 1
+        made = _snapshot("--complete")
+        assert made.exit_code == 0, made.output
+        folder = _folder_named(made)
+        assert folder.parent == store.root / "snapshots" / "acme+rates" and folder != first.kept.folder
+        store_module._read_records.clear()
+        assert FolderStore(store.root).verify_snapshot(folder / "_chartbook" / "snapshot.json") == []
+
+    def test_where_the_one_there_keeps_files_in_another_folder_a_new_one_is_made(self, steady, work, store, monkeypatch):
+        """The newest snapshot of these same files is one that ChartBook 0.5 laid out, in a pipeline's folder copied into this store by hand: under snapshots/, and keeping most of its files in an earlier snapshot's folder. It is no increment, and no "folder that stands by itself" either: the folder `--complete` names holds every file."""
+        from tests.store_of_0_5 import laid_out_as_0_5
+
+        snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0), complete=True)
+        _drawn(steady, 1)
+        snapshot.make(steady, store=FolderStore(store.root), made_at=_at(1), complete=True)
+        old = laid_out_as_0_5(store.root)
+        new = work / "new"
+        (new / "snapshots").mkdir(parents=True)
+        (new / "store.json").write_text('{"schema": "chartbook/store/v3"}\n', encoding="utf-8", newline="\n")
+        shutil.copytree(old.root / "pipelines" / "acme+rates", new / "snapshots" / "acme+rates")
+        store_module._found_whole.clear()
+        first, second = _records(new)
+        assert (first.complete, second.complete, second.increment) == (True, False, False)
+        assert FolderStore(new).verify() == []  # whole, and read right: it is not complete by what its record is
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(new))
+        made = _snapshot("--complete")
+        assert made.exit_code == 0, made.output
+        folder = _folder_named(made)
+        (record,) = [one for one in _records(new) if one.folder == folder]
+        assert record.complete and folder not in (first.folder, second.folder)
+        assert (folder / "_data" / "history.parquet").is_file() and FolderStore(new).verify_snapshot(record.path) == []
+        # Not asked, it is stood on as before, and nothing is made
+        plain = _snapshot()
+        assert _made(plain)[0].startswith("No new snapshot: ") and len(_records(new)) == 3
+
+    def test_several_stores_the_first_is_asked_and_the_others_read_what_they_have(self, rates, work, store, two):
+        """The first store is asked whether its own is complete and reads right. The others read what they have when a complete copy is sent, as before: one that is not what its record says there stops the command, naming the store and the file."""
+        first = snapshot.make(rates, store=two(), store_names=["here", "there"], made_at=_at(0))
+        assert first.made and [len(_records(work / name)) for name in ("store", "there")] == [1, 1]
+        asked = snapshot.make(rates, store=two(), store_names=["here", "there"], made_at=_at(1), complete=True)
+        assert not asked.made and asked.asked_complete and not asked.kept.increment and asked.kept_otherwise == []
+        assert asked.kept.folder == first.kept.folder and [len(_records(work / name)) for name in ("store", "there")] == [1, 1]
+        # The other store's copy damaged at the same size: found as that store's copy is read, and said
+        (theirs,) = _records(work / "there")
+        _damage(theirs.folder / "_data" / "treasury.parquet")
+        with pytest.raises(snapshot.NotInEveryStore) as stopped:
+            snapshot.make(rates, store=two(), store_names=["here", "there"], made_at=_at(2), complete=True)
+        assert str(work / "there") in str(stopped.value) and "_data/treasury.parquet is no longer what its record says" in str(stopped.value)
+        assert [len(_records(work / name)) for name in ("store", "there")] == [1, 1]
+        # The first store's own copy damaged at the same size: a new complete one, written from the files at hand, in each
+        _damage(first.kept.folder / "_data" / "treasury.parquet")
+        made = snapshot.make(rates, store=two(), store_names=["here", "there"], made_at=_at(3), complete=True)
+        assert made.made and not made.kept.increment and made.kept_otherwise == [] and made.kept.folder != first.kept.folder
+        for name in ("store", "there"):
+            (new,) = [record for record in _records(work / name) if record.made_at == _at(3)]
+            assert new.complete and FolderStore(work / name).verify_snapshot(new.path) == []
+
+
+@pytest.fixture
+def elsewhere(work, store):
+    """A store elsewhere with a complete snapshot of acme/sized and two increments on it; the store of the test is where it is copied to."""
+    there = FolderStore(work / "source")
+    kept = [_sized(there, work / "files", _same_30(k), k) for k in range(3)]
+    assert [one.increment for one in kept] == [False, True, True]
+    return there
+
+
+def _from_to(source: FolderStore, target: FolderStore):
+    """Two stores with names, as a catalog has them, for a `store move` from the first to the second."""
+    from chartbook.multi_store import NamedStore, Stores
+
+    return Stores([
+        NamedStore("here", str(source.root), FolderStore(source.root)),
+        NamedStore("there", str(target.root), FolderStore(target.root), create=True),
+    ])
+
+
+def _everything_in(root: Path) -> dict:
+    """Every file under a folder, with its size."""
+    return {path.relative_to(root).as_posix(): path.stat().st_size for path in sorted(root.rglob("*")) if path.is_file()}
+
+
+class TestACopyThatKeepsAnIncrementsForm:
+    """`store move` and `store import` write an increment as an increment, on the complete snapshot the target has: what stops one, and what it is written as where it does not fit."""
+
+    def _base_goes_as_the_first_increment_is_written(self, monkeypatch, target_root: Path) -> list:
+        """A `store gc` elsewhere takes the complete snapshot from the target once the first increment's files are in its folder there; when it did."""
+        real = store_module._FolderPending._before_record
+        fired: list = []
+
+        def going(pending):
+            real(pending)
+            if pending.builds_on is not None and pending.store.root == target_root and not fired:
+                fired.append(pending.builds_on)
+                shutil.rmtree(pending.store.pipeline_path(pending.pipeline) / pending.builds_on, onerror=_writable)
+                store_module._read_records.clear()
+                store_module._found_whole.clear()
+
+        monkeypatch.setattr(store_module._FolderPending, "_before_record", going)
+        return fired
+
+    def test_a_move_stopped_because_what_it_builds_on_went_says_to_run_the_command_again(self, elsewhere, store, monkeypatch):
+        """It said "Make the snapshot again." Nobody can make an old snapshot again, and nothing needs it: the move is what is run again. Nothing is removed from the source, and nothing half-written is left."""
+        from chartbook import transfer
+
+        before, form = _everything_in(elsewhere.root), [(record.folder.name, record.increment) for record in _records(elsewhere.root)]
+        with monkeypatch.context() as patched:
+            fired = self._base_goes_as_the_first_increment_is_written(patched, store.root)
+            with pytest.raises(store_module.StoreError) as stopped:
+                transfer.move("acme/sized", _from_to(elsewhere, store), "there", keep=False, route=False)
+        assert len(fired) == 1 and not isinstance(stopped.value, store_module.BuiltOnGoneError)
+        assert str(stopped.value).endswith(
+            ", which this one builds on, went from the store as this snapshot was being written. Run the command again."
+        )
+        assert _everything_in(elsewhere.root) == before
+        assert _unrecorded_folders(store.root) == [] and _left_in_tmp(store.root) == [] and _records(store.root) == []
+        # Run again, with nobody in the way, it is all there and whole, in the form it had
+        store_module._found_whole.clear()
+        transfer.move("acme/sized", _from_to(elsewhere, store), "there", keep=False, route=False)
+        assert [(record.folder.name, record.increment) for record in _records(store.root)] == form
+        assert FolderStore(store.root).verify() == [] and _records(elsewhere.root) == []
+
+    def test_an_import_refused_because_what_it_builds_on_went_says_to_run_the_command_again(self, elsewhere, store, monkeypatch):
+        with monkeypatch.context() as patched:
+            self._base_goes_as_the_first_increment_is_written(patched, store.root)
+            said = CliRunner().invoke(main, ["store", "import", str(elsewhere.root)])
+        assert said.exit_code == 1
+        (refused,) = [line for line in said.output.splitlines() if line.startswith("Refused: ")]
+        assert "went from the store as this snapshot was being written. Run the command again." in refused
+        assert "Make the snapshot again" not in said.output
+        assert _unrecorded_folders(store.root) == [] and _left_in_tmp(store.root) == []
+        # Run again, what is not there comes as it can
+        store_module._found_whole.clear()
+        again = CliRunner().invoke(main, ["store", "import", str(elsewhere.root)])
+        assert again.exit_code == 0 and "Refused" not in again.output and FolderStore(store.root).verify() == []
+
+    def _too_long_there(self, work: Path, monkeypatch) -> tuple:
+        """A store in a short folder with a complete snapshot and an increment whose own file has a long name, and a target in a longer folder, under whose snapshots/ that file fits by one character."""
+        place = "data/" + "f" * 40 + ".bin"
+        short = FolderStore(work / "s")
+        first = _of_files(short, work / "files", [("a", place, b"a" * 10), ("big", "data/big.bin", BIG)], 0)
+        second = _of_files(short, work / "files", [("a", place, b"b" * 10), ("big", "data/big.bin", BIG)], 1)
+        assert not first.increment and second.increment
+        assert [sorted(_own(record)) for record in _records(short.root) if record.increment] == [[place]]
+        target = FolderStore(work / "a-longer-folder")
+        name = store_module.snapshot_folder_name(_at(0), COMMIT)
+        under_snapshots = target.root / "snapshots" / "acme+sized" / name / place
+        monkeypatch.setattr(store_module, "_ON_WINDOWS", True)
+        monkeypatch.setattr(store_module, "long_paths_enabled", lambda: False)
+        monkeypatch.setattr(store_module, "WINDOWS_PATH_LIMIT", len(str(under_snapshots)) + 1)  # it fits, by one
+        monkeypatch.setattr(store_module, "WINDOWS_FOLDER_LIMIT", len(str(under_snapshots)) + 100)
+        return short, target, place
+
+    def test_a_move_writes_it_complete_where_its_own_file_does_not_fit_under_increments(self, work, monkeypatch):
+        from chartbook import transfer
+
+        short, target, place = self._too_long_there(work, monkeypatch)
+        transfer.move("acme/sized", _from_to(short, target), "there", keep=False, route=False)
+        there = _records(target.root)
+        assert [record.complete for record in there] == [True, True] and (there[1].folder / place).read_bytes() == b"b" * 10
+        assert FolderStore(target.root).verify() == [] and _unrecorded_folders(target.root) == [] and _left_in_tmp(target.root) == []
+        assert not any((target.root / "increments").rglob("*")) if (target.root / "increments").exists() else True
+
+    def test_an_import_writes_it_complete_where_its_own_file_does_not_fit_under_increments(self, work, monkeypatch):
+        from chartbook import sharing
+
+        short, target, place = self._too_long_there(work, monkeypatch)
+        done = sharing.import_snapshots(FolderStore(target.root), short.root)
+        assert done.refused == [] and len(done.copied) == 2
+        there = _records(target.root)
+        assert [record.complete for record in there] == [True, True] and (there[1].folder / place).read_bytes() == b"b" * 10
+        assert FolderStore(target.root).verify() == [] and _unrecorded_folders(target.root) == [] and _left_in_tmp(target.root) == []
+
+
+class TestTheHelpersOfTheClosingLine:
+    """tests/snapshot_lines.py: a caller names the form, the numbers are taken by pattern, and only counts that can be are taken."""
+
+    def test_a_snapshot_said_in_one_form_does_not_pass_for_another(self):
+        from tests import snapshot_lines
+
+        increment = "Snapshot made, kept as an increment: 2 of 5 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.\n" + PIN_LINE
+        added = "Snapshot made: 5 files, 23.0 MB. The increments since the last complete one had added up to its size.\n" + PIN_LINE
+        complete = "Snapshot made: 5 files, 23.0 MB.\n" + PIN_LINE
+        forms = {snapshot_lines.INCREMENT: increment, snapshot_lines.ADDED_UP: added, snapshot_lines.COMPLETE: complete}
+        for form, said in forms.items():
+            assert [other for other in forms if snapshot_lines.said_made(said, other)] == [form]
+
+    @pytest.mark.parametrize("line,form", [
+        ("Snapshot made, kept as an increment: 9 of 5 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.", "increment"),
+        ("Snapshot made, kept as an increment: 5 of 5 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.", "increment"),
+        ("Snapshot made, kept as an increment: 1 of 1 file, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.", "increment"),
+        ("Snapshot made: 1 files, 23.0 MB.", "complete"),
+        ("Snapshot made: 0 files, 0 bytes.", "complete"),
+        ("Snapshot made: 1 files, 23.0 MB. The increments since the last complete one had added up to its size.", "added up"),
+        ("Snapshot made: 1 files, 23.0 MB, for what depends on it in this run to pin.", "complete"),
+    ])
+    def test_a_count_that_cannot_be_does_not_pass(self, line, form):
+        from tests import snapshot_lines
+
+        assert not snapshot_lines.said_made(line + "\n" + PIN_LINE, form)
+        assert not snapshot_lines.said_made_for_this_run(line, form)
+
+    @pytest.mark.parametrize("line,form", [
+        ("Snapshot made, kept as an increment: 0 of 1 file, 0 bytes. The rest is in the snapshot made 2026-11-16 09:15 UTC.", "increment"),
+        ("Snapshot made, kept as an increment: 4 of 5 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.", "increment"),
+        ("Snapshot made: 1 file, 12 bytes.", "complete"),
+        ("Snapshot made: 12 files, 1.2 GB.", "complete"),
+    ])
+    def test_a_count_that_can_be_passes(self, line, form):
+        from tests import snapshot_lines
+
+        assert snapshot_lines.said_made(line + "\n" + PIN_LINE, form)
+
+
+class TestGcAndVerifyWhereWhatTheIncrementsBuildOnHasGone:
+    """The reference, and the help of `store gc`: gc names the snapshot whose folder the file is missing from, as `store verify` names it; and where that snapshot has itself gone from the store, gc names the newest increment that kept the file there, and verify the folder that has gone."""
+
+    def test_the_pages_say_both_cases(self):
+        reference = " ".join(_page("docs_src", "reference", "cli.md").split())
+        assert "The snapshot it names is the one whose folder the file is missing from, as `store verify` names it" in reference
+        assert (
+            "Where that snapshot has itself gone from the store, `gc` names the newest increment that kept the file there, a "
+            "snapshot the store still has, and `store verify` names the folder that has gone"
+        ) in reference
+        said = _help("store", "gc")
+        assert "the snapshot whose folder the file is missing from, as `chartbook store verify` names it, or, where that snapshot has itself gone from the store" in said
+        assert "the newest of those that kept the file there, which verify names by the folder that has gone" in said
+
+    def test_gc_names_a_snapshot_the_store_has_and_verify_the_folder_that_has_gone(self, steady, store):
+        made = _three(steady, store)
+        _drawn(steady, 3)
+        made.append(snapshot.make(steady, store=FolderStore(store.root), made_at=_at(3)))
+        assert made[3].kept.increment and made[3].kept.builds_on == made[0].kept.folder.name
+        shutil.rmtree(made[0].kept.folder, onerror=_writable)
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        verified = CliRunner().invoke(main, ["store", "verify"]).output
+        named_by_verify = set(re.findall(r"_data/history\.parquet is not in the store \(the snapshot (\S+)\)", verified))
+        said = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "0"]).output
+        named_by_gc = set(re.findall(r"Nothing of acme/rates is removed: its snapshot (\S+) lacks", said))
+        assert named_by_verify == {made[0].kept.folder.name}  # the folder that has gone, where the file was
+        assert named_by_gc == {made[3].kept.folder.name}  # the newest increment that kept it there: one the store has
+        assert "3 snapshots kept as increments on it keep it there" in verified
