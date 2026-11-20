@@ -220,8 +220,9 @@ class TestMigrate:
         said = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert said.exit_code == 0, said.output
         assert "Moved." in said.output and FolderStore(root).verify() == []
-        again = CliRunner().invoke(main, ["store", "migrate"])
-        assert again.exit_code == 0 and "nothing to move" in again.output
+        # What it is moved to is the layout of 0.3 to 0.5: the same command, run again, moves that one on
+        again = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
+        assert again.exit_code == 0 and "has the layout of ChartBook 0.5: " in again.output and "Nothing was moved." in again.output
 
 
 class TestWhatTheReviewFound:

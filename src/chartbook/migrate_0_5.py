@@ -360,6 +360,16 @@ def check(root: Path, found: Plan) -> None:
             f"there (run `chartbook store migrate` again on that machine), and let the sync finish. In a synced "
             f"folder two machines must never both move a store."
         )
+    try:
+        says = json.loads((root / "store.json").read_text(encoding="utf-8")).get("schema")
+    except (OSError, ValueError, AttributeError):
+        says = None
+    if says != SCHEMA and started is None:
+        raise MoveError(
+            f"The store at {root} has no store.json that says {SCHEMA!r}, the layout of ChartBook 0.5, so it is not moved. "
+            f"If a sync is still bringing the file, wait for it; if it is lost for good, put one back that holds "
+            f"{json.dumps({'schema': SCHEMA})}, and run this again."
+        )
     if not os.access(root, os.W_OK):
         raise MoveError(f"The store at {root} is not one this user may write: it is moved by whoever may.")
     notes = root / V2_LAYOUT.tmp

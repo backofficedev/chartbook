@@ -4310,11 +4310,83 @@ def _say_how_long_paths_are(folder) -> None:
     )
 
 
+def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
+    """`chartbook store migrate` for a store that ChartBook 0.5 laid out: say what would happen, ask, move, and say what was done."""
+    from chartbook import migrate_0_5
+    from chartbook.store import StoreError
+
+    def counts(found, verb: str) -> list:
+        lines = [
+            f"  {found.complete} snapshot(s) {verb} complete ({found.by_pins} of them made by a pin), {found.increments} "
+            f"{verb} increments on the newest of their pipeline.",
+            f"  {found.renamed} file(s), {_format_bytes(found.renamed_bytes)}, {'are' if verb == 'become' else 'were'} moved inside the store by rename: "
+            f"nothing is copied or uploaded again for these.",
+            f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {'are' if verb == 'become' else 'were'} copied: each is in two folders that must each hold it.",
+            f"  {found.folders_gone} folder(s) that are no snapshot any more go; {found.aside} file(s) that no record names "
+            f"are moved aside, under {migrate_0_5.LEFT_ASIDE}/.",
+        ]
+        if found.missing:
+            first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.missing[:3])
+            lines.append(
+                f"  {len(found.missing)} file(s) a record names are missing or of another size, as before the move: {first}"
+                f"{' and more' if len(found.missing) > 3 else ''}. If a sync is still bringing them, wait and run again."
+            )
+        return lines
+
+    root = the_store.root
+    synced = "In a synced folder, let the sync finish before another machine uses the store."
+    try:
+        resumed = migrate_0_5.journal_of(root) is not None
+        found = migrate_0_5.Plan() if resumed else migrate_0_5.plan(root)
+        migrate_0_5.check(root, found)
+        if resumed:
+            click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
+            if dry_run:
+                click.echo("Nothing was moved.")
+                return
+        else:
+            click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: {found.pipelines} pipeline(s), {found.snapshots} snapshot(s).")
+            for line in counts(found, "become"):
+                click.echo(line)
+            if dry_run:
+                click.echo("Nothing was moved.")
+                return
+            click.echo("Nothing else may use the store while this runs, on this machine or another.")
+            click.echo("Afterwards every machine that uses it needs this ChartBook: an earlier one will not read it.")
+            click.echo(synced)
+            if not yes and not click.confirm("Move it?", default=False):
+                click.echo("Nothing was moved.")
+                return
+        done = migrate_0_5.run(root)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    click.echo(f"Moved the store at {the_store} to this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
+    if not resumed:
+        for line in counts(done, "became"):
+            click.echo(line)
+    click.echo(synced)
+
+
 @store.command("migrate")
 @click.option("--dry-run", is_flag=True, help="Say what would be moved, and move nothing")
 @click.option("--yes", "-y", is_flag=True, help="Do not ask")
 def store_migrate(dry_run, yes):
-    """Move a store made by ChartBook 0.2 to the layout of 0.3.
+    """Move a store to this version's layout: one that ChartBook 0.5 laid out, or one made by 0.2.
+
+    A store of 0.5 (`pipelines/` at its top) is read as it is and not
+    written. This moves it, once, on one machine: in each pipeline the
+    newest snapshot its owner made becomes complete under `snapshots/`,
+    the others it made become increments on it under `increments/`, and
+    a snapshot a pin made becomes complete. Files change folder by rename,
+    so a store in a synced folder uploads nothing again; only a file that
+    two folders must each hold is copied. What no record names is moved
+    aside under `_chartbook/left-by-0.5/`, never removed. Nothing else
+    may use the store while it runs, and afterwards every machine that
+    uses it needs this ChartBook. Cut short, it is run again and goes on.
+
+    A store made by ChartBook 0.2 is moved to the layout of 0.3 to 0.5
+    first, as before; run the command again to move that one on.
 
     ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
     for each snapshot in it named by when it was made and its commit, and
@@ -4339,7 +4411,7 @@ def store_migrate(dry_run, yes):
         chartbook store migrate --dry-run
         chartbook store migrate
     """
-    from chartbook import migrate
+    from chartbook import migrate, migrate_0_5
     from chartbook.store import FolderStore, StoreError, default_store
 
     try:
@@ -4355,6 +4427,10 @@ def store_migrate(dry_run, yes):
             err=True,
         )
         raise SystemExit(1)
+    if migrate_0_5.journal_of(the_store.root) is not None:
+        # A move to this layout that was cut short: taken up from its journal
+        _move_from_0_5(the_store, dry_run, yes)
+        return
     try:
         plan = migrate.plan(the_store.root)
     except StoreError as e:
@@ -4369,7 +4445,7 @@ def store_migrate(dry_run, yes):
             raise SystemExit(1)
         if earlier:
             # What this command moves is a store of 0.2. One of 0.3 to 0.5 is read as it is, and is not this version's
-            click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: there is nothing to move from 0.2.")
+            _move_from_0_5(the_store, dry_run, yes)
         else:
             click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
         return

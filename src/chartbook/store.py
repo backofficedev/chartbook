@@ -2695,8 +2695,11 @@ class FolderStore(Store):
             if layout is V3_LAYOUT:
                 what = (
                     f"says {FOLDER_SCHEMA!r}, this version's layout, and a {other.pipelines}/ folder that holds snapshots "
-                    f"laid out as ChartBook 0.5 laid them out ({self._shown(found)}): most likely a store of 0.5 that "
-                    f"this ChartBook wrote into before its store.json had arrived"
+                    f"laid out as ChartBook 0.5 laid them out ({self._shown(found)}). If `chartbook store migrate` moved "
+                    f"this store on another machine, a sync may still be bringing the move: wait for it to finish. If a "
+                    f"machine that still has ChartBook 0.5 made that snapshot after the move: upgrade ChartBook on that "
+                    f"machine, remove that folder from the store, and run its pipeline again there. If neither, this is "
+                    f"most likely a store of 0.5 that this ChartBook wrote into before its store.json had arrived"
                 )
             else:
                 what = (

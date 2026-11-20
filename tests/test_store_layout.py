@@ -1063,15 +1063,16 @@ class TestStoreMigrateStillMovesAStoreOf02Alone:
             assert result.output.splitlines() == [f"The store at {store} has the layout of this version already: nothing to move."]
         assert _tree(store.root) == before and FolderStore(store.root).verify() == []
 
-    def test_a_store_of_0_5_is_left_as_it_is(self, of_0_5):
+    def test_a_store_of_0_5_is_what_it_moves_and_a_dry_run_or_a_no_moves_nothing(self, of_0_5):
+        """The move itself is in tests/test_migrate_0_5.py."""
         old, second, cleared = of_0_5
         before = _tree(old.root)
-        for arguments in (["store", "migrate"], ["store", "migrate", "--dry-run"], ["store", "migrate", "--yes"]):
-            result = CliRunner().invoke(main, arguments)
+        for arguments, typed in ((["store", "migrate"], "n\n"), (["store", "migrate", "--dry-run"], None)):
+            result = CliRunner().invoke(main, arguments, input=typed)
             assert result.exit_code == 0, result.output
-            assert result.output.splitlines() == [
-                f"The store at {old} has the layout of ChartBook 0.5: there is nothing to move from 0.2."
-            ]
+            lines = result.output.splitlines()
+            assert lines[0] == f"The store at {old} has the layout of ChartBook 0.5: 1 pipeline(s), 1 snapshot(s)."
+            assert lines[-1] == "Nothing was moved."
         assert _tree(old.root) == before
 
 
@@ -1188,10 +1189,12 @@ class TestAFolderWithPipelinesAndNoMarker:
         )
         assert "migrate" not in str(refused.value)
         assert _tree(root) == [f"roots/{'ab' * 16}.json"]
-        # The command it does not send to says nothing untrue of it either: no layout "of this version already"
-        migrate = CliRunner().invoke(main, ["store", "migrate"])
-        assert migrate.exit_code == 0 and migrate.output.splitlines() == [
-            f"The store at {store} has the layout of ChartBook 0.5: there is nothing to move from 0.2."
+        # The command it does not send to moves nothing of it either: its store.json is not there to say what it is
+        migrate = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        assert migrate.exit_code == 1 and migrate.output.splitlines() == [
+            f"Error: The store at {root} has no store.json that says 'chartbook/store/v2', the layout of ChartBook 0.5, so it "
+            f"is not moved. If a sync is still bringing the file, wait for it; if it is lost for good, put one back that "
+            f'holds {{"schema": "chartbook/store/v2"}}, and run this again.'
         ]
         # The way out, as written: what was named is removed, and the snapshot is made
         (root / "roots" / ("ab" * 16 + ".json")).unlink()
@@ -1296,8 +1299,11 @@ class TestAFolderWithBothLayoutsInIt:
             return (
                 f"The store at {store} has a store.json that says 'chartbook/store/v3', this version's layout, and a "
                 f"pipelines/ folder that holds snapshots laid out as ChartBook 0.5 laid them out "
-                f"({root / 'pipelines' / 'acme+rates' / of_0_5[0]}): most likely a store of 0.5 that this ChartBook wrote "
-                f"into before its store.json had arrived. {HOW_TO_PART}"
+                f"({root / 'pipelines' / 'acme+rates' / of_0_5[0]}). If `chartbook store migrate` moved this store on "
+                f"another machine, a sync may still be bringing the move: wait for it to finish. If a machine that still "
+                f"has ChartBook 0.5 made that snapshot after the move: upgrade ChartBook on that machine, remove that "
+                f"folder from the store, and run its pipeline again there. If neither, this is most likely a store of "
+                f"0.5 that this ChartBook wrote into before its store.json had arrived. {HOW_TO_PART}"
             )
         return (
             f"The store at {store} has a store.json that says 'chartbook/store/v2', the layout of ChartBook 0.5, and a "
