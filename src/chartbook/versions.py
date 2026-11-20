@@ -159,6 +159,110 @@ class Rendered:
 
 
 @functools.lru_cache(maxsize=None)
+@dataclass(frozen=True)
+class Behind:
+    """How far a catalog's site is behind its stores (:func:`behind`).
+
+    Attributes:
+        built: Whether the catalog has a site at all.
+        missing: How many snapshots its stores have that the site does not show.
+        gone: How many snapshots the site shows that its stores no longer have.
+    """
+
+    built: bool
+    missing: int = 0
+    gone: int = 0
+
+    def __bool__(self) -> bool:
+        return not self.built or bool(self.missing or self.gone)
+
+    def said(self) -> str:
+        """It in a sentence, for the person about to open the site; empty where the site shows what the stores have."""
+        if not self.built:
+            return "The catalog's site has not been built yet."
+
+        def counted(count: int) -> str:
+            return "1 snapshot" if count == 1 else f"{count} snapshots"
+
+        if self.missing and self.gone:
+            there = "is" if self.missing == 1 else "are"
+            return (
+                f"The catalog's site is behind your stores: {counted(self.missing)} {there} not in it yet, and "
+                f"{self.gone} it shows {'is' if self.gone == 1 else 'are'} no longer in them."
+            )
+        if self.missing:
+            return f"The catalog's site is behind your stores: {counted(self.missing)} {'is' if self.missing == 1 else 'are'} not in it yet."
+        if self.gone:
+            return (
+                f"The catalog's site is behind your stores: {counted(self.gone)} it shows "
+                f"{'is' if self.gone == 1 else 'are'} no longer in them."
+            )
+        return ""
+
+
+def behind(catalog: Path) -> Behind:
+    """How far the site of a catalog is behind its stores, worked out now.
+
+    The snapshots the site was built from, which the ``index.json`` beside
+    it lists, are compared with those in the catalog's stores, as its
+    build would list them. Nothing is kept between a run and this: a mark
+    left by ``chartbook run`` would miss a snapshot that arrived through a
+    synced folder from another machine, and one that ``store gc`` cleared
+    there.
+
+    The site shows snapshots. Work that is not committed is on a
+    pipeline's own site, and is not looked at here.
+
+    :param catalog: The catalog's ``catalog.toml``.
+    :raises ValueError: If the catalog cannot be read.
+    :raises OSError: If the catalog or a store cannot be read.
+    :raises chartbook.store.StoreError: If a store cannot be read.
+    """
+    import json
+
+    import tomli
+
+    from chartbook import index, snapshot
+    from chartbook.hubs import selected_snapshots
+    from chartbook.multi_store import Stores
+
+    catalog = Path(catalog)
+    site = catalog.parent / "docs"
+    built = (site / "index.html").is_file()
+    with open(catalog, "rb") as f:
+        raw = tomli.load(f)
+    notes = raw.get("pipelines") if isinstance(raw.get("pipelines"), dict) else {}
+    found, _ = snapshot.readable_snapshots(Stores.configured(catalog))
+    now = set()
+    for pipeline in {taken.pipeline for taken in found}:
+        note = notes.get(pipeline) if isinstance(notes.get(pipeline), dict) else {}
+        if note.get("disabled"):
+            continue  # not shown, by the catalog's own word
+        try:
+            chosen = selected_snapshots(found, pipeline, note.get("repository"))
+        except ValueError:
+            continue  # several repositories claim it: its build says so, and shows none of it until told which
+        for taken in chosen:
+            try:
+                version_name(taken.commit, taken.made_at)
+            except ValueError:
+                continue  # a record no build makes a page of
+            now.add((pipeline, taken.commit, taken.made_at))
+    shown = set()
+    if built:
+        try:
+            document = json.loads((site / index.INDEX_FILE).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            document = {}  # a site with no index beside it shows no snapshot that can be told
+        for record in (document.get("records") if isinstance(document, dict) else None) or []:
+            if not isinstance(record, dict) or record.get("kind") != "Pipeline":
+                continue
+            for entry in record.get("snapshots") or []:
+                if isinstance(entry, dict) and isinstance(entry.get("commit"), str) and isinstance(entry.get("made_at"), str):
+                    shown.add((record.get("id"), entry["commit"], entry["made_at"]))
+    return Behind(built, len(now - shown), len(shown - now))
+
+
 def fingerprint() -> str:
     """ChartBook's version and a fingerprint of its code: what a kept site was built with.
 

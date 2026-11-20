@@ -365,13 +365,33 @@ Catalog site generated: /Users/x/.chartbook/docs/index.html
 
 `chartbook run` says the same after a snapshot it makes, and takes `--no-gc-reminder` too. With several stores in the catalog, each that gc could clear is named, with the `--store NAME` that gc takes there.
 
+(chartbook-catalog-open)=
 ### catalog open
 
-Open the rendered catalog site in your default browser.
+Open the catalog's site in your default browser.
 
 ```console
 chartbook catalog open
 ```
+
+**It asks before it opens a site that is behind.** `chartbook run` makes a snapshot and builds no catalog: the site is built when it is looked at. So `catalog open` works out, when you type it, whether the site shows what your stores have now, and asks:
+
+```console
+$ chartbook catalog open
+The catalog's site is behind your stores: 3 snapshots are not in it yet. Build it before opening? [Y/n]: 
+...
+Catalog site generated: /Users/x/.chartbook/docs/index.html
+Opening /Users/x/.chartbook/docs/index.html
+```
+
+Enter builds it, as `chartbook catalog build` does, and opens it; `n` opens it as it is. A site that was never built is asked for the same way (`The catalog's site has not been built yet. Build it before opening? [Y/n]`), and `n` there opens nothing.
+
+- **Behind is worked out, not remembered.** The snapshots the site was built from (the `index.json` beside it) are compared with those in the catalog's stores now. A mark left by a run would miss a snapshot that came through a synced folder from another machine, and one that was cleared there.
+- **It counts both ways:** snapshots the stores have that the site does not show, and snapshots the site shows that the stores no longer have (`1 snapshot is not in it yet, and 2 it shows are no longer in them`).
+- **Where nothing can ask** (a script, a pipe, CI), it opens the site as it is and says how far behind it is, on stderr: `… Opening it as it is: `chartbook catalog build` brings it up to date.` With no site at all it exits `1` and names `chartbook catalog build`.
+- **A store that cannot be read now** (a drive that is away) is no reason to stop: the site is opened as it is, and the next build says what is wrong.
+
+The catalog shows snapshots. Work that is not committed yet is on the pipeline's own site, which its build writes: {ref}`chartbook docs open <chartbook-docs>`.
 
 ## chartbook ls
 

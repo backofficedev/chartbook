@@ -84,7 +84,7 @@ chartbook link acme/rates ../rates # Local working-copy override; delete chartbo
 chartbook catalog disable <id>   # Disable a pipeline (skip during builds)
 chartbook catalog enable <id>    # Re-enable a disabled pipeline
 chartbook catalog build       # Render the global catalog's site (was `catalog generate`)
-chartbook catalog open           # Open the global catalog's site in the browser (was `catalog browse`)
+chartbook catalog open           # Open the global catalog's site in the browser (was `catalog browse`). AT A TERMINAL it first asks `The catalog's site is behind your stores: N snapshots are not in it yet. Build it before opening? [Y/n]` when the stores have moved on since the last build (or `has not been built yet`); Enter builds then opens. Off a terminal it opens the site as it is and says how far behind on stderr; run `chartbook catalog build` first in a script
 chartbook ls                # List all pipelines, dataframes, charts
 chartbook ls pipelines      # List pipelines only
 chartbook ls dataframes     # List dataframes only

@@ -122,7 +122,7 @@ Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the o
 
 ```text
 $ chartbook catalog open
-The catalog's site is behind your stores: 3 versions are not in it yet. Build them before opening? [Y/n]
+The catalog's site is behind your stores: 3 snapshots are not in it yet. Build it before opening? [Y/n]: 
 ```
 
 ## What `chartbook run` does, in order
@@ -415,6 +415,20 @@ terminal it opens what there is and says how far behind it is.
 The catalog shows snapshots. Work that is not committed yet is on the pipeline's own site, which
 its build writes: `chartbook docs open`.
 
+*Built 2026-11-19* (`chartbook.versions.behind`), with what building it settled:
+
+- **It counts both ways.** Snapshots the stores have that the site does not show, and snapshots
+  the site shows that the stores no longer have: what `chartbook store gc` cleared, here or on a
+  machine that shares the store, still has its pages in the site until it is built again.
+- **The word is "snapshots",** not "versions", and the question is "Build it before opening?":
+  it is the site that is built.
+- **No is not a refusal to open.** `n` opens the site as it is. With no site at all, `n` opens
+  nothing and exits 0; where nothing can ask, no site is an error that names `chartbook catalog
+  build`, as before.
+- **A store that cannot be read now** does not stop the command: it opens what there is.
+- **What the site was built from is the `index.json` beside it,** which every build writes. No
+  new file, and nothing a run has to leave behind.
+
 ## Agents
 
 *Decided 2026-11-19: one command, and more than Claude.* *Proposed by Claude:* `chartbook install
@@ -470,6 +484,6 @@ changes.
 6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
    *Built 2026-11-19.*
 7. What is not in your store: the list, in order. *Built 2026-11-19.*
-8. `chartbook catalog open` asks before opening a site that is behind.
+8. `chartbook catalog open` asks before opening a site that is behind. *Built 2026-11-19.*
 9. `chartbook install agents`.
 10. The first screen: `--help`, the Quickstart, the README, the skill.

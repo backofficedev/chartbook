@@ -2158,7 +2158,7 @@ def catalog_enable(pipeline_id, catalog_path):
 @click.option("--gc", "run_gc", is_flag=True, help="After the build, run `chartbook store gc` (without asking)")
 @click.option("--no-gc-reminder", is_flag=True, help="Do not say what `chartbook store gc` would clear")
 @click.pass_context
-def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run_gc, no_gc_reminder):
+def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run_gc, no_gc_reminder, to_open=False):
     """Render the global catalog's site, into docs/ beside its catalog.toml.
 
     The catalog is the one ~/.chartbook/settings.toml names, or else
@@ -2243,6 +2243,8 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
 
     click.echo("")
     click.echo(f"Catalog site generated: {output_dir / 'index.html'}")
+    if to_open:
+        return  # built by `chartbook catalog open`, which opens it now
     click.echo("Run 'chartbook catalog open' to open it in your browser.")
     if run_gc:
         ctx.invoke(store_gc, dry_run=False, yes=True, forget_missing=False, keep_days=None, keep_lineage=False, aggressive=False)
@@ -2251,16 +2253,52 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
 
 
 @catalog.command("open")
-def catalog_open():
-    """Open the global catalog's site in your default browser."""
+@click.pass_context
+def catalog_open(ctx):
+    """Open the global catalog's site in your default browser.
+
+    The site shows the snapshots that were in your stores when it was last
+    built. Where the stores have moved on since (a snapshot made or
+    cleared, here or on a machine that shares a store with this one), or
+    the site was never built, you are asked whether to build it first.
+    Where nothing can ask, it opens the site as it is and says how far
+    behind it is. `chartbook catalog build` builds it without opening.
+    """
+    from chartbook import versions
+    from chartbook.store import StoreError
 
     catalog_path = _catalog_or_make_one()
 
     index_path = catalog_path.parent / "docs" / "index.html"
+    try:
+        # Worked out now, from the stores as they are: no run leaves a mark for this
+        said = versions.behind(catalog_path).said()
+    except (ValueError, OSError, StoreError):
+        said = ""  # a catalog or a store that cannot be read now: what there is is opened, and its build says what is wrong
     if not index_path.is_file():
-        click.echo("Error: Catalog docs not found.", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook catalog build' first.", err=True)
+        said = said or "The catalog's site has not been built yet."
+    if said and _can_ask():
+        try:
+            build = _confirm(f"{said} Build it before opening?", default=True)
+        except click.Abort:  # Ctrl-C, or the end of input
+            click.echo("", err=True)
+            raise SystemExit(1)
+        if build:
+            ctx.invoke(
+                catalog_generate, force_write=False, strict=False, clean=False, watch=False, watch_interval=None,
+                run_gc=False, no_gc_reminder=True, to_open=True,
+            )
+        elif not index_path.is_file():
+            click.echo("Nothing to open. `chartbook catalog build` builds it.", err=True)
+            return
+    elif said and index_path.is_file():
+        click.echo(f"{said} Opening it as it is: `chartbook catalog build` brings it up to date.", err=True)
+    if not index_path.is_file():
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + "The catalog's site has not been built yet. `chartbook catalog build` builds it.",
+            err=True,
+        )
         raise SystemExit(1)
 
     import webbrowser

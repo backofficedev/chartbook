@@ -84,7 +84,7 @@ chartbook catalog init       # Make the machine's catalog, ~/.chartbook/catalog.
 chartbook store add NAME URL  # Add a store; a pipeline enters by snapshot
 chartbook catalog disable <id>  # Leave a pipeline out of the catalog's builds; `chartbook catalog enable <id>` brings it back
 chartbook catalog build   # Render the catalog site
-chartbook catalog open       # Open the catalog site in the browser
+chartbook catalog open       # Open the catalog site in the browser. At a terminal it asks to build first when the site is behind the stores (snapshots made or cleared since its last build), or was never built; off a terminal it opens what there is and says how far behind it is
 chartbook ls                 # List all pipelines, dataframes, charts
 chartbook ls dataframes      # List dataframes only
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
