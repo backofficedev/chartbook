@@ -78,7 +78,7 @@ from chartbook.manifest import (
     resolve_project_type,
     validate_dependencies,
 )
-from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
+from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME, UNDECLARED_ENV_VAR
 from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
 
 
@@ -342,6 +342,10 @@ class RunReport:
         reason: What went wrong, when it was not the script itself.
         snapshots: The snapshot made of each pipeline after its build, as
             :class:`chartbook.snapshot.SnapshotReport`.
+        undeclared: Where a build failed: the pipelines its code read, from
+            the pipeline's own folder, that its manifest does not declare,
+            as the reads named them and in the order they were refused.
+            ``chartbook run`` offers to declare the first.
         not_snapshotted: The pipelines whose build was followed by no
             snapshot under :data:`WHEN_COMMITTED`, each with why, in a few
             words: work that is not committed, a folder in no repository, a
@@ -353,6 +357,7 @@ class RunReport:
     skipped: list[tuple[Step, str]] = field(default_factory=list)
     snapshots: list = field(default_factory=list)
     not_snapshotted: list[tuple[Step, str]] = field(default_factory=list)
+    undeclared: list[str] = field(default_factory=list)
     failed: Optional[Step] = None
     exit_code: int = 0
     reason: str = ""
@@ -1000,7 +1005,9 @@ def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
     )
 
 
-def execute(script: str, directory: Path, name: Optional[str] = None, foreign: bool = False) -> int:
+def execute(
+    script: str, directory: Path, name: Optional[str] = None, foreign: bool = False, undeclared: Optional[list] = None
+) -> int:
     """Run one script in a directory, and return its exit code.
 
     The script is handed to a shell whole, so a value of several lines is
@@ -1018,6 +1025,10 @@ def execute(script: str, directory: Path, name: Optional[str] = None, foreign: b
     :param foreign: Whether the directory is a git dependency's working
         copy, the cache's: then git in the script is not told of any other
         repository the environment names (a git hook's ``GIT_DIR``).
+    :param undeclared: A list that each read the script was refused, of a
+        pipeline its manifest does not declare, is added to: the pipeline
+        asked for, the reference as written and the folder of the pipeline
+        that asked (:func:`chartbook.resolve._note_an_undeclared_read`).
     :returns: The script's exit code. One that a signal stopped gives 128
         plus the signal's number, as a shell reports it.
     """
@@ -1049,8 +1060,43 @@ def execute(script: str, directory: Path, name: Optional[str] = None, foreign: b
         environment[RUN_DIR_ENV_VAR] = where
         environment[RUN_SCRIPT_ENV_VAR] = name
         environment[RUN_STACK_ENV_VAR] = json.dumps([*_stack(), [where, name]])
-    code = _execute(script, directory, environment)
+    notes = None
+    if undeclared is not None:
+        # A file of its own for this script's refused reads, which the reads are told of by its name
+        handle, notes = tempfile.mkstemp(prefix="chartbook-undeclared-", suffix=".jsonl")
+        os.close(handle)
+        environment[UNDECLARED_ENV_VAR] = notes
+    else:
+        environment.pop(UNDECLARED_ENV_VAR, None)  # never another run's file
+    try:
+        code = _execute(script, directory, environment)
+        if notes is not None:
+            undeclared.extend(_undeclared_reads(notes))
+    finally:
+        if notes is not None:
+            try:
+                os.remove(notes)
+            except OSError:
+                pass
     return 128 - code if code < 0 else code
+
+
+def _undeclared_reads(notes: str) -> list[dict]:
+    """The reads a script was refused, as it noted them: each a pipeline, a reference and a folder; a line that is not one is passed over."""
+    found = []
+    try:
+        with open(notes, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return found
+    for line in lines:
+        try:
+            note = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(note, dict) and all(isinstance(note.get(key), str) and note[key] for key in ("pipeline", "reference", "from")):
+            found.append(note)
+    return found
 
 
 def _execute(script: str, directory: Path, environment: dict) -> int:
@@ -1549,8 +1595,12 @@ def run(
             old_frozen = os.environ.get("CHARTBOOK_FROZEN")
             if frozen:
                 os.environ["CHARTBOOK_FROZEN"] = "1"
+            refused: list = []
             try:
-                code = execute(command, step.directory, script, foreign=step.source == "git")
+                code = execute(
+                    command, step.directory, script, foreign=step.source == "git",
+                    undeclared=refused if building and step.source == "asked" else None,
+                )
             finally:
                 if frozen:
                     if old_frozen is None:
@@ -1560,6 +1610,12 @@ def run(
             if code != 0:
                 report.failed, report.exit_code = step, code
                 report.reason = f"its {script!r} script exited with {code}"
+                # What its own code read and its manifest does not declare: only reads made from this
+                # pipeline's folder, since another's manifest is not this run's to write
+                own = str(step.directory.resolve())
+                for note in refused:
+                    if note["from"] == own and note["pipeline"] not in report.undeclared:
+                        report.undeclared.append(note["pipeline"])
                 break
             if step.source == "git":
                 mark_built(step.directory)

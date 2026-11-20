@@ -3063,6 +3063,15 @@ def add_command(pipeline, key, commit, project_dir):
         chartbook add acme/rates --as rates
         chartbook add acme/rates --commit 3f2a9c1
     """
+    _add_dependency(project_dir, pipeline, key=key, commit=commit)
+
+
+def _add_dependency(project_dir, pipeline, key=None, commit=None):
+    """Write a dependency into a pipeline's manifest and pin it, as `chartbook add` does; exit 1 where it cannot be.
+
+    For the command, and for a run that offers to declare a pipeline its
+    build read without declaring it (:func:`_offer_to_add`).
+    """
     from chartbook.identity import validate_pipeline_id
     from chartbook.manifest import dependency_line, validate_dependencies, with_dependency
     from chartbook.store import StoreError
@@ -3542,11 +3551,65 @@ def _echo_snapshot(report, upstream=False):
         click.echo("Stores: " + ", ".join(report.stores))
 
 
+def _offer_to_add(project_dir, report, strict, frozen, added):
+    """After a build that stopped on a read of a pipeline its manifest does not declare: offer to declare it; the ID added, or None.
+
+    Asked only where yes can work (``docs_src/design/one-command.md``): a
+    person is there to answer; the run is a plain one, not ``--frozen``
+    (which writes nothing) nor ``--snapshot`` (which a manifest just
+    changed cannot end in); the read was made from this pipeline's own
+    folder; and the stores have exactly one pipeline of that name. A name
+    two pipelines share, or one the stores do not have (a folder or a
+    repository, which is declared by hand), is left to the build's own
+    error, as before. Yes does what `chartbook add` does.
+
+    :param added: The IDs added before in this command: one is never
+        asked of twice, so that a build that goes on failing ends.
+    """
+    if not report.undeclared or strict or frozen or report.failed is None or report.failed.source != "asked":
+        return None
+    if not _can_ask():
+        return None
+    from chartbook.snapshot import SnapshotError, pipeline_in, readable_snapshots
+    from chartbook.store import StoreError
+
+    asked = report.undeclared[0]
+    try:
+        try:
+            itself = pipeline_in(project_dir)
+        except (SnapshotError, ValueError):
+            itself = None
+        stored = _StoredIds(project_dir)
+        found = (asked if asked in stored.ids else None) if "/" in asked else _bare_name_in_stores(asked, stored, itself)
+        if found is None or found == itself or found in added:
+            return None
+        taken = [one for one in readable_snapshots(stored._stores())[0] if one.pipeline == found]
+        newest = max(taken, key=lambda one: one.made_at)
+    except (ValueError, StoreError, OSError):
+        return None  # none of that name, or several, or a store that cannot be read: the build's error says the rest
+    count = "1 snapshot" if len(taken) == 1 else f"{len(taken)} snapshots"
+    click.echo(f"{report.failed.id}: its code reads from a pipeline that chartbook.toml does not declare:", err=True)
+    click.echo(f"  {found}   (in your store: {count}, the newest of {newest.commit[:7]})", err=True)
+    try:
+        agreed = click.confirm("Add it to [dependencies] and build again?", default=True, err=True)
+    except click.Abort:  # Ctrl-C, or the end of input
+        click.echo("", err=True)
+        return None
+    if not agreed:
+        return None
+    _add_dependency(project_dir, found)
+    return found
+
+
 def _run_script(
     project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
-    upstream=False, no_gc_reminder=False,
+    upstream=False, no_gc_reminder=False, added=(),
 ):
-    """Run a named script as `chartbook run` does; exit with its code if it fails."""
+    """Run a named script as `chartbook run` does; exit with its code if it fails.
+
+    :param added: The dependencies this command has added to the manifest
+        at the person's yes (:func:`_offer_to_add`), before running again.
+    """
     from chartbook import lock
     from chartbook import run as runner
     from chartbook.store import StoreError
@@ -3589,6 +3652,14 @@ def _run_script(
         raise SystemExit(1)
 
     if report.failed is not None:
+        now_declared = _offer_to_add(project_dir, report, strict=snapshot is True, frozen=frozen, added=added)
+        if now_declared is not None:
+            # Declared and pinned: the build again, which asks again if its code reads another
+            return _run_script(
+                project_dir, script, force=force, snapshot=snapshot, frozen=frozen, remake=remake,
+                remake_command=remake_command, upstream=upstream, no_gc_reminder=no_gc_reminder,
+                added=(*added, now_declared),
+            )
         click.echo(
             click.style("Error: ", fg="red", bold=True)
             + f"{report.failed.id}: {report.reason}. Nothing after it was run.",

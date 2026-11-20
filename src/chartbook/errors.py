@@ -295,7 +295,11 @@ class DependencyNotDeclaredError(LookupError):
         else:
             lines += [
                 "",
-                "To read from another pipeline, say where it is, then pin it:",
+                "To read from another pipeline, declare it. Where your store has snapshots of it:",
+                "",
+                f"    $ chartbook add {key}",
+                "",
+                "(`chartbook run`, typed at a terminal, offers to.) Or say by hand where it is, then pin it:",
                 "",
                 "    [dependencies]",
                 (f'    "{key}" = {{ id = "{key}" }}' if found_at and where is None else f'    "{key}" = {{ path = "{where}" }}'),

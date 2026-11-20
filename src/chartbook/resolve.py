@@ -1778,6 +1778,33 @@ def resolve(
 #: there, not warned about. CI can set it too.
 BATCH_ENV_VAR = "CHARTBOOK_BATCH"
 
+#: A file that ``chartbook run`` names for its build: a read the build is
+#: refused, of a pipeline its manifest does not declare, is noted there, so
+#: that the run can offer to declare it (``docs_src/design/one-command.md``)
+UNDECLARED_ENV_VAR = "CHARTBOOK_RUN_UNDECLARED"
+
+
+def _note_an_undeclared_read(asset: "AssetRef", manifest_dir: Path) -> None:
+    """Tell the ``chartbook run`` that started this build which pipeline its code read without declaring it.
+
+    One line of JSON in the file the run named: the pipeline asked for,
+    the reference as written, and the folder of the pipeline that asked.
+    Nothing scans source for names: a read is found when the code makes
+    it. The read is refused whatever becomes of the note.
+    """
+    path = os.environ.get(UNDECLARED_ENV_VAR, "").strip()
+    if not path:
+        return
+    import json
+
+    try:
+        with open(path, "a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps({
+                "pipeline": asset.pipeline_id, "reference": str(asset), "from": str(Path(manifest_dir).resolve()),
+            }) + "\n")
+    except OSError:
+        pass
+
 
 def batch() -> bool:
     """Whether this is a batch run, where every read of another pipeline must be one the lockfile records."""
@@ -2315,6 +2342,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
             # Never this pipeline's own snapshot read as another's
             raise _this_pipeline_error(asset, manifest_dir, own) from None
         if batch():
+            _note_an_undeclared_read(asset, manifest_dir)
             raise
         location, why, newest, settled = _newest_snapshot_of(asset)
         if location is None:

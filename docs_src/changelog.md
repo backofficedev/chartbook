@@ -84,6 +84,34 @@ Nothing is built yet: `chartbook run` builds it.
 - The template's CI file, its README and the line `chartbook init` ends with say `chartbook run --check`, and so do this repository's examples. A project made from an earlier template has `chartbook check --skip-outputs` in `.github/workflows/python_tests.yml`: change the line.
 - In Python, `chartbook.check.run_checks(..., not_built=[])` gathers the outputs that are not built into the list and does not report them; `skip_outputs` is as it was.
 
+### Added — `chartbook run` offers to add a pipeline your code reads and `chartbook.toml` does not declare
+
+You write `data.load("acme/rates:treasury")` and run. Nobody has to know `chartbook add` ({design}`one-command`):
+
+```text
+$ chartbook run
+acme/report: build
+…
+acme/report: its code reads from a pipeline that chartbook.toml does not declare:
+  acme/rates   (in your store: 2 snapshots, the newest of 4f2a91c)
+Add it to [dependencies] and build again? [Y/n]: y
+Added to [dependencies] in /work/report/chartbook.toml: "acme/rates" = {}
+acme/rates: 1 pinned
+  From its snapshot at 4f2a91c, made 2026-11-19 14:02 UTC.
+Wrote chartbook.lock.
+acme/report: build
+Ran build in 1 pipeline(s).
+acme/report: not snapshotted: 2 files are not committed (`git status` lists them).
+  A snapshot is of a commit: commit, and `chartbook run` again.
+```
+
+- **The read is found when the code makes it.** A read in a build of a pipeline that is not declared is refused, as before, and now tells the run that started the build which pipeline it asked for. Nothing reads source files for names.
+- **Yes does what `chartbook add` does,** pins, and builds again. One pipeline at a time: a build stops at the first read it is refused, so a second is asked of when the build is run again, and no pipeline is asked of twice in one command.
+- **It asks only where yes can work:** a person is there to answer, the run is neither `--frozen` nor `--snapshot`, the read was made from this pipeline's own folder, and the stores have exactly one pipeline of that name. Otherwise the build's error stands as before, in CI above all.
+- **The read's error names the command:** `DependencyNotDeclaredError` says `chartbook add acme/rates` before the entry to write by hand.
+- `chartbook add` is as it was, for declaring a pipeline before any code reads it, under another name, or at a commit.
+- In Python, `RunReport.undeclared` holds the pipelines a failed build read and its manifest does not declare. A build is told where to note such a read by `CHARTBOOK_RUN_UNDECLARED`, which `chartbook run` sets for it.
+
 ### Changed — `chartbook update` is `chartbook pin --update`: `pin` is the word for the lockfile
 
 `chartbook update` read as "update ChartBook". Everything about `chartbook.lock` is one command now ({design}`one-command`):

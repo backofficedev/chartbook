@@ -121,7 +121,7 @@ In a notebook, a read does what you most likely meant and says what it did. In a
 |---|---|---|
 | A dependency that is pinned | The pinned copy | The pinned copy |
 | A dependency declared and not pinned | Pins its newest snapshot now, and says so | `run` pinned it before the build |
-| A pipeline not in `[dependencies]` | Its newest snapshot, with a warning that nothing records it | An error |
+| A pipeline not in `[dependencies]` | Its newest snapshot, with a warning that nothing records it | An error; at a terminal, `chartbook run` then offers to add it and build again |
 | One with no snapshot, whose folder is here | An error naming `chartbook snapshot` in that folder, or `chartbook link` | The same error |
 
 ```python
