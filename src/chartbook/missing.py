@@ -851,6 +851,10 @@ def after_pin(
     return listing if listing.wanted else None
 
 
+#: Said of a repository whose pipeline could not be placed in it, where the command names the repository's top
+NOT_AT_THE_TOP = "if it is not at the top of its repository, give its folder there to `--project-dir`"
+
+
 def _first_line(error: object) -> str:
     """What went wrong, in a line a list can hold: the first line of it, with no full stop."""
     lines = str(error).strip().splitlines()
@@ -871,9 +875,10 @@ def _plain(text: str, most: int = 300) -> str:
 
 
 def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
-    """A word of a command, as this system's shell takes it: quoted where it has to be, and never with a control character.
+    """A word of a command, as this system's shells take it: quoted where it has to be, and never with a control character.
 
-    :param windows: Whether for ``cmd.exe``; by the system it runs on, by default.
+    :param windows: Whether for Windows, where the word is one that both
+        ``cmd.exe`` and PowerShell take; by the system it runs on, by default.
     """
     text = _plain(str(text), most=4096)
     if not (os.name == "nt" if windows is None else windows):
@@ -882,15 +887,23 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     # as it is: doubled it is one only in a batch file, and these lines are pasted at a prompt, where `%20` in an
     # address must stay `%20`. (A `%NAME%` that names a variable is filled in there, in quotes or out, and
     # nothing typed prevents it: the word is then another word, and still one word.)
+    # PowerShell takes the same word, bare or in double quotes, but for a `$NAME` or a backtick in it, which it
+    # reads in double quotes and cmd.exe does not: no one spelling is right in both, and cmd's is the one given.
     if re.fullmatch(r"[A-Za-z0-9_./:\\-]+", text):
         return text
     return '"' + text.replace('"', '""') + '"'
 
 
-def _cd(folder: Union[str, Path], windows: Optional[bool] = None) -> str:
-    """The command that enters a folder: on Windows `cd /d`, since a bare `cd` there does not change the drive."""
-    windows = os.name == "nt" if windows is None else windows
-    return f"cd /d {_quoted(folder, windows)}" if windows else f"cd {_quoted(folder, windows)}"
+def _in(folder: Union[str, Path], windows: Optional[bool] = None) -> str:
+    """`` --project-dir FOLDER``, which ends a command of the list: the folder it builds is named in it, and none is entered.
+
+    `cd FOLDER && chartbook run` is one line only where the shell reads
+    `&&`, and Windows PowerShell does not; `cd /d`, which cmd.exe needs to
+    change the drive, no PowerShell reads. A command that names its folder
+    is the same line in every shell, and leaves whoever types it where
+    they are.
+    """
+    return f" --project-dir {_quoted(folder, windows)}"
 
 
 def _counted(numbers: list[int]) -> str:
@@ -929,13 +942,19 @@ def _worktree_at(tree: Path, commit: str) -> bool:
 def said(listing: Listing, again: str = "chartbook run", done: str = "built", here: Optional[Union[str, Path]] = None) -> list[str]:
     """The list as it is printed: what cannot be done yet, each pipeline to build with what to type, and what to type after.
 
-    Every command can be pasted from any folder, in the order given: a
-    folder on this machine is named whole, and a repository is cloned
-    beside the pipeline's own, which is where a ``path`` entry would look
-    for it. A command never moves the pipeline's own repository to another
-    commit: a pipeline in that repository is built in a worktree of it.
+    A line is one command, as every shell takes it: none enters a folder
+    and none is joined to another (``&&``), so the lines are the same in a
+    POSIX shell, in ``cmd.exe`` and in PowerShell, and whoever types them
+    stays where they are. Each can be pasted from any folder, in the order
+    given: a folder on this machine is named whole, and a repository is
+    cloned beside the pipeline's own, which is where a ``path`` entry
+    would look for it. A command never moves the pipeline's own repository
+    to another commit: a pipeline in that repository is built in a
+    worktree of it.
 
-    :param again: The command to give once they are built, as it was typed.
+    :param again: The command to give once they are built, as it was
+        typed. It is given as it was typed where the pipeline is in the
+        folder it was typed in, and with the pipeline's folder otherwise.
     :param done: What cannot be done yet, as a participle: ``built``, or ``pinned``.
     :param here: The folder a folder on this machine is shown from; the
         working directory by default.
@@ -962,12 +981,10 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
     worktrees: dict = {}
     moved: set = set()
 
-    def at_its_commit(top: Path, folder: Path, commit: str, make: str) -> str:
+    def at_its_commit(top: Path, folder: Path, commit: str, make: str) -> list[str]:
         """Check a repository out and build in a folder of it: from its top, since the folder may not be there until the checkout."""
         moved.add(top)
-        if _same(top, folder):
-            return f"{_cd(top)} && git checkout {commit} && {make}"
-        return f"git -C {_quoted(top)} checkout {commit} && {_cd(folder)} && {make}"
+        return [f"git -C {_quoted(top)} checkout {commit}", make + _in(folder)]
 
     def in_a_worktree(line: Wanted, commit: str, make: str, fetch: str = "") -> list[str]:
         """Build in a worktree of the pipeline's own repository at a commit, which leaves the repository itself where it is."""
@@ -981,7 +998,7 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
             worktrees[commit] = there or next((tree for tree in names if not os.path.lexists(tree)), names[-1])
         tree = worktrees[commit]
         within = os.path.relpath(line.folder, listing.top) if line.folder is not None else line.subdirectory
-        commands = [f"{_cd(tree / within if within else tree)} && {make}"]
+        commands = [make + _in(tree / within if within else tree)]
         if add:
             commands.insert(0, f"git -C {_quoted(listing.top)} worktree add {_quoted(tree)} {commit}")
         if fetch:
@@ -1020,9 +1037,9 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
                 if line.repository and not in_own:
                     where = f"{shown} (a clone of {_plain(line.repository)}{', built already' if built else ''})"
                 if moves and line.top is not None:
-                    commands = [at_its_commit(line.top, line.folder, commit, make)]
+                    commands = at_its_commit(line.top, line.folder, commit, make)
                 else:
-                    commands = [f"{_cd(line.folder)} && {'git checkout ' + commit + ' && ' if moves else ''}{make}"]
+                    commands = [*([f"git -C {_quoted(line.folder)} checkout {commit}"] if moves else []), make + _in(line.folder)]
         elif line.repository and line.clone is not None:
             # A clone of it is here, and its files could not be read at that commit. Where it lacks the commit,
             # fetched there, it can be. Its folder in the clone is the one its reader names, or where the clone has
@@ -1033,16 +1050,16 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
             if in_own and pinned:
                 commands = in_a_worktree(line, commit, make, fetch)  # and not by moving the pipeline's own repository
             elif pinned:
-                commands = [*([fetch] if fetch else []), at_its_commit(line.clone, into, commit, make)]
+                commands = [*([fetch] if fetch else []), *at_its_commit(line.clone, into, commit, make)]
             elif line.lacks:
                 # Never pinned, and its clone could not be read where it is: it has no commit yet (`git init`, an
                 # `origin`, and nothing pulled). A fetch would leave its folder empty; a pull fills it
-                commands = [f"git -C {_quoted(line.clone)} pull origin HEAD", f"{_cd(line.clone)} && {make}"]
+                commands = [f"git -C {_quoted(line.clone)} pull origin HEAD", make + _in(line.clone)]
             else:
-                commands = [f"{_cd(into)} && {make}"]
+                commands = [make + _in(into)]
             if unknown and not line.placed:
                 unknown += (
-                    "; if it is not at the top of its repository, `cd` to its folder there first" if not line.subdirectory
+                    f"; {NOT_AT_THE_TOP}" if not line.subdirectory
                     else "" if line.given else "; its folder is where the clone has it now"
                 )
         elif line.repository:
@@ -1060,19 +1077,19 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
             # A commit where its pin names one; and for one that was never pinned, the commit it was read at once a
             # line above has left the clone elsewhere
             if commit and (pinned or clone in moved):
-                commands = [at_its_commit(clone, into, commit, make)]
+                commands = at_its_commit(clone, into, commit, make)
             else:
-                commands = [f"{_cd(into)} && {make}"]
+                commands = [make + _in(into)]
             if first:  # once for a repository of several pipelines: a second clone into the same folder would only fail
                 commands.insert(0, f"git clone {_quoted(address)} {_quoted(clone)}")
             if unknown and not line.placed:
-                unknown += "; if it is not at the top of its repository, `cd` to its folder there first"
+                unknown += f"; {NOT_AT_THE_TOP}"
         else:
             where = (
                 f"its folder, {line.expected}, is not on this machine, and its repository is not recorded" if line.expected
                 else "its repository is not recorded"
             ) + ", so neither is what it reads in turn"
-            commands = [f"In a clone of it: {'git checkout ' + commit + ' && ' if pinned else ''}{make}"]
+            commands = [f"In a clone of it: {'`git checkout ' + commit + '`, then ' if pinned else ''}`{make}`"]
             unknown = ""
         reads = f"; reads {_counted(line.reads)} above" if line.reads else ""
         lines.append(f"{number}. {_plain(line.pipeline)}{at}    {where}{reads}")
@@ -1081,7 +1098,8 @@ def said(listing: Listing, again: str = "chartbook run", done: str = "built", he
             lines.append("     It could not be found there, so no command is given for it.")
         elif unknown:
             lines.append(f"     What it reads in turn is not known: {unknown}. Its own `chartbook run` says.")
-    lines += ["", "Then here again:", f"     {_cd(listing.directory)} && {again}"]
+    # As it was typed, where it was typed: no command above has left that folder
+    lines += ["", "Then here again:", f"     {again}{'' if _same(Path(listing.directory), here) else _in(listing.directory)}"]
     if again == "chartbook run" and all(line.by_path and line.builds for line in wanted):
         these = "this folder" if one else "these folders"
         lines.append(f"Or `chartbook run --upstream` here, which builds and snapshots {these} itself.")

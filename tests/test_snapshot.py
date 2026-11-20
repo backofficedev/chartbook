@@ -1268,6 +1268,8 @@ class TestCommands:
         monkeypatch.chdir(user)
         import shlex
 
+        # A word of a command, as this system's shells take it
+        typed = subprocess.list2cmdline([str(maker)]) if os.name == "nt" else shlex.quote(str(maker))
         result = self._run("pin")
         assert result.exit_code == 1 and commit
         # The list of what is not in the store (tests/test_not_in_your_store.py). Its files are there and
@@ -1278,7 +1280,7 @@ class TestCommands:
             "Build it first, with the commands below. They end with a snapshot, which is what this one reads.",
             "",
             f"1. acme/maker    {os.path.join('..', 'maker')} (a folder on this machine, built already)",
-            f"     cd {shlex.quote(str(maker))} && chartbook snapshot",
+            f"     chartbook snapshot --project-dir {typed}",
             "",
         ]
         assert "could not be pinned" not in result.output

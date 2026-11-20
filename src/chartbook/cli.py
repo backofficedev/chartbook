@@ -3394,8 +3394,8 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     from chartbook.store import ReadOnlyStoreError, StoreError
 
     project_dir = resolve_project_dir(project_dir)
-    here = _in_its_folder(project_dir)
-    _refuse_a_folder_spelled_otherwise(project_dir, "chartbook snapshot")
+    here = _in_its_folder(project_dir)  # in a command a message names: the folder as it was typed
+    project_dir = _by_the_disks_name(project_dir)
     try:
         report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
@@ -3435,43 +3435,43 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     _remind_of_gc(no_gc_reminder)
 
 
-def _refuse_a_folder_spelled_otherwise(project_dir, again: str) -> None:
-    """Stop a command that is about to make a snapshot of a folder reached by another letter case than the disk's own, on a disk that takes either.
+def _by_the_disks_name(project_dir):
+    """A pipeline's folder by the name the disk gives it, for a command that is about to make a snapshot of it.
 
-    A run's last line may have handed such a spelling over
-    (``--project-dir mono/PIPES/A``, of ``pipes/a``). Where the
+    A folder may be reached by another spelling than the disk's own, on a
+    disk that takes either: another letter case, or the other of
+    Unicode's two forms of an accented letter. The list of what is not in
+    a store names a clone as its address does, and a run's last line names
+    a folder as it was typed (``--project-dir mono/PIPES/A``, of
+    ``pipes/a``). A snapshot records where its pipeline is in its
+    repository. Of that spelling it would record another place, and a
+    pipeline that reads the folder by its real name would not find the
+    snapshot and would pin an older one without a word; and where the
     repository's own folder is the one spelled otherwise, where the
-    pipeline is in it cannot be told, and pathlib's words for that help
-    nobody. Where a folder inside it is, the snapshot would record that
-    spelling as the pipeline's place, and a pipeline that reads the folder
-    by its real name would not find the snapshot and would pin an older
-    one without a word. Only a difference of letter case is refused: git
-    and the system may write one name in two of Unicode's forms, and that
-    is no mistake of whoever typed it.
+    pipeline is in it could not be told at all. Git names the repository
+    and the folder in it as the disk does, so that name is taken: what
+    ``cd`` into the folder gives, and what Windows gives by itself.
 
-    :param again: The command to type again, once in the folder.
+    The name is taken only where it is another than the one given, and
+    only where it is the same folder. Whatever else is wrong with the
+    folder is said by what meets it next.
     """
-    import unicodedata
+    import os
 
     from chartbook import snapshot as snapshots
 
     try:
-        recorded = snapshots.code_of(project_dir).subdirectory
+        top = snapshots._git(Path(project_dir), "rev-parse", "--show-toplevel").strip()
         named = snapshots._git(Path(project_dir), "rev-parse", "--show-prefix").strip().rstrip("/")
-        recorded, named = (unicodedata.normalize("NFC", "" if one in ("", ".") else one) for one in (recorded, named))
-        otherwise = recorded != named and recorded.casefold() == named.casefold()
-    except ValueError:
-        otherwise = True
+        try:
+            if snapshots.code_of(project_dir).subdirectory == named:
+                return project_dir
+        except ValueError:
+            pass  # the repository's own folder is the one spelled otherwise
+        real = Path(top, named) if named else Path(top)
+        return real if os.path.samefile(real, project_dir) else project_dir
     except Exception:  # noqa: BLE001 - whatever else is wrong with the folder is said by what meets it next
-        return
-    if otherwise:
-        click.echo(
-            click.style("Error: ", fg="red", bold=True)
-            + f"{project_dir} is named otherwise than the disk names it, so where it is in its repository cannot be "
-            f"told. `cd` into the folder, and `{again}` again.",
-            err=True,
-        )
-        raise SystemExit(1)
+        return project_dir
 
 
 def _a_store_to_send_it_to(project_dir):
@@ -3764,7 +3764,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     # Not for arguments the run refuses anyway: it says why, and nothing is recorded
     refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
     if make_snapshot and not refused:
-        _refuse_a_folder_spelled_otherwise(project_dir, "chartbook run --snapshot")
+        project_dir = _by_the_disks_name(project_dir)
     if not refused:
         _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
     _run_script(

@@ -164,6 +164,12 @@ def _numbered(result) -> list[str]:
     return [line for line in _said(result) if line[:1].isdigit()]
 
 
+def _has(said: list[str], *commands: str) -> bool:
+    """Whether a list has these commands, each a line of its own, one after the other."""
+    wanted = [f"     {command}" for command in commands]
+    return any(said[index:index + len(wanted)] == wanted for index in range(len(said)))
+
+
 def _q(path) -> str:
     """A path as a command of the list has it: quoted where this system's shell needs it."""
     return subprocess.list2cmdline([str(path)]) if os.name == "nt" else shlex.quote(str(path))
@@ -199,7 +205,9 @@ def _follow(work: Path, result, monkeypatch, start: Path = None):
         "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.org",
     }
     commands = [line.strip() for line in _said(result) if line.startswith("     ") and not line.startswith(("     What ", "     It could not "))]
-    assert commands and commands[-1].endswith("&& chartbook run")
+    assert commands and commands[-1].split(" --project-dir ")[0] == "chartbook run"
+    # One command to a line, and none that enters a folder: what cmd.exe and PowerShell take as a POSIX shell does
+    assert not any("&&" in command or ";" in command or command.startswith("cd ") for command in commands), commands
     for command in commands:
         done = subprocess.run(command, shell=True, cwd=start or work / "report", env=environment, capture_output=True, text=True)
         assert done.returncode == 0, f"{command}\n{done.stdout}{done.stderr}"
@@ -221,13 +229,15 @@ class TestTheList:
             *SEVERAL,
             f"1. acme/rates at {commits['rates'][:7]}    https://example.org/acme/rates",
             f"     git clone https://example.org/acme/rates {_q(work / 'rates')}",
-            f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'rates')} checkout {commits['rates'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}",
             f"2. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid; reads 1 above",
             f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
-            f"     cd {_q(work / 'mid')} && git checkout {commits['mid'][:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mid')} checkout {commits['mid'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
             "",
             "Then here again:",
-            f"     cd {_q(work / 'report')} && chartbook run",
+            "     chartbook run",
             SHARED.format("them"),
         ]
         # Nothing was built, and nothing written
@@ -241,6 +251,34 @@ class TestTheList:
         mine()
         done = _follow(work, _run(work, monkeypatch, "run"), monkeypatch)
         assert "Ran build in 1 pipeline(s)." in done.stdout and (work / "report" / "build.log").exists()
+
+    def test_no_command_enters_a_folder_or_is_joined_to_another(self, work, theirs, mine, monkeypatch):
+        """Found on Windows, 2026-11-20: the lines were `cd /d FOLDER && git checkout … && chartbook run --snapshot`, which PowerShell does not read.
+
+        A line is one command, and names the folder it works in. That is the same line in a POSIX shell, in cmd.exe and in PowerShell.
+        """
+        _chain(work, theirs)
+        _away(work, "rates", "mid")
+        mine()
+        commands = [line.strip() for line in _said(_run(work, monkeypatch, "run")) if line.startswith("     ")]
+        assert len(commands) == 7
+        assert all(command.startswith(("git clone ", "git -C ", "chartbook run")) for command in commands), commands
+        assert not any(sign in command for command in commands for sign in ("&&", ";", "|", "cd "))
+
+    def test_typed_of_another_folder_its_last_command_names_the_pipelines_folder(self, work, theirs, mine, monkeypatch):
+        """No command of the list leaves the folder it is typed in, so the last one is what was typed: with the pipeline's folder, where that is another."""
+        _chain(work, theirs)
+        _away(work, "rates", "mid")
+        mine()
+        monkeypatch.chdir(work)
+        result = CliRunner().invoke(main, ["run", "--project-dir", "report"])
+        assert _said(result)[-3:-1] == ["Then here again:", f"     chartbook run --project-dir {_q(work / 'report')}"]
+        # Typed there, each of them, and then the last: the pipeline builds
+        done = _follow(work, result, monkeypatch, start=work)
+        assert "Ran build in 1 pipeline(s)." in done.stdout and (work / "report" / "build.log").exists()
+        # And `chartbook pin` the same way
+        pinned = CliRunner().invoke(main, ["pin", "--project-dir", "report"])
+        assert pinned.exit_code == 0, pinned.output
 
     def test_what_two_read_is_one_line(self, work, theirs, mine, monkeypatch):
         commits = {"rates": _ready(_pipeline(work, "rates"), theirs)}
@@ -298,14 +336,14 @@ class TestTheList:
             f"2. acme/a    {_up('a')} (a folder on this machine); reads 1 above",
             f"3. acme/b    {_up('b')} (a folder on this machine); reads 1 above",
         ]
-        assert f"     cd {_q(work / 'rates')} && chartbook run --snapshot" in _said(result)  # never `chartbook snapshot`: it is pinned
+        assert f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}" in _said(result)  # never `chartbook snapshot`: it is pinned
         assert "chartbook run --upstream" not in result.output
         # With the clone on another commit they are two builds, and each reader names its own
         _git(work / "rates", "commit", "--quiet", "--allow-empty", "-m", "On")
         moved = _run(work, monkeypatch, "run")
         assert [line.split("    ")[0] for line in _numbered(moved)] == ["1. acme/rates", "2. acme/a", f"3. acme/rates at {commit[:7]}", "4. acme/b"]
         assert _numbered(moved)[1].endswith("; reads 1 above") and _numbered(moved)[3].endswith("; reads 3 above")
-        assert f"     cd {_q(work / 'rates')} && git checkout {commit[:12]} && chartbook run --snapshot" in _said(moved)
+        assert _has(_said(moved), f"git -C {_q(work / 'rates')} checkout {commit[:12]}", f"chartbook run --snapshot --project-dir {_q(work / 'rates')}")
 
     def test_a_line_names_each_line_above_that_it_reads(self, work, theirs, mine, monkeypatch):
         commits = {name: _ready(_pipeline(work, name), theirs) for name in ("a", "b")}
@@ -331,12 +369,14 @@ class TestTheList:
         mine()
         result = _run(work, monkeypatch, "run")
         assert _head(work, "3 pipelines it reads are") in _said(result)
-        assert [line for line in _said(result) if "acme/base" in line or f"cd {_q(base)}" in line] == [
+        assert [line for line in _said(result) if "acme/base" in line or _q(base) in line] == [
             f"1. acme/base at {first[:7]}    {_up('base')} (a clone of https://example.org/acme/base)",
-            f"     cd {_q(base)} && git checkout {first[:12]} && chartbook run --snapshot",
+            f"     git -C {_q(base)} checkout {first[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(base)}",
             # On that commit when the list was made, and no longer once the line above is done
             f"3. acme/base at {second[:7]}    {_up('base')} (a clone of https://example.org/acme/base)",
-            f"     cd {_q(base)} && git checkout {second[:12]} && chartbook run --snapshot",
+            f"     git -C {_q(base)} checkout {second[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(base)}",
         ]
         assert early and late
         done = _follow(work, result, monkeypatch)
@@ -354,10 +394,11 @@ class TestTheList:
             *ONE,
             f"1. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid",
             f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
-            f"     cd {_q(work / 'mid')} && git checkout {commits['mid'][:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mid')} checkout {commits['mid'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
             "",
             "Then here again:",
-            f"     cd {_q(work / 'report')} && chartbook run",
+            "     chartbook run",
             SHARED.format("it"),
         ]
 
@@ -375,7 +416,7 @@ class TestTheList:
         _away(work, "rates", "mid")
         mine()
         said = _said(_run(work, monkeypatch, "run", "--snapshot", "--force", "--remake"))
-        assert f"     cd {_q(work / 'report')} && chartbook run --force --snapshot --remake" in said
+        assert said[-3:-1] == ["Then here again:", "     chartbook run --force --snapshot --remake"]
 
     def test_with_several_stores_each_is_named(self, work, theirs, mine, monkeypatch):
         from chartbook.multi_store import NamedStore, Stores
@@ -406,10 +447,10 @@ class TestALine:
             _head(work, "1 pipeline it reads is", store="theirs"),
             *ONE,
             f"1. acme/rates    {_up('rates')} (a folder on this machine)",
-            f"     cd {_q(work / 'rates')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}",
             "",
             "Then here again:",
-            f"     cd {_q(work / 'report')} && chartbook run",
+            "     chartbook run",
             "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
             SHARED.format("it"),
         ]
@@ -422,13 +463,13 @@ class TestALine:
         said = _said(_run(work, monkeypatch, "run"))
         assert said[5:7] == [
             f"1. acme/rates    {_up('rates')} (a folder on this machine, built already)",
-            f"     cd {_q(rates)} && chartbook snapshot",
+            f"     chartbook snapshot --project-dir {_q(rates)}",
         ]
         # With work that is not committed, a snapshot would be refused: the build is what is said, and its refusal says to commit
         (rates / "chartbook.toml").write_text((rates / "chartbook.toml").read_text(encoding="utf-8") + "\n# more\n", encoding="utf-8", newline="\n")
         assert _said(_run(work, monkeypatch, "run"))[3:5] == [
             f"1. acme/rates    {_up('rates')} (a folder on this machine)",
-            f"     cd {_q(rates)} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(rates)}",
         ]
 
     def test_a_pinned_one_is_never_called_built(self, work, theirs, mine, monkeypatch):
@@ -440,7 +481,7 @@ class TestALine:
         said = _said(_run(work, monkeypatch, "run"))
         assert said[3:5] == [
             f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder on this machine)",
-            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",  # nothing to check out: it is on that commit
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",  # nothing to check out: it is on that commit
         ]
         assert not any("--upstream" in line for line in said)  # which builds what has no pin, and this has one
 
@@ -464,12 +505,14 @@ class TestALine:
             *SEVERAL,
             f"1. acme/rates at {commits['rates'][:7]}    https://example.org/acme/rates",
             f"     git clone https://example.org/acme/rates {_q(work / 'rates')}",
-            f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'rates')} checkout {commits['rates'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}",
             f"2. acme/mid at {commits['mid'][:7]}    {_up('mid')} (a folder on this machine); reads 1 above",
-            f"     cd {_q(mid)} && git checkout {commits['mid'][:12]} && chartbook run --snapshot",
+            f"     git -C {_q(mid)} checkout {commits['mid'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(mid)}",
             "",
             "Then here again:",
-            f"     cd {_q(work / 'report')} && chartbook run",
+            "     chartbook run",
             SHARED.format("them"),
         ]
         assert _git(mid, "rev-parse", "HEAD") == now and _git(mid, "status", "--porcelain") == ""
@@ -485,14 +528,15 @@ class TestALine:
             _head(work, "1 pipeline it reads is"),
             *ONE,
         ]
-        assert said[4:7] == [
+        assert said[4:8] == [
             f"1. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid",
             f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
-            f"     cd {_q(work / 'mid')} && git checkout {commits['mid'][:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mid')} checkout {commits['mid'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
         ]
-        assert said[7].startswith("     What it reads in turn is not known: its repository could not be fetched (")
+        assert said[8].startswith("     What it reads in turn is not known: its repository could not be fetched (")
         # Where it is in its repository is not known either, and the top is only the likeliest place
-        assert said[7].endswith("); if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says.")
+        assert said[8].endswith("); if it is not at the top of its repository, give its folder there to `--project-dir`. Its own `chartbook run` says.")
 
     def test_a_fetch_that_receives_nothing_is_given_up(self, work, theirs, mine, monkeypatch):
         """Found by review: a server that answers nothing held `chartbook pin`, which used no network before, for ever."""
@@ -555,7 +599,7 @@ class TestALine:
         said = _said(_run(work, monkeypatch, "run"))
         assert said[3:5] == [
             f"1. acme/mid at {commit[:7]}    its repository is not recorded, so neither is what it reads in turn",
-            f"     In a clone of it: git checkout {commit[:12]} && chartbook run --snapshot",
+            f"     In a clone of it: `git checkout {commit[:12]}`, then `chartbook run --snapshot`",
         ]
 
     def test_whose_folder_is_not_on_this_machine(self, work, theirs, mine, monkeypatch):
@@ -575,7 +619,7 @@ class TestALine:
         said = _said(_run(work, monkeypatch, "run"))
         assert said[5:7] == [
             "1. acme/mid    its repository is not recorded, so neither is what it reads in turn",
-            "     In a clone of it: chartbook run --snapshot",
+            "     In a clone of it: `chartbook run --snapshot`",
         ]
 
     def test_of_one_whose_entry_names_its_repository(self, work, theirs, mine, monkeypatch):
@@ -604,7 +648,7 @@ class TestALine:
         at = said.index("1. acme/mid    https://example.org/acme/mid")
         assert said[at + 1 : at + 3] == [
             f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
-            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
         ]
         assert said[at + 3].startswith("     What it reads in turn is not known: its chartbook.toml cannot be read (")
 
@@ -619,7 +663,7 @@ class TestALine:
         result = _run(work, monkeypatch, "run")  # against their store, which has mid at its first commit only
         assert _numbered(result) == [f"1. acme/mid at {wanted[:7]}    https://example.org/acme/mid"]
         # Twelve digits of the commit the entry's ten resolved to (found by the third pass: an entry's seven stayed seven)
-        assert f"     cd {_q(work / 'mid')} && git checkout {wanted[:12]} && chartbook run --snapshot" in _said(result)
+        assert _has(_said(result), f"git -C {_q(work / 'mid')} checkout {wanted[:12]}", f"chartbook run --snapshot --project-dir {_q(work / 'mid')}")
 
     def test_of_a_pipeline_in_a_folder_of_its_repository(self, work, theirs, mine, monkeypatch):
         commit = _ready(_pipeline(work, "mid", within="pipelines/mid"), theirs)
@@ -627,10 +671,11 @@ class TestALine:
         _away(work, "mid")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert said[4:7] == [
+        assert said[4:8] == [
             f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid",
             f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
-            f"     git -C {_q(work / 'mid')} checkout {commit[:12]} && cd {_q(work / 'mid' / 'pipelines' / 'mid')} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mid')} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid' / 'pipelines' / 'mid')}",
         ]
 
     def test_of_two_pipelines_in_one_repository(self, work, theirs, mine, monkeypatch):
@@ -645,12 +690,14 @@ class TestALine:
         assert [line for line in said if line.startswith("Fetching ")] == [
             "Fetching https://example.org/acme/mono, to see what acme/a reads in turn."
         ]
-        assert said[4:9] == [
+        assert said[4:11] == [
             f"1. acme/a at {commit[:7]}    https://example.org/acme/mono",
             f"     git clone https://example.org/acme/mono {_q(work / 'mono')}",
-            f"     git -C {_q(work / 'mono')} checkout {commit[:12]} && cd {_q(work / 'mono' / 'a')} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mono')} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mono' / 'a')}",
             f"2. acme/b at {commit[:7]}    https://example.org/acme/mono",
-            f"     git -C {_q(work / 'mono')} checkout {commit[:12]} && cd {_q(work / 'mono' / 'b')} && chartbook run --snapshot",  # cloned by the line before
+            f"     git -C {_q(work / 'mono')} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mono' / 'b')}",  # cloned by the line before
         ]
         assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch).stdout
 
@@ -663,12 +710,14 @@ class TestALine:
         _away(work, "mono")
         mine()
         result = _run(work, monkeypatch, "run")
-        assert _said(result)[4:9] == [
+        assert _said(result)[4:11] == [
             f"1. acme/alpha at {first[:7]}    https://example.org/acme/mono",
             f"     git clone https://example.org/acme/mono {_q(work / 'mono')}",
-            f"     git -C {_q(work / 'mono')} checkout {first[:12]} && cd {_q(work / 'mono' / 'alpha')} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mono')} checkout {first[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mono' / 'alpha')}",
             f"2. acme/beta at {second[:7]}    https://example.org/acme/mono; reads 1 above",
-            f"     git -C {_q(work / 'mono')} checkout {second[:12]} && cd {_q(work / 'mono' / 'beta')} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mono')} checkout {second[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mono' / 'beta')}",
         ]
         assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch).stdout
 
@@ -685,7 +734,7 @@ class TestALine:
         _away(work, "mid")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:12]} && chartbook run --snapshot" in said
+        assert _has(said, f"git -C {_q(work / 'mid')} checkout {commit[:12]}", f"chartbook run --snapshot --project-dir {_q(work / 'mid')}")
         assert not any("not known" in line for line in said)
 
     def test_of_a_pipeline_among_several_in_its_repository(self, work, theirs, mine, monkeypatch):
@@ -704,16 +753,19 @@ class TestALine:
         mine()
         said = _said(_run(work, monkeypatch, "run"))
         assert f"2. acme/mid at {commit[:7]}    https://example.org/acme/mid; reads 1 above" in said
-        assert f"     git -C {_q(work / 'mid')} checkout {commit[:12]} && cd {_q(work / 'mid' / 'pipelines' / 'mid')} && chartbook run --snapshot" in said
+        assert _has(
+            said, f"git -C {_q(work / 'mid')} checkout {commit[:12]}",
+            f"chartbook run --snapshot --project-dir {_q(work / 'mid' / 'pipelines' / 'mid')}",
+        )
         # Of very many manifests, so many are read. One past them is not called absent (found by the third pass: it
         # was said to hold no such pipeline): its line says how far the search went, and where it may be
         monkeypatch.setattr(missing, "MOST_MANIFESTS", 1)
         said = _said(_run(work, monkeypatch, "run"))
         assert f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid" in said
-        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:12]} && chartbook run --snapshot" in said
+        assert _has(said, f"git -C {_q(work / 'mid')} checkout {commit[:12]}", f"chartbook run --snapshot --project-dir {_q(work / 'mid')}")
         assert (
             f"     What it reads in turn is not known: its chartbook.toml was not found among the first 1 of the 3 in its "
-            f"repository at {commit[:7]}; if it is not at the top of its repository, `cd` to its folder there first. Its own "
+            f"repository at {commit[:7]}; if it is not at the top of its repository, give its folder there to `--project-dir`. Its own "
             "`chartbook run` says."
         ) in said
 
@@ -729,11 +781,12 @@ class TestALine:
         mine()
         monkeypatch.setattr(missing, "MOST_MANIFESTS", 1)
         said = _said(_run(work, monkeypatch, "run"))
-        assert said[3:5] == [
+        assert said[3:6] == [
             f"1. acme/mid at {commit[:7]}    {_up('mid')} (a clone of https://example.org/acme/mid)",
-            f"     cd {_q(top)} && git checkout {commit[:12]} && chartbook run --snapshot",
+            f"     git -C {_q(top)} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(top)}",
         ]
-        assert "was not found among the first 1 of the 2 in its repository" in said[5]
+        assert "was not found among the first 1 of the 2 in its repository" in said[6]
 
     def test_of_a_pipeline_with_no_build_script(self, work, theirs, mine, monkeypatch):
         """It commits what it declares: nothing to run, and a snapshot to make."""
@@ -741,7 +794,8 @@ class TestALine:
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         _away(work, "mid")
         mine()
-        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:12]} && chartbook snapshot" in _said(_run(work, monkeypatch, "run"))
+        said = _said(_run(work, monkeypatch, "run"))
+        assert _has(said, f"git -C {_q(work / 'mid')} checkout {commit[:12]}", f"chartbook snapshot --project-dir {_q(work / 'mid')}")
 
     def test_stops_where_it_is_too_deep_and_says_so(self, work, theirs, mine, monkeypatch):
         _chain(work, theirs)
@@ -756,7 +810,10 @@ class TestWhateverCommitACloneWasLeftOn:
     """Found by the second pass of the review: a line was written as if the lines above it had not been done."""
 
     def test_a_folder_that_is_not_there_until_the_checkout(self, work, theirs, mine, monkeypatch):
-        """alpha was snapshotted before beta was added to their repository: `cd beta && git checkout` failed at the `cd`, every time."""
+        """alpha was snapshotted before beta was added to their repository: `cd beta && git checkout` failed at the `cd`, every time.
+
+        (As the list was then. Its checkout is still made from the repository's top, on a line of its own.)
+        """
         top = _several(work, "multi", {"alpha": None})
         first = _ready(top / "alpha", theirs)
         second = _ready(_added(top, "beta", {"acme/alpha": {}}), theirs)
@@ -765,12 +822,14 @@ class TestWhateverCommitACloneWasLeftOn:
         mine()
         result = _run(work, monkeypatch, "run")
         clone = work / "multi"
-        assert _said(result)[4:9] == [
+        assert _said(result)[4:11] == [
             f"1. acme/alpha at {first[:7]}    https://example.org/acme/multi",
             f"     git clone https://example.org/acme/multi {_q(clone)}",
-            f"     git -C {_q(clone)} checkout {first[:12]} && cd {_q(clone / 'alpha')} && chartbook run --snapshot",
+            f"     git -C {_q(clone)} checkout {first[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(clone / 'alpha')}",
             f"2. acme/beta at {second[:7]}    https://example.org/acme/multi; reads 1 above",
-            f"     git -C {_q(clone)} checkout {second[:12]} && cd {_q(clone / 'beta')} && chartbook run --snapshot",
+            f"     git -C {_q(clone)} checkout {second[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(clone / 'beta')}",
         ]
         assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch).stdout
 
@@ -788,12 +847,14 @@ class TestWhateverCommitACloneWasLeftOn:
         mine()
         result = _run(work, monkeypatch, "run")
         clone = work / "multi"
-        assert [line for line in _said(result) if line.startswith(("1.", "2.", "     git", "     cd")) and "report" not in line] == [
+        assert [line for line in _said(result) if line.startswith(("1.", "2.", "     git", "     chartbook run --snapshot"))] == [
             f"1. acme/alpha at {first[:7]}    https://example.org/acme/multi",
             f"     git clone https://example.org/acme/multi {_q(clone)}",
-            f"     git -C {_q(clone)} checkout {first[:12]} && cd {_q(clone / 'alpha')} && chartbook run --snapshot",
+            f"     git -C {_q(clone)} checkout {first[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(clone / 'alpha')}",
             "2. acme/gamma    https://example.org/acme/multi",
-            f"     git -C {_q(clone)} checkout {now[:12]} && cd {_q(clone / 'gamma')} && chartbook run --snapshot",
+            f"     git -C {_q(clone)} checkout {now[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(clone / 'gamma')}",
         ]
         done = _follow(work, result, monkeypatch)
         assert "Ran build in 1 pipeline(s)." in done.stdout
@@ -810,11 +871,13 @@ class TestWhateverCommitACloneWasLeftOn:
         now = _git(top, "rev-parse", "HEAD")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert [line for line in said if "acme/new" in line or "acme/old" in line or line.startswith("     git -C")] == [
+        assert [line for line in said if "acme/new" in line or "acme/old" in line or line.startswith(("     git -C", "     chartbook snapshot", "     chartbook run --snapshot"))] == [
             # By its key, `new` comes first: built where it stands, before anything moves
             f"1. acme/new    {os.path.join('..', 'multi', 'new')} (a folder on this machine, built already)",
+            f"     chartbook snapshot --project-dir {_q(top / 'new')}",
             f"2. acme/old at {first[:7]}    {os.path.join('..', 'multi', 'old')} (a folder on this machine)",
-            f"     git -C {_q(top)} checkout {first[:12]} && cd {_q(top / 'old')} && chartbook run --snapshot",
+            f"     git -C {_q(top)} checkout {first[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(top / 'old')}",
         ]
         assert now
         # And the other way round, as `said` is given them: after the line that moves the repository
@@ -822,7 +885,7 @@ class TestWhateverCommitACloneWasLeftOn:
         listing.wanted.reverse()
         again = missing.said(listing, here=report)
         assert f"2. acme/new    {os.path.join('..', 'multi', 'new')} (a folder on this machine)" in again
-        assert f"     git -C {_q(top)} checkout {now[:12]} && cd {_q(top / 'new')} && chartbook run --snapshot" in again
+        assert _has(again, f"git -C {_q(top)} checkout {now[:12]}", f"chartbook run --snapshot --project-dir {_q(top / 'new')}")
 
 
 class TestACloneOnThisMachine:
@@ -835,13 +898,16 @@ class TestACloneOnThisMachine:
         result = _run(work, monkeypatch, "run")
         assert _said(result)[3:7] == [
             f"1. acme/rates at {commits['rates'][:7]}    {_up('rates')} (a clone of https://example.org/acme/rates)",
-            f"     cd {_q(work / 'rates')} && chartbook run --snapshot",  # and it is on that commit
+            f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}",  # and it is on that commit
             f"2. acme/mid at {commits['mid'][:7]}    {_up('mid')} (a clone of https://example.org/acme/mid); reads 1 above",
-            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
         ]
         _git(work / "rates", "commit", "--quiet", "--allow-empty", "-m", "On")
         moved = _run(work, monkeypatch, "run")
-        assert _said(moved)[4] == f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:12]} && chartbook run --snapshot"
+        assert _said(moved)[4:6] == [
+            f"     git -C {_q(work / 'rates')} checkout {commits['rates'][:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}",
+        ]
         assert "Ran build in 1 pipeline(s)." in _follow(work, moved, monkeypatch).stdout
 
     def test_a_pipeline_in_a_folder_of_it_is_found_there(self, work, theirs, mine, monkeypatch):
@@ -852,7 +918,7 @@ class TestACloneOnThisMachine:
         monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
         assert _said(_run(work, monkeypatch, "run"))[3:5] == [
             f"1. acme/mid at {commit[:7]}    {os.path.join('..', 'mid', 'pipelines', 'mid')} (a clone of https://example.org/acme/mid)",
-            f"     cd {_q(work / 'mid' / 'pipelines' / 'mid')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid' / 'pipelines' / 'mid')}",
         ]
 
     def test_one_that_lacks_the_commit_is_fetched_there(self, work, theirs, mine, monkeypatch):
@@ -870,12 +936,13 @@ class TestACloneOnThisMachine:
         _git(mid, "gc", "--quiet", "--prune=now")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert said[3:7] == [
+        assert said[3:8] == [
             f"1. acme/mid at {commit[:7]}    {_up('mid')} (a clone of https://example.org/acme/mid)",
             f"     git -C {_q(work / 'mid')} fetch",
-            f"     cd {_q(work / 'mid')} && git checkout {commit[:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mid')} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
             f"     What it reads in turn is not known: its clone, {work / 'mid'}, does not have the commit {commit[:7]}; "
-            f"if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says.",
+            f"if it is not at the top of its repository, give its folder there to `--project-dir`. Its own `chartbook run` says.",
         ]
 
     def test_one_that_lacks_the_commit_is_built_in_the_folder_the_clone_has_it_in(self, work, theirs, mine, monkeypatch):
@@ -895,9 +962,10 @@ class TestACloneOnThisMachine:
         _git(top, "gc", "--quiet", "--prune=now")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert said[4:7] == [
+        assert said[4:8] == [
             f"     git -C {_q(top)} fetch",
-            f"     git -C {_q(top)} checkout {commit[:12]} && cd {_q(top / 'pipelines' / 'mid')} && chartbook run --snapshot",
+            f"     git -C {_q(top)} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(top / 'pipelines' / 'mid')}",
             f"     What it reads in turn is not known: its clone, {top}, does not have the commit {commit[:7]}; "
             "its folder is where the clone has it now. Its own `chartbook run` says.",
         ]
@@ -929,9 +997,10 @@ class TestACloneOnThisMachine:
         _git(mid, "remote", "set-url", "origin", "https://example.org/acme/mid.git")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert said[4:6] == [
+        assert said[4:7] == [
             f"     git -C {_q(mid)} fetch --unshallow",
-            f"     cd {_q(mid)} && git checkout {commit[:12]} && chartbook run --snapshot",
+            f"     git -C {_q(mid)} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(mid)}",
         ]
 
     def test_the_clone_the_list_said_to_make_is_found_the_next_time(self, work, theirs, mine, monkeypatch):
@@ -946,7 +1015,7 @@ class TestACloneOnThisMachine:
         _git(work / "mid-2", "remote", "set-url", "origin", "https://example.org/acme/mid.git")
         assert _said(_run(work, monkeypatch, "run"))[3:5] == [
             f"1. acme/mid at {commit[:7]}    {_up('mid-2')} (a clone of https://example.org/acme/mid)",
-            f"     cd {_q(work / 'mid-2')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid-2')}",
         ]
 
     @pytest.mark.skipif(os.name == "nt", reason="a link to nowhere is made as an administrator there")
@@ -965,7 +1034,7 @@ class TestACloneOnThisMachine:
         said = _said(_run(work, monkeypatch, "run"))
         assert said[5:7] == [
             f"1. acme/mid    {_up('mid')} (a clone of https://example.org/acme/mid)",
-            f"     cd {_q(mid)} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(mid)}",
         ]
         # Not a folder of that name whose origin is another's, whatever its manifest says
         _git(mid, "remote", "set-url", "origin", "https://example.org/someone/else.git")
@@ -986,11 +1055,11 @@ class TestACloneOnThisMachine:
         assert _said(result)[5:8] == [
             f"1. acme/mid    {_up('mid')} (a clone of https://example.org/acme/mid)",
             f"     git -C {_q(mid)} pull origin HEAD",
-            f"     cd {_q(mid)} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(mid)}",
         ]
         assert _said(result)[8] == (
             f"     What it reads in turn is not known: its clone, {mid}, has no commit yet; "
-            "if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says."
+            "if it is not at the top of its repository, give its folder there to `--project-dir`. Its own `chartbook run` says."
         )
         assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch).stdout
 
@@ -1019,10 +1088,11 @@ class TestACloneOnThisMachine:
         (work / "mid").mkdir()
         _write(work / "mid", _table("mid"))  # the same ID, and no repository at all
         mine()
-        assert _said(_run(work, monkeypatch, "run"))[4:7] == [
+        assert _said(_run(work, monkeypatch, "run"))[4:8] == [
             f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid",
             f"     git clone https://example.org/acme/mid {_q(work / 'mid-2')}",
-            f"     cd {_q(work / 'mid-2')} && git checkout {commit[:12]} && chartbook run --snapshot",
+            f"     git -C {_q(work / 'mid-2')} checkout {commit[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid-2')}",
         ]
         # Nor is a repository of another address
         _repository(work / "mid", "another")
@@ -1052,10 +1122,10 @@ class TestInThePipelinesOwnRepository:
             *ONE,
             f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder of this repository, at another commit)",
             f"     git -C {_q(top)} worktree add {_q(tree)} {commit[:12]}",
-            f"     cd {_q(tree / 'mid')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(tree / 'mid')}",
             "",
             "Then here again:",
-            f"     cd {_q(top / 'report')} && chartbook run",
+            "     chartbook run",
             SHARED.format("it"),
         ]
         head = _git(top, "rev-parse", "HEAD")
@@ -1086,8 +1156,8 @@ class TestInThePipelinesOwnRepository:
         tree = work / f"mono-at-{commit[:12]}"
         assert [line for line in _said(result) if line.startswith("     ")][:3] == [
             f"     git -C {_q(top)} worktree add {_q(tree)} {commit[:12]}",
-            f"     cd {_q(tree / 'a')} && chartbook run --snapshot",
-            f"     cd {_q(tree / 'b')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(tree / 'a')}",
+            f"     chartbook run --snapshot --project-dir {_q(tree / 'b')}",
         ]
         # And one that is there already is not added again
         _git(top, "worktree", "add", "--quiet", str(tree), commit[:12])
@@ -1104,7 +1174,7 @@ class TestInThePipelinesOwnRepository:
         result = CliRunner().invoke(main, ["run"])
         assert _said(result)[4:6] == [
             f"     git -C {_q(top)} worktree add {_q(second)} {commit[:12]}",
-            f"     cd {_q(second / 'mid')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(second / 'mid')}",
         ]
         assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch, start=top / "report").stdout
 
@@ -1138,9 +1208,9 @@ class TestInThePipelinesOwnRepository:
             f"1. acme/rates at {commit[:7]}    . (a clone of https://example.org/acme/rates)",
             f"     git -C {_q(report)} fetch",
             f"     git -C {_q(report)} worktree add {_q(tree)} {commit[:12]}",
-            f"     cd {_q(tree)} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(tree)}",
             f"     What it reads in turn is not known: its clone, {report}, does not have the commit {commit[:7]}; "
-            f"if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says.",
+            f"if it is not at the top of its repository, give its folder there to `--project-dir`. Its own `chartbook run` says.",
         ]
         head = _git(report, "rev-parse", "HEAD")
         done = _follow(work, result, monkeypatch, start=report)
@@ -1157,7 +1227,7 @@ class TestInThePipelinesOwnRepository:
         monkeypatch.chdir(top / "report")
         assert _said(CliRunner().invoke(main, ["run"]))[3:5] == [
             f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder on this machine)",
-            f"     cd {_q(top / 'mid')} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {_q(top / 'mid')}",
         ]
 
 
@@ -1253,10 +1323,15 @@ class TestWhoseTextThisIs:
         """
         assert missing._quoted(word, windows=True) == typed
 
-    def test_for_cmd_a_folder_is_entered_whatever_drive_it_is_on(self):
-        """Found by the third pass (not run on Windows): a bare `cd` there does not change the drive, and the build ran where the prompt was."""
-        assert missing._cd("D:\\class\\my rates", windows=True) == 'cd /d "D:\\class\\my rates"'
-        assert missing._cd("/work/my rates", windows=False) == "cd '/work/my rates'"
+    def test_a_command_names_its_folder_and_enters_none(self):
+        """Found on Windows, 2026-11-20: the lines were `cd /d FOLDER && …`, for cmd.exe. Windows PowerShell, which a new machine opens, reads neither `&&` nor `cd /d`.
+
+        (And before that, by the third pass: a bare `cd` does not change the drive there. A command that names its folder has no drive to change.)
+        """
+        assert missing._in("D:\\class\\my rates", windows=True) == ' --project-dir "D:\\class\\my rates"'
+        assert missing._in("D:\\class\\rates", windows=True) == " --project-dir D:\\class\\rates"
+        assert missing._in("/work/my rates", windows=False) == " --project-dir '/work/my rates'"
+        assert not hasattr(missing, "_cd")
 
     def test_a_folder_with_a_space_in_its_name_is_one_word_of_the_command(self, work, theirs, monkeypatch):
         spaced = work / "my rates"
@@ -1265,9 +1340,40 @@ class TestWhoseTextThisIs:
         _repository(spaced, "rates")
         _pipeline(work, "report", {"acme/rates": {"path": "../my rates"}})
         result = _run(work, monkeypatch, "run")
-        assert f"     cd {_q(spaced)} && chartbook run --snapshot" in _said(result) and _q(spaced) != str(spaced)
+        assert f"     chartbook run --snapshot --project-dir {_q(spaced)}" in _said(result) and _q(spaced) != str(spaced)
         done = _follow(work, result, monkeypatch)
         assert "Ran build in 1 pipeline(s)." in done.stdout
+
+    @pytest.mark.parametrize("within", ["", "pipelines/rates"])
+    def test_a_clone_named_in_another_letter_case_than_its_address_is_built_all_the_same(self, work, theirs, mine, monkeypatch, within):
+        """A clone is looked for under the name its address gives, and a disk that takes either letter case finds `RATES` for `rates`.
+
+        `cd` made that the disk's own name, and a command that names its
+        folder does not. So the command takes the folder by the name the
+        disk gives it: the snapshot says where the pipeline is, and its
+        reader finds it.
+        """
+        if os.name == "nt":
+            pytest.skip("typed in a POSIX shell here")
+        top = work / "RATES"
+        directory = top / within if within else top
+        directory.mkdir(parents=True)
+        if not (work / "rates").is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        _write(directory, _table("rates"))
+        _repository(top, "rates")
+        commit = _ready(directory, theirs, rows="rates,1")  # as its build writes them
+        _ready(_pipeline(work, "report", {"acme/rates": {}}), theirs)
+        store = mine()
+        result = _run(work, monkeypatch, "run")
+        named = work.joinpath("rates", *(part for part in within.split("/") if part))  # by its address, and not as the disk has it
+        shown = os.path.relpath(named, work / "report")
+        assert _numbered(result) == [f"1. acme/rates at {commit[:7]}    {shown} (a clone of https://example.org/acme/rates)"]
+        assert f"     chartbook run --snapshot --project-dir {_q(named)}" in _said(result)
+        done = _follow(work, result, monkeypatch)
+        assert "Ran build in 1 pipeline(s)." in done.stdout
+        (taken,) = [one for one in snapshot.all_snapshots(store) if one.pipeline == "acme/rates"]
+        assert taken.subdirectory == within
 
 
 class TestARepositoryThatDoesNotHoldIt:
@@ -1308,7 +1414,10 @@ class TestARepositoryThatDoesNotHoldIt:
         _away(work, "mono")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert f"     git -C {_q(work / 'mono')} checkout {first[:12]} && cd {_q(work / 'mono' / 'current')} && chartbook run --snapshot" in said
+        assert _has(
+            said, f"git -C {_q(work / 'mono')} checkout {first[:12]}",
+            f"chartbook run --snapshot --project-dir {_q(work / 'mono' / 'current')}",
+        )
         assert not any(str(work / "mono" / "alpha") in line for line in said)
 
 
@@ -1587,7 +1696,7 @@ class TestTheOtherCommands:
         assert result.exit_code == 1
         said = _said(result)
         assert said[2] == _head(work, "2 pipelines it reads are", done="pinned")
-        assert said[-3:] == ["Then here again:", f"     cd {_q(work / 'report')} && chartbook pin", SHARED.format("them")]
+        assert said[-3:] == ["Then here again:", "     chartbook pin", SHARED.format("them")]
         assert f"2. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid; reads 1 above" in said
         assert not any("could not be pinned" in line or line.startswith("acme/mid:") or "is unchanged" in line for line in said)
 
