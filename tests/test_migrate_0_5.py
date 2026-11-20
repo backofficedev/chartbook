@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import stat
+import types
 from pathlib import Path
 
 import polars as pl
@@ -18,12 +19,12 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import config, data, lock, migrate_0_5, snapshot
+from chartbook import config, data, lock, migrate_0_5, replacing, snapshot
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.gitcache import GitCache
 from chartbook.store import FolderStore, StoreError
-from tests.fixtures import _git
+from tests.fixtures import _git, needs_symlinks, symlinks_work
 from tests.rich_store_of_0_5 import not_its_own, watch
 from tests.store_of_0_5 import cleared_as_0_5, laid_out_as_0_5
 
@@ -588,6 +589,7 @@ class TestFoundBeforeAnythingMoves:
             os.chmod(locked, stat.S_IRWXU)
         self._moves(root)
 
+    @needs_symlinks
     def test_a_pipelines_folder_that_is_a_link(self, of_0_5, work):
         root, _ = of_0_5
         real = root / "pipelines" / "acme+once"
@@ -771,11 +773,12 @@ class TestTheWaysOutNeverSayToRemoveWhatARecordMayName:
         assert result.exit_code == 1 and "wait and run this again; if not, move that folder out of the store and run this again" in said
         assert "remove" not in said
         arriving.rename(work / "moved-out")  # the way out, as written
-        link = root / "pipelines" / "acme+linked"
-        link.symlink_to(work, target_is_directory=True)
-        said = CliRunner().invoke(main, ["store", "migrate", "--yes"]).output.replace("\n", " ")
-        assert "is a link to another place" in said and "move the link out of the store and run this again" in said and "remove" not in said
-        link.rename(work / "the-link")
+        if symlinks_work():  # a link is this user's to make: not so on Windows without Developer Mode
+            link = root / "pipelines" / "acme+linked"
+            link.symlink_to(work, target_is_directory=True)
+            said = CliRunner().invoke(main, ["store", "migrate", "--yes"]).output.replace("\n", " ")
+            assert "is a link to another place" in said and "move the link out of the store and run this again" in said and "remove" not in said
+            link.rename(work / "the-link")
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
 
 
@@ -893,3 +896,49 @@ class TestOnAMovedStore:
         (root / "tmp").mkdir()
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
         assert (root / "README.txt").read_text(encoding="utf-8") == "Ours. Ask Dana.\n" and not (root / "tmp").exists()
+
+
+class TestARenameWindowsRefusesForAMoment:
+    def test_every_rename_of_a_move_is_tried_again(self, of_0_5, monkeypatch):
+        """On Windows a virus scanner, the indexer or a sync client holds a file or a folder for a moment, and a rename is refused meanwhile (found on Windows 11, 2026-11-20: the move stopped part way, to be run again).
+
+        Every rename of the move is refused once here, as Windows refuses
+        one, and the move goes through in one run.
+        """
+        root, _ = of_0_5
+        refused: set = set()
+
+        def held_once(source, target):
+            if str(source) not in refused:
+                refused.add(str(source))
+                raise PermissionError(13, "Access is denied", str(source))
+            return os.replace(source, target)
+
+        # Only where the move renames (chartbook.replacing): this machine is not said to be Windows anywhere else
+        monkeypatch.setattr(replacing, "sys", types.SimpleNamespace(platform="win32"))
+        monkeypatch.setattr(replacing, "os", types.SimpleNamespace(replace=held_once))
+        monkeypatch.setattr(replacing, "_WAIT_SECONDS", 0)
+        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        assert result.exit_code == 0, result.output
+        kinds = {Path(source).name for source in refused}
+        # Files, the notes' folders, the old folder put aside, the journal and the marker: every kind of rename it makes
+        assert len(refused) > 20 and {"pipelines", "roots", "origins", "store.json.moving"} <= kinds, sorted(kinds)
+        store_module._read_records.clear()
+        assert not (root / "pipelines").exists() and FolderStore(root).verify() == []
+
+    def test_one_that_stays_refused_is_said_as_before(self, of_0_5, monkeypatch):
+        """A folder that may not be written is refused for good: said after the two seconds, and the move is taken up by running it again."""
+        root, _ = of_0_5
+
+        def refused(source, target):
+            raise PermissionError(13, "Access is denied", str(source))
+
+        with monkeypatch.context() as patched:
+            patched.setattr(replacing, "sys", types.SimpleNamespace(platform="win32"))
+            patched.setattr(replacing, "os", types.SimpleNamespace(replace=refused))
+            patched.setattr(replacing, "_WAIT_SECONDS", 0)
+            result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+            assert result.exit_code == 1 and "Access is denied" in result.output, result.output
+        assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
+        store_module._read_records.clear()
+        assert not (root / "pipelines").exists() and FolderStore(root).verify() == []

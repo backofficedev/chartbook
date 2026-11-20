@@ -42,6 +42,11 @@ Three rules hold it together.
   whole. Nothing under it is moved in, an object no pipeline owns neither:
   the last lines name each snapshot there, to be made again with this
   ChartBook.
+
+Every rename goes through :func:`chartbook.replacing.replace_when_let`: on
+Windows a virus scanner, the indexer or a sync client holds a file or a
+folder for a moment, and a rename refused then is tried again for two
+seconds before it is said.
 """
 
 from __future__ import annotations
@@ -56,6 +61,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from chartbook import hashing
+from chartbook.replacing import replace_when_let
 from chartbook.store import (
     CLEARED_FILE,
     FOLDER_SCHEMA,
@@ -637,7 +643,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     if marker_of(root) != FOLDER_SCHEMA:
         temporary = marker.with_name("store.json.moving")
         temporary.write_text(json.dumps({"schema": FOLDER_SCHEMA}) + "\n", encoding="utf-8", newline="\n")
-        os.replace(temporary, marker)
+        replace_when_let(temporary, marker)
     after_step(number + 1)
     try:
         so_far = (journal_of(root) or {}).get("so_far") or {}
@@ -687,7 +693,7 @@ def _write_journal(journal: Path, header: dict, steps: list) -> None:
             f.write(json.dumps({key: value for key, value in vars(step).items() if value not in ("", 0)}, ensure_ascii=False) + "\n")
         f.flush()
         os.fsync(f.fileno())
-    os.replace(temporary, journal)
+    replace_when_let(temporary, journal)
 
 
 def _free_name(target: Path) -> Path:
@@ -703,7 +709,7 @@ def _aside(root: Path, path: Path) -> Path:
     """Move a file or a folder, whole, to its own path under ``_chartbook/left-by-0.5/``, or to the next free name beside that; where it then is."""
     target = _free_name(root / LEFT_ASIDE / path.relative_to(root))
     target.parent.mkdir(parents=True, exist_ok=True)
-    os.replace(path, target)
+    replace_when_let(path, target)
     return target
 
 
@@ -722,7 +728,7 @@ def _do(root: Path, step: Step) -> Optional[str]:
     if step.op == "rename":
         if os.path.lexists(source) and not os.path.lexists(target):
             target.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(source, target)
+            replace_when_let(source, target)
     elif step.op == "aside":
         if os.path.lexists(source):
             kept = _aside(root, source)
@@ -732,7 +738,7 @@ def _do(root: Path, step: Step) -> Optional[str]:
             return None
         if not os.path.lexists(target):
             target.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(source, target)
+            replace_when_let(source, target)
             return None
         for child in sorted((p for p in source.rglob("*") if not p.is_dir() or p.is_symlink()), key=lambda p: len(p.parts), reverse=True):
             there = target / child.relative_to(source)
@@ -743,7 +749,7 @@ def _do(root: Path, step: Step) -> Optional[str]:
                     continue
                 _aside(root, there)
             there.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(child, there)
+            replace_when_let(child, there)
         if step.source.split("/")[0] != V2_LAYOUT.pipelines:
             _aside(root, source)  # what is left of it, whole; under pipelines/ it goes aside with that folder
     elif step.op == "copy":
@@ -759,7 +765,7 @@ def _do(root: Path, step: Step) -> Optional[str]:
             write.flush()
             os.fsync(write.fileno())
         shutil.copymode(source, temporary)
-        os.replace(temporary, target)
+        replace_when_let(temporary, target)
         if step.content_hash and f"sha256:{hashed.hexdigest()}" != step.content_hash:
             return "as it is"  # it was wrong before: two copies of it are no worse, and the last lines name it
     elif step.op in ("write", "note"):
@@ -771,5 +777,5 @@ def _do(root: Path, step: Step) -> Optional[str]:
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = _own_temporary(target)
         temporary.write_text(step.text, encoding="utf-8", newline="\n")
-        os.replace(temporary, target)
+        replace_when_let(temporary, target)
     return None
