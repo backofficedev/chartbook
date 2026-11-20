@@ -79,6 +79,7 @@ chartbook store migrate      # Move a store made by ChartBook 0.2 to 0.3's layou
 chartbook store export ID --to DIR   # One pipeline's snapshots, each complete, into DIR/snapshots/<pipeline>/, to send (--latest, --snapshot COMMIT[@MADE_AT])
 chartbook store import DIR    # Copy the snapshots in DIR (an export, or a pipeline's folder) into this store, each file checked against its record
 chartbook config             # Configure default catalog path
+chartbook install agents     # The Claude Code skill for the user, and a ChartBook section in the project's AGENTS.md (between two marker lines; run again after an upgrade)
 chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
 chartbook catalog init       # Make the machine's catalog, ~/.chartbook/catalog.toml, ahead of time (the first command that needs it makes it over your store, asking at a terminal)
 chartbook store add NAME URL  # Add a store; a pipeline enters by snapshot

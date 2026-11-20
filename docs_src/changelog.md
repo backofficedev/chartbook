@@ -135,6 +135,21 @@ Nothing is built yet: `chartbook run` builds it.
 - The template's CI file, its README and the line `chartbook init` ends with say `chartbook run --check`, and so do this repository's examples. A project made from an earlier template has `chartbook check --skip-outputs` in `.github/workflows/python_tests.yml`: change the line.
 - In Python, `chartbook.check.run_checks(..., not_built=[])` gathers the outputs that are not built into the list and does not report them; `skip_outputs` is as it was.
 
+### Added — `chartbook install agents`: one command for every coding agent
+
+```text
+$ chartbook install agents
+…
+Installed 3 skill file(s) to ~/.claude/skills/chartbook (ChartBook 0.6.0)
+Wrote AGENTS.md: a ChartBook section, for the agents that read that file (ChartBook 0.6.0).
+```
+
+- **Two halves.** The Claude Code skill for you, as `chartbook install claude-skill` installs it, and, in a pipeline's folder, a ChartBook section in the project's `AGENTS.md`, which other coding agents read: what the project is, the commands that matter, where the whole reference is ({design}`one-command`).
+- **The section is between two marker lines.** Run again after an upgrade, the command replaces what is between them and leaves the rest of the file alone, byte for byte; the file is written whole or not at all, and not at all where it is read-only, has a second name, or was saved by something else meanwhile.
+- **Nothing a person wrote is replaced unasked.** The opening marker carries a hash of the section, so one that somebody wrote in, of any version, is replaced only at a yes or with `-f`; the question says which lines would go. A newer ChartBook's section is left as it is. A line that only mentions a marker is the project's own text; marker lines that do not hold one section are an error that says which lines, and nothing is written.
+- **A section from an older ChartBook is said,** as a stale skill is: in one line to a person at a terminal, and by `chartbook run --check`.
+- Outside a project it installs the skill and says what the other half is for. `chartbook install claude-skill` is as it was.
+
 ### Changed — `chartbook catalog open` asks before it opens a site that is behind
 
 A run makes a snapshot and builds no catalog, so the catalog's site is built when it is looked at ({design}`one-command`):

@@ -30,6 +30,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook store import` | Copy the snapshots a folder holds into this machine's store |
 | `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
 | `chartbook config` | Set the default catalog for data loading |
+| `chartbook install agents` | Set a project up for coding agents: the Claude Code skill, and a ChartBook section in `AGENTS.md` |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
 
 `chartbook --version` prints the installed version; `chartbook <command> --help` prints a command's options.
@@ -1609,6 +1610,45 @@ Interactively set the default catalog path (stored as `catalog.path` in `~/.char
 chartbook config
 ```
 
+(chartbook-install-agents)=
+## chartbook install agents
+
+Set a project up for coding agents, in one command. It has two halves:
+
+1. It installs the Claude Code skill for you, as {ref}`chartbook install claude-skill <chartbook-install-claude-skill>` does.
+2. In a pipeline's folder, or a folder below one, it writes a ChartBook section into that project's `AGENTS.md`, which other coding agents read: what the project is, the few commands that matter, and where the whole reference is.
+
+```console
+$ chartbook install agents
+  SKILL.md
+  catalog_system.md
+  manifest_files.md
+
+Installed 3 skill file(s) to ~/.claude/skills/chartbook (ChartBook 0.6.0)
+Wrote AGENTS.md: a ChartBook section, for the agents that read that file (ChartBook 0.6.0).
+```
+
+**The section is ChartBook's, and the rest of the file is yours.** It stands between two marker lines:
+
+```markdown
+<!-- chartbook:start version=0.6.0 text=11c60b4e256c; written by `chartbook install agents`, which replaces everything down to chartbook:end. Notes of your own go outside these two lines. -->
+## ChartBook
+…
+<!-- chartbook:end -->
+```
+
+Run again after an upgrade, the command replaces what is between them and says so (`Updated the ChartBook section of AGENTS.md from ChartBook 0.5.1 to 0.6.0. The rest of the file is as it was.`). A file the project already has gets the section added at its end, and the rest of it is kept byte for byte: its line endings, a byte-order mark, blank lines at its end. One with none is made. When the section is already this version's, nothing is written. The file is written whole or not at all, and one that is read-only, that has a second name (a hard link), or that something else saved while the command ran is not written: the command says which. Commit `AGENTS.md`: it is for everyone who works in the repository.
+
+- **Nothing a person wrote is replaced unasked.** The opening marker carries the version and a hash of the section (`text=…`: of its two marker lines and the text between them), so a section somebody has written in is told from one that is as ChartBook left it, whatever its version. One that was written in, or that `chartbook install agents` did not write at all (markers typed by hand, no hash), is replaced only when you say so at the question, which says which lines and how many would go (`The ChartBook section of AGENTS.md (lines 12 to 40) was changed since ChartBook 0.6.0 wrote it. … Replace what is between them (27 lines)? [y/N]`), or with `-f`, which is for the skill's files too. Where nothing can ask, the command exits `1` and says that notes of your own go outside the two lines. Blank lines that a formatter puts inside the markers, and spaces after them, are nobody's writing.
+- **A newer ChartBook's section is left as it is,** and the command says so: `AGENTS.md` is committed, and two environments on two versions would otherwise take turns at it.
+- **A marker is a whole line.** From its first column, the comment and nothing else, and not inside a fenced code block. A line that only mentions one (in a sentence, indented as code, in an example) is the project's own text and is left alone. A marker line with other text after it, and marker lines that do not hold one section (a start with no end, two of either), are an error that says which lines, and nothing is written.
+- **A fence is as Markdown takes one.** Three or more backticks or tildes open it, and the same character, at least as many and nothing after, closes it. A file that ends inside one (a fence never closed) is an error that names the line: a section written below it would be part of that code.
+- **A file that is a link** is written through to a file of the project that is there (`AGENTS.md` linked to `CLAUDE.md`, say), and stays a link. One that leads outside the project, or to nothing, is an error.
+- **Both halves are done.** Where the skill's question is declined or cannot be answered, or its folder cannot be written, the section is still written; the command then exits `1` and says what was left. Ctrl-C at the skill's question ends the command. A skill that is a newer ChartBook's is left as it is, as a newer section is, and that is no error.
+- **Outside a project** it installs the skill and says that the `AGENTS.md` half is for a project. A project is the folder you are in, or the nearest above it in the same git repository, that holds a `chartbook.toml`; in no repository, or where the repository is your home folder, only the folder itself. Never the home folder.
+- **A section from an older ChartBook** teaches that version's commands. Every other command, run by a person at a terminal, says so in one line, and `chartbook run --check` as a `warning:`, as for a stale skill (below). One that somebody has written in is theirs, and is not said.
+
+(chartbook-install-claude-skill)=
 ## chartbook install claude-skill
 
 Install the bundled Claude Code skill, giving Claude context about the CLI, the manifest format and the data API. By default it installs **user-level**, into `~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR/skills/chartbook/` when that variable is set, so the skill is available in every Claude Code session on your machine. With `--project` it installs into `./.claude/skills/chartbook/` in the current directory, to commit with a repository; a project `chartbook init` makes has one already.

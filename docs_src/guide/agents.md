@@ -24,13 +24,19 @@ The examples below use the {doc}`tutorial catalog <../tutorials/explore-a-catalo
 ## Teach your agent ChartBook
 
 ```console
-chartbook install claude-skill
+chartbook install agents
 ```
 
-installs a skill for Claude Code: when ChartBook comes up, Claude reads what the commands above do
-and when to use each. Any other agent can be pointed at the catalog site's `llms.txt`, one line
-per asset with a link to its page, which every `chartbook catalog build` writes at the site's
-root.
+does it for every agent, in a pipeline's folder. It installs a skill for Claude Code: when
+ChartBook comes up, Claude reads what the commands above do and when to use each. And it writes a
+ChartBook section into the project's `AGENTS.md`, which other coding agents read when they start:
+what the project is, the few commands that matter, and where the whole reference is. The section
+is between two marker lines, so the command can replace it after an upgrade and leave your own
+notes alone ({ref}`the reference <chartbook-install-agents>`). Commit `AGENTS.md`.
+
+`chartbook install claude-skill` is the first half alone. Any agent can also be pointed at the
+catalog site's `llms.txt`, one line per asset with a link to its page, which every `chartbook
+catalog build` writes at the site's root.
 
 ## What is there?
 
