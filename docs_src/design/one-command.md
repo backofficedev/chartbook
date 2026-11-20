@@ -225,6 +225,10 @@ not merged, and waits for the maintainer.
 2026-11-19: a run removes nothing, says in a line what could go, and `chartbook store gc
 PIPELINE` lists it and asks (proposed); or a run removes with what can be closed closed, a
 longer window, and the first case accepted; or as written.
+
+*Decided 2026-11-19: none of the three.* A run clears an older snapshot when the new one holds
+all of its data, by the rule in {doc}`snapshots-and-increments` ("Clearing"), which has to see no
+pin. What is written below is not to be built, and the branch that built it is not to be merged.
 ```
 
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the

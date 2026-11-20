@@ -126,6 +126,7 @@ Decided by the maintainer, 2026-10-12.
 | 13 | {doc}`plan-data-reads` | The store hands out files, never a gathered folder; the catalog reads no data; `data.path`, `data.files`, `data.load`; standalone and shared snapshots; the guide rewritten around use cases | Proposed 2026-10-31; built and released as 0.5.0, 2026-11-01 |
 | 14 | {doc}`pins-and-rebuilds` | A lockfile that a rebuild can meet: only dataframes and models in it; a dataframe pinned by its rows in periods, up to its last date; what each command and read then does | Decided 2026-11-15 and 16; being built, the lockfile by kind first |
 | 15 | {doc}`one-command` | A smaller surface: `chartbook run` builds, checks what it built and makes a snapshot of committed work; `pin` is the word for the lockfile; what is not in your store is listed in the order to build it | Decided 2026-11-18 and 19; to be built for 0.6.0 |
+| 16 | {doc}`snapshots-and-increments` | A store a person can read: `snapshots/` holds only complete snapshots and `increments/` those kept as what differs from one of them; a run chooses which to make; a run clears an older snapshot when the new one holds all of its data, and a read of a cleared one is given its rows | Decided 2026-11-19; to be built for 0.6.0 |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
