@@ -162,8 +162,16 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
                 target.add_root(root.lockfile, set(root.hashes) | set(previous.hashes if previous else ()),
                                 set(root.snapshots or ()) | set(previous.snapshots or () if previous else ()), root.machine,
                                 set(root.labelled or ()) | set(previous.labelled or () if previous else ()))
-        # Each snapshot is verified where it is: one written just now by each file's hash as it was written, one
-        # that was there already by reading its own files (copy_snapshot). Nothing is asked of "the store, somewhere"
+        # Each snapshot was verified where it is: one written just now by each file's hash as it was written,
+        # one that was there already by reading its own files (copy_snapshot). And now every asset of them,
+        # by its hash, as a read of this pipeline finds it in the target: nothing is removed from the source
+        # for an asset the target's records name and do not hold
+        problems = target.verify(sorted(hashes), pipeline)
+        if problems:
+            raise StoreError(
+                f"The store at {target} does not hold {pipeline} whole after the copy: {problems[0].content_hash[:19]}… "
+                f"{problems[0].message}. Nothing was removed from where it came from."
+            )
     if not keep:
         for entry, chosen in sources:
             # Oldest first lets a store that keeps each file once (a bucket) preserve files referenced by remaining snapshots.

@@ -1271,7 +1271,7 @@ class Store(abc.ABC):
         """
         return all(self.has(content_hash) for content_hash in content_hashes)
 
-    def verify_snapshot(self, record: Path, content_hashes: Iterable[str]) -> list["StoreProblem"]:
+    def verify_snapshot(self, record: Path, content_hashes: Iterable[str], only: bool = False) -> list["StoreProblem"]:
         """What is wrong with the snapshot with this record, reading every byte of its own files: empty when it is whole.
 
         Asked before another store's copy of the same snapshot is removed
@@ -2915,7 +2915,7 @@ class FolderStore(Store):
                     ) from None
                 removed = True
         if removed:
-            _found_whole.difference_update({(str(self.root), content_hash, True), (str(self.root), content_hash, False)})
+            _found_whole.difference_update({seen for seen in _found_whole if seen[:2] == (str(self.root), content_hash)})
         path = self.unowned_path(content_hash)
         if not path.is_dir():
             return removed
@@ -2985,12 +2985,27 @@ class FolderStore(Store):
                     return True
         return not wanted
 
-    def verify_snapshot(self, record: Path, content_hashes: Iterable[str] = ()) -> list[StoreProblem]:
-        """Every file of one snapshot that is missing or has other bytes, read where its record says it is (:meth:`Store.verify_snapshot`)."""
+    def verify_snapshot(self, record: Path, content_hashes: Iterable[str] = (), only: bool = False) -> list[StoreProblem]:
+        """Every file of one snapshot that is missing or has other bytes, read where its record says it is (:meth:`Store.verify_snapshot`).
+
+        Each of *content_hashes* must be an asset the record says where to
+        find, and so must every hash the record names (:func:`_not_followed`):
+        a record that names what it gives no place for is not whole. With
+        *only*, no other asset's files are read.
+        """
         kept = read_kept_record(Path(record))
-        return [
+        wanted = set(content_hashes)
+        if not kept.readable:
+            return [StoreProblem(content_hash, kept.folder, "its record cannot be read") for content_hash in sorted(wanted) or [""]]
+        followed = {asset.content_hash for asset in kept.assets}
+        problems = [
+            StoreProblem(content_hash, kept.folder, f"its record does not say where {content_hash[:19]}… is")
+            for content_hash in sorted((wanted if only else wanted | kept.named) - followed)
+        ]
+        return problems + [
             StoreProblem(asset.content_hash, kept.folder, said)
-            for asset in kept.assets for _, said in what_is_wrong_in(asset)
+            for asset in kept.assets if not only or asset.content_hash in wanted
+            for _, said in what_is_wrong_in(asset)
         ]
 
     def holes_left(self, without: Iterable[Path]) -> dict[str, tuple[Path, str, int]]:
@@ -3263,10 +3278,21 @@ def _is_whole(file: KeptFile, pipeline_folder: Path) -> bool:
         return False
 
 
+def _not_followed(record: KeptRecord) -> list[str]:
+    """The hashes a record names and gives no place this machine follows: no dictionary (another version's record, one written by hand), or one whose files do not make the hash."""
+    return sorted(record.named - {asset.content_hash for asset in record.assets})
+
+
 def _holes(record: KeptRecord) -> list[str]:
-    """The files a snapshot's record names that are not whole where it says (:func:`_is_whole`), by their paths in the pipeline, each asked about once."""
+    """The files a snapshot's record names that are not whole where it says (:func:`_is_whole`), by their paths in the pipeline, each asked about once.
+
+    And what it names without saying where it is (:func:`_not_followed`),
+    by its hash: a snapshot is not whole by what its record passes over.
+    """
     whole = {file.location: file for asset in record.assets for file in asset.files}
-    return sorted({file.path for file in whole.values() if not _is_whole(file, record.folder.parent)})
+    return sorted({file.path for file in whole.values() if not _is_whole(file, record.folder.parent)}) + [
+        f"{content_hash[:19]}… (its record does not say where it is)" for content_hash in _not_followed(record)
+    ]
 
 
 def what_is_wrong_in(asset: KeptAsset, read: Optional[dict] = None) -> list[tuple[Path, str]]:

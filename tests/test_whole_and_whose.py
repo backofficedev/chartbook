@@ -17,6 +17,7 @@ every question of the store means, after three reviews of the layout:
 Found by the third review (2026-11-20), each test here failed before.
 """
 
+import hashlib
 import json
 import os
 import stat
@@ -504,7 +505,10 @@ class TestTheWayOutGcNames:
 
 
 class TestWhatGcSaysItFreed:
-    def test_a_folder_a_pin_made_is_counted_when_it_goes(self, work, store):
+    def test_a_snapshot_a_pin_made_is_listed_asked_about_and_counted(self, work, store, monkeypatch):
+        """Only a snapshot a pin made goes: the dry run lists it, "n" removes nothing, "y" removes it, and the last line agrees with the disk."""
+        from chartbook.cli import _format_bytes, _what_gc_would_clear
+
         upstream = work / "upstream"
         (upstream / "data").mkdir(parents=True)
         (upstream / "chartbook.toml").write_text(
@@ -530,14 +534,28 @@ class TestWhatGcSaysItFreed:
         assert lock.update(one, store=FolderStore(store.root), git_cache=cache).problems == []
         both = [p.parent.parent for p in (store.root / "snapshots" / "acme+upstream").glob("*/_chartbook/snapshot.json")]
         first, second = sorted(both, key=lambda folder: (folder / "data" / "moving.parquet").stat().st_size)
-        held = sum(p.stat().st_size for p in first.rglob("*") if p.is_file() and p.name != "snapshot.json")
-        fresh = FolderStore(store.root)
-        plan = lock.plan_gc(fresh, recent_seconds=0)
-        assert [_folder_of(taken) for taken, _ in plan.pinned_delete] == [first] and plan.snapshots_delete == []
-        assert plan.freed_bytes == held  # said before the question
-        done = lock.carry_out_gc(plan, fresh)
-        assert not first.exists() and (second / "data" / "steady.parquet").is_file()
-        assert done.freed_bytes == held  # and after: a whole folder went, with its own copy of the table that did not change
+        freed = _format_bytes(sum(p.stat().st_size for p in first.rglob("*") if p.is_file() and p.name != "snapshot.json"))
+        _an_hour_on(monkeypatch)
+        # The line a snapshot ends with says it too
+        assert _what_gc_would_clear(FolderStore(store.root)) == (
+            f"`chartbook store gc` would clear 1 snapshot(s) a pin made from a repository, whose files no lockfile needs "
+            f"from them, freeing {freed}."
+        )
+        dry = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert dry.exit_code == 0 and first.exists(), dry.output
+        lines = dry.output.splitlines()
+        assert f"Would remove 1 snapshot(s) a pin made from a repository and 1 object(s) that nothing names, {freed}:" in lines
+        (listed,) = [line for line in lines if line.startswith("  acme/upstream at ")]
+        assert ", which a pin made " in listed and listed.endswith(": no lockfile pins what it alone holds")
+        no = CliRunner().invoke(main, ["store", "gc"], input="n\n")
+        assert no.exit_code == 0 and listed in no.output.splitlines() and "Remove them?" in no.output, no.output
+        assert no.output.splitlines()[-1] == "Nothing was removed." and first.exists()
+        yes = CliRunner().invoke(main, ["store", "gc"], input="y\n")
+        assert yes.exit_code == 0 and not first.exists() and (second / "data" / "steady.parquet").is_file(), yes.output
+        assert yes.output.splitlines()[-1] == (
+            f"Removed 0 snapshot(s), 1 snapshot(s) a pin made from a repository and 1 object(s), {freed}."
+        )
+        assert CliRunner().invoke(main, ["store", "gc"]).output.splitlines()[-1] == "Nothing to remove."
 
     def test_an_object_whose_file_was_not_there_is_not_said_to_be_kept(self, rates, store):
         """A snapshot that is to go has lost a file only it had. Its folder goes, and nothing names or uses that object."""
@@ -646,3 +664,154 @@ class TestWhatLineageCountsAsThere:
         assert lineage.walk(reader, FolderStore(store.root)).gaps() == []  # nothing is read without --rehash
         ((node, said),) = lineage.walk(reader, FolderStore(store.root), rehash=True).gaps()
         assert node.pipeline == "acme/rates" and "which is not what its name says" in said
+
+
+def _an_hour_on(monkeypatch) -> None:
+    """Everything in the store was put there two hours ago, as `store gc` asks it: nothing is spared for being new."""
+    monkeypatch.setattr(FolderStore, "age_of", lambda self, content_hash, now=None: 2.0 * lock.RECENT_SECONDS)
+
+
+class TestGcReadsTheCopyAReadIsLeftWith:
+    """A snapshot that holds a pinned asset goes only when one of its pipeline that stays holds that asset intact, read and hashed."""
+
+    @pytest.fixture
+    def pinned_then_owned(self, work, store, monkeypatch):
+        """A `git` dependency pinned from its clone; then its owner, on this machine, commits a README and snapshots the same table."""
+        upstream = work / "upstream"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/upstream"}, "dataframes": {"steady": {"path": "./data/steady.parquet", "docs": "d"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        pl.DataFrame({"day": list(range(5000))}).write_parquet(upstream / "data" / "steady.parquet")
+        _commit(upstream, "One")
+        one = work / "one"
+        one.mkdir()
+        (one / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/one"}, "dependencies": {"acme/upstream": {"git": "../upstream"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        assert lock.pin(one, FolderStore(store.root), git_cache=GitCache(work / "gitcache")).problems == []
+        (pinned,) = [p.parent.parent for p in (store.root / "snapshots" / "acme+upstream").glob("*/_chartbook/snapshot.json")]
+        (upstream / "README.md").write_text("# Upstream\n", encoding="utf-8", newline="\n")
+        _commit(upstream, "A README")
+        owners = snapshot.make(upstream, store=FolderStore(store.root), made_at=OLD).snapshot
+        _an_hour_on(monkeypatch)
+        return one, pinned, owners, (upstream / "data" / "steady.parquet").read_bytes()
+
+    def test_the_pin_made_copy_stays_while_the_owners_has_other_bytes_at_its_size(self, pinned_then_owned, store):
+        one, pinned, owners, good = pinned_then_owned
+        assert Path(data.path("acme/upstream:steady", project_dir=one)) == pinned / "data" / "steady.parquet"
+        damaged = _folder_of(owners) / "data" / "steady.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(len(good)))  # the same size, other bytes: no size tells
+        store_module._found_whole.clear()
+        said = [
+            f"Nothing of acme/upstream is removed: in its snapshot {_folder_of(owners).name}, data/steady.parquet is no "
+            f"longer what its record says (now sha256:{hashlib.sha256(bytes(len(good))).hexdigest()}), and it stays because "
+            f"it is the newest of its pipeline.",
+            "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything "
+            "missing. If it is lost for good, that snapshot goes once a newer snapshot of its pipeline is made "
+            "(`chartbook run` in its folder) and nothing else keeps it.",
+        ]
+        for typed in (["store", "gc", "--dry-run"], ["store", "gc", "--yes"]):
+            result = CliRunner().invoke(main, typed)
+            assert result.exit_code == 0 and pinned.is_dir(), result.output
+            lines = result.output.splitlines()
+            assert lines[lines.index(said[0]):][:2] == said and lines[-1] == "Nothing to remove.", result.output
+        store_module._found_whole.clear()
+        assert Path(data.path("acme/upstream:steady", project_dir=one)).read_bytes() == good
+
+    def test_with_the_owners_copy_intact_it_goes_and_the_read_is_handed_the_owners(self, pinned_then_owned, store):
+        one, pinned, owners, good = pinned_then_owned
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0 and not pinned.exists() and "Nothing of" not in result.output, result.output
+        store_module._found_whole.clear()
+        after = Path(data.path("acme/upstream:steady", project_dir=one))
+        assert after == _folder_of(owners) / "data" / "steady.parquet" and after.read_bytes() == good
+
+    def test_only_a_plan_that_can_remove_reads_and_each_copy_once(self, pinned_then_owned, store, monkeypatch):
+        """The line a snapshot ends with makes a plan of the whole store, and reads nothing."""
+        from chartbook.cli import _what_gc_would_clear
+
+        one, pinned, owners, _ = pinned_then_owned
+        read: list = []
+        verify = FolderStore.verify_snapshot
+
+        def reading(self, record, content_hashes=(), only=False):
+            read.append((Path(record), list(content_hashes), only))
+            return verify(self, record, content_hashes, only)
+
+        monkeypatch.setattr(FolderStore, "verify_snapshot", reading)
+        monkeypatch.setattr(store_module, "what_is_wrong_in", lambda *a, **k: read.append("hashed") or [])
+        plan = lock.plan_gc(FolderStore(store.root))
+        assert [_folder_of(taken) for taken, _ in plan.pinned_delete] == [pinned] and not plan.hashed
+        assert _what_gc_would_clear(FolderStore(store.root)) is not None and read == []
+        plan = lock.plan_gc(FolderStore(store.root), hashed=True)
+        table = owners.content()["steady"]
+        assert read == [(Path(owners.path), [table], True), "hashed"]
+        assert [_folder_of(taken) for taken, _ in plan.pinned_delete] == [pinned] and plan.not_intact == set()
+
+
+class TestARecordThatNamesWhatItGivesNoPlaceFor:
+    """A snapshot is not whole by what its record passes over: a hash it names with no place this machine follows is a hole."""
+
+    @staticmethod
+    def _stores(store, target):
+        return Stores([
+            NamedStore("here", str(store.root), FolderStore(store.root)),
+            NamedStore("there", str(target), FolderStore(target), create=True),
+        ])
+
+    @pytest.fixture
+    def moved(self, rates, work, store):
+        """rates in two stores; the target's record says nothing of where the table is, and the table is not in its folder."""
+        first = snapshot.make(rates, store=store, made_at=OLD).snapshot
+        target = work / "target"
+        transfer.move("acme/rates", self._stores(store, target), "there", keep=True, route=False)
+        (copy,) = snapshot.all_snapshots(FolderStore(target))
+        record = Path(copy.path)
+        document = json.loads(record.read_text(encoding="utf-8"))
+        (table,) = [part for part in document["records"] if part["id"].endswith("treasury")]
+        del table["stored"]  # as another version might write it, or a hand
+        os.chmod(record, stat.S_IWRITE | stat.S_IREAD)
+        record.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+        _lose(_folder_of(copy) / "_data" / "treasury.parquet")
+        store_module._read_records.clear()
+        return first, copy, target
+
+    def test_it_is_a_hole_for_every_question_of_whole(self, moved):
+        first, copy, target = moved
+        table = first.content()["treasury"]
+        there = FolderStore(target)
+        assert there.holes_of(copy.path) == [f"{table[:19]}… (its record does not say where it is)"]
+        assert not there.holds_whole("acme/rates", [table]) and not there.has(table, "acme/rates")
+        (problem,) = there.verify_snapshot(copy.path, first.hashes())
+        assert problem.content_hash == table and problem.message == f"its record does not say where {table[:19]}… is"
+        # A hash the record does not name at all is no asset of it
+        other = "sha256:" + "0" * 64
+        assert [p.message for p in there.verify_snapshot(copy.path, [other], only=True)] == [f"its record does not say where {other[:19]}… is"]
+
+    def test_store_move_removes_nothing_from_the_source(self, moved, store):
+        first, copy, target = moved
+        with pytest.raises(StoreError) as stopped:
+            transfer.move("acme/rates", self._stores(store, target), "there", keep=False, route=False)
+        assert "and not whole: its record does not say where" in str(stopped.value)
+        assert str(stopped.value).count("Nothing was removed from where it came from.") == 1
+        assert (_folder_of(first) / "_data" / "treasury.parquet").is_file()
+
+    def test_a_run_that_writes_to_both_does_not_stand_on_it(self, rates, moved, store):
+        first, copy, target = moved
+        report = snapshot.make(rates, store=_two_stores(store, target), store_names=["here", "there"], made_at=NOW)
+        assert report.made and str(report.not_whole[2]) == str(FolderStore(target))
+
+    def test_store_move_asks_the_target_by_hash_before_it_removes(self, rates, work, store, monkeypatch):
+        """After the copies and before anything goes: every asset, as a read of the pipeline finds it in the target."""
+        first = snapshot.make(rates, store=store, made_at=OLD).snapshot
+        target = work / "target"
+        monkeypatch.setattr(transfer, "copy_snapshot", lambda taken, source, into: None)  # a copy that wrote nothing
+        with pytest.raises(StoreError) as stopped:
+            transfer.move("acme/rates", self._stores(store, target), "there", keep=False, route=False)
+        assert f"The store at {FolderStore(target)} does not hold acme/rates whole after the copy: " in str(stopped.value)
+        assert str(stopped.value).endswith("not in the store. Nothing was removed from where it came from.")
+        assert (_folder_of(first) / "_data" / "treasury.parquet").is_file() and len(snapshot.all_snapshots(FolderStore(store.root))) == 1

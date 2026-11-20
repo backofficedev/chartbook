@@ -4274,11 +4274,15 @@ class GcPlan:
     unused: list = field(default_factory=list)
     copies: dict = field(default_factory=dict)
     held_back: dict = field(default_factory=dict)
+    #: The pipelines of *held_back* whose snapshot that stays has a file with other bytes than its record
+    #: says, found by reading it (:func:`plan_gc` with *hashed*); for them *held_back* gives what is wrong
+    not_intact: set = field(default_factory=set)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
     keep_lineage: bool = False
     aggressive: bool = False
+    hashed: bool = False
 
     @property
     def size_bytes(self) -> int:
@@ -4306,6 +4310,7 @@ def plan_gc(
     keep_days: float = snapshot.KEEP_DAYS,
     keep_lineage: bool = False,
     aggressive: bool = False,
+    hashed: bool = False,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
@@ -4345,6 +4350,12 @@ def plan_gc(
         be found keeps nothing, and is forgotten when the plan is carried
         out. Another machine's lockfiles are never forgotten from here.
     :param recent_seconds: An unnamed object newer than this is left alone.
+    :param hashed: For a plan that can lead to removal (``chartbook store
+        gc``, its dry run too): where a snapshot that goes holds an asset a
+        lockfile pins, the copy of it in the snapshot of its pipeline that
+        stays, which a read is handed afterwards, is read and hashed, and
+        if it is not what its record says nothing of that pipeline goes.
+        Off by default: the line a snapshot ends with reads nothing.
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.
     :returns: The plan, for :func:`run_gc`.
@@ -4355,14 +4366,14 @@ def plan_gc(
     store = store if store is not None else default_store()
     # Asked many times over: the records are read once for the whole plan
     with store.reading():
-        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive)
+        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed)
 
 
-def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool) -> GcPlan:
+def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool, hashed: bool = False) -> GcPlan:
     """The rest of :func:`plan_gc`, within one reading of the store's records."""
     plan = GcPlan(
         forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
-        keep_lineage=keep_lineage, aggressive=aggressive,
+        keep_lineage=keep_lineage, aggressive=aggressive, hashed=hashed,
     )
     keep: set[str] = set()
     pinned_snapshots: set[tuple[str, str]] = set()
@@ -4483,7 +4494,7 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     plan.kept_versions = snapshots.kept_versions
     _keep_what_only_they_hold(plan, keep)
     _plan_pinned(store, plan, keep, recent_seconds)
-    _hold_back_where_one_that_stays_has_a_hole(store, plan)
+    _hold_back_where_one_that_stays_has_a_hole(store, plan, keep)
     named_by_snapshots = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept + plan.pinned_kept))
     plan.snapshots = len(named_by_snapshots)
     keep |= named_by_snapshots
@@ -4570,9 +4581,11 @@ def _held_by_pipeline(kept: list) -> dict:
 
 #: Why ``store gc`` removes no snapshot of a pipeline one of whose snapshots that stay has lost a file of its own
 HELD_BACK = "a snapshot of its pipeline that stays has lost a file"
+#: And where that snapshot has the file, with other bytes than its record says (:attr:`GcPlan.not_intact`)
+HELD_BACK_OTHER_BYTES = "a snapshot of its pipeline that stays has a file with other bytes than its record says"
 
 
-def _hold_back_where_one_that_stays_has_a_hole(store: Store, plan: "GcPlan") -> None:
+def _hold_back_where_one_that_stays_has_a_hole(store: Store, plan: "GcPlan", keep: frozenset = frozenset()) -> None:
     """Remove no snapshot of a pipeline one of whose snapshots that stay lacks a file of its own (:attr:`GcPlan.held_back`).
 
     Where each snapshot holds its own copy of every file, one folder can
@@ -4587,11 +4600,49 @@ def _hold_back_where_one_that_stays_has_a_hole(store: Store, plan: "GcPlan") -> 
     # Asked of one store, as what is left is (files_left): several read as one are planned as before
     asked = getattr(type(store), "holes_left", None)
     plan.held_back = asked(store, going) if asked is not None and going else {}
+    if plan.hashed:
+        # A plan that can lead to removal reads the copy a read is handed once the other has gone
+        other_bytes = _holders_with_other_bytes(store, plan, keep)
+        plan.not_intact = set(other_bytes)
+        plan.held_back.update(other_bytes)
     for delete, keeping in ((plan.snapshots_delete, plan.snapshots_kept), (plan.pinned_delete, plan.pinned_kept)):
         for taken, why in list(delete):
             if taken.pipeline in plan.held_back:
                 delete.remove((taken, why))
-                keeping.append((taken, HELD_BACK))
+                keeping.append((taken, HELD_BACK_OTHER_BYTES if taken.pipeline in plan.not_intact else HELD_BACK))
+
+
+def _holders_with_other_bytes(store: Store, plan: "GcPlan", keep: frozenset) -> dict:
+    """Each pipeline one of whose snapshots that stay holds, with other bytes than its record says, an asset a lockfile pins that a snapshot which goes holds too: as :attr:`GcPlan.held_back` has it.
+
+    A snapshot that holds a pinned asset goes only when a snapshot of its
+    pipeline that stays holds that asset intact, read and hashed. The one
+    read is the copy a read is handed once the other has gone: the newest
+    that stays of that pipeline, and the newest that stays of the going
+    one's own commit, which an entry that names a commit and no time is
+    read from. Each asset of each snapshot is read once, and only where a
+    copy of it would go; a pipeline already held back is not asked.
+    """
+    check = getattr(type(store), "verify_snapshot", None)
+    if check is None or getattr(type(store), "holes_of", Store.holes_of) is Store.holes_of:
+        return {}  # several stores read as one; or one that keeps each file once, where nothing that goes takes a file that stays
+    staying: dict = {}
+    for taken, _ in sorted(plan.snapshots_kept + plan.pinned_kept, key=lambda pair: pair[0].made_at, reverse=True):
+        staying.setdefault(taken.pipeline, []).append(taken)
+    found: dict = {}
+    read: dict = {}
+    for going, _ in plan.snapshots_delete + plan.pinned_delete:
+        if going.pipeline in plan.held_back or going.pipeline in found:
+            continue
+        for content_hash in sorted(going.hashes() & keep):
+            holders = [taken for taken in staying.get(going.pipeline, []) if content_hash in taken.hashes()]
+            for holder in {str(taken.path): taken for taken in holders[:1] + [t for t in holders if t.commit == going.commit][:1]}.values():
+                asked = (str(holder.path), content_hash)
+                if asked not in read:
+                    read[asked] = check(store, holder.path, [content_hash], only=True)
+                if read[asked] and going.pipeline not in found:
+                    found[going.pipeline] = (holder.path, read[asked][0].message, len(read[asked]))
+    return found
 
 
 def _plan_pinned(store: Store, plan: "GcPlan", keep: set, recent_seconds: float) -> None:
@@ -4690,6 +4741,10 @@ class GcDone:
     held_back: dict = field(default_factory=dict)
     #: Each snapshot the plan made again keeps, with why: what says why one that lacks a file stays
     kept: list = field(default_factory=list)
+    #: :attr:`GcPlan.not_intact` of the plan made again
+    not_intact: set = field(default_factory=set)
+    #: How many snapshots a pin made from a repository were removed
+    pinned: int = 0
 
 
 def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
@@ -4722,6 +4777,7 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         keep_days=plan.keep_days,
         keep_lineage=plan.keep_lineage,
         aggressive=plan.aggressive,
+        hashed=plan.hashed,
     )
     from chartbook import versions
 
@@ -4746,11 +4802,12 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
     size_bytes = 0
     # Where a git dependency's bytes were kept, which only a pin made
     still_pinned = {taken.path for taken, _ in now.pinned_delete}
+    removed_pinned = 0
     for taken, _ in plan.pinned_delete:
         if taken.path not in still_pinned:
             continue
         try:
-            snapshot.remove(store, taken)
+            removed_pinned += 1 if snapshot.remove(store, taken) else 0
         except (StoreError, OSError) as error:
             failures.append((f"where a pin kept {taken.pipeline} at {taken.commit[:7]}", str(error)))
     # What the cleared snapshots held goes now, file by file, but what a
@@ -4812,6 +4869,9 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
             failures.append((f"the note of the lockfile {lockfile}", str(error)))
     if failures:
         raise GcError(removed_snapshots, removed, size_bytes, failures)
-    why_now = {taken.path: why for taken, why in now.snapshots_kept}
-    kept_after_all = [(taken, why_now[taken.path]) for taken, _ in plan.snapshots_delete if taken.path in why_now]
-    return GcDone(removed_snapshots, removed, size_bytes, kept_after_all, objects_kept, now.held_back, now.snapshots_kept + now.pinned_kept)
+    why_now = {taken.path: why for taken, why in now.snapshots_kept + now.pinned_kept}
+    kept_after_all = [(taken, why_now[taken.path]) for taken, _ in plan.snapshots_delete + plan.pinned_delete if taken.path in why_now]
+    return GcDone(
+        removed_snapshots, removed, size_bytes, kept_after_all, objects_kept, now.held_back, now.snapshots_kept + now.pinned_kept,
+        not_intact=now.not_intact, pinned=removed_pinned,
+    )

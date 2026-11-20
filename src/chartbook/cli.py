@@ -4217,16 +4217,20 @@ def _what_gc_would_clear(the_store) -> "str | None":
         plan = lock.plan_gc(the_store)
     except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
         return None
-    # A record a pin made goes with gc too, but holds nothing of its own: gc says nothing of it, and neither does this
-    cleared = len(plan.snapshots_delete)
-    if not cleared and not plan.delete:
+    # A snapshot a pin made from a repository goes with gc too, with its own copy of every file
+    cleared, pinned = len(plan.snapshots_delete), len(plan.pinned_delete)
+    if not cleared and not pinned and not plan.delete:
         return None
+    by_pins = f"{pinned} snapshot(s) a pin made from a repository, whose files no lockfile needs from them"
     if cleared:
         # With the snapshots' own copies of files that objects which stay have too: each snapshot is complete
         return (
             f"`chartbook store gc` would clear {cleared} snapshot(s), freeing {_format_bytes(plan.freed_bytes)}: "
-            f"older than {plan.keep_days:g} days, and neither pinned nor the newest of their pipeline."
+            f"older than {plan.keep_days:g} days, and neither pinned nor the newest of their pipeline"
+            f"{f'; and {by_pins}' if pinned else ''}."
         )
+    if pinned:
+        return f"`chartbook store gc` would clear {by_pins}, freeing {_format_bytes(plan.freed_bytes)}."
     return f"`chartbook store gc` would clear {len(plan.delete)} object(s) nothing names, freeing {_format_bytes(plan.size_bytes)}."
 
 
@@ -4642,22 +4646,26 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
     try:
         the_store = default_store()
-        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive)
+        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive, hashed=True)
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
-    def say_held_back(held_back: dict, kept: list) -> None:
-        """Say of each pipeline none of whose snapshots is removed which snapshot lacks which file, why that one stays, and what to do."""
+    def say_held_back(held_back: dict, kept: list, not_intact: set) -> None:
+        """Say of each pipeline none of whose snapshots is removed which snapshot lacks which file, or has it with other bytes, why that one stays, and what to do."""
         reasons = {taken.path: why for taken, why in kept}
         for pipeline, (record, file, count) in sorted(held_back.items()):
-            more = f" and {count - 1} more" if count > 1 else ""
             why = reasons.get(record, "")
-            click.echo(
-                f"Nothing of {_printable(pipeline)} is removed: its snapshot {record.parent.parent.name} lacks "
-                f"{_printable(file)}{more}, and stays{f' because {why}' if why else ''}."
-            )
+            stays = f"stays{f' because {why}' if why else ''}"
+            if pipeline in not_intact:
+                # Found by reading it: the file is there, at the size its record says, and is not what it was
+                more = f" (and {count - 1} more of its files)" if count > 1 else ""
+                wrong = f"in its snapshot {record.parent.parent.name}, {_printable(file)}{more}, and it {stays}"
+            else:
+                more = f" and {count - 1} more" if count > 1 else ""
+                wrong = f"its snapshot {record.parent.parent.name} lacks {_printable(file)}{more}, and {stays}"
+            click.echo(f"Nothing of {_printable(pipeline)} is removed: {wrong}.")
             click.echo(
                 f"  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists "
                 f"everything missing. If it is lost for good, that snapshot goes {_when_it_goes(why)}."
@@ -4755,9 +4763,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             "(for a note from before notes did, the newest holding each object it "
             "named). --forget-missing lets them go."
         )
-    say_held_back(plan.held_back, plan.snapshots_kept + plan.pinned_kept)
+    say_held_back(plan.held_back, plan.snapshots_kept + plan.pinned_kept, plan.not_intact)
 
-    if not plan.delete and not plan.snapshots_delete:
+    if not plan.delete and not plan.snapshots_delete and not plan.pinned_delete:
         click.echo("Nothing to remove.")
         if not dry_run:
             carry_out()  # forgets the missing, if asked to
@@ -4766,14 +4774,19 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     # The size of what goes: the objects nothing names and, with a snapshot's folder, its own copies of
     # files that a kept snapshot has too (GcPlan.freed_bytes); and after the yes, of what went (GcDone)
     freed = _format_bytes(plan.freed_bytes)
-    if plan.snapshots_delete:
-        objects = f" and {len(plan.delete)} object(s) that nothing names" if plan.delete else ""
-        click.echo(f"Would remove {len(plan.snapshots_delete)} snapshot(s){objects}, {freed}:")
+    if plan.snapshots_delete or plan.pinned_delete:
+        # A snapshot a pin made from a repository goes as any does, its whole folder: said, and asked about
+        counted = [f"{len(plan.snapshots_delete)} snapshot(s)"] if plan.snapshots_delete else []
+        counted += [f"{len(plan.pinned_delete)} snapshot(s) a pin made from a repository"] if plan.pinned_delete else []
+        counted += [f"{len(plan.delete)} object(s) that nothing names"] if plan.delete else []
+        click.echo(f"Would remove {', '.join(counted[:-1]) + ' and ' if counted[1:] else ''}{counted[-1]}, {freed}:")
         for taken, why in plan.snapshots_delete:
             click.echo(
                 f"  {taken.pipeline} at {taken.commit[:7]}, made "
                 f"{_when(taken.made_at)}: {why}"
             )
+        for taken, why in plan.pinned_delete:
+            click.echo(f"  {taken.pipeline} at {taken.commit[:7]}, which a pin made {_when(taken.made_at)}: {why}")
         if dry_run and plan.delete:
             for content_hash, size in plan.delete:
                 click.echo(f"  {content_hash}  {_format_bytes(size)}")
@@ -4801,8 +4814,11 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         click.echo(f"Kept after all: {taken.pipeline} at {taken.commit[:7]}, made {_when(taken.made_at)}: {why}")
     if done.objects_kept:
         click.echo(f"Kept after all: {done.objects_kept} object(s), which a lockfile or a snapshot names or uses now")
-    say_held_back({pipeline: held for pipeline, held in done.held_back.items() if pipeline not in plan.held_back}, done.kept)
-    click.echo(f"Removed {done.snapshots} snapshot(s) and {done.objects} object(s), {_format_bytes(done.freed_bytes)}.")
+    say_held_back(
+        {pipeline: held for pipeline, held in done.held_back.items() if pipeline not in plan.held_back}, done.kept, done.not_intact
+    )
+    by_pins = f", {done.pinned} snapshot(s) a pin made from a repository" if done.pinned else ""
+    click.echo(f"Removed {done.snapshots} snapshot(s){by_pins} and {done.objects} object(s), {_format_bytes(done.freed_bytes)}.")
 
 @main.command()
 @click.option(
