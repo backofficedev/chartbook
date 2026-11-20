@@ -362,7 +362,7 @@ Advice for the guide, not a rule: partition a large table that grows by date, by
 has a row a day, and by day only where a day is large. A small table gains nothing, and a folder
 for each day of sixty years is fifteen thousand small files.
 
-## Clearing: decided in principle, held, and not to be built yet
+## Clearing: what was wanted, what broke three times, and what is built instead
 
 *Decided 2026-11-19: a run clears an older snapshot, whole, when the new one holds all of its
 data; a chart or a notebook does not count as data; and it is wanted in 0.6.0.* It was to take the
@@ -372,11 +372,11 @@ was built, was shown to lose data, and is held back.
 *Decided 2026-11-19, after the two reviews: 0.6.0 may be released without it, and the work on a
 rule goes on. Which form to try next is left to Claude.*
 
-**Nothing of it is to be built from this page as it stands.** Two forms of the rule were read
-against the code, before anything was built, by reviewers asked to break them. Both were broken,
-on paper. This section records the two forms, what broke each, and what a third has to answer.
-Until one survives such a reading, a run clears nothing, `chartbook store gc` clears as it does
-today, and the line a snapshot ends with says what it could clear.
+**No run removes a snapshot.** Three forms of the rule were read against the code, before
+anything was built, by reviewers asked to break them, and each was broken, on paper. This
+section records the three, what broke each, and what is built instead ("Where it stands"):
+`chartbook store gc` goes on clearing, with its list and its question, and is given better
+evidence.
 
 ### The first form
 
@@ -457,13 +457,80 @@ What broke it *(found by a second review)*:
 - **Reads by path, and reads of what no lockfile holds.** Whether they stop, or say what they
   give.
 
-*Proposed by Claude, 2026-11-19, and not reviewed:* the likeliest third form is **a run clears,
-of its own pipeline, what `chartbook store gc` would remove, and of that only what a later
-snapshot of the same commit and the same pins holds all the data of.** gc's rules are built and
-were reviewed many times, and carry the waiting, the marks, the notes and the clocks; the second
-half is for the pins gc cannot see, which is what stopped step 3. It clears less than the
-maintainer was first told: the pull that runs every morning keeps a week of snapshots, and a
-pipeline being worked on keeps one for each commit, until `chartbook store gc`.
+### The maintainer's idea: the store knows every project that reads from it
+
+*The maintainer, 2026-11-19:* "Any time any code in any location calls chartbook.data chartbook
+should record the location of its chartbook.toml file. That way chartbook can centrally keep
+track of any code anywhere that might pin a snapshot. That way it can always keep track of what
+might be needed when a version of store gc runs."
+
+Half of it is built. A pin, and a read through a lockfile, leave a note in the store: the
+lockfile's path, the machine, and the snapshots and hashes it names. `chartbook store gc` reads
+the notes, and each noted lockfile of this machine as it is now. What the notes miss is a
+lockfile on another branch or tag of the same project, since a note is of the lockfile as
+checked out; a reader who may not write to the store; and a note of another machine that has not
+arrived. The idea closes the first, which is the commonest: since the store knows where the
+project is, a note can say what its lockfile pins on every branch and every tag. It is decided
+by evidence, and no rows are compared.
+
+### The third form
+
+*A week's notice. A run marks an old snapshot of its pipeline that nothing pins, by the fuller
+notes, and says when it goes; a run a week later removes it, if nothing has pinned it
+meanwhile.* Three designs worked out apart on 2026-11-19 (compose `store gc`; set aside, then
+remove; a person says yes) came to it, or near it. All three agreed that the notes come first,
+that `store gc`'s plan has to be made for one pipeline, that nothing is removed at first sight,
+and that with full notes no rows need comparing.
+
+What broke it *(found by a third review)*:
+
+1. **A machine that was switched off removes, at its first run back, what was pinned while it
+   was away.** It has had the mark for a week. The note that took the mark off has not reached
+   it yet. Not a machine that ran for a week without syncing, which the design gave up: any
+   machine that was off, and a run that starts before the sync has finished.
+2. **A tag holds only the newest snapshot of its commit, and only where a clone has the tag.** So
+   what the notice told a reader who cannot write, "its owner keeps it with a tag", holds nothing
+   in a pipeline that pulls every day; and a run in CI, or on another machine, clears what a tag
+   on this one was meant to keep.
+3. **Its list of what is held was not `store gc`'s.** Bytes a note names by their hash, a model's
+   version pinned by a label, and a repository kept whole were not on it.
+4. **"`store gc` removes what is marked" was two things, each worse than today:** a pipeline
+   nobody runs again never cleared, or the seven days gone.
+5. **A run that makes no snapshot could remove the one it had just named,** which was step 3's
+   third loss.
+6. **The time a mark "arrived on this disk" is not a time every store has,** and a clock put
+   right can take the week away.
+
+And of the fuller notes, which are to be built, it found what they need: the pipeline in each
+name, so that a plan for one pipeline is of one pipeline; a note replaced only where git has
+answered for a whole clone, and added to otherwise; a name that comes from a branch or tag that
+is not checked out holding the snapshot it names and no other of its commit, or one old tag
+would hold every snapshot of a pipeline whose code has not changed; and a way for a person to
+see which note holds a snapshot, and to have one note forgotten.
+
+### Where it stands
+
+*Decided 2026-11-19. The maintainer, that day: this may not be possible to do perfectly; do it
+in a way that is safe and reasonable; 0.6.0 may be released without it; and which form, he left
+to Claude.* Three forms of a run that removes were broken before a line of them was built. So:
+
+**A run removes nothing. It says what `chartbook store gc` could remove of its pipeline; `store
+gc` removes it, with its list, its question and its week, as today, and knows more.**
+
+For 0.6.0:
+
+1. **The store's notes say what each project pins on every branch and tag,** with what the third
+   review asked of them above. `chartbook store gc` uses them at once. They can lose nothing.
+2. **The line a snapshot ends with says what `store gc` could remove of this pipeline,** from a
+   plan made for this pipeline. Today it makes the plan for the whole store at every snapshot.
+3. **`chartbook store gc` says which note holds a snapshot, and can forget one note.**
+
+A run that removes by itself is not in 0.6.0. In a folder that a sync service keeps, nobody
+sees everything: not the other branches, not the reader who may only read, not what another
+machine did a minute ago. What the third review says a fourth form would need is a run that
+clears only what its own machine made, a ledger of its own outside the store, and two sightings
+a day apart after the week; and then a reading of the built code. A store that one service runs
+sees every read and every pin, and could clear exactly (the maintainer's thought, the same day).
 
 ### What a read is given where another snapshot stands in
 
@@ -576,6 +643,8 @@ files for what it changes.
 4. The S3 store, and `store export` and `store import`.
 5. Increments are made: which one a run makes, the last line of a run, `chartbook snapshot` and
    `run --snapshot` complete.
-6. Clearing: not before a form of it has stood a review, and the maintainer has said which.
+6. Clearing, as "Where it stands" has it: the notes of every branch and tag, with the pipeline in
+   each name; the line of what `store gc` could remove of this pipeline; `store gc` saying which
+   note holds a snapshot, and forgetting one. No run removes.
 7. The guide, the vocabulary and the changelog, read through once more against what was built;
    and what `data.path` says of `data.as_of`.

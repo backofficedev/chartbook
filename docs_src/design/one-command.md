@@ -24,7 +24,7 @@ version, and shows all of them in one catalog.
 | You want to | You type |
 |---|---|
 | Start a pipeline | `chartbook init` |
-| Build it, make the build available to your other pipelines, and clear out its old versions | `chartbook run` |
+| Build it, and make the build available to your other pipelines | `chartbook run` |
 | Take newer data from a pipeline you depend on | `chartbook pin --update` |
 | Look at everything | `chartbook catalog open` |
 | Teach your coding agent ChartBook | `chartbook install agents` |
@@ -233,6 +233,12 @@ older snapshot when the new one holds all of its data. It is in {doc}`snapshots-
 held there. Until that page says otherwise a run clears nothing, the line on what `chartbook
 store gc` could clear stays, what is written below is not to be built, and the branch that built
 it is not to be merged.
+
+*Decided later the same day, after a third form was broken too:* no run removes a snapshot in
+0.6.0. A run says what `chartbook store gc` could remove of its pipeline, and `store gc` is given
+better evidence: the store's notes of what each project pins, on every branch and tag
+({doc}`snapshots-and-increments`, "Where it stands"). So the first row of "What everyone learns"
+no longer says that a run clears out old versions.
 ```
 
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
