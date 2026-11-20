@@ -4,6 +4,18 @@
 
 A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declares what it makes (dataframes, charts, models, files, notebooks, notes). A **snapshot** is everything one pipeline built at one commit, by hash, kept in a **store**; another pipeline **pins** it in `chartbook.lock` and reads it by name. A **catalog** is one site over every snapshot in its stores. Every page is also published as Markdown: `guide/agents.html` is `guide/agents.md`.
 
+## The five commands
+
+Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. `chartbook --help` lists them first:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+
 ## Get started
 
 - [Quickstart](docs_src/getting-started.md): `pip install chartbook`; a pipeline from three files (manifest, script, README); `chartbook docs build`; what `index.json` records

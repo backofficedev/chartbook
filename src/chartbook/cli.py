@@ -73,8 +73,40 @@ def _reads_as_an_argument(word: str) -> bool:
     return word.startswith(("-", ".")) or "/" in word or os.sep in word or os.path.exists(word)
 
 
+#: What everyone learns (``docs_src/design/one-command.md``): the words to type, and what each is
+#: for, in the order a person meets them. `chartbook --help` shows these first; the Quickstart,
+#: the README and the skill teach them first; a test holds each to a command there is.
+THE_FIVE = (
+    ("chartbook init", "Start a project from the template"),
+    ("chartbook run", "Pin, build and snapshot this pipeline"),
+    ("chartbook pin --update", "Take the newest snapshot of what it reads"),
+    ("chartbook catalog open", "Browse every snapshot in your stores"),
+    ("chartbook install agents", "Teach your coding agent ChartBook"),
+)
+
+
 class _Main(_Group):
     renamed = {"browse": "docs open"}
+
+    def format_commands(self, ctx, formatter):
+        """The five commands everyone learns, as they are typed, and then the rest by name.
+
+        A command that is all there under its own name above (`init`,
+        `run`) is not listed again; one that has more to it than the form
+        above (`pin`, `catalog`, `install`) is.
+        """
+        with formatter.section("Start with these"):
+            formatter.write_dl(list(THE_FIVE))
+        said_whole = {words.split()[1] for words, _ in THE_FIVE if len(words.split()) == 2}
+        more = [
+            (name, command) for name in self.list_commands(ctx)
+            if (command := self.get_command(ctx, name)) is not None and not command.hidden and name not in said_whole
+        ]
+        if more:
+            # Each in one line, cut to what is left beside the longest name, as click lists commands
+            limit = formatter.width - 6 - max(len(name) for name, _ in more)
+            with formatter.section("More"):
+                formatter.write_dl([(name, command.get_short_help_str(limit)) for name, command in more])
 
     def parse_args(self, ctx, args):
         if args and args[0] == "build" and not ctx.resilient_parsing:
@@ -126,7 +158,10 @@ class _Install(_Group):
 @click.version_option(version=__version__)
 @click.pass_context
 def main(ctx):
-    """chartbook CLI tool for generating documentation websites."""
+    """ChartBook builds a pipeline, keeps what it built as a snapshot that other pipelines pin, and shows every snapshot in a catalog.
+
+    Every command takes --help.
+    """
     _utf8_output()
     # A warning from the settings or a manifest is one line for a person,
     # not Python's file, line and source line

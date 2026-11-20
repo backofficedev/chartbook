@@ -72,6 +72,18 @@ Many pipelines become one catalog: a searchable website for your team, and an in
 
 ::::
 
+## The five commands
+
+Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+
 ## Ask the catalog from the command line
 
 What a person browses on the site, a script or an agent can ask for at the terminal: which
@@ -101,7 +113,7 @@ command line the same questions and gets the same answers.
 | **Use it** | Copy the snippet on the page | `data.load("yield_curve:repo_public")`, `chartbook path`, `chartbook add yield_curve` |
 | **Can I trust it?** | The Provenance table and the Versions page | `chartbook lineage --json`, and `chartbook.lock` in git |
 
-`chartbook install claude-skill` teaches Claude Code all of this, and every site ChartBook builds
+`chartbook install agents` teaches your coding agent all of this, and every site ChartBook builds
 ships an [llms.txt](https://llmstxt.org/) at its root.
 
 ## In any language
