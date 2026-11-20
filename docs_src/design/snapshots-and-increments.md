@@ -604,7 +604,8 @@ and his other work read them with 0.5 until then.*
 - **Nobody else writes to the store meanwhile,** and every machine that shares it needs this
   ChartBook afterwards: a 0.5 that has not yet seen the new `store.json` would go on writing a
   `pipelines/` folder. The command says both before it starts.
-- **In a bucket a move is a copy and a delete,** file by file.
+- **A store in a bucket is not moved.** *Decided 2026-11-20; the first draft had "in a bucket a
+  move is a copy and a delete, file by file".* It keeps its layout and works as it did.
 
 As built, after two reviews of the mover, by three rules:
 
@@ -688,7 +689,9 @@ files for what it changes.
 3. `chartbook store migrate` from the layout of 0.5. *Steps 2 and 3 are one pull request: main
    never names a command that cannot yet move a store.* `store export`, `store import` and `store
    move` of the folder store came with them, since each has to keep a snapshot's form.
-4. The S3 store.
+4. ~~The S3 store.~~ *Not for 0.6.0. Decided 2026-11-20: the maintainer had not asked for it,
+   and the priority is a store in a folder. A store in a bucket keeps the layout it has had since
+   0.3.0, each file once, and works as it did; nothing here moves one.*
 5. Increments are made: which one a run makes, the last line of a run, `chartbook snapshot` and
    `run --snapshot` complete.
 6. Clearing, as "Where it stands" has it with its note: the notes of every branch and tag, with
