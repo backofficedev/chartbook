@@ -15,6 +15,7 @@ import hashlib
 import io
 import json
 import os
+import pathlib
 import shutil
 import stat
 from pathlib import Path
@@ -229,6 +230,15 @@ def watch(monkeypatch, root: Path, gone: list) -> None:
     monkeypatch.setattr(os, "rename", onto("rename"))
     monkeypatch.setattr(io, "open", opened)
     monkeypatch.setattr(builtins, "open", opened)
+    # Python 3.10: a Path's own methods (unlink, rmdir, rename, replace, open, and so write_text)
+    # call the functions pathlib kept when it was imported, which the patches above do not reach.
+    # From 3.11 on they look them up in os and io each time, and there is no such class
+    accessor = getattr(pathlib, "_NormalAccessor", None)
+    if accessor is not None:
+        kept = (("unlink", remover("unlink")), ("rmdir", remover("rmdir")), ("rename", onto("rename")), ("replace", onto("replace")), ("open", opened))
+        for name, call in kept:
+            if hasattr(accessor, name):
+                monkeypatch.setattr(accessor, name, staticmethod(call))
 
 
 def not_its_own(gone: list) -> list:
