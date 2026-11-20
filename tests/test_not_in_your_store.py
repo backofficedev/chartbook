@@ -15,6 +15,7 @@ this disk (git's ``insteadOf``), so nothing here uses the network.
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -27,6 +28,7 @@ from click.testing import CliRunner
 from chartbook import config, lock, missing, snapshot
 from chartbook.cli import main
 from chartbook.gitcache import GitCache, GitError
+from chartbook.replacing import rename_when_let  # a folder git has just written is held for a moment on Windows
 from chartbook.store import FolderStore
 from tests.test_lock_by_kind import _git
 
@@ -151,7 +153,7 @@ def _away(work: Path, *names: str) -> None:
     """These repositories are not on this machine: each is where its address leads, and nowhere a clone would be looked for."""
     (work / "elsewhere").mkdir(exist_ok=True)
     for name in names:
-        (work / name).rename(work / "elsewhere" / name)
+        rename_when_let(work / name, work / "elsewhere" / name)
     _answered_from(work, work / "elsewhere")
 
 
@@ -610,7 +612,7 @@ class TestALine:
         """Found by review: the words this list takes the place of said where it was looked for."""
         commit = _ready(_pipeline(work, "mid", remote=False), theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
-        (work / "mid").rename(work / "gone")
+        rename_when_let(work / "mid", work / "gone")
         mine()
         assert _numbered(_run(work, monkeypatch, "run")) == [
             f"1. acme/mid at {commit[:7]}    its folder, ../mid, is not on this machine, and its repository is not recorded, "
@@ -931,7 +933,7 @@ class TestACloneOnThisMachine:
         commit = _ready(mid, theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         # A clone of it from before that commit was made
-        mid.rename(work / "newer")
+        rename_when_let(mid, work / "newer")
         _git(work, "clone", "--quiet", "--single-branch", str(work / "newer"), "mid")
         _git(mid, "remote", "set-url", "origin", "https://example.org/acme/mid.git")
         _git(mid, "update-ref", "-d", "refs/remotes/origin/main")
@@ -957,7 +959,7 @@ class TestACloneOnThisMachine:
         commit = _ready(mid, theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         # A clone of it from before that commit was made
-        top.rename(work / "newer")
+        rename_when_let(top, work / "newer")
         _git(work, "clone", "--quiet", "--single-branch", str(work / "newer"), "mid")
         _git(top, "remote", "set-url", "origin", "https://example.org/acme/mid.git")
         _git(top, "update-ref", "-d", "refs/remotes/origin/main")
@@ -980,7 +982,7 @@ class TestACloneOnThisMachine:
         commit = _ready(mid, theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
         _git(mid, "commit", "--quiet", "--allow-empty", "-m", "On")
-        mid.rename(work / "whole")
+        rename_when_let(mid, work / "whole")
         _git(work, "clone", "--quiet", "--depth", "1", (work / "whole").as_uri(), "mid")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
@@ -996,7 +998,7 @@ class TestACloneOnThisMachine:
         commit = _ready(mid, theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         _git(mid, "commit", "--quiet", "--allow-empty", "-m", "And on")
-        mid.rename(work / "whole")
+        rename_when_let(mid, work / "whole")
         _git(work, "clone", "--quiet", "--depth", "1", (work / "whole").as_uri(), "mid")
         _git(mid, "remote", "set-url", "origin", "https://example.org/acme/mid.git")
         mine()
@@ -1140,7 +1142,7 @@ class TestInThePipelinesOwnRepository:
     def test_it_is_this_repository_whatever_its_folder_is_called(self, work, theirs, mine, monkeypatch):
         """Told by its `origin`, and not by a folder named as `git clone` would name it."""
         top, commit = self._made(work, theirs, {"acme/mid": {}})
-        top.rename(work / "my-checkout")
+        rename_when_let(top, work / "my-checkout")
         mine()
         monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
         monkeypatch.chdir(work / "my-checkout" / "report")
@@ -1336,6 +1338,27 @@ class TestWhoseTextThisIs:
         """
         assert missing._quoted(word, windows=True) == typed
 
+    def test_a_command_a_message_prints_is_typed_for_this_systems_shells(self):
+        """Found on Windows, 2026-11-20: `shlex.join` put a folder there in single quotes, and cmd.exe read `'C:\\work\\rates'`, quotes and all, as the folder's name."""
+        words = ["chartbook", "pin", "--update", "rates", "a b", "--project-dir", "C:\\my work\\report"]
+        assert missing.typed(words, windows=True) == 'chartbook pin --update rates "a b" --project-dir "C:\\my work\\report"'
+        assert missing.typed(["chartbook", "restore", "--project-dir", "C:\\work\\up"], windows=True) == 'chartbook restore --project-dir "C:\\work\\up"'
+        # In a POSIX shell, as shlex has it
+        for posix in (words, ["chartbook", "pin", "--project-dir", "/work/it's"], ["chartbook", "pin", ""]):
+            assert missing.typed(posix, windows=False) == shlex.join(posix)
+
+    def test_no_other_code_quotes_a_command_for_a_posix_shell_alone(self):
+        """One function quotes what is printed to be pasted. `shlex` is for a POSIX shell, and a message is read on Windows too.
+
+        (But in `scaffold.py`, whose `cruft link` line holds JSON, which no one spelling gives to cmd.exe and PowerShell alike.)
+        """
+        source = Path(missing.__file__).parent
+        found = sorted(
+            file.name for file in source.rglob("*.py")
+            if file.name not in ("missing.py", "scaffold.py") and re.search(r"shlex\.(quote|join)", file.read_text(encoding="utf-8"))
+        )
+        assert found == []
+
     def test_a_command_names_its_folder_and_enters_none(self):
         """Found on Windows, 2026-11-20: the lines were `cd /d FOLDER && …`, for cmd.exe. Windows PowerShell, which a new machine opens, reads neither `&&` nor `cd /d`.
 
@@ -1511,7 +1534,7 @@ class TestWhatIsNotOnIt:
         commit = _ready(_pipeline(work, "mid", {"acme/data": {"git": "../data"}}), theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         _away(work, "mid")
-        (work / "data").rename(work / "elsewhere" / "data")
+        rename_when_let(work / "data", work / "elsewhere" / "data")
         mine()
         result = _run(work, monkeypatch, "run")
         assert _numbered(result) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]

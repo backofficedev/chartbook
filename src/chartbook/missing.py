@@ -901,6 +901,16 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     return '"' + text.replace('"', '""') + "\\" * (len(text) - len(text.rstrip("\\"))) + '"'
 
 
+def typed(words: Iterable[Union[str, Path]], windows: Optional[bool] = None) -> str:
+    """A command as a message prints it, to be pasted: its words, each as this system's shells take it.
+
+    What ``shlex.join`` gives is for a POSIX shell alone: a folder on
+    Windows comes out of it in single quotes, which ``cmd.exe`` reads as
+    part of the word.
+    """
+    return " ".join(_quoted(word, windows) for word in words)
+
+
 def _in(folder: Union[str, Path], windows: Optional[bool] = None) -> str:
     """`` --project-dir FOLDER``, which ends a command of the list: the folder it builds is named in it, and none is entered.
 

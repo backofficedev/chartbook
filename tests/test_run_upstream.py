@@ -244,7 +244,9 @@ class TestWhatTheReviewFound:
         monkeypatch.setattr(run, "kept_missing", lambda folder, store=None: [("x", "./x.parquet", taken)] if folder == up else [])
         with pytest.raises(RunError) as raised:
             run.run(down, upstream=True, echo=lambda line: None)
-        assert f"chartbook restore --project-dir {up}" in str(raised.value)
+        # The folder as this system's shells take it: on Windows in double quotes, which cmd.exe reads, and single ones it does not
+        shown = f'"{up}"' if os.name == "nt" else str(up)
+        assert f"chartbook restore --project-dir {shown}" in str(raised.value)
         assert "chartbook run --remake --upstream" in str(raised.value)
 
     def test_a_build_that_moves_the_commit_is_not_snapshotted(self, work):

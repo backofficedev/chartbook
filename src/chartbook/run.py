@@ -827,7 +827,7 @@ def _snapshot_first(loop, steps: list, script: str, store: Optional[Store]) -> s
     back unchanged), and the pin takes its newest (not narrowed to a
     commit, a revision or a repository).
     """
-    import shlex
+    from chartbook import missing
 
     snapshotted = {
         step.id: step for step in steps
@@ -851,7 +851,7 @@ def _snapshot_first(loop, steps: list, script: str, store: Optional[Store]) -> s
         return (
             f"\nThe pin of {member.id} is of the snapshot the store has of it now, which this run would replace "
             f"with --snapshot. If {member.id} no longer depends on what leads back here, make its new snapshot "
-            f"first (`chartbook run --snapshot --project-dir {shlex.quote(str(member.directory))}`), and run this again."
+            f"first (`chartbook run --snapshot --project-dir {missing._quoted(member.directory)}`), and run this again."
         )
     return ""
 
@@ -1382,12 +1382,12 @@ def run(
                 else:
                     own = True
         if said:
-            import shlex
+            from chartbook import missing
 
             them = "them" if len(said) > 1 else "it"
             # An upstream's own are put back from its own folder
             restore = (["chartbook restore"] if own else []) + [
-                f"chartbook restore --project-dir {shlex.quote(str(folder))}" for folder in upstream_folders
+                f"chartbook restore --project-dir {missing._quoted(folder)}" for folder in upstream_folders
             ]
             again = f"{remake_command} --upstream" if upstream else remake_command
             lines = [f"\n  {command}{' ' * max(1, 28 - len(command))}puts {them} back" for command in restore]

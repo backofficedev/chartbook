@@ -11,6 +11,7 @@ What a pin and an update do to a lockfile is in ``tests/test_lock.py``;
 this is the command.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -121,7 +122,9 @@ class TestPinUpdate:
         monkeypatch.chdir(work)
         result = CliRunner().invoke(main, ["pin", "rates", "a b", "--project-dir", "consumer"])
         assert result.exit_code == 2
-        assert "`chartbook pin --update rates 'a b' --project-dir consumer` moves the pins of what it names." in result.output
+        # A word with a space, as this system's shells take it: cmd.exe reads no single quotes
+        spaced = '"a b"' if os.name == "nt" else "'a b'"
+        assert f"`chartbook pin --update rates {spaced} --project-dir consumer` moves the pins of what it names." in result.output
 
     def test_a_folder_where_a_name_goes_is_taken_for_the_pipeline_meant(self, consumer, work, monkeypatch):
         """Found by review: `chartbook pin ../prices` was answered with `pin --update ../prices`, which names no dependency."""

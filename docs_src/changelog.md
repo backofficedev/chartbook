@@ -219,6 +219,10 @@ Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the o
 - `chartbook pin --update` is as it was. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline lacks and add `` `chartbook run` lists all there is to build, in order``.
 - In Python: `chartbook.missing.find()` gives the list (`Listing`, of `Wanted` lines) and `missing.said()` its lines; `RunReport.not_in_store` and `PinReport.not_in_store` hold it, and a run stopped by nothing else has `reason == run.NOT_IN_STORE`. `GitCache.paths_at()` and `GitCache.text_at()` read a commit's files with nothing checked out.
 
+### Fixed — on Windows, a command that a message prints can be pasted
+
+A message that names a command to type, such as `chartbook restore --project-dir …`, `chartbook pin --project-dir …` or a line of the list above, wrote its folder for a POSIX shell: in single quotes, which `cmd.exe` reads as part of the folder's name, or bare, which Git Bash reads without its backslashes. On Windows a folder is now in double quotes, which `cmd.exe`, PowerShell and Git Bash all read. The `cruft link` line that `chartbook init` prints is as it was: its answers are JSON, which no one spelling gives to `cmd.exe` and PowerShell alike.
+
 ### Added — `chartbook run` offers to add a pipeline your code reads and `chartbook.toml` does not declare
 
 You write `data.load("acme/rates:treasury")` and run. Nobody has to know `chartbook add` ({design}`one-command`):

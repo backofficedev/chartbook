@@ -580,6 +580,30 @@ class TestASnapshotIsTyped:
         assert strict.exit_code == 0 and _ran(a) == 2, strict.output
         assert {one.subdirectory for one in _snapshots(store)} == {"pipes/a"}
 
+    def test_a_name_git_gives_that_is_another_folder_is_not_taken(self, demo, work, monkeypatch):
+        """The name git gives is taken only where it is the same folder: a snapshot is never made of another."""
+        from chartbook import cli
+
+        other = work / "other" / "sub"
+        other.mkdir(parents=True)
+        asked = snapshot._git
+
+        def another(directory, *arguments, **keywords):
+            if arguments == ("rev-parse", "--show-toplevel"):
+                return str(work / "other") + "\n"
+            return "sub/\n" if arguments == ("rev-parse", "--show-prefix") else asked(directory, *arguments, **keywords)
+
+        monkeypatch.setattr(snapshot, "_git", another)
+        assert cli._by_the_disks_name(demo) == demo
+
+    def test_a_folder_in_no_repository_is_said_as_it_was(self, work, store, monkeypatch):
+        """What is wrong with a folder is said by the command, in its own words, and not by the look for the folder's name."""
+        directory = _folder(work / "loose")
+        monkeypatch.chdir(directory)
+        for result in (_snapshot(), _run("--snapshot", "--no-gc-reminder")):
+            assert result.exit_code == 1 and "is not in a git repository" in result.output, result.output
+            assert "Traceback" not in result.output and result.exception.__class__ is SystemExit
+
     def test_a_folder_in_another_of_unicodes_forms_is_recorded_under_one_name(self, work, store, monkeypatch):
         """Git and the system may write one name two ways. Whoever typed either made no mistake, and both are one place: the one git gives."""
         import unicodedata

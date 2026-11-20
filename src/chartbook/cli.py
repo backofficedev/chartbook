@@ -123,14 +123,14 @@ class _Main(_Group):
         if args and args[0] == "build" and not ctx.resilient_parsing:
             raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
         if args and args[0] == "update" and not ctx.resilient_parsing:
-            import shlex
+            from chartbook import missing
 
             # Its help was asked for: that of the command it became, and not a command that moves every pin
             asked_for_help = any(word in ("--help", "-h") for word in args[1:])
             tried = ["chartbook", "pin", "--help"] if asked_for_help else ["chartbook", "pin", "--update", *args[1:]]
             raise click.UsageError(
                 "`chartbook update` is gone: `chartbook pin --update`. It moves pins to the newest snapshot, all of "
-                f"them or those of the dependencies named. Try: {shlex.join(tried)}",
+                f"them or those of the dependencies named. Try: {missing.typed(tried)}",
                 ctx,
             )
         if args and args[0] == "check" and not ctx.resilient_parsing:
@@ -3056,18 +3056,19 @@ def pin(names, project_dir, moving, check_only):
         raise click.UsageError("--check takes no name: it says whether every pin of the pipeline can be read here, and writes nothing.")
     if names and not moving:
         import os
-        import shlex
+
+        from chartbook import missing
 
         folder = next((name for name in names if os.path.isdir(name)), None)
         if folder is not None and project_dir is None:
             # A folder where a dependency's name goes: the pipeline to pin was meant
             raise click.UsageError(
                 f"{folder} is a folder, and a pipeline is named with --project-dir: "
-                f"`{shlex.join(['chartbook', 'pin', '--project-dir', folder])}`."
+                f"`{missing.typed(['chartbook', 'pin', '--project-dir', folder])}`."
             )
         meant = ["chartbook", "pin", "--update", *names, *(["--project-dir", project_dir] if project_dir else [])]
         raise click.UsageError(
-            f"A name goes with --update: `{shlex.join(meant)}` moves the pins of what it names. "
+            f"A name goes with --update: `{missing.typed(meant)}` moves the pins of what it names. "
             f"`chartbook pin` pins what has no pin yet, of every dependency."
         )
     if check_only:

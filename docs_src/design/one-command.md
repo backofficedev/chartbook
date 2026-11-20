@@ -559,6 +559,12 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   Windows 11: every line ran in Windows PowerShell 5.1 and in `cmd.exe`, quoted words among
   them, and the last built. In Git Bash a path printed bare, `C:\work\rates`, reached the
   command as `C:workrates`.)*
+  The same function now quotes every command a message prints with a folder or a word of the
+  user's in it (`chartbook restore --project-dir …`, `chartbook pin --update …`): `shlex`, which
+  they used, writes for a POSIX shell alone, and `cmd.exe` read its single quotes as part of the
+  folder's name. A test reads the source for another use of it. The `cruft link` line of
+  `chartbook init` is left: its answers are JSON, which no one spelling gives to `cmd.exe` and
+  PowerShell alike.
   What it costs:
   - *A line no longer stops at its first failure.* `git checkout … && chartbook run --snapshot`
     did not build after a checkout that failed. Two lines pasted together do: the build runs,
