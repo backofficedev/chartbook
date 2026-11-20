@@ -177,8 +177,9 @@ ChartBook's own.*
 
 - **A pipeline's folder and a snapshot's folder are named as today:** `acme+rates`, and
   `2026-11-16T091500Z_4f2a91c0e1b2` for when it was made and its commit.
-- **`store.json` stays at the top.** *Proposed by Claude, 2026-11-19; the maintainer had agreed to
-  everything of ChartBook's own going under `_chartbook/`.* It is the one file an earlier
+- **`store.json` stays at the top.** *Proposed by Claude, and decided 2026-11-19; the maintainer
+  had first agreed to everything of ChartBook's own going under `_chartbook/`.* It is the one
+  file an earlier
   ChartBook looks for. Left where it is and saying `v3`, ChartBook 0.5 says `The store at … has
   the layout 'chartbook/store/v3', and this version of ChartBook reads 'chartbook/store/v2'. Use
   a newer ChartBook …` and writes nothing, once the file has reached that machine. Moved, there
@@ -297,7 +298,8 @@ is its price.
 every file each time.
 
 - **Where the newest snapshot is an increment of these same files, they make a new, complete
-  one.** *Proposed by Claude, 2026-11-19 (found by review).* It joins the few cases in which the
+  one.** *Proposed by Claude (found by review), and decided 2026-11-19.* It joins the few cases
+  in which the
   same files make a new snapshot today (documents that changed, rows recorded for the first
   time). The first draft of this page turned the increment into a complete snapshot in its
   place; that changes a snapshot after it is made, and leaves two folders of one name for a
@@ -366,6 +368,9 @@ for each day of sixty years is fifteen thousand small files.
 data; a chart or a notebook does not count as data; and it is wanted in 0.6.0.* It was to take the
 place of step 3 of {doc}`one-command`, which applied `chartbook store gc`'s rules at every run,
 was built, was shown to lose data, and is held back.
+
+*Decided 2026-11-19, after the two reviews: 0.6.0 may be released without it, and the work on a
+rule goes on. Which form to try next is left to Claude.*
 
 **Nothing of it is to be built from this page as it stands.** Two forms of the rule were read
 against the code, before anything was built, by reviewers asked to break them. Both were broken,
@@ -472,6 +477,10 @@ clearing makes more reads meet it.
 | `data.path`, `data.files`, `chartbook path` of such a table | The other file as it is, newer rows and all; said once where there are newer rows, with `data.as_of` to cut it by |
 | A chart, a notebook, a file the lockfile does not hold | The other snapshot's, and nothing is said |
 
+*Decided 2026-11-19: whoever reads by `data.path` is to cut by `data.as_of` themselves; that is
+theirs to know, and the reference is to say so where `data.path` is described, in so many
+words.* The guide says it today in two places, and the function's own description does not.
+
 ## What the store promises
 
 The store of 0.3.0 promised that nothing in it is moved or rewritten once written, and that only
@@ -486,7 +495,10 @@ broke it three times.)*
 
 ## Moving a store to this layout
 
-*Proposed by Claude, 2026-11-19.*
+*Proposed by Claude, 2026-11-19. Decided the same day: a store of 0.5 is read as it is; the
+newest snapshot of each pipeline becomes complete and the others increments on it; and the
+maintainer's own stores are moved at the release and not before, since his installed ChartBook
+and his other work read them with 0.5 until then.*
 
 - **This ChartBook reads a store of 0.5 as it is,** and writes its notes there as 0.5 does.
   *(Found by review: {doc}`pins-and-rebuilds` promises that a store is shared across versions,
@@ -565,4 +577,5 @@ files for what it changes.
 5. Increments are made: which one a run makes, the last line of a run, `chartbook snapshot` and
    `run --snapshot` complete.
 6. Clearing: not before a form of it has stood a review, and the maintainer has said which.
-7. The guide, the vocabulary and the changelog, read through once more against what was built.
+7. The guide, the vocabulary and the changelog, read through once more against what was built;
+   and what `data.path` says of `data.as_of`.
