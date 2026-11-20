@@ -2620,6 +2620,11 @@ class FolderStore(Store):
         """
         if self._layout_checked:
             return
+        # A move to this layout that was cut short, or is running: the store is neither layout until it has finished
+        if os.path.isfile(self.root / OWN_DIR / "move-to-v3.jsonl"):
+            from chartbook.migrate_0_5 import cut_short_said
+
+            raise StoreError(cut_short_said(self.root))
         marker = self.root / MARKER_FILE
         try:
             schema = _read_marker(marker)
