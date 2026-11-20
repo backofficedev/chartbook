@@ -528,6 +528,9 @@ class _Opened(FolderStore):
     def _places(self) -> Layout:
         return V2_LAYOUT
 
+    def check_writable(self) -> None:
+        """Nothing: the move from 0.2 is the one thing that writes a store laid out as 0.5 laid one out."""
+
 
 def run(root, echo: Callable[[str], None] = lambda line: None) -> MigrationPlan:
     """Move the store at *root* to this layout, and return what was planned.

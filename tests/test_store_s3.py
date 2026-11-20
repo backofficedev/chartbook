@@ -273,6 +273,26 @@ class TestTheBucketIsAFolderStore:
         with pytest.raises(StoreError, match="has the layout 'chartbook/store/v9'"):
             store.has("sha256:" + "0" * 64)
 
+    def test_a_folder_store_copied_into_a_bucket_is_said_to_be_one(self, work, client):
+        """A bucket synced from a folder store of this layout: no newer ChartBook reads it, and the message does not say one does."""
+        client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v3"}\n')
+        client.put_object(Bucket=BUCKET, Key="stores/one/snapshots/acme+rates/README.txt", Body=b"x")
+        store = S3Store(URL, cache=work / "cache", client=client)
+        with pytest.raises(StoreError) as refused:
+            store.has("sha256:" + "0" * 64)
+        said = str(refused.value)
+        assert said == (
+            f"The store {store} has the layout 'chartbook/store/v3': that of a folder store of this ChartBook, copied "
+            f"into the bucket as it is (by a sync, or by hand). A bucket is laid out as 'chartbook/store/v2', and this "
+            f"one is not read. Point CHARTBOOK_STORE at the folder it was copied from; `chartbook store move PIPELINE "
+            f"--to NAME --keep` copies a pipeline's snapshots from one of a catalog's stores into another, a bucket "
+            f"among them."
+        )
+        assert "newer ChartBook" not in said
+        with pytest.raises(StoreError, match="that of a folder store of this ChartBook"):
+            store.begin("acme/rates", COMMIT, FIRST)
+        assert _keys(client, "stores/one/") == ["stores/one/snapshots/acme+rates/README.txt", "stores/one/store.json"]
+
 
 class TestTheCache:
     def test_a_file_is_downloaded_once_and_checked(self, work, client, monkeypatch):

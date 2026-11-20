@@ -90,6 +90,7 @@ from chartbook.replacing import rename_when_let, replace_when_let
 from chartbook.store import (
     _of_shape,
     CLEARED_FILE,
+    FOLDER_SCHEMA,
     FOLDER_MARK,
     FROZEN_LINKS,
     LINKS,
@@ -814,6 +815,15 @@ class S3Store(Store):
                 f"{SCHEMA!r}. Once every machine that uses this store has ChartBook 0.3, run `chartbook store "
                 f"migrate` on one of them; until then, use ChartBook 0.2 with it."
             )
+        if schema == FOLDER_SCHEMA:
+            # No newer ChartBook reads it: it is this one's folder store, copied into a bucket file by file
+            raise StoreError(
+                f"The store {self} has the layout {FOLDER_SCHEMA!r}: that of a folder store of this ChartBook, "
+                f"copied into the bucket as it is (by a sync, or by hand). A bucket is laid out as {SCHEMA!r}, and "
+                f"this one is not read. Point CHARTBOOK_STORE at the folder it was copied from; `chartbook store "
+                f"move PIPELINE --to NAME --keep` copies a pipeline's snapshots from one of a catalog's stores "
+                f"into another, a bucket among them."
+            )
         if schema != SCHEMA:
             raise StoreError(
                 f"The store {self} has the layout {schema!r}, and this version of ChartBook "
@@ -1328,7 +1338,10 @@ class S3Store(Store):
             for asset in self._held(seen, content_hash, pipeline) for file in asset.files
         )
 
-    def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> KeptFiles:
+    def files(
+        self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None,
+        snapshot: Optional[tuple] = None,
+    ) -> KeptFiles:
         """The asset's files, each where the cache keeps it checked, downloaded if they were not yet (:meth:`chartbook.store.Store.files`).
 
         Each file is downloaded once into the cache, by its hash, and its
@@ -1341,6 +1354,9 @@ class S3Store(Store):
         :param pipeline: The pipeline the asset is of, whose folder is
             looked in first.
         :param name: For an asset of one file, the name it is read by.
+        :param snapshot: The snapshot it is read from, which a folder store
+            takes notice of; not this one, which keeps each file once and
+            serves it from the cache by its hash.
         :raises ObjectNotFoundError: If the store has no such asset.
         :raises StoreError: If no copy of it is all in the bucket yet, or
             none is what its record says; nothing of such a file is kept.

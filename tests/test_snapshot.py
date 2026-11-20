@@ -23,7 +23,7 @@ from click.testing import CliRunner
 
 from chartbook import store as store_module
 from chartbook import config, data, index, lock, snapshot
-from chartbook.cli import main
+from chartbook.cli import _format_bytes, main
 from chartbook.manifest import load_manifest
 from chartbook.snapshot import SnapshotError
 from chartbook.store import default_store
@@ -1170,12 +1170,14 @@ class TestClearingOldSnapshots:
         # No lockfile names them: the kept snapshot does
         assert said.startswith(f"Kept: {len(third.hashes())} object(s), named by 0 lockfile(s) or a kept snapshot\n")
         assert f"Kept: 1 snapshot(s), naming {len(third.hashes())} object(s): 1 because it is the newest of its pipeline" in said
-        assert "Would remove 2 snapshot(s):" in said
-        assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
         # What only they hold goes with their folders, though it was stored a moment ago: a snapshot's
-        # folder goes whole, and an object is spared for being new only where something of it stays
+        # folder goes whole, and an object is spared for being new only where something of it stays.
+        # One line says both, with the one size of all that goes
         only_theirs = (first.hashes() | second.hashes()) - third.hashes()
-        assert f"Would remove {len(only_theirs)} object(s), " in said and "stored in the last hour" not in said
+        freed = _format_bytes(lock.plan_gc(default_store()).freed_bytes)
+        assert f"Would remove 2 snapshot(s) and {len(only_theirs)} object(s) that nothing names, {freed}:\n" in said
+        assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
+        assert "stored in the last hour" not in said
         assert first.path.exists()  # a dry run
 
         kept = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])
@@ -1185,7 +1187,7 @@ class TestClearingOldSnapshots:
 
         done = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert done.exit_code == 0, done.output
-        assert f"Removed 2 snapshot(s) and {len(only_theirs)} object(s)" in done.output
+        assert done.output.splitlines()[-1] == f"Removed 2 snapshot(s) and {len(only_theirs)} object(s), {freed}."
         assert not first.path.exists() and third.path.exists()
         assert not first.path.parent.parent.exists() and not second.path.parent.parent.exists()  # no folder left behind
         assert snapshot.all_snapshots(default_store()) == [third]

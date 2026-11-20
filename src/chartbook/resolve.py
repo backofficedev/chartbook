@@ -957,7 +957,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             _note_the_read(manifest_dir / "chartbook.lock", locked, store)
             _say_it_stands_in(manifest_dir, dependency.id, stood.snapshot)
             return dataclasses.replace(
-                _held(store, met.record, stood.snapshot.pipeline),
+                _held(store, met.record, stood.snapshot.pipeline, (stood.snapshot.commit, stood.snapshot.made_at)),
                 as_of=record.get("as_of"), date_col=record.get("date_col"), stands_in=True, newer=met.newer,
             )
         if stood is not None:
@@ -981,7 +981,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
 
     _note_the_read(manifest_dir / "chartbook.lock", locked, store)
-    held = _held(store, record, listed.get("pinned_from"))
+    # The pinned snapshot's own copy, where the store has it: the path of a pin stays while the pin does
+    held = _held(store, record, listed.get("pinned_from"), _moment_of(listed))
     if isinstance(held, FileLocation) and isinstance(record.get("rows"), dict) and record.get("date_col"):
         # The pin's own last date, whichever file is read: what data.as_of() gives
         held = dataclasses.replace(held, as_of=record.get("as_of"), date_col=record["date_col"])
@@ -1089,7 +1090,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
         """What a lockfile of an earlier version names of it, where the store still has it."""
         if earlier.get("content_hash") and store.has(earlier["content_hash"]):
             _note_the_read(lock_path, locked, store)
-            return _held(store, earlier, entry.get("pinned_from"))
+            return _held(store, earlier, entry.get("pinned_from"), _moment_of(entry))
         return None
 
     if not isinstance(commit, str) or not commit:
@@ -1148,7 +1149,7 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
             lacking = lacking or f"the store does not have the bytes of {name} from its snapshot made {taken.made_at}"
         else:
             _note_the_read(lock_path, locked, store)
-            return _held(store, record, taken.pipeline)
+            return _held(store, record, taken.pipeline, (taken.commit, taken.made_at))
         return None
 
     for taken in at_commit:
@@ -1231,12 +1232,25 @@ def _note_the_read(lock_path: Path, locked, store) -> None:
     _noted_reads.add(key)
 
 
-def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
+def _moment_of(entry: dict) -> Optional[tuple[str, str]]:
+    """The snapshot a dependency's entry in a lockfile pins, by its commit and when it was made; None if it names none."""
+    location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
+    commit, made_at = location.get("commit"), entry.get("snapshot")
+    return (commit, made_at) if isinstance(commit, str) and commit and isinstance(made_at, str) and made_at else None
+
+
+def _held(store, record: dict, pipeline: Optional[str] = None, snapshot: Optional[tuple[str, str]] = None) -> Location:
     """Where the store holds an asset, given its record with a content hash.
 
     :param pipeline: The pipeline it was pinned from, whose copy is the one
         read: the same bytes in another pipeline's snapshot may be cleared
         while this one's is kept.
+    :param snapshot: The snapshot it is read from, by its commit and when
+        it was made: where each snapshot has its own copy of every file,
+        that snapshot's is the one read while the store has it whole
+        (:meth:`chartbook.store.Store.files`), so that the path of a pinned
+        file does not move when its owner makes another snapshot of the
+        same bytes.
     """
     from chartbook import hashing
     from chartbook.snapshot import not_whole
@@ -1261,7 +1275,7 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
         one = None
     else:
         one = _declared_name(record["location"].get("path", "")) or None
-    kept = store.files(record["content_hash"], pipeline, name=one)
+    kept = store.files(record["content_hash"], pipeline, name=one, snapshot=snapshot)
     content_hash = record["content_hash"]
     # How its owner said to read it: the format and options its entry gave, or its declared path's ending
     said = kept_reading(record["location"])
@@ -1549,7 +1563,7 @@ def _resolve_pinned_version(
             f"Version {pinned.rev} of {without} is named by a snapshot, and its "
             f"bytes are not in the store at {store}.",
         )
-    return _held(store, taken.assets[local], taken.pipeline)
+    return _held(store, taken.assets[local], taken.pipeline, (taken.commit, taken.made_at))
 
 
 def _declared_in_source(dependency: PipelineLocation, name: str) -> Optional[str]:
@@ -2581,9 +2595,10 @@ def require_single_path(location: Location, what: str, ref: str, kind: str) -> P
     """Return a file location's one path; a folder or a glob read from the store has none.
 
     :func:`require_file` first. Then, for an asset read from the store as
-    several files (:attr:`FileLocation.listed`), raise: the store keeps each
-    file once, so a snapshot's files may sit in other snapshots'
-    folders, and there is no one folder to hand out. By declaration, so that
+    several files (:attr:`FileLocation.listed`), raise: a store may keep each
+    file once (a bucket does, and a store that ChartBook 0.5 laid out), so
+    a snapshot's files may sit in other snapshots' folders, and there is
+    then no one folder to hand out. By declaration, whatever the store, so that
     a call that works does not stop working when the upstream takes another
     snapshot.
 

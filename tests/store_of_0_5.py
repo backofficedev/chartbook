@@ -44,6 +44,29 @@ def _parts(document: dict) -> list:
     return [part for part in parts if isinstance(part.get("stored"), dict)]
 
 
+def _in_put_order(document: dict) -> list:
+    """The parts of a record that keep files, in the order ChartBook 0.5 put them into a snapshot.
+
+    The assets with a path, by kind and then by name
+    (:func:`chartbook.resolve.declared_files`); then the tables written
+    out of a source, by name; then the index; then the documents. A record
+    lists its assets in another order, by their names alone. The order
+    tells only where two files of one snapshot have the same bytes: 0.5
+    kept the first one put, and the other's entry names it (``kept_as``).
+    """
+    from chartbook.resolve import RESOLVABLE_KINDS
+
+    def put_at(record: dict) -> tuple:
+        ref = record.get("ref") or {}
+        written_out = (record.get("location") or {}).get("kind") in ("table", "query")
+        kind = RESOLVABLE_KINDS.index(ref.get("kind")) if ref.get("kind") in RESOLVABLE_KINDS else len(RESOLVABLE_KINDS)
+        return (written_out, 0 if written_out else kind, str(ref.get("name", "")))
+
+    records = sorted((record for record in document.get("records") or [] if isinstance(record, dict)), key=put_at)
+    parts = records + [document[name] for name in ("index", "documents") if isinstance(document.get(name), dict)]
+    return [part for part in parts if isinstance(part.get("stored"), dict)]
+
+
 def laid_out_as_0_5(root, share: bool = True) -> FolderStore:
     """Make of a store this ChartBook wrote the store ChartBook 0.5 would have left; the store, opened again.
 
@@ -73,14 +96,18 @@ def laid_out_as_0_5(root, share: bool = True) -> FolderStore:
 
 
 def _keep_each_file_once(pipeline: Path) -> None:
-    """Rewrite one pipeline's snapshots, oldest first, as 0.5 wrote them: a file an earlier one has is kept there alone."""
+    """Rewrite one pipeline's snapshots, oldest first, as 0.5 wrote them: a file an earlier one has is kept there alone.
+
+    Of two files of one snapshot with the same bytes, the first one 0.5
+    put is the one kept (:func:`_in_put_order`).
+    """
     first: dict = {}  # where each file's bytes are kept, by their hash: the snapshot's folder, and the path in it
     for folder in sorted(p for p in pipeline.iterdir() if p.is_dir() and is_snapshot_folder(p.name)):
         record = folder / "_chartbook" / "snapshot.json"
         if not record.is_file():
             continue
         document = json.loads(record.read_text(encoding="utf-8"))
-        for part in _parts(document):
+        for part in _in_put_order(document):
             for entry in part["stored"].get("files") or []:
                 kept_in, kept_as = first.setdefault(entry["content_hash"], (folder.name, entry["path"]))
                 if (kept_in, kept_as) == (folder.name, entry["path"]):

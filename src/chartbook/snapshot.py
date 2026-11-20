@@ -75,6 +75,7 @@ secrets, and a store is something to share.
 from __future__ import annotations
 
 import hashlib
+import contextlib
 import dataclasses
 import json
 import os
@@ -618,8 +619,32 @@ def not_whole(store: Store, record: dict) -> Optional[str]:
     return store.incomplete(record["content_hash"], record.get("size_bytes"), files, every)
 
 
+@contextlib.contextmanager
+def _staged(staging: Optional[Path], name: str, prefix: str = "chartbook-"):
+    """A folder to stage files for a snapshot in, as its path.
+
+    The folder *name* under *staging*, which whoever made *staging* removes
+    once the snapshot is written or let go (:func:`_make_in`): what is
+    staged there is still at hand when the record is written, which is when
+    a store that writes each snapshot whole copies a file an earlier
+    snapshot has, and where it takes the bytes from if that copy has gone
+    or is damaged. With no *staging*, a folder of its own, removed on the
+    way out.
+    """
+    import tempfile
+
+    if staging is None:
+        with tempfile.TemporaryDirectory(prefix=prefix) as scratch:
+            yield scratch
+        return
+    folder = Path(staging) / name
+    folder.mkdir(parents=True, exist_ok=True)
+    yield str(folder)
+
+
 def materialize_in_source(
-    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"], rows=None
+    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"], rows=None,
+    staging: Optional[Path] = None,
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
     """Write each table or query dataframe out as parquet, into the store: a snapshot being made, at ``_chartbook/tables/<name>.parquet``.
 
@@ -636,11 +661,12 @@ def materialize_in_source(
 
     :param rows: What says a record's rows, given the record and the
         parquet file written out (:func:`_rows_of`); nothing by default.
+    :param staging: A folder to write the parquet files out in, which the
+        caller removes once the snapshot is written or let go
+        (:func:`_staged`); by default each is removed as soon as it is put.
     :returns: For each such dataframe, in name order: its local reference,
         its record, and why it was not written out, or None.
     """
-    import tempfile
-
     import duckdb
     import polars as pl
 
@@ -691,7 +717,7 @@ def materialize_in_source(
             found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                           f"{where}: the DuckDB file is not there"))
             continue
-        with tempfile.TemporaryDirectory() as scratch:
+        with _staged(staging, "tables", prefix="chartbook-tables-") as scratch:
             out = Path(scratch) / f"{name}.parquet"
             try:
                 # The file is read on one thread: a parallel aggregate of
@@ -2473,6 +2499,30 @@ def pipeline_in(directory: Union[str, Path]) -> str:
     return derive_pipeline_id(raw.get("project") or {}, directory)
 
 
+def check_store_takes_one(pipeline: str, store: Optional[Store] = None) -> None:
+    """Refuse a snapshot of a pipeline where the store it would be written to takes none: one laid out as ChartBook 0.5 laid one out.
+
+    Asked of the stores :func:`make` would write it to, with nothing
+    written: for a command that builds first (``chartbook run --snapshot``)
+    to find out before the build, as it finds out that work is uncommitted.
+
+    :param store: As for :func:`make`.
+    :raises chartbook.store.EarlierLayoutError: Saying so, and which
+        command moves the store.
+    """
+    from chartbook.multi_store import Stores
+
+    if store is None or isinstance(store, Stores):
+        stores = Stores.configured() if store is None else store
+        targets = stores.for_writing(pipeline, None)
+    else:
+        targets = [store]
+    for target in targets:
+        check = getattr(target, "check_writable", None)
+        if check is not None:
+            check()
+
+
 def make(
     project_dir: Union[str, Path] = ".",
     store: Optional[Store] = None,
@@ -2597,16 +2647,23 @@ def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at
     raw = _read_manifest_file(directory)
     check_within(directory, pipeline)
     check_own_name(directory, pipeline, raw)
+    import tempfile
+
     made_at = made_at or _now()
     pending = store.begin(pipeline, code.commit, made_at, base=directory)
-    try:
-        report = _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in)
-        report.stores = [str(store)]
-        return report
-    except BaseException:
-        # What was put in a snapshot that is not written goes with it
-        pending.discard()
-        raise
+    # What is staged for the snapshot (its documents, its index, a table written out of a DuckDB file) is
+    # kept until the snapshot is written or let go (_staged)
+    with tempfile.TemporaryDirectory(prefix="chartbook-snapshot-") as staging:
+        try:
+            report = _make(
+                directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in, staging=Path(staging)
+            )
+            report.stores = [str(store)]
+            return report
+        except BaseException:
+            # What was put in a snapshot that is not written goes with it
+            pending.discard()
+            raise
 
 
 def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
@@ -2627,8 +2684,12 @@ def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
 
 
 def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
-          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None) -> SnapshotReport:
-    """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written."""
+          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, staging: Optional[Path] = None) -> SnapshotReport:
+    """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written.
+
+    :param staging: A folder for what is staged for the snapshot, which the
+        caller removes once this has returned (:func:`_staged`).
+    """
     assets: dict[str, dict] = {}
     held: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
@@ -2690,7 +2751,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     # A dataframe that is a table or a query in a DuckDB file has no file of
     # its own: it is written out as parquet into the store, so that a pin
     # copies it like any file and another pipeline reads it by name
-    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending, rows=rows):
+    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending, rows=rows, staging=staging):
         if "stored" in record:
             held[str(local)] = record.pop("stored")
         assets[str(local)] = record
@@ -2783,8 +2844,14 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             if part and (not store.has(part["content_hash"]) or store.incomplete(part["content_hash"], part.get("size_bytes")))
         ]
         # A file put back into this snapshot's own folder, the store having
-        # lost it, is kept only if this snapshot is written
-        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
+        # lost it, is kept only if this snapshot is written. And where each
+        # snapshot holds its own copy of every file, that one may have lost
+        # a file another snapshot still has: what was put above is back in
+        # its folder already, and what is put below (its documents, its
+        # index) is not, so a new one is made, whole, and "no new snapshot"
+        # is never said of one with a hole
+        holes = store.holes_of(same.path) if same.path is not None else []
+        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed and not holes:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(
@@ -2822,12 +2889,12 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     index_skipped = None
     stored = dict(snapshot.stored)
     try:
-        index, stored["index"] = _put_index(_version_index(directory), pending)
+        index, stored["index"] = _put_index(_version_index(directory), pending, staging)
     except Exception as error:  # noqa: BLE001 - whatever the docs build would have raised
         said = str(error).strip()
         index, index_skipped = None, said.splitlines()[0].rstrip(".") if said else type(error).__name__
         stored.pop("index", None)
-    kept_documents, stored["documents"] = _put_documents(directory, documents, pending)
+    kept_documents, stored["documents"] = _put_documents(directory, documents, pending, staging)
     snapshot = dataclasses.replace(snapshot, index=index, documents=kept_documents, stored={k: v for k, v in stored.items() if v})
     path = pending.write(snapshot.to_document())
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
@@ -2970,13 +3037,14 @@ def _version_index(directory: Path) -> dict:
     return index_module.published(built)
 
 
-def _put_index(published: dict, pending: PendingSnapshot) -> tuple[dict, Optional[dict]]:
-    """Put an index in a snapshot being made, as ``_chartbook/index.json``; its record, and where it is kept."""
-    import tempfile
+def _put_index(published: dict, pending: PendingSnapshot, staging: Optional[Path] = None) -> tuple[dict, Optional[dict]]:
+    """Put an index in a snapshot being made, as ``_chartbook/index.json``; its record, and where it is kept.
 
+    :param staging: Where the file is written first (:func:`_staged`).
+    """
     from chartbook import index as index_module
 
-    with tempfile.TemporaryDirectory(prefix="chartbook-index-") as scratch:
+    with _staged(staging, "index", prefix="chartbook-index-") as scratch:
         path = Path(scratch) / INDEX_FILE
         index_module.write_index(published, path)
         stored = pending.put(path, place=f"{OWN_DIR}/{INDEX_FILE}", links=LINKS)
@@ -3190,13 +3258,16 @@ def _copy_regular_file(source: Path, target: Path) -> bool:
     return True
 
 
-def _put_documents(directory: Path, paths: list[str], pending: PendingSnapshot) -> tuple[Optional[dict], Optional[dict]]:
-    """Put a pipeline's documents in a snapshot being made, each at its own path; their record and where they are kept, or None if there are none."""
-    import tempfile
+def _put_documents(
+    directory: Path, paths: list[str], pending: PendingSnapshot, staging: Optional[Path] = None
+) -> tuple[Optional[dict], Optional[dict]]:
+    """Put a pipeline's documents in a snapshot being made, each at its own path; their record and where they are kept, or None if there are none.
 
+    :param staging: Where they are copied first (:func:`_staged`).
+    """
     if not paths:
         return None, None
-    with tempfile.TemporaryDirectory(prefix="chartbook-documents-") as scratch:
+    with _staged(staging, "documents", prefix="chartbook-documents-") as scratch:
         staged = Path(scratch)
         copied = 0
         for relative in paths:

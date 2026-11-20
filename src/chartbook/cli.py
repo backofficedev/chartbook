@@ -4327,6 +4327,11 @@ def store_verify():
     anything edited in the store by hand. Every byte is read, so on a large
     store it takes a while.
 
+    In a folder store each snapshot is checked for itself: every file its
+    record names is read in the snapshot's own folder, and one that is
+    missing there or has other bytes is said with the snapshot's name,
+    though another snapshot has the same bytes.
+
     Examples:
         chartbook store verify
         CHARTBOOK_STORE=/shared/store chartbook store verify
@@ -4344,8 +4349,10 @@ def store_verify():
     for problem in problems:
         click.echo(problem.format())
     if problems:
+        # By object: one that two snapshots have each lost a file of is said twice above, and is one object
+        wrong = len({problem.content_hash for problem in problems})
         click.echo(
-            f"\n{len(problems)} of {total} object(s) in {the_store} are "
+            f"\n{wrong} of {total} object(s) in {the_store} are "
             f"not what their names say.",
             err=True,
         )
@@ -4432,7 +4439,10 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     a kept snapshot was made from is kept too, as far up as it goes, for
     `chartbook lineage` to check. With --aggressive, names keep nothing: a
     snapshot a git tag or branch names, or one holding a labelled model
-    version that no lockfile pins, goes once nothing else keeps it.
+    version that no lockfile pins, goes once nothing else keeps it. And a
+    snapshot that would go is kept while it has the only whole copy of a
+    file that a snapshot which stays has lost: `chartbook store verify`
+    says which file, and a run in that pipeline's folder puts it back.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
@@ -4577,25 +4587,33 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             carry_out()  # forgets the missing, if asked to
         return
 
+    # One size, said before the question and after: what goes, the objects nothing names and, with
+    # a snapshot's folder, its own copies of files that a kept snapshot has too (GcPlan.freed_bytes)
+    freed = _format_bytes(plan.freed_bytes)
     if plan.snapshots_delete:
-        click.echo(f"Would remove {len(plan.snapshots_delete)} snapshot(s):")
+        objects = f" and {len(plan.delete)} object(s) that nothing names" if plan.delete else ""
+        click.echo(f"Would remove {len(plan.snapshots_delete)} snapshot(s){objects}, {freed}:")
         for taken, why in plan.snapshots_delete:
             click.echo(
                 f"  {taken.pipeline} at {taken.commit[:7]}, made "
                 f"{_when(taken.made_at)}: {why}"
             )
-    summary = (
-        f"{len(plan.delete)} object(s), {_format_bytes(plan.size_bytes)}, that "
-        f"nothing names"
-    )
-    if dry_run:
-        if plan.delete:
-            click.echo(f"Would remove {summary}:")
+        if dry_run and plan.delete:
             for content_hash, size in plan.delete:
                 click.echo(f"  {content_hash}  {_format_bytes(size)}")
+            if plan.copies_bytes:
+                click.echo(
+                    f"  and the removed snapshots' own copies of files a kept snapshot has too  "
+                    f"{_format_bytes(plan.copies_bytes)}"
+                )
+    elif dry_run:
+        click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names:")
+        for content_hash, size in plan.delete:
+            click.echo(f"  {content_hash}  {_format_bytes(size)}")
+    else:
+        click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names.")
+    if dry_run:
         return
-    if plan.delete:
-        click.echo(f"Would remove {summary}.")
     if not yes and not click.confirm("Remove them?", default=False):
         click.echo("Nothing was removed.")
         return
