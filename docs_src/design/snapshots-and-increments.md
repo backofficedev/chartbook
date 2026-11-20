@@ -4,15 +4,16 @@
 A design document, written 2026-11-19 from a day of planning with the maintainer. He looked at
 his own store in a file browser and could not say what its folders were for, nor where the files
 of a nearly empty snapshot were. It says how the store is laid out so that a person can read it,
-when a run makes a complete snapshot and when a smaller one, and when a run may clear an old
-snapshot without anybody losing data. It is for 0.6.0, with {doc}`one-command`.
+and when a run makes a complete snapshot and when a smaller one. It also records what was decided
+about a run clearing old snapshots, and why that part is held. It is for 0.6.0, with
+{doc}`one-command`.
 
 Status: **to be built, step by step, in "The order of work" at the end.** Each part says whether
 the maintainer decided it, and when. A choice he left open is marked *Proposed by Claude*, with
-its date, until he says otherwise. The page was read against the code by a reviewer before
-anything was built, who was asked to break it; what that changed is marked *(found by review)*,
-and it changed "Clearing" most. Nothing here adds a command, an option or a field of
-`chartbook.toml`.
+its date, until he says otherwise. The page was read against the code twice before anything was
+built, by reviewers asked to break it; what that changed is marked *(found by review)*. The
+layout and the increments stood; the clearing did not, twice, and its section says so. Nothing
+here adds a command, an option or a field of `chartbook.toml`.
 ```
 
 ## What was wrong
@@ -132,41 +133,7 @@ Snapshot made: 5 files, 23 MB.
   ~/.chartbook/store/snapshots/acme+rates/2026-11-21T101500Z_c07d3e1a55f0
 ```
 
-**6. A pipeline that pulls new data every morning, and whose code is as it was.** Yesterday's
-snapshot and today's are of the same commit and differ by one day of rows, so yesterday's is
-cleared.
-
-```text
-$ chartbook run
-acme/rates: build
-acme/rates at c07d3e1: 3 asset(s) in the store
-Snapshot made: 5 files, 23 MB.
-acme/rates: the snapshot made 2026-11-22 09:02 UTC is cleared. This one holds all of its rows.
-```
-
-**7. The same pipeline, on a morning when the source had revised a value of October.**
-Yesterday's snapshot holds rows that today's does not, and is kept.
-
-```text
-$ chartbook run
-…
-Snapshot made: 5 files, 23 MB.
-acme/rates: the snapshot made 2026-11-23 09:02 UTC is kept. It has rows this one changed (treasury, in 2026-10).
-```
-
-**8. A pipeline whose lockfile names a cleared snapshot,** on a branch nobody had touched for a
-month, so that the store had no note of its pin. `data.load` gives it the rows it pinned.
-
-```text
-$ chartbook run
-acme/rates: the snapshot the lockfile names (c07d3e1, made 2026-11-22 09:02 UTC) is not in the store.
-  Its rows are read from a later snapshot of the same commit, made 2026-11-23 09:02 UTC,
-  without the rows after 2026-11-21.
-acme/report: build
-…
-```
-
-**9. Looking at the store.**
+**6. Looking at the store.**
 
 ```text
 $ chartbook store ls acme/rates
@@ -175,7 +142,7 @@ acme/rates
   2026-11-19 14:02 UTC  9b1e22d  increment on 2026-11-16 09:15 UTC     2 files  0.4 MB
 ```
 
-**10. A store made by an earlier ChartBook** is read as it is, and moved once before a snapshot
+**7. A store made by an earlier ChartBook** is read as it is, and moved once before a snapshot
 is made in it.
 
 ```text
@@ -240,7 +207,8 @@ increment.*
   table that pandas wrote again under another name, with the same rows in the same bytes, is not
   kept again.
 - **It builds on the newest complete snapshot of its pipeline in that store** that the pipeline's
-  owner made. *Proposed by Claude, 2026-11-19.* A snapshot that `chartbook pin` makes from a
+  owner made, of the same repository as the records tell it (what a snapshot's making asks
+  already, before it says two are of one pipeline). *Proposed by Claude, 2026-11-19.* A snapshot that `chartbook pin` makes from a
   repository is always complete: it builds on nothing, and nothing builds on it.
 - **Its record lists every file of its version,** as any snapshot's does, each with the folder
   that keeps it. That is one of two: its own, or the one it builds on. The record names that one
@@ -258,11 +226,12 @@ increment.*
   complete and the other as an increment.
 - **If the snapshot it builds on is gone before its record is written,** it is written complete:
   whatever is writing it has every file of it at hand.
-- **An increment whose snapshot is gone is no snapshot.** *Proposed by Claude, 2026-11-19 (found
-  by review).* That can happen: a machine that has not synced makes an increment on a snapshot
-  that another machine has just cleared. Such a folder is passed over, as a folder without a
-  record is today, and what had pinned it is read as "Clearing" says a cleared one is. `chartbook
-  store gc` removes the folder.
+- **An increment whose snapshot is gone has lost the files it kept there.** *(Found by review.)*
+  That can happen: a machine that has not synced makes an increment on a snapshot that
+  `chartbook store gc` has removed on another machine, more than a week after it was made. What
+  the increment's own folder holds is still read; a read of one of the lost files says that it is
+  not in the store, as it does today for a file that is lost. `store gc` never removes a complete
+  snapshot that an increment it can see builds on.
 
 What the rule gives:
 
@@ -270,11 +239,16 @@ What the rule gives:
 |---|---|---|
 | The folders a snapshot's files are in | Any number of earlier ones | One, or two |
 | Removing a snapshot nothing needs | May leave its folder behind, for the files later ones keep in it | An increment goes whole; a complete one stays whole while an increment builds on it |
-| A folder that holds files and is no snapshot | Yes, with `CLEARED.txt`, for as long as later snapshots use it | Only one left half removed, or the stranded increment above, until `store gc` |
+| A folder that holds files and is no snapshot | Yes, with `CLEARED.txt`, for as long as later snapshots use it | Only one that a removal left half done, until the next `store gc` |
 | What a person can copy | A pipeline's first snapshot, if they know which | Anything under `snapshots/` |
 
 It is not a diff, as a shared snapshot was not ({doc}`plan-data-reads`): nothing is applied to
 anything, and a read opens files where they are.
+
+**A complete snapshot has every file in its place, twice where two are the same.** *(Found by
+review.)* Today two files of one snapshot with the same bytes are kept once, under the first
+one's name. Under `snapshots/` both are written, or the folder could not be read without its
+record.
 
 ## Which one a run makes
 
@@ -290,7 +264,10 @@ add up to the size of a complete one. Then it makes a complete one.**
   increment's is that of the files in its own folder.
 - **The count is kept in the records,** each increment's saying the total up to and with itself,
   beside what it builds on. *Proposed by Claude, 2026-11-19.* It is a count of what was copied,
-  so clearing an increment does not take from it.
+  so removing an increment does not take from it.
+- **A table in one file that gains a day makes an increment nearly the size of the whole,** since
+  the documents beside it did not change, and the run after it a complete one. So such a pipeline
+  alternates, and copies what a complete snapshot at every run would.
 - **Each store decides for itself,** where a snapshot goes to several.
 - **Where nothing has changed there is no new snapshot,** as today: the same commit, the same
   bytes and the same pins.
@@ -320,11 +297,11 @@ is its price.
 every file each time.
 
 - **Where the newest snapshot is an increment of these same files, they make a new, complete
-  one.** *Proposed by Claude, 2026-11-19 (found by review).* It is the one case in which the same
-  files make a new snapshot. The first draft of this page turned the increment into a complete
-  snapshot in its place; that changes a snapshot after it is made, and leaves two folders of one
-  name for a moment. A new one changes nothing that exists, and the increment is cleared like
-  any other.
+  one.** *Proposed by Claude, 2026-11-19 (found by review).* It joins the few cases in which the
+  same files make a new snapshot today (documents that changed, rows recorded for the first
+  time). The first draft of this page turned the increment into a complete snapshot in its
+  place; that changes a snapshot after it is made, and leaves two folders of one name for a
+  moment. A new one changes nothing that exists.
 
 ## Words
 
@@ -355,7 +332,7 @@ complete snapshot, and an increment would be for nobody.
 - **A read asks the store for an asset by its hash and is handed its files,** each where it is
   kept, as today. For an increment those are in two folders.
 - **Not completed when pinned.** That was considered: an increment nobody has pinned could then be
-  cleared with no care at all. But whoever pins would pay for it. On the one pipeline of "What was
+  removed with no care at all. But whoever pins would pay for it. On the one pipeline of "What was
   wrong" with 9 GB in earlier folders, a `chartbook pin --update` would copy those 9 GB from the
   reader's machine; a reader who cannot write to the store could not pin the newest at all; and a
   pipeline whose reader takes every snapshot would have none but complete ones.
@@ -383,168 +360,128 @@ Advice for the guide, not a rule: partition a large table that grows by date, by
 has a row a day, and by day only where a day is large. A small table gains nothing, and a folder
 for each day of sixty years is fifteen thousand small files.
 
-## Clearing
+## Clearing: decided in principle, held, and not to be built yet
 
-*Decided 2026-11-19, in place of step 3 of {doc}`one-command`: a run clears an older snapshot,
-whole, when the new one holds all of its data; and a chart or a notebook does not count as data.*
-Step 3 applied `chartbook store gc`'s rules at every run. They decide from what the store can see
-of who pins what, and its review showed what the store cannot see: a pin on another branch of a
-pipeline that depends on this one, and a pin of anybody who may not write to the store.
+*Decided 2026-11-19: a run clears an older snapshot, whole, when the new one holds all of its
+data; a chart or a notebook does not count as data; and it is wanted in 0.6.0.* It was to take the
+place of step 3 of {doc}`one-command`, which applied `chartbook store gc`'s rules at every run,
+was built, was shown to lose data, and is held back.
 
-The rule as the maintainer decided it had one condition. A reviewer, asked to break it before it
-was built, showed data lost, or a read given more than it had pinned, in ten ways. So it has four
-conditions here, each *proposed by Claude, 2026-11-19 (found by review)*, and it clears less than
-he was first told. What it does not clear waits for `chartbook store gc`, as today.
+**Nothing of it is to be built from this page as it stands.** Two forms of the rule were read
+against the code, before anything was built, by reviewers asked to break them. Both were broken,
+on paper. This section records the two forms, what broke each, and what a third has to answer.
+Until one survives such a reading, a run clears nothing, `chartbook store gc` clears as it does
+today, and the line a snapshot ends with says what it could clear.
 
-**After a run or `chartbook snapshot` makes a snapshot, an older snapshot of the same pipeline is
-cleared when all four hold. A snapshot is cleared whole, or kept whole.**
+### The first form
 
-1. **It is of the same commit as the new one,** and of the same repository, and the pipeline's
-   owner made it.
-2. **No lockfile that the store has a note of pins it.**
-3. **The new one holds all of its data.**
-4. **Nothing else holds it:** no asset marked `keep = true`, no increment that is kept, and no
-   date that is out of order.
+*One condition: the new snapshot has, for every dataframe of the older one, the same rows up to
+the older one's last date.* No pin had to be seen, because a lockfile pins a dataframe by its
+rows ({doc}`pins-and-rebuilds`) and a read of a cleared snapshot would be given those rows from
+the newer one. A record of each cleared snapshot was kept, naming the one that held its data, and
+the run's own clone was asked which snapshot a branch or a tag is pinned from.
 
-### 1. The same commit
+What broke it *(found by review)*:
 
-At one commit the code is the same, so a later snapshot of it is the same thing made later, with
-whatever the source had added.
+1. **A chain of clearings is only as strong as its weakest link.** A is cleared because B has
+   the same file; B, which has a rows hash that A lacked, is cleared because C has the same rows
+   in another file. A pin of A's file is then met by nothing.
+2. **`chartbook store gc` would remove the snapshot that held a cleared one's rows.** Its notes
+   and lockfiles name the one that is gone.
+3. **A read by path is given later rows.** Where a build stands in, `data.load` and `data.sql`
+   give the pinned rows, and `data.path`, `data.files` and `chartbook path` hand over the file as
+   it is, newer rows and all, and say so once (*decided 2026-11-15*). Until now only somebody who
+   had built the upstream themselves met that. So "a read never gives other rows" was false.
+4. **A lockfile of 0.5 pins every asset by its bytes, charts too,** and a pipeline of charts
+   alone is pinned by naming its snapshot. Leaving charts out of the count unpinned both.
+5. **`keep = true`, read from the older snapshot's record alone,** let the run that first carried
+   the mark clear the versions it was written to keep.
+6. **A pin by `rev` asks the dependency's remote, and a pin of a folder its checkout.** The run's
+   own clone answers another question.
+7. **A machine that has not synced** makes an increment on a complete snapshot that another
+   machine has just cleared, and its files are gone when the two meet.
+8. **A clock that is ahead** writes a snapshot that every other machine passes over, and the
+   older ones are cleared into it.
+9. **A record of what was cleared does not travel** with `store move`, `export` or `import`.
 
-- **Nothing a branch, a tag or a folder is pinned from changes.** A dependency that asks for a
-  pipeline at a branch or a tag is pinned from the newest snapshot of the first commit, going
-  back from that branch's or tag's own, that has one. Among the snapshots of one commit that is
-  the new one, before the clearing and after. So git is asked nothing. (The first draft cleared
-  snapshots of other commits and asked the run's own clone for its branches and tags; a pin by
-  `rev` asks the dependency's remote, and a pin of a folder its checkout, which is not the same
-  question.)
-- **A read of a cleared snapshot needs nothing new.** Where the store does not have the snapshot
-  a lockfile names, what was pinned is read from another snapshot of that pipeline at that
-  commit that meets every pin, the newest that does. That is built
-  ({doc}`pins-and-rebuilds`, "The check, cheapest first"), for a class in which each student
-  builds the upstream. `chartbook store gc` keeps such snapshots already, and `chartbook snapshot`
-  takes one as the lineage of what it reads.
-- **Lineage walks on through it.** *Proposed by Claude, 2026-11-19.* A snapshot made before the
-  clearing names the cleared one as what it was made from. `chartbook lineage` and `chartbook
-  snapshot --deep` call that a gap today, as they do after `store gc` without `--keep-lineage`.
-  They go on instead through the later snapshot of that commit that stands in for it, and say
-  that they did.
-- **So this tidies the pipeline that is run again and again as it is:** the pull every morning.
-  A pipeline being worked on leaves a snapshot at each commit, most of them small increments, as
-  it does today, for `chartbook store gc`.
+### The second form
 
-### 2. No pin the store knows of
+*Four conditions: the older snapshot is of the same commit as the new one; no lockfile the store
+has a note of pins it; the new one meets every pin a lockfile could have made of it, by the
+check a read makes; and nothing else holds it (`keep`, an increment, a date out of order).* The
+same commit took out the read beyond the pinned commit, the record of what was cleared and the
+question to git: where the store does not have the snapshot a lockfile names, a read is given
+what it pinned from another snapshot of that pipeline at that commit, and that is built.
 
-A pin, or a read through a lockfile, leaves a note in the store of what that lockfile names. A
-snapshot that a note names is not cleared by a run.
+What broke it *(found by a second review)*:
 
-- **Whoever is pinned to a snapshot, where the store can see it, keeps exactly that snapshot:**
-  its files, its charts, the path `data.path` gives. Moving the pin with `chartbook pin --update`
-  moves the note, and the old snapshot can go at the next run.
-- **The notes are read, and no lockfile is.** A note that cannot be read stops the clearing, with
-  a line that says so, as it stops `store gc`.
-- **A note outlives its lockfile,** and then holds what it names until `chartbook store gc
-  --forget-missing` on the machine that wrote it. That errs toward keeping.
-- **Conditions 3 and 4 are for the pins that leave no note:** a lockfile on another branch, a
-  reader who may not write to the store, a build in CI.
+1. **In a synced folder a removal arrives before an upload.** A run writes today's snapshot on
+   one disk and clears yesterday's; the removal reaches the other machines at once, and the new
+   snapshot hours later, or never if the lid is closed. `chartbook store gc` waits seven days and
+   asks. The rule had no waiting at all. A note that another machine wrote minutes before has
+   not arrived either, so "no note pins it" is said of what this machine has seen.
+2. **The stranded increment of the first review is a lost snapshot,** and not a cleared one: it
+   is of another commit, and nothing stands in for it.
+3. **The clock again.** A snapshot dated ahead is passed over by `chartbook pin --update` on
+   every other machine as well as by reads, and `store gc` may remove it.
+4. **The read's check cannot be used as it is.** It takes a pin as met where the store has the
+   pinned file anywhere, and before the removal the store has the older snapshot's own files. The
+   comparison has to be of the two snapshots' records.
+5. **A file that is not marked `lock = true` is read from a later snapshot without a word,** as a
+   chart is.
+6. **More pins leave no note than were counted:** an earlier commit of a lockfile at the same
+   path, a dependency that names a store, `chartbook pin --check`. And a note of another machine
+   is never forgotten.
+7. **A note that names a cleared snapshot holds nothing.** `store gc` keeps every snapshot of
+   that commit for it; the rule did not, so what stands in would change at every run.
+8. **The same commit is not the same inputs.** `chartbook run --snapshot` passes over a lockfile
+   that is not committed, and a later snapshot of the commit can be made from other pins.
+9. **"Of the same repository" has to be said by the records,** as a snapshot's own making says
+   it.
+10. **A `keep = true` given at a later commit** is in neither record of an earlier one.
 
-### 3. The new one holds all of its data
+### What a third form has to answer
 
-**The new snapshot has to meet every pin that a lockfile could have made of the older one, by
-the check a read makes** (`standins.compare`, with the older snapshot's records as the pins).
-One function, so that a run cannot clear what a read would then refuse.
+- **Waiting.** Something has to stand where gc's seven days and its question stand: for the
+  upload, for the note and the increment of a machine that has not synced.
+- **What is compared.** The two snapshots' own records, and the pins they were made from.
+- **The marks.** `keep`, labels, a branch and a tag, read as `store gc` reads them.
+- **A note of a snapshot that is gone.**
+- **Clocks.**
+- **A complete snapshot that increments build on.**
+- **Reads by path, and reads of what no lockfile holds.** Whether they stop, or say what they
+  give.
 
-| In the older snapshot | The new one meets it with |
-|---|---|
-| A dated dataframe whose rows were hashed | The same file; or the same rows up to the older one's last date, period by period, and no row up to that date or with no date that the older one lacked |
-| A dataframe with no dates, hashed | The same file, or the same rows |
-| A dataframe whose rows were not hashed, or that had no rows | The same file |
-| A model, a plain file, and anything marked `lock = true` | The same file |
-| A chart, a notebook, a page, not so marked | Nothing: they are not counted |
+*Proposed by Claude, 2026-11-19, and not reviewed:* the likeliest third form is **a run clears,
+of its own pipeline, what `chartbook store gc` would remove, and of that only what a later
+snapshot of the same commit and the same pins holds all the data of.** gc's rules are built and
+were reviewed many times, and carry the waiting, the marks, the notes and the clocks; the second
+half is for the pins gc cannot see, which is what stopped step 3. It clears less than the
+maintainer was first told: the pull that runs every morning keeps a week of snapshots, and a
+pipeline being worked on keeps one for each commit, until `chartbook store gc`.
 
-- **A chart or a notebook is not counted.** *Decided 2026-11-19.* They never come out in the same
-  bytes twice, so nothing would ever be cleared otherwise.
-- **A snapshot with nothing that is counted is kept.** A pipeline of charts alone is pinned by
-  naming its snapshot, and "holds all of its data" would be true of it for no reason.
-- **One made by a ChartBook before 0.6 is kept.** A lockfile of 0.5 pins every asset by its
-  bytes, charts too, and such a snapshot records no rows.
-- **One whose record has no rows hash for a dataframe is kept unless the new one has none for it
-  either.** A pin made of it is of the file alone. If it were cleared into a snapshot with the
-  same file and a rows hash, the next run could clear that one by its rows, into another file,
-  and the first pin would be met by nothing.
-- **A period of the older record with no line of the same dates in the new record is read,** not
-  taken as held: the older one's last period always, and a year that has since been split into
-  months.
+### What a read is given where another snapshot stands in
 
-### 4. Nothing else holds it
-
-- **`keep = true`.** A snapshot that has a version of a kept asset which the new one does not is
-  kept ({doc}`keep`). The mark is read from both records, the older one's and the new one's, and
-  never from the folder the run is in: the run that first carries the mark must not clear the
-  versions it was written to keep.
-- **A complete snapshot that a kept increment builds on is kept.** Increments are looked at
-  first.
-- **Dates out of order.** Nothing is cleared unless the new snapshot is the one made last of its
-  pipeline, by the records: one dated after it was written by a clock that is wrong, here or
-  there. And a snapshot that stands in for a cleared one is taken whatever its date, since its
-  rows are checked. Today one dated after now is passed over, which would leave the pins of what
-  a fast clock had cleared with nothing to read until its date had come.
-- **A snapshot that a pin made from a repository** is the pinning machine's and no build of the
-  pipeline's owner: never cleared here, never built on.
-- **A run that made no snapshot clears nothing.**
-
-### What reads of a cleared snapshot are given
-
-Only a reader whose pin left no note can meet this (condition 2).
+This is as built, and true today for a build of your own. It is here because every form of
+clearing makes more reads meet it.
 
 | Read | What it is given |
 |---|---|
-| A file the new snapshot also has | That file, found by its hash as any is |
-| `data.load`, `data.sql` of a table with the same rows in another file | The pinned rows: the later snapshot's, without those after the pin's `as_of` |
-| `data.path`, `data.files`, `chartbook path` of such a table | **The later file as it is, newer rows and all**, said once, with `data.as_of` to cut it by |
-| A chart or a notebook | The later snapshot's |
+| A file the other snapshot also has, of an asset the lockfile holds | That file, found by its hash |
+| `data.load`, `data.sql` of a table with the same rows in another file | The pinned rows: the other snapshot's, without those after the pin's `as_of` |
+| `data.path`, `data.files`, `chartbook path` of such a table | The other file as it is, newer rows and all; said once where there are newer rows, with `data.as_of` to cut it by |
+| A chart, a notebook, a file the lockfile does not hold | The other snapshot's, and nothing is said |
 
-*This is what a build of your own that stands in gives, as decided 2026-11-15
-({doc}`pins-and-rebuilds`, "Reads"), and it now reaches further: until now only somebody who had
-built the upstream themselves could meet it.* The first draft said "a read never gives other
-rows", which is true of `data.load` and `data.sql` and not of a path. *(Found by review. The
-maintainer has not yet been asked whether a path should stop instead.)* The check is the
-reader's own, against the reader's own lockfile, before anything is read, and its result is
-remembered for the file that was checked.
-
-### What a run says
-
-One line for what it cleared, with a count where there are several. Of the snapshot before this
-one, if it is kept, one line with why (scenario 7). The line a snapshot has ended with since
-0.5.0, on what `chartbook store gc` could clear, stays: it is how the snapshots of earlier
-commits are heard of.
-
-### How it is done
-
-- **By the store's own removing,** which `store gc` uses: the record first, then the folder, and
-  a file that a snapshot being written elsewhere has noted is left. A folder that cannot be
-  removed whole (a file open on Windows, a bucket whose writer may not delete) is left without
-  its record for `store gc`, and said in a line. The catalog's page of that snapshot goes with
-  it.
-- **It looks at its own pipeline's snapshots, in the store the new one went to,** their records,
-  and the notes. Never the whole store: the plan `chartbook store gc` makes took 3.9 seconds on a
-  store of 20 pipelines when step 3 was reviewed.
-- **Two records are compared period by period, which reads no data.** A period with the same
-  dates and another hash has changed, and the older snapshot is kept. The new table is read only
-  where every period matches but those with no line of the same dates, which as a rule is the
-  older one's last period, in the snapshot before this one.
-- **`chartbook run --upstream` clears for the pipeline it was asked to run,** and not for the
-  ones it builds on the way.
-
-## What the store promises now
+## What the store promises
 
 The store of 0.3.0 promised that nothing in it is moved or rewritten once written, and that only
-`store gc` removes. This design keeps the first half and changes the second. *(Found by review:
-the first draft leaned on the promise and broke it.)*
+`store gc` removes. *(Found by review: the first draft of this page leaned on the promise and
+broke it three times.)*
 
-- **A snapshot's folder is not changed once its record is written.** As before.
-- **A run removes whole snapshots,** by "Clearing". New. Until now a snapshot went only when
-  somebody ran `store gc`, read its list and said yes.
+- **A snapshot's folder is not changed once its record is written.** As before. That is why
+  `chartbook snapshot` writes a new complete snapshot where the newest is an increment, and does
+  not complete that one in its place.
+- **Only `chartbook store gc` removes,** as before, until a form of "Clearing" is settled.
 - **`chartbook store migrate` moves every file once.** As the move from 0.2 did.
 
 ## Moving a store to this layout
@@ -554,7 +491,7 @@ the first draft leaned on the promise and broke it.)*
 - **This ChartBook reads a store of 0.5 as it is,** and writes its notes there as 0.5 does.
   *(Found by review: {doc}`pins-and-rebuilds` promises that a store is shared across versions,
   and somebody who may only read a store cannot move it.)* It makes no snapshot in one and
-  removes nothing from one: a run says so in its last line (scenario 10), and `chartbook
+  removes nothing from one: a run says so in its last line (scenario 7), and `chartbook
   snapshot` and `chartbook store gc` stop with the same words.
 - **`chartbook store migrate` moves it,** as it moved a store of 0.2.
 - **The newest snapshot of each pipeline becomes a complete one, and each of the others an
@@ -594,17 +531,10 @@ data in mind.
 
 - **A complete snapshot copies every file,** and into a synced folder that is an upload. The
   rule of adding up bounds how often.
-- **A kept increment holds its whole complete snapshot in the store.**
-- **A table too large or too wide to have a rows hash is cleared only where its file is the
-  same.** So is one in a pipeline nobody has run with 0.6.
-- **A reader whose pinned snapshot was cleared reads each changed table through once,** to check
-  it, for each later snapshot it comes to be read from. Only a reader the store had no note of.
-- **Rows hashed as they are today have to be checked the same way by every later ChartBook.**
-  Until now a pin could always be met by its bytes alone; a pin of a cleared snapshot can only be
-  met by its rows.
-- **A build that is reading a snapshot while a run clears it fails,** and is run again.
-- **A file removed from a folder a sync service keeps stays in that service's trash** for a
-  time, and may count against its room.
+- **An increment holds its whole complete snapshot in the store** for as long as it is kept.
+- **Nothing is removed by a run,** so a pipeline's snapshots are as many as today until
+  `chartbook store gc`, and each complete one is whole where today its unchanged files were kept
+  once. A large pipeline that makes a complete snapshot often takes more room than it did.
 - **`chartbook run --snapshot` in a script copies everything each time.**
 - **Until increments are made (step 5 below), main keeps every snapshot complete.** Nobody but
   the maintainer uses main.
@@ -618,10 +548,6 @@ data in mind.
 - **Increments of rows.** See "Dated dataframes".
 - **Keeping the newest snapshot complete by moving files forward into it.** Every run would move
   files out of folders that records name and reads have open.
-- **Clearing, at a run, a snapshot of an earlier commit.** It needs a read that looks beyond the
-  pinned commit, a record of what was cleared into what, and an answer for a dependency pinned
-  by a branch or a tag. The first draft had all three, and the review broke each. Later, if the
-  snapshots of a pipeline being worked on prove to be too many.
 - **Turning an increment into a complete snapshot in its place.**
 
 ## The order of work
@@ -638,7 +564,5 @@ files for what it changes.
 4. The S3 store, and `store export` and `store import`.
 5. Increments are made: which one a run makes, the last line of a run, `chartbook snapshot` and
    `run --snapshot` complete.
-6. A run clears: the four conditions; an increment whose snapshot is gone is passed over; a
-   snapshot that stands in is taken whatever its date; lineage walks on through one; the words
-   of the line a read says when another snapshot stands in.
+6. Clearing: not before a form of it has stood a review, and the maintainer has said which.
 7. The guide, the vocabulary and the changelog, read through once more against what was built.

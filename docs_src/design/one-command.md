@@ -50,8 +50,8 @@ acme/rates: not snapshotted: 2 files are not committed (`git status` lists them)
 
 **2. Commit, and build again.** The build tool finds little to do, and the run ends with a
 snapshot: this version of the pipeline is now in your store, where your other pipelines can read
-it. (What a run clears, and when, is in {doc}`snapshots-and-increments`: an older snapshot of the
-same commit that the new one holds all the data of.)
+it. (Whether a run also clears older snapshots is not settled: see "Clearing old snapshots"
+below, and {doc}`snapshots-and-increments`.)
 
 ```text
 $ git add -A && git commit -m "Yields through October" && chartbook run
@@ -227,10 +227,12 @@ not merged, and waits for the maintainer.
 PIPELINE` lists it and asks (proposed); or a run removes with what can be closed closed, a
 longer window, and the first case accepted; or as written.
 
-*Decided 2026-11-19: none of the three.* A run clears an older snapshot of the same commit when
-the new one holds all of its data, by the rule in {doc}`snapshots-and-increments` ("Clearing"),
-which does not depend on seeing every pin. What is written below is not to be built, and the
-branch that built it is not to be merged.
+*Decided 2026-11-19: none of the three.* The maintainer chose a rule by rows: a run clears an
+older snapshot when the new one holds all of its data. It is in {doc}`snapshots-and-increments`
+("Clearing"), where two forms of it were broken by review before anything was built, and it is
+held there. Until that page says otherwise a run clears nothing, the line on what `chartbook
+store gc` could clear stays, what is written below is not to be built, and the branch that built
+it is not to be merged.
 ```
 
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
