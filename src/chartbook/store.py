@@ -2688,6 +2688,18 @@ class FolderStore(Store):
                 f"version of ChartBook reads {FOLDER_SCHEMA!r}. Use a newer ChartBook, "
                 f"or point CHARTBOOK_STORE at another directory."
             )
+        if layout is V3_LAYOUT:
+            # What ChartBook 0.5 keeps at the top of a store, beside a store of this layout: a machine that had not been
+            # brought the move wrote there, and `chartbook store migrate`, run again, moves it in
+            old = [name for name in (V2_LAYOUT.pipelines, V2_LAYOUT.roots, V2_LAYOUT.origins, V2_LAYOUT.tmp) if (self.root / name).is_dir()]
+            if old:
+                raise StoreError(
+                    f"The store at {self} has this version's layout, and at its top what ChartBook 0.5 keeps there "
+                    f"({', '.join(name + '/' for name in old)}): a machine that had not been brought the move wrote it, or "
+                    f"a move on another machine is still arriving by a sync. It is neither read nor written as it is. If "
+                    f"a move may still be arriving, wait for the sync to finish. Then run `chartbook store migrate`, "
+                    f"which moves it in."
+                )
         # The snapshots of the other layout, which this one's store.json would have passed over without a word
         other = V2_LAYOUT if layout is V3_LAYOUT else V3_LAYOUT
         found = _snapshot_folder_in(self.root, other)

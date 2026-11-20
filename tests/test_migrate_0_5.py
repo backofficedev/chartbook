@@ -271,7 +271,7 @@ class TestCutShortAndRunAgain:
         shutil.copytree(root, work / "whole")
         migrate_0_5.run(work / "whole")
         wanted = _tree(work / "whole")
-        steps = len(migrate_0_5.plan(root).steps) + len(migrate_0_5._top(root)) + 1
+        steps = len(migrate_0_5.plan(root).steps) + 1
 
         class Stop(Exception):
             pass
@@ -335,10 +335,11 @@ class TestCutShortAndRunAgain:
 
         with pytest.raises(Stop):
             migrate_0_5.run(root, after_step=after)
-        monkeypatch.setattr(migrate_0_5.socket, "gethostname", lambda: "another-laptop")
+        monkeypatch.setattr(migrate_0_5, "this_machine", lambda create=True: "another-machine")
         before = _tree(root)
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
-        assert result.exit_code == 1 and "was started on " in result.output and "two machines must never both move a store" in result.output
+        assert result.exit_code == 1 and "was started on another machine (" in result.output and "two machines must never both move a store" in result.output
+        assert f"take the move over here: remove {root / migrate_0_5.JOURNAL} and run this again." in result.output.replace("\n", "")
         assert _tree(root) == before
 
 
@@ -350,7 +351,7 @@ class TestBeforeAnythingMoves:
         record.write_text("{not json", encoding="utf-8", newline="\n")
         before = _tree(root)
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
-        assert result.exit_code == 1 and f"The snapshot record {record} cannot be read" in result.output and _tree(root) == before
+        assert result.exit_code == 1 and f"The snapshot record {record} cannot be followed" in result.output and _tree(root) == before
 
     def test_a_snapshot_being_made_stops_it(self, of_0_5):
         root, _ = of_0_5
@@ -435,7 +436,7 @@ class TestItLooksOnceMore:
                 entry["kept_in"] = arrived.name
         os.chmod(record, stat.S_IWRITE | stat.S_IREAD)
         record.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
-        total = len(migrate_0_5.plan(root).steps) + len(migrate_0_5._top(root))
+        total = len(migrate_0_5.plan(root).steps)
 
         def arrives(done: int) -> None:
             if done == total:  # everything planned is moved, and the marker is not switched yet

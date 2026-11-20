@@ -4311,17 +4311,18 @@ def _say_how_long_paths_are(folder) -> None:
 
 
 def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
-    """`chartbook store migrate` for a store that ChartBook 0.5 laid out: say what would happen, ask, move, and say what was done."""
+    """`chartbook store migrate` for a store that ChartBook 0.5 laid out, for one whose move was cut short, and for a moved one with what 0.5 keeps at its top: say what would happen, ask, move, and say what the whole move came to."""
     from chartbook import migrate_0_5
-    from chartbook.store import StoreError
+    from chartbook.store import FOLDER_SCHEMA, StoreError
 
     def counts(found, verb: str) -> list:
+        are = "are" if verb == "become" else "were"
         lines = [
             f"  {found.complete} snapshot(s) {verb} complete ({found.by_pins} of them made by a pin), {found.increments} "
             f"{verb} increments on the newest of their pipeline.",
-            f"  {found.renamed} file(s), {_format_bytes(found.renamed_bytes)}, {'are' if verb == 'become' else 'were'} moved inside the store by rename: "
+            f"  {found.renamed} file(s), {_format_bytes(found.renamed_bytes)}, {are} moved inside the store by rename: "
             f"nothing is copied or uploaded again for these.",
-            f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {'are' if verb == 'become' else 'were'} copied: each is in two folders that must each hold it.",
+            f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {are} copied: each is in two folders that must each hold it.",
             f"  {found.folders_gone} folder(s) that are no snapshot any more go; {found.aside} file(s) that no record names "
             f"are moved aside, under {migrate_0_5.LEFT_ASIDE}/.",
         ]
@@ -4331,26 +4332,45 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                 f"  {len(found.missing)} file(s) a record names are missing or of another size, as before the move: {first}"
                 f"{' and more' if len(found.missing) > 3 else ''}. If a sync is still bringing them, wait and run again."
             )
+        if found.set_aside:
+            named = ", ".join(f"{pipeline}/{snapshot}" for pipeline, snapshot in found.set_aside[:3])
+            lines.append(
+                f"  {len(found.set_aside)} snapshot(s) {are} set aside whole, under {migrate_0_5.LEFT_ASIDE}/, since a file of "
+                f"each is found nowhere: {named}{' and more' if len(found.set_aside) > 3 else ''}. Run those pipelines again "
+                f"with this ChartBook."
+            )
+        if found.copied_as_is:
+            lines.append(
+                f"  {len(found.copied_as_is)} file(s) were copied as they are, though their bytes are not what their records "
+                f"say: {', '.join(found.copied_as_is[:3])}{' and more' if len(found.copied_as_is) > 3 else ''}. "
+                f"`chartbook store verify` says more."
+            )
         return lines
 
     root = the_store.root
     synced = "In a synced folder, let the sync finish before another machine uses the store."
     try:
-        resumed = migrate_0_5.journal_of(root) is not None
-        found = migrate_0_5.Plan() if resumed else migrate_0_5.plan(root)
+        started = migrate_0_5.journal_of(root)
+        found = migrate_0_5.plan(root)
         migrate_0_5.check(root, found)
-        if resumed:
+        moved = migrate_0_5.marker_of(root) == FOLDER_SCHEMA
+        half = started is not None or (not moved and any(True for tree in ("snapshots", "increments") for _ in (root / tree).glob("*/*/_chartbook/snapshot.json")))
+        if moved and started is None:
+            click.echo(
+                f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
+                f"({', '.join(name + '/' for name in migrate_0_5.old_left(root))}): it is moved in."
+            )
+        elif half:
             click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
-            if dry_run:
-                click.echo("Nothing was moved.")
-                return
         else:
             click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: {found.pipelines} pipeline(s), {found.snapshots} snapshot(s).")
+        if not half:
             for line in counts(found, "become"):
                 click.echo(line)
-            if dry_run:
-                click.echo("Nothing was moved.")
-                return
+        if dry_run:
+            click.echo("Nothing was moved.")
+            return
+        if not half:
             click.echo("Nothing else may use the store while this runs, on this machine or another.")
             click.echo("Afterwards every machine that uses it needs this ChartBook: an earlier one will not read it.")
             click.echo(synced)
@@ -4361,10 +4381,18 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
     except StoreError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    click.echo(f"Moved the store at {the_store} to this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
-    if not resumed:
-        for line in counts(done, "became"):
-            click.echo(line)
+    except OSError as e:
+        # A failure of the disk part way: every step done is done, and the rest is still to do
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"The move stopped: {_said(e)}. The store is as far as the move got, and nothing is lost: run "
+            f"`chartbook store migrate` again, and it goes on.",
+            err=True,
+        )
+        raise SystemExit(1)
+    click.echo(f"The store at {the_store} has this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
+    for line in counts(done, "became"):
+        click.echo(line)
     click.echo(synced)
 
 
@@ -4427,8 +4455,8 @@ def store_migrate(dry_run, yes):
             err=True,
         )
         raise SystemExit(1)
-    if migrate_0_5.journal_of(the_store.root) is not None:
-        # A move to this layout that was cut short: taken up from its journal
+    if migrate_0_5.to_move(the_store.root):
+        # A store of 0.5, a move to this layout that was cut short, or a moved store with what 0.5 keeps at its top
         _move_from_0_5(the_store, dry_run, yes)
         return
     try:
@@ -4484,6 +4512,7 @@ def store_migrate(dry_run, yes):
         click.echo("What was moved stays moved: run this again to go on.", err=True)
         raise SystemExit(1)
     click.echo(f"Moved. The store at {the_store} has the layout of ChartBook 0.3; `chartbook store verify` checks it.")
+    click.echo("Run `chartbook store migrate` once more to move it on to this version's layout.")
 
 
 def _folder_store_or_exit():
