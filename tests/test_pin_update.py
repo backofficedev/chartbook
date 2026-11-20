@@ -177,8 +177,13 @@ class TestTheOldCommand:
         (["update"], "chartbook pin --update"),
         (["update", "rates"], "chartbook pin --update rates"),
         (["update", "rates", "prices", "--project-dir", "x"], "chartbook pin --update rates prices --project-dir x"),
-        # Quoted as a shell takes it, so that the line can be pasted
-        (["update", "--project-dir", "../my dir", "it's"], """chartbook pin --update --project-dir '../my dir' 'it'"'"'s'"""),
+        # Quoted as this system's shells take it, so that the line can be pasted: on Windows in double quotes,
+        # which cmd.exe reads and single ones it does not (found by running this there, 2026-11-20)
+        (
+            ["update", "--project-dir", "../my dir", "it's"],
+            """chartbook pin --update --project-dir "../my dir" "it's\"""" if os.name == "nt"
+            else """chartbook pin --update --project-dir '../my dir' 'it'"'"'s'""",
+        ),
         # Its help was asked for: that of the command it became, not a line that moves every pin
         (["update", "--help"], "chartbook pin --help"),
         (["update", "rates", "-h"], "chartbook pin --help"),
