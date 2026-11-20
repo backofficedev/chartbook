@@ -123,7 +123,7 @@ $ chartbook run
 Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
 Fetching https://github.com/ftsfr/fed_yield_curve, to see what ftsfr/fed_yield_curve reads in turn.
 acme/report cannot be built yet: 3 pipelines it reads are not in the store at /Users/x/.chartbook/store.
-Build them in this order. Each ends with a snapshot, which is what the next one reads.
+Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
@@ -183,8 +183,9 @@ What was left open, *proposed by Claude, 2026-11-19 and 20:*
 - **`chartbook run --snapshot` is the build and the snapshot in one command,** as it is today,
   for a script that must end with one and for building someone's pipeline at the commit they
   pinned (scenario 5). It refuses before it builds with anything uncommitted but the lockfile,
-  which its own pin is about to write; it fails if no snapshot can be made; and it asks nothing
-  about its snapshot. The table below sets it beside the other two.
+  which its own pin is about to write, and where the store its snapshot goes to may only be
+  read; it fails if no snapshot can be made; and it asks nothing about where its snapshot goes.
+  The table below sets it beside the other two.
 - **`chartbook run --frozen` pins nothing,** as today.
 - **What counts as declared (item 5):** whatever `chartbook.toml` gives a `path` that the build is
   to write, which is what `chartbook check` called an output. A dataframe that is a table or a
@@ -254,7 +255,7 @@ the page calling two of them the same)*:
 | Makes a snapshot | No | Yes | Yes |
 | With work that is not committed | Builds | Refuses, and lists it | Refuses before it builds |
 | A `chartbook.lock` that is not committed | Builds | Refuses: it is one more file | Passes over it: its own pin writes it. Commit it after |
-| With several stores, which one | | May ask, at a terminal | Never asks: where the catalog sends the pipeline |
+| With several stores, which one | | May ask, at a terminal | Never asks: where the catalog sends the pipeline, or to its first store |
 | Where there is no catalog yet | Makes none | Asks at a terminal, and makes one elsewhere | The same |
 | Its record says ChartBook ran the build | | No | Yes |
 
@@ -263,9 +264,10 @@ What step 2 built for a plain run's own snapshot is taken out again: the lines `
 snapshot up; and the rule that a commit checked out by its hash gets none. Two things it built
 are kept and moved *(found by review, 2026-11-20: the first draft dropped them)*: where a
 catalog's first store may only be read, the way out (`pipelines = ["acme/rates"]` under the store
-to send it to) is now said by `chartbook snapshot`; and a run that is asked for a snapshot, with
-`--snapshot` or `--upstream`, still asks nothing about it. The other half of step 2 stands: a run
-looks for what was declared (item 5).
+to send it to) is now said by `chartbook snapshot`, and by `chartbook run --snapshot` and
+`--upstream` before anything is built, since the list of scenario 5 has a whole class type that
+command; and a run that is asked for a snapshot still asks nothing about where it goes. The
+other half of step 2 stands: a run looks for what was declared (item 5).
 
 ### What it costs
 
@@ -289,6 +291,12 @@ Said plainly, since the day with one command hid each of these *(found by review
   was. And one typed while a build is running takes the files as they are at that moment.
 - **An asset marked `keep = true` is kept by the store once a snapshot holds it,** and not by a
   run. After a build that cost something: commit, and snapshot.
+- **"Commit, then" is the owner's advice, and wrong at a commit somebody else pinned.** A run
+  there that writes `chartbook.lock` leaves one file uncommitted; committing it makes a commit
+  nobody else has, and a snapshot of that meets no pin. `chartbook run --snapshot` is the way
+  there, as the list of scenario 5 says, since it passes over the lockfile. So where
+  `chartbook.lock` is all that is not committed, the refusal of `chartbook snapshot` names it.
+  *(Found by review, 2026-11-20.)*
 - **`chartbook snapshot` in a folder that is in no git repository** says that only a pipeline in
   git has snapshots, and not `git init`. A project `chartbook init` makes without `--git` meets
   that. Left as it is.
@@ -296,8 +304,8 @@ Said plainly, since the day with one command hid each of these *(found by review
 ### Clearing old snapshots: the record
 
 *Decided 2026-11-19: a run clears the old snapshots of its own pipeline,* since a run then made
-one every time. *Decided 2026-11-20: no run makes a snapshot, so none has any to clear. Step 3 is
-dropped, and the branch that built it is not to be merged.* What was built, and what its review
+one every time. *Decided 2026-11-20: a run makes a snapshot only where it is asked for one, so none pile up
+behind it to clear. Step 3 is dropped, and the branch that built it is not to be merged.* What was built, and what its review
 found, is kept here because it is part of why.
 
 It did, after every snapshot, what `chartbook store gc` would do for that one pipeline, by the
@@ -501,6 +509,8 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
 - **On Windows the lines are for `cmd.exe` at its prompt:** `cd /d`, and a `%` as it is. *(Found
   by the third pass, by reading: a bare `cd` does not change the drive, and a doubled `%` is one
   only in a batch file. Nothing here was run on Windows.)*
+- **The list's first words say "with the commands below".** *(Found by review, 2026-11-20:
+  "Build it first. It ends with a snapshot" was true while a build ended with one.)*
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
   entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
   is as the command left it.
