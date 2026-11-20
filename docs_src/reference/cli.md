@@ -2,12 +2,25 @@
 
 Every command supports `--help`. Everything the CLI needs ships with `pip install chartbook`; see {doc}`../getting-started`.
 
+## The five commands
+
+Most days need only these, in a pipeline's folder. `chartbook --help` lists them first.
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Starts a project from the template |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build, checks what it wrote, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens everything that has been built, in your browser |
+| `chartbook install agents` | Teaches your coding agent ChartBook |
+
+## Every command
+
 | Command | Purpose |
 |---------|---------|
 | `chartbook init` | Scaffold a new pipeline project |
 | `chartbook docs build` | Render the documentation site |
 | `chartbook docs open` | Open the rendered site in a browser |
-| `chartbook run` | Make everything current: run the build script, then render the site |
 | `chartbook run --check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
@@ -23,7 +36,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook pin --update` | Move pins forward to each dependency's newest snapshot |
 | `chartbook lineage` | Show and check every snapshot upstream of this pipeline |
-| `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
+| `chartbook run [SCRIPT]` | Run a named script in this pipeline. `build` by default: pin what it reads, run it, check what it wrote, make its snapshot |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
 | `chartbook store export` | Write one pipeline's snapshots into a folder, to send to someone |

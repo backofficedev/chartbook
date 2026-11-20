@@ -465,6 +465,21 @@ under "More". The Quickstart, the README and the skill teach the five first. The
 names every command and option, as the tests of it require, and each step below changes it for
 what that step changes. *Proposed by Claude, 2026-11-19.*
 
+*Built 2026-11-19*, as far as it can be before the store's new layout lands
+({doc}`snapshots-and-increments`):
+
+- **`chartbook --help`** opens with "Start with these": the five, each as it is typed, with one
+  line of what it is for. "More" lists the rest by name. `init` and `run` are all there in the
+  first list and are not said twice; `pin`, `catalog` and `install` have more to them and are.
+- **The README, the Quickstart, the reference, the skill and `llms.txt`** each have a section
+  "The five commands" with the same table, and a test holds the five in each to the five in the
+  help.
+- **Not done here: the Quickstart's walk-through itself,** which goes step by step (a script run
+  by hand, `chartbook docs build`, `chartbook snapshot`) and has a recorded terminal beside it.
+  Rewriting it around `chartbook run` means recording that again, and its closing lines are the
+  ones the store's new layout changes. It says, after its steps, that `chartbook run` is those
+  steps in one.
+
 ## Later
 
 On the {doc}`../roadmap`, with what was said of each:
@@ -505,4 +520,5 @@ changes.
 7. What is not in your store: the list, in order. *Built 2026-11-19.*
 8. `chartbook catalog open` asks before opening a site that is behind. *Built 2026-11-19.*
 9. `chartbook install agents`. *Built 2026-11-19.*
-10. The first screen: `--help`, the Quickstart, the README, the skill.
+10. The first screen: `--help`, the Quickstart, the README, the skill. *Built 2026-11-19, but for
+    the Quickstart's walk-through (see "The first screen").*

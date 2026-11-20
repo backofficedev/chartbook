@@ -207,6 +207,23 @@ again and nothing is written: the same bytes at the same commit are the snapshot
 Change the seed in `build_chart.py`, run it again and rebuild the site: the chart, the glimpse and
 both hashes change with it.
 
+## The five commands
+
+You did each step by hand above, to see what it is. In a project with a build script, which
+`chartbook init` makes for you, most days need only these:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Starts a project from the template |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build, checks what it wrote, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens everything that has been built, in your browser |
+| `chartbook install agents` | Teaches your coding agent ChartBook |
+
+`chartbook run` is steps 3 to 5 in one: it runs the build, looks for everything the manifest
+declares, and takes the snapshot when your work is committed. The rest is in the
+{doc}`reference/cli`.
+
 ## Next
 
 ::::{grid} 1 2 2 2

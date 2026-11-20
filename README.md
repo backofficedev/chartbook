@@ -29,6 +29,18 @@ One install has everything: the command line, data loading, plotting and the sit
 - **Discover.** Many pipelines become one catalog: a searchable website for your team, and an
   index, an `llms.txt` and a command line your agents work from.
 
+## The five commands
+
+Most days need only these, in a pipeline's folder:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Starts a project from the template |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build, checks what it wrote, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens everything that has been built, in your browser |
+| `chartbook install agents` | Teaches your coding agent ChartBook |
+
 ## A pipeline, in three files
 
 A pipeline is a folder in git: a manifest that says what it makes, the code that makes it, and a

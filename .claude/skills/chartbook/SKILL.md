@@ -22,6 +22,18 @@ ChartBook is a developer platform for data science teams to discover, document, 
 1. **Pipeline**: Single analytics project with charts and dataframes
 2. **Catalog**: Collection of multiple pipelines in unified documentation
 
+## The five commands
+
+What a person types on most days, in a pipeline's folder. Reach for these first, and for the long list below only when one of these does not do it:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Starts a project from the template |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build, checks what it wrote, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens everything that has been built, in your browser |
+| `chartbook install agents` | Teaches your coding agent ChartBook |
+
 ## Key CLI Commands
 
 ```bash
