@@ -439,6 +439,25 @@ it when ChartBook moves on and leaves the rest of the file alone. Run anywhere e
 the skill and says that the `AGENTS.md` half is for a project. `chartbook install claude-skill`
 stays as the first half alone.
 
+*Built 2026-11-19* (`chartbook/agents.py`, and the section's text in `chartbook/agents_section.md`),
+with what building it settled:
+
+- **The project is the nearest folder with a `chartbook.toml`,** from the working directory up to
+  the top of its git repository, and never the home folder. That is where `AGENTS.md` is written.
+- **The opening marker names the version,** as the skill's `SKILL.md` does. A section of an
+  older version is replaced and said. One that names this version and has other text was written
+  in by somebody: it is replaced at a yes or with `--force`, and where nothing can ask the
+  command stops and says that notes go outside the two lines.
+- **Marker lines that do not hold one section are an error,** and nothing is written. Guessing
+  where a section ends would delete a project's own text.
+- **Both halves are done** even where the skill's own question was answered no.
+- **A section from an older ChartBook is said** as a stale skill is: in one line to a person at a
+  terminal, and by `chartbook run --check`.
+- **The section is short.** It says what an agent gets wrong without it (build with `chartbook
+  run`, never edit the lockfile, declare before writing, read other pipelines through
+  `chartbook.data`) and where the whole reference is. It is held to the same test as the skill:
+  every command it names is one.
+
 ## The first screen
 
 `chartbook --help` lists the five commands above first, under their own heading, and the rest
@@ -485,5 +504,5 @@ changes.
    *Built 2026-11-19.*
 7. What is not in your store: the list, in order. *Built 2026-11-19.*
 8. `chartbook catalog open` asks before opening a site that is behind. *Built 2026-11-19.*
-9. `chartbook install agents`.
+9. `chartbook install agents`. *Built 2026-11-19.*
 10. The first screen: `--help`, the Quickstart, the README, the skill.

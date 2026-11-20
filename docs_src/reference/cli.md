@@ -30,6 +30,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook store import` | Copy the snapshots a folder holds into this machine's store |
 | `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
 | `chartbook config` | Set the default catalog for data loading |
+| `chartbook install agents` | Set a project up for coding agents: the Claude Code skill, and a ChartBook section in `AGENTS.md` |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
 
 `chartbook --version` prints the installed version; `chartbook <command> --help` prints a command's options.
@@ -1555,6 +1556,41 @@ Interactively set the default catalog path (stored as `catalog.path` in `~/.char
 chartbook config
 ```
 
+(chartbook-install-agents)=
+## chartbook install agents
+
+Set a project up for coding agents, in one command. It has two halves:
+
+1. It installs the Claude Code skill for you, as {ref}`chartbook install claude-skill <chartbook-install-claude-skill>` does.
+2. In a pipeline's folder, or a folder below one, it writes a ChartBook section into that project's `AGENTS.md`, which other coding agents read: what the project is, the few commands that matter, and where the whole reference is.
+
+```console
+$ chartbook install agents
+  SKILL.md
+  catalog_system.md
+  manifest_files.md
+
+Installed 3 skill file(s) to ~/.claude/skills/chartbook (ChartBook 0.6.0)
+Wrote AGENTS.md: a ChartBook section, for the agents that read that file (ChartBook 0.6.0).
+```
+
+**The section is ChartBook's, and the rest of the file is yours.** It stands between two marker lines:
+
+```markdown
+<!-- chartbook:start version=0.6.0; written by `chartbook install agents`, which replaces everything down to chartbook:end. Notes of your own go outside these two lines. -->
+## ChartBook
+…
+<!-- chartbook:end -->
+```
+
+Run again after an upgrade, the command replaces what is between them and says so (`Updated the ChartBook section of AGENTS.md from ChartBook 0.5.1 to 0.6.0. The rest of the file is as it was.`). A file the project already has gets the section added at its end; one with none is made. Its line endings are kept. When the section is already this version's, nothing is written. Commit `AGENTS.md`: it is for everyone who works in the repository.
+
+- **A section somebody wrote in.** One that names this version and has other text is replaced only when you say so at the question, or with `-f`. Where nothing can ask, the command exits `1` and says that notes of your own go outside the two lines.
+- **Marker lines that do not hold one section** (a start with no end, two of either) are an error that says which line, and nothing is written.
+- **Outside a project** (no `chartbook.toml` here or above, up to the top of the git repository and never the home folder) it installs the skill and says that the `AGENTS.md` half is for a project.
+- **A section from an older ChartBook** teaches that version's commands. Every other command, run by a person at a terminal, says so in one line, and `chartbook run --check` as a `warning:`, as for a stale skill (below).
+
+(chartbook-install-claude-skill)=
 ## chartbook install claude-skill
 
 Install the bundled Claude Code skill, giving Claude context about the CLI, the manifest format and the data API. By default it installs **user-level**, into `~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR/skills/chartbook/` when that variable is set, so the skill is available in every Claude Code session on your machine. With `--project` it installs into `./.claude/skills/chartbook/` in the current directory, to commit with a repository; a project `chartbook init` makes has one already.

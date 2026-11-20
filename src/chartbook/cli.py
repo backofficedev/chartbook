@@ -302,6 +302,12 @@ def _say_if_the_skill_is_stale():
 
         for copy in claude_skill.stale():
             click.echo(click.style("Note: ", fg="yellow", bold=True) + claude_skill.notice(copy), err=True)
+        from chartbook import agents
+
+        # And what other agents read of ChartBook in this project
+        old = agents.stale()
+        if old is not None:
+            click.echo(click.style("Note: ", fg="yellow", bold=True) + agents.notice(*old), err=True)
     except Exception:  # noqa: BLE001 - a note about the skill never stops a command
         pass
 
@@ -1210,6 +1216,11 @@ def _check_pipeline(project_dir, within_days, policy_path):
 
         for copy in claude_skill.stale(project_dir):
             click.echo(f"warning: {claude_skill.notice(copy)}", err=True)
+        from chartbook import agents
+
+        old = agents.stale(project_dir)
+        if old is not None:
+            click.echo(f"warning: {agents.notice(*old)}", err=True)
     except Exception:  # noqa: BLE001 - a note about the skill never stops a check
         pass
     try:
@@ -5206,6 +5217,113 @@ def install_claude_skill(force, project):
     else:
         click.echo(f"\nInstalled {len(skill_files)} skill file(s) to {shown} (ChartBook {__version__})")
 
+
+
+@install.command("agents")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Replace skill files, and a ChartBook section of AGENTS.md, that were changed by hand, without asking",
+)
+@click.pass_context
+def install_agents(ctx, force):
+    """Set a project up for coding agents: the Claude Code skill, and a ChartBook section in AGENTS.md.
+
+    Two halves. The first installs the Claude Code skill for you, as
+    `chartbook install claude-skill` does. The second, in a pipeline's
+    folder (or below one), writes a ChartBook section into that project's
+    AGENTS.md, which other coding agents read: what the project is, the
+    few commands that matter, and where the whole reference is.
+
+    The section stands between two marker lines. Run again after an
+    upgrade, the command replaces what is between them with this
+    version's and leaves the rest of the file alone, so notes of your own
+    go outside those lines. A section changed by hand since this version
+    wrote it is replaced when you say so, or with --force. Commit
+    AGENTS.md: it is for everyone who works in the repository.
+
+    Anywhere else it installs the skill and says the AGENTS.md half is
+    for a project.
+
+    \b
+    Examples:
+        chartbook install agents
+    """
+    from chartbook import agents
+    from chartbook.check import display_path
+
+    failed = False
+    try:
+        ctx.invoke(install_claude_skill, force=force, project=False)
+    except SystemExit as stopped:  # declined at its question, or no skill in the package: the other half is still done
+        failed = bool(stopped.code)
+
+    project = agents.project_folder()
+    if project is None:
+        click.echo(
+            "No chartbook.toml here or above: the AGENTS.md half is for a project. Run `chartbook install agents` "
+            "in a pipeline's folder to write it."
+        )
+        raise SystemExit(1 if failed else 0)
+    file = project / agents.FILE
+    shown = display_path(file, relative_to=Path.cwd())
+    try:
+        existed = file.exists()
+        text = file.read_bytes().decode("utf-8") if existed else ""
+        found = agents.read(text)
+    except agents.Malformed as e:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"{shown}: {e}. Put the missing line back, or take out the one that is left, and run this again. "
+            "Nothing was written to it.",
+            err=True,
+        )
+        raise SystemExit(1)
+    except (OSError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"{shown} cannot be read as text: {_explain_os_error(e)}", err=True)
+        raise SystemExit(1)
+
+    if agents.same(found):
+        click.echo(f"{shown}: its ChartBook section is up to date (ChartBook {__version__}).")
+        raise SystemExit(1 if failed else 0)
+    if agents.changed_by_hand(found) and not force:
+        said = f"The ChartBook section of {shown} was changed since ChartBook {__version__} wrote it."
+        if not _can_ask():
+            click.echo(
+                click.style("Error: ", fg="red", bold=True)
+                + f"{said} Notes of your own go outside its two marker lines; --force replaces what is between them.",
+                err=True,
+            )
+            raise SystemExit(1)
+        click.echo(f"{said} Notes of your own go outside its two marker lines.", err=True)
+        try:
+            agreed = _confirm("Replace what is between them?", default=False)
+        except click.Abort:  # Ctrl-C, or the end of input
+            click.echo("", err=True)
+            agreed = False
+        if not agreed:
+            raise SystemExit(1 if failed else 0)
+    try:
+        with open(file, "w", encoding="utf-8", newline="") as f:
+            f.write(agents.written(found))
+    except OSError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"{shown} could not be written: {_explain_os_error(e)}", err=True)
+        raise SystemExit(1)
+    if not existed:
+        click.echo(f"Wrote {shown}: a ChartBook section, for the agents that read that file (ChartBook {__version__}).")
+    elif not found.own:
+        click.echo(f"Added a ChartBook section to {shown} (ChartBook {__version__}). The rest of the file is as it was.")
+    elif found.version and found.version != __version__:
+        click.echo(
+            f"Updated the ChartBook section of {shown} from ChartBook {found.version} to {__version__}. "
+            "The rest of the file is as it was."
+        )
+    else:
+        click.echo(f"Wrote the ChartBook section of {shown} again (ChartBook {__version__}). The rest of the file is as it was.")
+    if failed:
+        raise SystemExit(1)
 
 
 @catalog.command("migrate")

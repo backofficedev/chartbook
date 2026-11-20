@@ -68,6 +68,7 @@ uv run doit      # everything: docs, examples, package, test matrix
 | `store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3, once, after every machine that uses it has 0.3; `--dry-run` says what it would move |
 | `index diff BEFORE AFTER` | What changed between two builds, from their `index.json` (files or site folders), compared as published: added, removed, and each changed record in a reviewer's words (data changed with hashes and row counts, pins moved, new versions, labels moved, out of date, declared differently); `--json`, `--exit-code` |
 | `config` | Configure the default catalog path for data loading |
+| `install agents` | The Claude Code skill for the user, and a ChartBook section in the project's `AGENTS.md` for other agents |
 | `install claude-skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo). Its `SKILL.md` names the ChartBook version it is for; a copy for an older version is replaced and said |
 
 ### chartbook docs build
@@ -231,6 +232,10 @@ chartbook trust [PATH] [--render] [--repository] [--list] [--forget]
 ```
 
 Says a pipeline's folder (PATH, or this one) is the user's to build, at `run` (the default: queries run, files the manifest names are read wherever they are, the build script runs) or with `--render` to render only. A folder's trust covers the folders inside it (the command says so when the folder has no `chartbook.toml`); `--repository` trusts the folder's `origin` repository instead, every clone of it, as `chartbook.identity.repository_key` reduces it; `--list` shows the record and whether `CI` or `CHARTBOOK_TRUST=all` trusts more; `--forget` removes the folder's entries (with `--repository`, the repository's). The record is `~/.chartbook/trust.toml`: `[[pipeline]]` entries (`path` resolved, `level`, `id` and `repository` as notes; matched by path, never by ID) and `[[repository]]` entries (`url`, `level`), each with `since`; written whole or not at all; one that cannot be read stops the command naming the file, an entry of another shape is passed over with a warning. A folder's level is the highest of every entry covering it. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted. No prompt anywhere: a command refuses and prints this one. Design: `docs_src/design/trust.md`.
+
+### chartbook install agents
+
+Sets a project up for coding agents. It installs the Claude Code skill user-level, as `chartbook install claude-skill` does, and, run in a pipeline's folder or below one (the nearest folder with a `chartbook.toml`, up to the top of the git repository), writes a ChartBook section into that project's `AGENTS.md`: what the project is, the commands that matter, and where the whole reference is. The section stands between `<!-- chartbook:start version=X; … -->` and `<!-- chartbook:end -->`; run again after an upgrade, the command replaces what is between them and leaves the rest of the file alone. A section that names this version and was changed by hand is replaced at a yes or with `-f`, and where nothing can ask the command exits 1. Marker lines that do not hold exactly one section are an error and nothing is written. Outside a project it installs the skill and says the `AGENTS.md` half is for a project. A section from an older ChartBook is said in one line by other commands at a terminal, and by `chartbook run --check`.
 
 ### chartbook install claude-skill
 
