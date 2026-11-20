@@ -690,7 +690,7 @@ class TestPinning:
         }
 
     def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
-        """The store lost the one file two assets share: put back, each reads it under its own name."""
+        """The store lost the files of two assets with the same bytes: put back, each reads its own under its own name."""
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
         (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
@@ -698,7 +698,7 @@ class TestPinning:
         _commit(upstream, "A twin")
         lock.pin(downstream, git_cache=cache)
         before = (downstream / LOCK_FILE).read_bytes()
-        assert len(default_store().files_of(HELLO)) == 1  # kept once
+        assert len(default_store().files_of(HELLO)) == 2  # each in its own place, in the snapshot the pin made
         assert default_store().delete(HELLO)
 
         store_module._found_whole.clear()  # this process may have found it whole before
@@ -963,7 +963,7 @@ def _puts(monkeypatch) -> list:
 
 
 class TestWhatTheSecondReviewOfPuttingBackFound:
-    def test_a_directory_of_one_file_that_is_gone_is_put_back_where_it_was(self, downstream, upstream, cache, monkeypatch):
+    def test_a_directory_of_one_file_that_is_gone_is_restored_in_a_snapshot_of_its_own(self, downstream, upstream, cache, monkeypatch):
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
         (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
@@ -976,12 +976,17 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         os.chmod(held / "a.parquet", stat.S_IRUSR | stat.S_IWUSR)
         (held / "a.parquet").unlink()
         store_module._found_whole.clear()
-        # None of its files is there, so it is not in the store: put back
-        # where its record says, and nowhere else, so nothing is kept twice
+        # None of its files is there, so it is not in the store: the pin puts it in again, in a snapshot
+        # of its own, whole. The one that lost it is left as it is (a snapshot's folder is not changed
+        # once its record is written, where since 0.3 the file was put back where its record says), and
+        # goes with `store gc` like any that holds nothing a lockfile pins that another does not
         report = lock.pin(downstream, git_cache=cache)
         assert report.problems == [] and _statuses(report)["parts"] == "restored"
-        assert (held / "a.parquet").read_bytes() == b"part a"
-        assert len([p for p in default_store().pipeline_path("upstream").iterdir() if p.is_dir()]) == 1
+        assert not (held / "a.parquet").exists()
+        again = default_store().files(record["content_hash"]).home
+        assert again != held and (again / "a.parquet").read_bytes() == b"part a"
+        assert len([p for p in default_store().pipeline_path("upstream").iterdir() if p.is_dir()]) == 2
+        assert [Path(path) for path in data.files("acme/upstream:parts", project_dir=downstream)] == [again / "a.parquet"]
 
     def test_a_directory_pinned_before_records_listed_its_files_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
@@ -1032,8 +1037,8 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         from chartbook import data
 
         monkeypatch.chdir(downstream)
-        assert "/pipelines/other/" in Path(data.path("acme/other:same")).as_posix()
-        assert "/pipelines/upstream/" in Path(data.path("acme/upstream:committed")).as_posix()
+        assert "/snapshots/other/" in Path(data.path("acme/other:same")).as_posix()
+        assert "/snapshots/upstream/" in Path(data.path("acme/upstream:committed")).as_posix()
 
 
 class TestPuttingBackInAnS3Store:

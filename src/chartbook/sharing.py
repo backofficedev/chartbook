@@ -1,19 +1,21 @@
 """Sending one pipeline's snapshots to someone else: ``chartbook store export`` and ``store import``.
 
-A pipeline's folder in a store (``pipelines/<pipeline>/``) is what a person
-sends a collaborator, and copied by hand into another store's ``pipelines/``
+A pipeline's folder in a store (``snapshots/<pipeline>/``) is what a person
+sends a collaborator, and copied by hand into another store's ``snapshots/``
 it is that pipeline's snapshots there too. These two commands do the same,
 checked:
 
 - **Export** writes chosen snapshots of one pipeline into a folder laid out
-  as a store, ``<to>/pipelines/<pipeline>/``: every snapshot by default, the
-  newest with ``latest``, or the ones named. Each file is kept once, in the
-  first exported snapshot that has it, so the newest alone is a complete
-  snapshot, every file it needs in its own folder.
+  as a store, ``<to>/snapshots/<pipeline>/``: every snapshot by default, the
+  newest with ``latest``, or the ones named. Each is a complete snapshot,
+  every file of it in its own folder.
 - **Import** copies the snapshots of such a folder, or of a pipeline's folder
   copied by hand, into this machine's store, oldest first. Every file is
-  hashed as it is copied and checked against its record; a file the store
-  holds already is not copied again, and nothing there is written over.
+  hashed as it is copied and checked against its record; a snapshot the
+  store has already is not copied again, and nothing there is written over.
+  A folder from a store of ChartBook 0.5 (``pipelines/<pipeline>/``, its
+  files kept once) is read as it is, and each of its snapshots is written
+  complete.
 
 Only what a snapshot's record names goes: its data, its documents and its
 index, never anything that runs. A snapshot a pin made from a clone is not
@@ -30,17 +32,24 @@ from typing import Callable, Iterable, Optional, Union
 
 from chartbook.store import (
     OWN_DIR,
-    PIPELINES_DIR,
     RECORD_FILE,
+    V2_LAYOUT,
+    V3_LAYOUT,
+    BuiltOnGoneError,
+    EarlierLayoutError,
     FolderStore,
     KeptRecord,
     Store,
     StoreError,
+    INCREMENTS_DIR,
     _any_length,
+    _increment_of,
+    _not_followed,
     _kept_files,
     is_snapshot_folder,
     pipeline_folder,
     read_kept_record,
+    what_is_wrong_in,
 )
 
 
@@ -76,37 +85,73 @@ def _records_in(folder: Path) -> list[KeptRecord]:
 
 
 def _pipeline_folders(source: Path) -> list[Path]:
-    """The pipelines' folders a folder holds: a store's (``pipelines/*``), or the one it is."""
-    if (source / PIPELINES_DIR).is_dir():
-        return sorted(p for p in (source / PIPELINES_DIR).iterdir() if p.is_dir() and not p.name.startswith("+"))
+    """The pipelines' folders a folder holds: a store's or an export's (``snapshots/*``; ``pipelines/*`` in one of ChartBook 0.5), or the one it is.
+
+    Both names are looked under: a store of 0.5 that was moved from one of
+    0.2 has a ``snapshots/`` too, with no pipeline's folder in it.
+    """
+    held = [source / name for name in (V3_LAYOUT.pipelines, INCREMENTS_DIR, V2_LAYOUT.pipelines) if (source / name).is_dir()]
+    if held:
+        return sorted(p for folder in held for p in folder.iterdir() if p.is_dir() and not p.name.startswith("+"))
     if any(p.is_dir() and is_snapshot_folder(p.name) for p in source.iterdir()):
         return [source]
     return sorted(p for p in source.iterdir() if p.is_dir() and any(q.is_dir() and is_snapshot_folder(q.name) for q in p.iterdir()))
 
 
 def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[str], None] = lambda line: None) -> Copied:
-    """Copy snapshots, each by its record, into a store: oldest first, each file once, every byte checked.
+    """Copy snapshots, each by its record, into a store: oldest first, each complete, every byte checked.
 
     A snapshot the store has already (its pipeline, commit and time) is not
     copied again. One whose file is not what its record says, or whose
     record is not one a store wrote, is refused and said, and the rest go.
     """
     done = Copied()
-    for record in sorted(records, key=lambda record: (record.made_at, record.folder.name)):
+    whole: set = set()  # the complete snapshots in the store that this run wrote, or read and hashed
+    # Each complete snapshot, then the increments on it, so that what an increment builds on is there before it
+    for record in sorted(records, key=lambda record: (record.increment, record.made_at, record.folder.name)):
         moment = (record.pipeline, record.commit, record.made_at)
         if not record.readable:
             done.refused.append((str(record.path), "its record cannot be read"))
             continue
         if record.made_by != "snapshot":
             continue  # where a pin kept a clone's files: the pinning machine's, not the pipeline's
-        if any(
-            (kept.pipeline, kept.commit, kept.made_at) == moment
-            for kept in (into.records() if hasattr(into, "records") else [])
-            if kept.readable
-        ):
-            done.there.append(moment)
-            continue
         what = f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}"
+        here = next(
+            (
+                kept for kept in (into.records() if hasattr(into, "records") else [])
+                if kept.readable and (kept.pipeline, kept.commit, kept.made_at) == moment
+            ),
+            None,
+        )
+        if here is not None:
+            # There only if the store's own snapshot of that moment is whole, its own files read and
+            # hashed: nothing is imported over one that is not, since a snapshot's folder is not changed
+            wrong = into.verify_snapshot(here.path, [asset.content_hash for asset in here.assets])
+            if wrong:
+                more = f" (and {len(wrong) - 1} more of its files)" if len(wrong) > 1 else ""
+                # The way out is named only on what was looked at: what is being imported is read too, each
+                # file of that snapshot where it is, at its size and hash
+                theirs = [f"its record does not say where {gap[:19]}… is" for gap in _not_followed(record)]
+                theirs += [said for asset in record.assets for _, said in what_is_wrong_in(asset)]
+                if theirs:
+                    way = (
+                        f"What is being imported does not hold it whole either ({theirs[0]}): keep that snapshot's "
+                        f"folder, {here.folder}, as it is, and import from a copy that is whole. If a sync is still "
+                        f"bringing either, import again when it has"
+                    )
+                else:
+                    way = (
+                        f"If a sync is still bringing the file, import again when it has. If the file is lost, remove "
+                        f"that snapshot's folder, {here.folder}, and import again: what is imported holds it whole"
+                    )
+                done.refused.append((what, (
+                    f"the store has it already, in {here.folder.name}, and not whole: {wrong[0].message}{more}. Nothing "
+                    f"was imported over it. {way}"
+                )))
+            else:
+                done.there.append(moment)
+                whole.add(str(here.path))
+            continue
         why = _not_to_copy(record)
         if why is not None:
             done.refused.append((what, why))
@@ -118,10 +163,24 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             continue
         pending = None
         try:
-            pending = into.begin(record.pipeline, record.commit, record.made_at)
+            on = _builds_on_there(record, into, whole)  # it keeps its form on a complete one found whole in this run
+            counted = done.size_bytes
+            pending = into.begin(record.pipeline, record.commit, record.made_at, **({"builds_on": on} if on is not None else {}))
             why = _copy_parts(document, record, pending, done)
             if why is None:
-                pending.write(document)
+                try:
+                    written = pending.write(document)
+                    if on is None:
+                        whole.add(str(written))  # written in this run, each file hashed as it was written
+                except BuiltOnGoneError:
+                    # What it builds on went from the store meanwhile: written complete, every file being at hand
+                    pending.discard()
+                    pending = into.begin(record.pipeline, record.commit, record.made_at)
+                    done.size_bytes = counted  # what the increment had counted is counted once
+                    document = json.loads(record.path.read_text(encoding="utf-8"))
+                    why = _copy_parts(document, record, pending, done)
+                    if why is None:
+                        pending.write(document)
         except (OSError, ValueError, StoreError) as error:
             why = str(error) or type(error).__name__
         except BaseException:
@@ -138,6 +197,40 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
     return done
 
 
+def _builds_on_there(record: KeptRecord, into: Store, whole: set) -> Optional[str]:
+    """The folder name, in the store copied into, of the complete snapshot that an increment builds on where it came from; None where it is to be written complete.
+
+    An increment keeps its form only on a complete snapshot that was
+    written in this run, or read and hashed in this run (*whole*, by its
+    record's path): never on one whose files are taken on trust. Where
+    what was sent holds the increment and not the complete one, the store's
+    own snapshot of that name is the one, if it is whole.
+    """
+    if not (record.increment and record.builds_on) or getattr(into, "increments_path", lambda: None)() is None:
+        return None
+    source = record.folder.parent.parent.parent / V3_LAYOUT.pipelines / record.folder.parent.name / record.builds_on / OWN_DIR / RECORD_FILE
+    on = read_kept_record(source) if os.path.isfile(_any_length(source)) else None
+    for kept in into.records():
+        if not kept.readable or kept.increment or kept.pipeline != record.pipeline:
+            continue
+        same = (kept.commit, kept.made_at) == (on.commit, on.made_at) if on is not None and on.readable else kept.folder.name == record.builds_on
+        if same:
+            if str(kept.path) not in whole and not into.verify_snapshot(kept.path):
+                whole.add(str(kept.path))
+            return kept.folder.name if str(kept.path) in whole else None
+    return None
+
+
+def _a_link(record: KeptRecord) -> bool:
+    """Whether a snapshot's record or a folder holding it is a link; for an increment, the folder of the complete snapshot it builds on, or one holding that, too. None is followed, by an import or an export."""
+    folder = record.folder
+    places = [record.path, record.path.parent, folder, folder.parent]
+    if record.increment and record.builds_on:
+        complete = folder.parent.parent.parent / V3_LAYOUT.pipelines / folder.parent.name
+        places += [complete / record.builds_on, complete, complete.parent, folder.parent.parent]
+    return any(place.is_symlink() for place in places)
+
+
 def _not_to_copy(record: KeptRecord) -> Optional[str]:
     """Why a snapshot is not to be copied, by what a store asks of its record; None if it may be.
 
@@ -149,8 +242,8 @@ def _not_to_copy(record: KeptRecord) -> Optional[str]:
     from chartbook.snapshot import SnapshotError, read
 
     folder = record.folder
-    if record.path.is_symlink() or (record.path.parent).is_symlink() or folder.is_symlink() or folder.parent.is_symlink():
-        return "its record, or a folder holding it, is a link"
+    if _a_link(record):
+        return "its record, or a folder holding it or the snapshot it builds on, is a link"
     try:
         taken = read(record.path)
     except SnapshotError as error:
@@ -169,19 +262,29 @@ def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Op
             continue  # declared and not built
         if "stored" not in part:
             return f"its record's {part.get('id', 'part')} names {part['content_hash']}, and does not say where its files are"
-        kept = _kept_files(part["stored"], record.folder.parent, record.folder.name)
+        kept = _kept_files(part["stored"], record.folder.parent, record.folder.name, _increment_of(record.folder, document))
         if kept is None:
             return f"its record's {part.get('id', 'part')} says nothing a store could follow"
         at, single, files = kept
         # A folder sent by someone may hold a link to a file of this machine's: never followed
-        inside = Path(os.path.realpath(record.folder.parent))
+        inside = [Path(os.path.realpath(record.folder.parent))]
+        if record.increment:
+            # An increment's files are in two folders of what it came in: its own, and the one it builds on
+            # as the folder that was given has it: a link there leads out, and is not followed
+            inside.append(Path(os.path.realpath(record.folder.parent.parent.parent)) / V3_LAYOUT.pipelines / record.folder.parent.name)
         for file in files:
-            if file.location.is_symlink() or not Path(os.path.realpath(file.location)).is_relative_to(inside):
+            if file.location.is_symlink() or not any(Path(os.path.realpath(file.location)).is_relative_to(folder) for folder in inside):
                 return f"{file.path} is a link, or leads out of the folder it came in"
-        missing = next((file for file in files if not file.location.is_file()), None)
+        # A file an increment keeps in the complete one, where what was sent does not hold that one: the store's own
+        # copy of it, in the complete snapshot this run found whole
+        at_hand = {
+            file.location: (pending._held_whole(file.content_hash, file.size_bytes) if getattr(pending, "builds_on", None) and not file.location.is_file() else None) or file.location
+            for file in files
+        }
+        missing = next((file for file in files if not Path(at_hand[file.location]).is_file()), None)
         if missing is not None:
             return f"{missing.path} is not there"
-        sources = [(file.relative, str(file.location)) for file in files]
+        sources = [(file.relative, str(at_hand[file.location])) for file in files]
         stored = pending.put_listed(sources, files[0].path if single else at, single)
         wrong = [
             new["path"] for new, old in zip(stored.stored["files"], files) if new["content_hash"] != old.content_hash
@@ -202,13 +305,14 @@ def export(
     which: Union[str, list, None] = None,
     echo: Callable[[str], None] = lambda line: None,
 ) -> Copied:
-    """Write snapshots of one pipeline from a store into a folder laid out as a store: ``<to>/pipelines/<pipeline>/``.
+    """Write snapshots of one pipeline from a store into a folder laid out as a store: ``<to>/snapshots/<pipeline>/``.
 
     :param which: None for every snapshot its owner made; ``"latest"`` for
         the newest; or a list of the ones to write, each a commit (or the
         start of one) or ``commit@made_at``.
     :raises SharingError: If the store has no snapshot of the pipeline, or
-        none of those asked for.
+        none of those asked for; or if the folder holds an export of the
+        pipeline already, or one laid out as ChartBook 0.5 laid one out.
     """
     folder = store.pipeline_path(pipeline)
     records = [r for r in store.records() if r.readable and r.made_by == "snapshot" and r.pipeline == pipeline]
@@ -226,21 +330,33 @@ def export(
             chosen += [r for r in matched if r not in chosen]
         records = chosen
     to = Path(to).expanduser().resolve()
-    if (to / PIPELINES_DIR / folder.name).exists() and any((to / PIPELINES_DIR / folder.name).iterdir()):
-        raise SharingError(f"{to / PIPELINES_DIR / folder.name} is there already: export into another folder.")
-    return copy_snapshots(records, FolderStore(to), echo)
+    target = FolderStore(to)
+    try:
+        target.check_writable()
+    except EarlierLayoutError:
+        # An export, or a store, that ChartBook 0.5 wrote there: nothing is added to one
+        raise SharingError(
+            f"{to} holds a store or an export of ChartBook 0.5 ({V2_LAYOUT.pipelines}/): export into another folder."
+        ) from None
+    there = target.pipelines_path() / folder.name
+    if there.exists() and any(there.iterdir()):
+        raise SharingError(f"{there} is there already: export into another folder.")
+    return copy_snapshots(records, target, echo)
 
 
 def import_snapshots(store: FolderStore, source: Union[str, Path], echo: Callable[[str], None] = lambda line: None) -> Copied:
     """Copy the snapshots a folder holds into a store: an export, a store, or a pipeline's folder copied by hand.
 
     :raises SharingError: If the folder holds no snapshot.
+    :raises EarlierLayoutError: If the store is laid out as ChartBook 0.5
+        laid one out: no snapshot is made in one.
     """
     source = Path(source).expanduser().resolve()
     if not source.is_dir():
         raise SharingError(f"{source} is not a folder.")
+    store.check_writable()
     inside = Path(os.path.realpath(store.root))
-    if source == inside or source.is_relative_to(inside / PIPELINES_DIR):
+    if source == inside or source.is_relative_to(inside / store.pipelines_path().relative_to(store.root)):
         raise SharingError(f"{source} is in the store it would be imported into.")
     records = [record for folder in _pipeline_folders(source) for record in _records_in(folder)]
     if not records:

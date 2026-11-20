@@ -66,9 +66,12 @@ def path(
     A version of one of this pipeline's models is named after ``@``:
     ``models.path("rate_forecaster@7f3a9c2e41b0")``, by the start of its content
     hash, or ``models.path("rate_forecaster@champion")``, by a label of
-    ``[models.rate_forecaster.aliases]``. That path is in the store, is
-    read-only, and does not change. A model that is a folder has files
-    there and no one path, since the store keeps each file once:
+    ``[models.rate_forecaster.aliases]``. That path is in the store and is
+    read-only. It is of the copy in the newest snapshot of the pipeline
+    that holds the version whole, which is the one ``chartbook store gc``
+    keeps: so it changes when a later snapshot holds that version too. A model that is a folder has files
+    there and no one path, since a store may keep each file once (a bucket
+    does, and a store that ChartBook 0.5 laid out):
     :func:`chartbook.assets.files` lists them, and
     :func:`chartbook.assets.gathered` lays them out in a temporary folder
     for a loader that takes a directory.

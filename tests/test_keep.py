@@ -209,7 +209,7 @@ class TestWhatTheStoreKeeps:
         assert result.exit_code == 0, result.output
         assert "Kept for `keep = true`: 3 version(s) of acme/docs:embeddings, 15 bytes, in 3 snapshot(s)" in result.output
         assert f"it holds a version of embeddings, {KEPT}" in result.output
-        assert "Would remove 1 snapshot(s):" in result.output
+        assert "\nWould remove 1 snapshot(s)" in result.output
 
 
 class TestRestore:

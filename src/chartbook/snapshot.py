@@ -31,16 +31,18 @@ to. A snapshot that would be the same as the one before it is not made.
 Where they are kept::
 
     ~/.chartbook/store/
-      pipelines/
+      snapshots/
         ftsfr+fed_yield_curve/                 the pipeline
           2026-10-13T182205Z_4f2a91c0e1b2/     when it was made _ its commit
-            _data/treasury_rates.parquet       what is new in it, in its place
+            _data/treasury_rates.parquet       every file of it, in its place
             _chartbook/snapshot.json           the record
 
 A record is JSON in the index's format, like a lockfile: an envelope and
 one record for each asset, each with its content hash, and, for each of
-its files, where the store keeps it (``stored``): each file is kept once in
-the pipeline's folder, usually in the first snapshot that had it
+its files, where the store keeps it (``stored``): in a folder store, the
+snapshot's own folder, which holds every file of it; in a bucket, and in a
+store ChartBook 0.5 laid out, each file once in the pipeline's folder,
+usually in the first snapshot that had it
 (:class:`chartbook.store.PendingSnapshot`). A snapshot keeps what it names
 from being cleared (:func:`chartbook.lock.plan_gc`).
 
@@ -73,6 +75,7 @@ secrets, and a store is something to share.
 from __future__ import annotations
 
 import hashlib
+import contextlib
 import dataclasses
 import json
 import os
@@ -380,6 +383,12 @@ class SnapshotReport:
         rows_first_count: And how many dataframes' rows this one is the
             first to record. One whose rows are not hashed is not counted:
             the command says why it has none.
+        not_whole: For a snapshot that was made of the same files, commit
+            and pins as one already in the store, because that one lacks a
+            file of its own (:meth:`chartbook.store.Store.holes_of`): that
+            one, the files it lacks, and the store it lacks them in where
+            that is another store this run sends the snapshot to (None
+            where it is the one the snapshot is made in). It is left as it is.
     """
 
     snapshot: Snapshot
@@ -399,6 +408,7 @@ class SnapshotReport:
     index_column_names: dict = field(default_factory=dict)
     rows_first_said: Optional[Snapshot] = None
     rows_first_count: int = 0
+    not_whole: Optional[tuple] = None
 
 
 def asset_record(
@@ -602,22 +612,59 @@ def _plain_everywhere(relative: str) -> bool:
     return all(part not in ("", ".", "..") for part in re.split(r"[\\/]", relative))
 
 
-def not_whole(store: Store, record: dict) -> Optional[str]:
+def not_whole(store: Store, record: dict, pipeline: Optional[str] = None) -> Optional[str]:
     """Why the store's object of a record with a hash is not whole as the record has it; None if it is, or that cannot be told.
 
     By the names and sizes of the files a reader opens (:func:`files_read`),
     and, for a directory, that it holds no file its record does not list.
-    Nothing is read (:meth:`chartbook.store.Store.incomplete`).
+    Nothing is read (:meth:`chartbook.store.Store.incomplete`). With *pipeline*, the
+    pipeline it is of, whole means that one of that pipeline's own snapshots holds it whole.
     """
     if not record.get("content_hash"):
         return None
     files = files_read(record)
     every = files is not None and isinstance(record.get("files"), list)
-    return store.incomplete(record["content_hash"], record.get("size_bytes"), files, every)
+    if pipeline is None:
+        return store.incomplete(record["content_hash"], record.get("size_bytes"), files, every)
+    return store.incomplete(record["content_hash"], record.get("size_bytes"), files, every, pipeline=pipeline)
+
+
+@contextlib.contextmanager
+def _staged(staging: Optional[Path], name: str, pending=None, prefix: str = "chartbook-"):
+    """A folder to stage files for a snapshot in, as its path.
+
+    The folder *name* under *staging*, which whoever made *staging* removes
+    once the snapshot is written or let go (:func:`_make_in`). On the way
+    out of the block, every file in it goes but those the snapshot being
+    made still wants at hand
+    (:meth:`chartbook.store.PendingSnapshot.at_hand`): one it has written
+    into its own folder is kept no longer, and one whose copy waits for the
+    record stays, as where the bytes are taken from if the earlier
+    snapshot's copy has gone or is damaged by then. With no *staging*, a
+    folder of its own, removed on the way out.
+    """
+    import tempfile
+
+    if staging is None:
+        with tempfile.TemporaryDirectory(prefix=prefix) as scratch:
+            yield scratch
+        return
+    folder = Path(staging) / name
+    folder.mkdir(parents=True, exist_ok=True)
+    yield str(folder)
+    wanted = pending.at_hand() if isinstance(pending, PendingSnapshot) else set()
+    for directory, _, files in os.walk(folder):
+        for file in files:
+            if os.path.realpath(os.path.join(directory, file)) not in wanted:
+                try:
+                    os.remove(os.path.join(directory, file))
+                except OSError:
+                    pass  # it goes with the folder, once the snapshot is written or let go
 
 
 def materialize_in_source(
-    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"], rows=None
+    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"], rows=None,
+    staging: Optional[Path] = None,
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
     """Write each table or query dataframe out as parquet, into the store: a snapshot being made, at ``_chartbook/tables/<name>.parquet``.
 
@@ -634,11 +681,12 @@ def materialize_in_source(
 
     :param rows: What says a record's rows, given the record and the
         parquet file written out (:func:`_rows_of`); nothing by default.
+    :param staging: A folder to write the parquet files out in, which the
+        caller removes once the snapshot is written or let go
+        (:func:`_staged`); by default each is removed as soon as it is put.
     :returns: For each such dataframe, in name order: its local reference,
         its record, and why it was not written out, or None.
     """
-    import tempfile
-
     import duckdb
     import polars as pl
 
@@ -689,7 +737,7 @@ def materialize_in_source(
             found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                           f"{where}: the DuckDB file is not there"))
             continue
-        with tempfile.TemporaryDirectory() as scratch:
+        with _staged(staging, "tables", store, prefix="chartbook-tables-") as scratch:
             out = Path(scratch) / f"{name}.parquet"
             try:
                 # The file is read on one thread: a parallel aggregate of
@@ -1473,7 +1521,7 @@ def label_records(
                 why = f"no snapshot of {where} in the store names such a version"
             elif len(named) > 1:
                 why = f"{len(named)} versions share that start"
-            elif not store.has(named[0][0]):
+            elif not store.has(named[0][0], newest.pipeline):
                 why = "a snapshot names it, and its bytes are not in the store"
             else:
                 why = ""
@@ -1803,10 +1851,12 @@ def plan_removals(
     every = sorted((taken for group, _, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
 
     def newest_holding(hashes: set) -> set:
+        # In each pipeline: a note names bytes and not whose they are, and a read of a pipeline's asset
+        # is handed that pipeline's own newest holder, never another pipeline's copy of the same bytes
         holder: dict = {}
         for taken in every:
             for content_hash in taken.hashes() & hashes:
-                holder[content_hash] = taken
+                holder[(taken.pipeline, content_hash)] = taken
         return {id(taken) for taken in holder.values()}
 
     by_missing = newest_holding(set(hashes_of_missing))
@@ -1917,13 +1967,14 @@ def _holding_labelled(every: list, labelled: dict) -> dict[int, str]:
         at_moment.setdefault((taken.commit, taken.made_at), set()).add((taken.pipeline, taken.subdirectory))
     for (commit, made_at, name, content_hash), why in sorted(labelled.items()):
         of_pipeline = at_moment.get((commit, made_at))
-        holder = None
+        # The newest holder in each pipeline it may be of: a read is handed that pipeline's own, never another's
+        holders: dict = {}
         for taken in every:
             if of_pipeline and (taken.pipeline, taken.subdirectory) not in of_pipeline:
                 continue
             if taken.content().get(name) == content_hash:
-                holder = taken
-        if holder is not None:
+                holders[(taken.pipeline, taken.subdirectory)] = taken
+        for holder in holders.values():
             kept.setdefault(id(holder), why)
     return kept
 
@@ -2471,6 +2522,36 @@ def pipeline_in(directory: Union[str, Path]) -> str:
     return derive_pipeline_id(raw.get("project") or {}, directory)
 
 
+def check_store_takes_one(pipeline: str, store: Optional[Store] = None) -> None:
+    """Refuse a snapshot of a pipeline where the store it would be written to takes none: one laid out as ChartBook 0.5 laid one out.
+
+    Asked of the stores :func:`make` would write it to, with nothing
+    written: for a command that builds first (``chartbook run --snapshot``)
+    to find out before the build, as it finds out that work is uncommitted.
+
+    :param store: As for :func:`make`.
+    :raises StoreError: What the store says of itself
+        (:meth:`chartbook.store.Store.check_writable`): that it has the
+        layout of 0.5, and which command moves it; or that it has no
+        ``store.json`` and holds what such a store holds. Which stores a
+        snapshot goes to, where that cannot be said now (one that is
+        read-only, or cannot be reached), is left for :func:`make` to say.
+    """
+    from chartbook.multi_store import Stores
+
+    if store is None or isinstance(store, Stores):
+        try:
+            targets = (Stores.configured() if store is None else store).for_writing(pipeline, None)
+        except (StoreError, OSError):
+            return
+    else:
+        targets = [store]
+    for target in targets:
+        check = getattr(target, "check_writable", None)
+        if check is not None:
+            check()
+
+
 def make(
     project_dir: Union[str, Path] = ".",
     store: Optional[Store] = None,
@@ -2538,17 +2619,30 @@ def make(
                 from chartbook.catalog_config import route
                 route(pipeline, store_names, stores.catalog)
         targets = stores.for_writing(pipeline, store_names)
+        for target in targets:
+            # A store laid out as ChartBook 0.5 laid one out takes no snapshot: said before the first is written
+            check = getattr(target, "check_writable", None)
+            if check is not None:
+                check()
         # Validate every target before writing the first one. A partial fan-out
         # remains recoverable: repeating the command skips existing snapshots.
         # The lineage is checked in every store, where the pins were read
         # from: a snapshot pinned from a read-only store is written to another
         stood_in = _check_lineage(directory, pipeline, stores, deep)
-        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in)
+        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in, also=tuple(targets[1:]))
         if len(targets) > 1:
-            from chartbook.transfer import copy_snapshot
+            from chartbook.transfer import NotWholeThere, copy_snapshot
             for target in targets[1:]:
                 try:
                     copy_snapshot(report.snapshot, targets[0], target)
+                except NotWholeThere as error:
+                    # That store's own copy of this snapshot lacks a file, and nothing is written over it
+                    raise NotInEveryStore(
+                        f"{error}. The snapshot in {targets[0]} is whole. If a sync is still bringing the file "
+                        f"there, it arrives with the sync. If it is lost for good, that store's copy stays as it "
+                        f"is until a later snapshot of {pipeline} is sent there, and then goes with `chartbook "
+                        f"store gc` there once nothing keeps it."
+                    ) from error
                 except (StoreError, OSError) as error:
                     raise NotInEveryStore(f"Snapshot written to {targets[0]}, but copy to {target} failed: {error}. Rerun the snapshot to finish the remaining copies.") from error
         report.stores = [e.name for e in stores.entries if e.store in targets]
@@ -2585,21 +2679,28 @@ def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> 
 
 
 def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at: Optional[str],
-             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None) -> SnapshotReport:
-    """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`)."""
+             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, also: tuple = ()) -> SnapshotReport:
+    """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`); *also* are the other stores it is then sent to."""
     raw = _read_manifest_file(directory)
     check_within(directory, pipeline)
     check_own_name(directory, pipeline, raw)
+    import tempfile
+
     made_at = made_at or _now()
     pending = store.begin(pipeline, code.commit, made_at, base=directory)
-    try:
-        report = _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in)
-        report.stores = [str(store)]
-        return report
-    except BaseException:
-        # What was put in a snapshot that is not written goes with it
-        pending.discard()
-        raise
+    # What is staged for the snapshot (its documents, its index, a table written out of a DuckDB file) is
+    # kept until the snapshot is written or let go (_staged)
+    with tempfile.TemporaryDirectory(prefix="chartbook-snapshot-") as staging:
+        try:
+            report = _make(
+                directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in, staging=Path(staging), also=also,
+            )
+            report.stores = [str(store)]
+            return report
+        except BaseException:
+            # What was put in a snapshot that is not written goes with it
+            pending.discard()
+            raise
 
 
 def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
@@ -2619,9 +2720,37 @@ def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
             )
 
 
+def _holes_there(other: Store, taken: Snapshot) -> Optional[tuple]:
+    """What another store's own record of one snapshot lacks there: that record, the files, and the store; None where it lacks nothing.
+
+    Its record is found as any is (:func:`find`), by its commit and its
+    folder in the repository, and is this snapshot by its pipeline and its
+    time. A store with no record of it lacks nothing: the snapshot is
+    written there whole. Nor does one that keeps each file once (a bucket),
+    or one that cannot be asked now, whose copy then says what is wrong.
+    """
+    if getattr(type(other), "holes_of", Store.holes_of) is Store.holes_of:
+        return None
+    try:
+        for theirs in find(other, taken.commit, taken.subdirectory):
+            if theirs.pipeline == taken.pipeline and theirs.made_at == taken.made_at and theirs.path is not None:
+                holes = other.holes_of(theirs.path)
+                return (theirs, holes, other) if holes else None
+    except (SnapshotError, StoreError, OSError):
+        pass
+    return None
+
+
 def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
-          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None) -> SnapshotReport:
-    """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written."""
+          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, staging: Optional[Path] = None,
+          also: tuple = ()) -> SnapshotReport:
+    """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written.
+
+    :param staging: A folder for what is staged for the snapshot, which the
+        caller removes once this has returned (:func:`_staged`).
+    :param also: The other stores this run sends the snapshot to: the one
+        it stands on must be whole in each that has a record of it.
+    """
     assets: dict[str, dict] = {}
     held: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
@@ -2683,7 +2812,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     # A dataframe that is a table or a query in a DuckDB file has no file of
     # its own: it is written out as parquet into the store, so that a pin
     # copies it like any file and another pipeline reads it by name
-    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending, rows=rows):
+    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending, rows=rows, staging=staging):
         if "stored" in record:
             held[str(local)] = record.pop("stored")
         assets[str(local)] = record
@@ -2744,7 +2873,15 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     # whose own lockfile has moved, with nothing committed), would otherwise
     # be the one a pin takes. What it was pinned to is part of what a
     # snapshot says, so one whose pins have moved since is not given back
+    # Each that this could stand on is asked whether it is whole: its own files, at the sizes its
+    # record says, one question for each (Store.holes_of), here and in every other store this run
+    # sends it to that has a record of it already (one that has none is sent it whole). The newest
+    # that is whole in each of them is stood on. One that is not is not stood on, nor written to,
+    # since a snapshot's folder is not changed once its record is written; and only where none is
+    # whole is a new one made from the files at hand, the report saying which file the newest of
+    # them lacks, and in which store where that is not this one
     same = None
+    not_whole = None
     rows_first_said, rows_first_count = None, 0  # the one of the same files that says nothing of the rows this one records
     for taken in before:
         if taken.content() != snapshot.content() or _inputs_key(taken.inputs) != _inputs_key(snapshot.inputs):
@@ -2752,15 +2889,25 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         # One made under another ID is not this pipeline's, whose ID has
         # changed since (a remote added, a folder renamed): it gets its own
         if taken.pipeline == snapshot.pipeline and identity_keys(snapshot) <= identity_keys(taken):
-            same = taken
-            break
+            holed = (taken, store.holes_of(taken.path), None) if taken.path is not None else (taken, [], None)
+            for other in also:
+                if holed[1]:
+                    break
+                holed = _holes_there(other, taken) or holed
+            if not holed[1]:
+                same, not_whole = taken, None
+                break
+            not_whole = not_whole or holed
+    if not_whole is not None and not_whole[0].built_by_run:
+        # The bytes are still the ones a run built, from these same pins: the whole one says so too
+        snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
     if same is not None:
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
         # a commit is often tagged after it is built. Or because the store
-        # has lost its index or its documents (its assets were put back
-        # above): an index is made again with the time it is made, so it is
-        # not the same object, and the new snapshot holds both
+        # has lost its index or its documents, where it keeps each file
+        # once (a bucket): an index is made again with the time it is made,
+        # so it is not the same object, and the new snapshot holds both
         # Or the rows of a dataframe, which a snapshot made before rows were hashed does not
         # say, and one made before its entry named its dates says otherwise
         from chartbook import rowhash
@@ -2773,10 +2920,10 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags and says_its_rows
         lost = [
             part["content_hash"] for part in (same.index, same.documents)
-            if part and (not store.has(part["content_hash"]) or store.incomplete(part["content_hash"], part.get("size_bytes")))
+            if part and (not store.has(part["content_hash"], same.pipeline) or store.incomplete(part["content_hash"], part.get("size_bytes"), pipeline=same.pipeline))
         ]
-        # A file put back into this snapshot's own folder, the store having
-        # lost it, is kept only if this snapshot is written
+        # A file the store lacked, which is in this snapshot's own folder by
+        # now (`placed`), is kept only if this snapshot is written
         if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
@@ -2815,12 +2962,12 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     index_skipped = None
     stored = dict(snapshot.stored)
     try:
-        index, stored["index"] = _put_index(_version_index(directory), pending)
+        index, stored["index"] = _put_index(_version_index(directory), pending, staging)
     except Exception as error:  # noqa: BLE001 - whatever the docs build would have raised
         said = str(error).strip()
         index, index_skipped = None, said.splitlines()[0].rstrip(".") if said else type(error).__name__
         stored.pop("index", None)
-    kept_documents, stored["documents"] = _put_documents(directory, documents, pending)
+    kept_documents, stored["documents"] = _put_documents(directory, documents, pending, staging)
     snapshot = dataclasses.replace(snapshot, index=index, documents=kept_documents, stored={k: v for k, v in stored.items() if v})
     path = pending.write(snapshot.to_document())
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
@@ -2842,6 +2989,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         index_column_names=index_names,
         rows_first_said=rows_first_said,
         rows_first_count=rows_first_count,
+        not_whole=not_whole,
     )
 
 
@@ -2963,13 +3111,14 @@ def _version_index(directory: Path) -> dict:
     return index_module.published(built)
 
 
-def _put_index(published: dict, pending: PendingSnapshot) -> tuple[dict, Optional[dict]]:
-    """Put an index in a snapshot being made, as ``_chartbook/index.json``; its record, and where it is kept."""
-    import tempfile
+def _put_index(published: dict, pending: PendingSnapshot, staging: Optional[Path] = None) -> tuple[dict, Optional[dict]]:
+    """Put an index in a snapshot being made, as ``_chartbook/index.json``; its record, and where it is kept.
 
+    :param staging: Where the file is written first (:func:`_staged`).
+    """
     from chartbook import index as index_module
 
-    with tempfile.TemporaryDirectory(prefix="chartbook-index-") as scratch:
+    with _staged(staging, "index", pending, prefix="chartbook-index-") as scratch:
         path = Path(scratch) / INDEX_FILE
         index_module.write_index(published, path)
         stored = pending.put(path, place=f"{OWN_DIR}/{INDEX_FILE}", links=LINKS)
@@ -3183,13 +3332,16 @@ def _copy_regular_file(source: Path, target: Path) -> bool:
     return True
 
 
-def _put_documents(directory: Path, paths: list[str], pending: PendingSnapshot) -> tuple[Optional[dict], Optional[dict]]:
-    """Put a pipeline's documents in a snapshot being made, each at its own path; their record and where they are kept, or None if there are none."""
-    import tempfile
+def _put_documents(
+    directory: Path, paths: list[str], pending: PendingSnapshot, staging: Optional[Path] = None
+) -> tuple[Optional[dict], Optional[dict]]:
+    """Put a pipeline's documents in a snapshot being made, each at its own path; their record and where they are kept, or None if there are none.
 
+    :param staging: Where they are copied first (:func:`_staged`).
+    """
     if not paths:
         return None, None
-    with tempfile.TemporaryDirectory(prefix="chartbook-documents-") as scratch:
+    with _staged(staging, "documents", pending, prefix="chartbook-documents-") as scratch:
         staged = Path(scratch)
         copied = 0
         for relative in paths:
@@ -3296,7 +3448,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         index_record = {**taken.index, "location": {"kind": "file", "path": INDEX_FILE}}
         named.append(taken.index["content_hash"])
     try:
-        missing = [h for h in named if not isinstance(h, str) or not store.has(h)]
+        missing = [h for h in named if not isinstance(h, str) or not store.has(h, taken.pipeline)]
     except ValueError as error:  # a hash that is not one: a record written to mislead
         raise SnapshotError(f"The snapshot of {taken.pipeline} names an object that is not a hash: {error}") from None
     if missing:
@@ -3312,7 +3464,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         if record is not taken.documents and record is not index_record and safe_relative(declared) is None:
             continue  # not laid out at all, and said so below
         if record.get("content_hash") in named:
-            unsynced = not_whole(store, record)
+            unsynced = not_whole(store, record, taken.pipeline)
             if unsynced:
                 raise StoreNotReadyError(
                     f"The snapshot of {taken.pipeline} at {taken.commit[:7]} names {record['content_hash']}, "
@@ -3331,7 +3483,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     # Each document where the store keeps it; a file that is a link, or under one, the store never hands out
-    kept = store.files(taken.documents["content_hash"]).by_relative()
+    kept = store.files(taken.documents["content_hash"], taken.pipeline, snapshot=(taken.commit, taken.made_at)).by_relative()
     for relative in taken.documents.get("files", []):
         plain = plain_name(relative) if isinstance(relative, str) else None
         if plain is None or plain.split("/")[0] == VERSION_FILE:
@@ -3349,7 +3501,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             if (record.get("location") or {}).get("kind") == "file":
                 report.from_index.append(record["id"])
             continue  # shown from the index; a table or query is dealt with below
-        why = _place_asset(record, store, folder)
+        why = _place_asset(record, store, folder, taken)
         if why is not None:
             report.left_out.append((record["id"], why))
             continue
@@ -3368,7 +3520,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             continue
         relative = f"_chartbook/tables/{materialized_name(record)}"
         if data:
-            written = store.files(record["content_hash"], taken.pipeline, name=materialized_name(record)).one.location
+            written = store.files(record["content_hash"], taken.pipeline, name=materialized_name(record), snapshot=(taken.commit, taken.made_at)).one.location
             if not _copy_regular_file(written, folder / relative):
                 continue
         # The manifest names the database; here the table is a parquet file (laid out, or shown from the index)
@@ -3389,7 +3541,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         manifest_path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
     if index_record is not None:
         try:
-            held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
+            held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE, snapshot=(taken.commit, taken.made_at)).one.location
             copied = _copy_regular_file(held, folder / "_chartbook" / INDEX_FILE)
         except StoreError as error:
             copied, error_said = False, str(error)
@@ -3416,8 +3568,8 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     return report
 
 
-def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = None) -> Optional[str]:
-    """Copy one asset's bytes from the store to its path under *folder*; why it was not, if it was not.
+def _place_asset(record: dict, store: Store, folder: Path, of: Snapshot, at: Optional[str] = None) -> Optional[str]:
+    """Copy one asset's bytes from the store to its path under *folder*; why it was not, if it was not: the copy in the snapshot *of* which it is, or in the newest of its pipeline that holds it whole.
 
     The path is the record's, or *at*, the path the manifest declares now,
     for :func:`restore`; either is judged as a record's is
@@ -3446,7 +3598,9 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
         )
     single = not is_glob_pattern(plain) and not record.get("files")
     try:
-        kept = store.files(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None)
+        kept = store.files(
+            record["content_hash"], of.pipeline, name=Path(plain).name if single else None, snapshot=(of.commit, of.made_at),
+        )
     except StoreError as error:
         # A file of it is a link, or not synced yet: the rest of the version is laid out
         return f"the store does not give it: {str(error).rstrip('.')}"
@@ -3485,9 +3639,9 @@ def newest_holder(snapshots: list, store: Store, name: str) -> tuple[Optional[Sn
             continue
         where = f"the newest snapshot holding it, at {taken.commit[:7]},"
         try:
-            if not store.has(content_hash):
+            if not store.has(content_hash, taken.pipeline):
                 return None, f"{where} names bytes the store does not have"
-            unsynced = not_whole(store, record)
+            unsynced = not_whole(store, record, taken.pipeline)
         except (ValueError, TypeError) as error:  # not a hash: a record written to mislead
             return None, f"{where} names an object that is not one: {error}"
         if unsynced:
@@ -3581,7 +3735,7 @@ def restore(
             report.left.append((name, why))
             continue
         record = holder.assets[name]
-        placed = _place_asset(record, store, directory, at=path)
+        placed = _place_asset(record, store, directory, holder, at=path)
         if placed is not None:
             report.left.append((name, placed))
             continue
@@ -3629,7 +3783,7 @@ def _stored_records(taken: Snapshot, store: Store) -> list:
     if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
         return []
     try:
-        held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
+        held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE, snapshot=(taken.commit, taken.made_at)).one.location
         recorded = json.loads(_read_regular_file(held, STORED_INDEX_LIMIT).decode("utf-8"))
     except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
         return []

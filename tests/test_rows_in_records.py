@@ -291,11 +291,12 @@ class TestRowsThatCouldNotBeHashed:
 
 
 class TestAFolderReadFromTheStore:
-    """The store keeps each file once: what stands in for a pin is hashed from there, and has to be the reader's rows."""
+    """A store of ChartBook 0.5 keeps each file once: what stands in for a pin is hashed from there, and has to be the reader's rows."""
 
     def test_two_partitions_that_are_one_file(self, work, store):
         """polars drops a key's column when it writes, so two partitions can be the same bytes: read once for each, with each one's key."""
         from chartbook.resolve import _held
+        from tests.store_of_0_5 import laid_out_as_0_5
 
         directory = work / "regional"
         _write_manifest(
@@ -310,7 +311,10 @@ class TestAFolderReadFromTheStore:
         record = taken.assets["sales"]
         whole = pl.concat([_yields(3).with_columns(region=pl.lit(region)) for region in ("eu", "us")])
         assert record["row_count"] == 12 and record["rows"] == {"2025-12-01/2025-12-03": rowhash.hash_frame(whole, "ds")}
-        kept = rowhash.Table.at(_held(store, dict(record), taken.pipeline))
+        # In a store of this version each partition has its own file; as 0.5 left it, the two are one
+        own = rowhash.Table.at(_held(store, dict(record), taken.pipeline))
+        assert len({str(path) for path in own.inside.values()}) == 2 and own.scan().collect().height == 12
+        kept = rowhash.Table.at(_held(laid_out_as_0_5(store.root), dict(record), taken.pipeline))
         assert len({str(path) for path in kept.inside.values()}) == 1  # one file in the store, for both
         assert kept.scan().collect().height == 12
         assert rowhash.hash_rows(kept, "ds").fields() == {key: record[key] for key in rowhash.FIELDS if key in record}

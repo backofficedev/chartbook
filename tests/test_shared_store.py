@@ -338,7 +338,7 @@ class TestASyncServicesCopies:
         project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
         assert lock.pin(project).problems == []
         store = default_store()
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         copy = note.with_name(f"{note.stem} (1).json")
         shutil.copy(note, copy)  # the service kept the other side as a copy
         stored = json.loads(note.read_text(encoding="utf-8"))
@@ -348,7 +348,7 @@ class TestASyncServicesCopies:
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         assert [root.note for root in plan.elsewhere] == [copy.name] and plan.forget == [project / lock.LOCK_FILE]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--forget-missing"])
-        assert f"(a sync service's copy of a note: what it recorded at its last pin is kept; note {store.root / 'roots' / copy.name})" in result.output
+        assert f"(a sync service's copy of a note: what it recorded at its last pin is kept; note {store.root / '_chartbook' / 'roots' / copy.name})" in result.output
 
     def test_a_copy_that_cannot_be_read_stops_gc_and_names_itself(self, drive):
         """Half a copy may be the only record of the other side's pins: nothing is removed until it is read or gone."""
@@ -359,10 +359,10 @@ class TestASyncServicesCopies:
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         store = default_store()
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         copy = note.with_name(f"{note.stem} (1).json")
         copy.write_text('{"lock', encoding="utf-8", newline="\n")  # half a copy
-        with pytest.raises(StoreError, match=rf"remove roots/{re.escape(copy.name)} if it is a copy nobody needs"):
+        with pytest.raises(StoreError, match=rf"remove _chartbook/roots/{re.escape(copy.name)} if it is a copy nobody needs"):
             lock.plan_gc(store)
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 1 and "Nothing was removed." in result.output
@@ -451,10 +451,10 @@ class TestOnePersonsTwoMachines:
         remove_tree(colleague)
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": mid.commit[:7]}})
         assert lock.pin(forecast).problems == []
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.unlink()  # as an older ChartBook wrote it: named by the path alone
-        (store.root / "roots" / root_name(forecast / lock.LOCK_FILE)).write_text(
+        (store.root / "_chartbook" / "roots" / root_name(forecast / lock.LOCK_FILE)).write_text(
             json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8", newline="\n"
         )
         _forecast(forecast, {"acme/rates": {"commit": old.commit[:7]}})  # git pull
@@ -478,10 +478,10 @@ class TestOnePersonsTwoMachines:
         _forecast(project, {"acme/rates": {"commit": old.commit[:7]}})
         assert lock.pin(project).problems == []
         store = default_store()
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.unlink()  # B pinned with an older ChartBook
-        older = store.root / "roots" / root_name(project / lock.LOCK_FILE)
+        older = store.root / "_chartbook" / "roots" / root_name(project / lock.LOCK_FILE)
         older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8", newline="\n")
         machine("a")
         (project / lock.LOCK_FILE).unlink()
@@ -492,7 +492,7 @@ class TestOnePersonsTwoMachines:
         plan = lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0)
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
-        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root / 'roots' / older.name})" in result.output
+        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root / '_chartbook' / 'roots' / older.name})" in result.output
 
     def test_gc_says_whose_it_is(self, drive, monkeypatch):
         import socket
@@ -508,7 +508,7 @@ class TestOnePersonsTwoMachines:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0
         assert f"{forecast / lock.LOCK_FILE}  (on another machine, machine-b.local: what it recorded at its last pin is kept;" in result.output
-        assert f"note {default_store().root / 'roots'}{os.sep}" in result.output
+        assert f"note {default_store().root / '_chartbook' / 'roots'}{os.sep}" in result.output
         monkeypatch.setattr(socket, "gethostname", lambda: "machine-b.local")  # a machine named as the other is
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert "(noted by machine-b.local under another machine name than this one's now: " in result.output
@@ -589,33 +589,28 @@ class TestStoreInfo:
         assert result.exit_code == 0
         assert "\n  a folder, set by CHARTBOOK_STORE" in result.output
 
-    def test_a_bucket_on_a_machine_without_boto3_is_told_so_here(self, monkeypatch):
-        """Found by a reviewer: `store info` printed the bucket and exited 0, and the
-        `pip install chartbook[s3]` error came only at the first pin or read."""
+    def test_a_bucket_is_said_here_to_be_withdrawn_whether_its_library_is_installed_or_not(self, monkeypatch):
+        """A store in a bucket is withdrawn in ChartBook 0.6: `store info` says the store and the line, makes no client, and exits 1.
+
+        (Until 0.6 this is where a machine heard that boto3 was missing, or
+        that the bucket was a store it could use.)
+        """
         import sys
 
-        monkeypatch.setenv("CHARTBOOK_STORE", "s3://bkt/p")
-        monkeypatch.setitem(sys.modules, "boto3", None)
-        result = CliRunner().invoke(main, ["store", "info"])
-        assert result.exit_code == 1
-        assert "Store: s3://bkt/p" in result.output and "an S3 bucket, set by CHARTBOOK_STORE" in result.output
-        assert "needs boto3, which is not installed: pip install chartbook[s3]" in result.output
-        assert "Cache:" not in result.output and "Traceback" not in result.output
-
-    def test_a_bucket_with_its_library_is_a_store_the_machine_can_use(self, monkeypatch):
-        pytest.importorskip("botocore")
-        import sys
-
-        class FakeBoto3:
+        class NoClient:
             @staticmethod
             def client(service, **arguments):
-                return object()
+                raise AssertionError("a client was made for a store that is not opened")
 
         monkeypatch.setenv("CHARTBOOK_STORE", "s3://bkt/p")
-        monkeypatch.setitem(sys.modules, "boto3", FakeBoto3)
-        result = CliRunner().invoke(main, ["store", "info"])
-        assert result.exit_code == 0, result.output
-        assert "an S3 bucket, set by CHARTBOOK_STORE" in result.output and "Cache:" in result.output
+        for boto3 in (None, NoClient):
+            monkeypatch.setitem(sys.modules, "boto3", boto3)
+            result = CliRunner().invoke(main, ["store", "info"])
+            assert result.exit_code == 1
+            assert "Store: s3://bkt/p" in result.output and "an S3 bucket, set by CHARTBOOK_STORE" in result.output
+            assert "a store in a bucket is not available in ChartBook 0.6" in result.output.replace("\n", " ")
+            assert "Cache:" not in result.output and "Traceback" not in result.output and "pip install" not in result.output
+
 
     def test_a_kind_nothing_provides_is_said(self, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_STORE", "gs://bkt/p")
@@ -830,7 +825,7 @@ class TestAMachineThatOnlyReads:
     def test_check_writes_no_note(self, reader):
         """`pin --check` only checks: the note that keeps these pins from gc is left to `run --frozen` and reads."""
         work, machine, rates, old, project, clone = reader
-        roots = default_store().root / "roots"
+        roots = default_store().root / "_chartbook" / "roots"
         before = sorted(p.name for p in roots.iterdir())
         result = CliRunner().invoke(main, ["pin", "--check", "--project-dir", str(clone)])
         assert result.exit_code == 0
@@ -855,7 +850,7 @@ class TestAMachineThatOnlyReads:
     def test_the_old_name_is_refused_and_leaves_no_note(self, reader, words):
         """`pin --frozen` was this check through 0.5.1, and also left the note. It is gone: `pin --check` checks, and `run --frozen` and a read leave the note."""
         work, machine, rates, old, project, clone = reader
-        roots = default_store().root / "roots"
+        roots = default_store().root / "_chartbook" / "roots"
         before = sorted(p.name for p in roots.iterdir())
         result = CliRunner().invoke(main, [*words, "--project-dir", str(clone)])
         assert result.exit_code == 2
@@ -884,7 +879,7 @@ class TestAMachineThatOnlyReads:
     def test_run_frozen_says_when_the_note_cannot_be_written_and_builds(self, reader):
         work, machine, rates, old, project, clone = reader
         _with_a_build(clone)
-        roots = default_store().root / "roots"
+        roots = default_store().root / "_chartbook" / "roots"
         roots.chmod(0o555)  # a store this machine may only read
         try:
             result = _runner().invoke(main, ["run", "--frozen", "--project-dir", str(clone)])
@@ -952,7 +947,7 @@ class TestACloneThatKeptItsIdentity:
         assert get_machine_id() == first
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
-        (note,) = (default_store().root / "roots").glob("*.json")
+        (note,) = (default_store().root / "_chartbook" / "roots").glob("*.json")
         assert note.name == root_name(forecast / lock.LOCK_FILE, json.loads(note.read_text(encoding="utf-8"))["machine"])
 
 
@@ -996,7 +991,7 @@ class TestTheStoreShrinks:
         s3 = self._rates(rates, 3.0, "2020-03-01T00:00:00.000000Z")
         self._rates(rates, 4.0, None)
         store = default_store()
-        old_note = store.root / "roots" / root_name("/gone/chartbook.lock")
+        old_note = store.root / "_chartbook" / "roots" / root_name("/gone/chartbook.lock")
         old_note.parent.mkdir(parents=True, exist_ok=True)
         old_note.write_text(json.dumps({"lockfile": "/gone/chartbook.lock", "hashes": sorted(s2.asset_hashes())}), encoding="utf-8", newline="\n")
         plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
@@ -1131,7 +1126,7 @@ class TestWhatGcReadsAndPrints:
         machine("b")
         forecast = _forecast(work / "b" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
-        (note,) = (default_store().root / "roots").glob("*.json")
+        (note,) = (default_store().root / "_chartbook" / "roots").glob("*.json")
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.write_text(json.dumps({**stored, "host": "evil\x1b[2J\nhost", "lockfile": stored["lockfile"] + "\x07"}), encoding="utf-8", newline="\n")
         machine("a")
@@ -1447,7 +1442,7 @@ class TestRunnersThatShareAName:
         work, machine, rates = drive
         snapshot.make(rates)
         project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
-        roots = default_store().root / "roots"
+        roots = default_store().root / "_chartbook" / "roots"
         roots.mkdir(parents=True, exist_ok=True)
         roots.chmod(0o555)
         try:
@@ -1472,10 +1467,10 @@ class TestAnOldNoteInThisUsersOwnStore:
         from chartbook.store import root_name
 
         store = default_store()
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.unlink()
-        older = store.root / "roots" / root_name(project / lock.LOCK_FILE)
+        older = store.root / "_chartbook" / "roots" / root_name(project / lock.LOCK_FILE)
         older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8", newline="\n")
         return older
 
@@ -1579,7 +1574,7 @@ class TestAnOldNoteGivesWay:
     def _old_note(lockfile: Path, hashes) -> Path:
         from chartbook.store import root_name
 
-        older = default_store().root / "roots" / root_name(lockfile)
+        older = default_store().root / "_chartbook" / "roots" / root_name(lockfile)
         older.write_text(json.dumps({"lockfile": str(lockfile), "hashes": sorted(hashes)}), encoding="utf-8", newline="\n")
         return older
 
@@ -1621,7 +1616,7 @@ class TestAnOldNoteGivesWay:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0, result.output
         assert result.output.count(str(project / lock.LOCK_FILE)) == 1, result.output
-        assert f"roots{os.sep}{root_name(project / lock.LOCK_FILE)}" in result.output
+        assert f"_chartbook{os.sep}roots{os.sep}{root_name(project / lock.LOCK_FILE)}" in result.output
         lock.run_gc(lock.plan_gc(default_store()), default_store())
         assert not older.exists() and len(default_store().roots()) == 1
 
@@ -1806,7 +1801,7 @@ class TestADirectoryOfMixedNames:
         snapshot.make(rates)
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
-        (half,) = [p for p in (work / "Google Drive" / "chartbook-store").rglob(second) if "pipelines" in p.parts]
+        (half,) = [p for p in (work / "Google Drive" / "chartbook-store").rglob(second) if "snapshots" in p.parts]
         whole = half.read_bytes()
         half.chmod(0o644)
         kept = len(whole) // 2 if written == "first half" else 0
@@ -1922,7 +1917,7 @@ class TestNoPasswordOfAStoreAtAPath:
         shutil.copytree(forecast, clone)
         monkeypatch.setenv("CHARTBOOK_STORE", "//alice:s3cr3tpw@fileserver/share/store")
 
-        def unreadable(self, content_hash):
+        def unreadable(self, content_hash, pipeline=None):
             raise PermissionError(13, "Permission denied", str(self.root / "objects"))
 
         monkeypatch.setattr(FolderStore, "has", unreadable)
@@ -1975,7 +1970,7 @@ class TestWhatGcCannotRemove:
         assert "Traceback" not in result.output and isinstance(result.exception, SystemExit)
         assert "Removed 2 snapshot(s) and " in result.output
         assert "Error: 1 thing(s) could not be removed:" in result.output
-        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/pipelines/" in result.output
+        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/snapshots/" in result.output
         assert "Operation not permitted. It is another user's, most likely" in result.output
         assert "its owner removes it" in result.output and "write permission on it and on the folder holding it" in result.output
         assert held.is_file() and not their.exists()
@@ -1999,7 +1994,7 @@ class TestWhatGcCannotRemove:
                 lock.run_gc(plan, store)
             ((what, why),) = raised.value.failures
             assert what == f"the object {first.assets['treasury']['content_hash']}"
-            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/pipelines/")
+            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/snapshots/")
             assert "Operation not permitted" in why and "its owner removes it" in why
             assert raised.value.removed_snapshots == 2 and raised.value.removed >= 1
             assert held.is_file() and not their.exists()
@@ -2039,7 +2034,7 @@ class TestWhatGcCannotRemove:
             return unlink(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "unlink", refused)
-        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(store))}/pipelines/.*: Permission denied\. It is another user's"):
+        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(store))}/snapshots/.*: Permission denied\. It is another user's"):
             store.remove_snapshot(taken.path)
 
 
@@ -2128,12 +2123,12 @@ class TestANoteOrARecordHalfSynced:
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         store = default_store()
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         note.write_text('{"lockfile": "/x"}', encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="not a note this version of ChartBook reads") as raised:
             lock.plan_gc(store)
         assert "sync that has not finished" not in str(raised.value)
-        assert f"remove roots/{note.name}" in str(raised.value)
+        assert f"remove _chartbook/roots/{note.name}" in str(raised.value)
 
     def test_an_empty_note_says_to_wait_for_the_sync(self, drive):
         work, machine, rates = drive
@@ -2141,11 +2136,11 @@ class TestANoteOrARecordHalfSynced:
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         store = default_store()
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         note.write_text("", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match=r"the file is empty\. A sync that has not finished is the likeliest cause") as raised:
             lock.plan_gc(store)
-        assert f"remove roots/{note.name}" in str(raised.value) and "Nothing is removed from the store until it is read or gone" in str(raised.value)
+        assert f"remove _chartbook/roots/{note.name}" in str(raised.value) and "Nothing is removed from the store until it is read or gone" in str(raised.value)
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 1 and "run this again once it has finished" in result.output and "Nothing was removed." in result.output
         note.write_text('{"lock', encoding="utf-8", newline="\n")  # half of it

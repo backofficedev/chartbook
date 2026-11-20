@@ -16,8 +16,7 @@ ChartBook is meant to be useful on one laptop with nothing but `pip install char
 
 Several machines share by sharing the store: point each one at the same folder, on a network drive
 or in a synced folder such as Google Drive, Dropbox or OneDrive (`CHARTBOOK_STORE`, or `[store] url`
-in the settings; see {doc}`reference/configuration`). A bucket in S3 works the same way, with
-`pip install chartbook[s3]`.
+in the settings; see {doc}`reference/configuration`).
 
 The work now is to make this smooth from end to end, for one person on one machine first.
 
@@ -64,6 +63,11 @@ the commands are fewer to learn: `chartbook run` builds, checks what it built an
 of committed work; `chartbook pin --update` takes newer data; `chartbook catalog open` shows it all
 ({design}`one-command`).
 
+A store in a bucket is withdrawn in this version. 0.6.0 lays a store out anew (complete snapshots
+and increments), and a bucket has not been brought to that layout: a command that meets one stops
+and says so, and says to use a store in a folder. The bucket is as it was, and 0.5 still reads and
+writes it.
+
 ## Experimental: Databricks
 
 A dataframe can be a table or a query in a Databricks SQL warehouse
@@ -77,6 +81,11 @@ Reading works: `data.load()`, `data.sql()`, `data.ref()`, and the site's pages f
 What another pipeline cannot do yet is pin a Databricks table.
 
 ## Next, to research
+
+**A store in a bucket, brought to the layout of 0.6.** Complete snapshots and increments in a
+bucket, and a move of an existing bucket to that layout, as `chartbook store migrate` moves a
+folder. It waited because the priority is one person on one machine, and a store in a folder: one
+on a network drive or in a synced folder is already shared between machines.
 
 **`chartbook run` builds what is not in your store.** From 0.6.0 a run that reads a pipeline your
 store does not have says which pipelines to build, in order, with the commands. The next step is

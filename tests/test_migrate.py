@@ -220,8 +220,9 @@ class TestMigrate:
         said = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert said.exit_code == 0, said.output
         assert "Moved." in said.output and FolderStore(root).verify() == []
-        again = CliRunner().invoke(main, ["store", "migrate"])
-        assert again.exit_code == 0 and "nothing to move" in again.output
+        # What it is moved to is the layout of 0.3 to 0.5: the same command, run again, moves that one on
+        again = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
+        assert again.exit_code == 0 and "has the layout of ChartBook 0.5: " in again.output and "Nothing was moved." in again.output
 
 
 class TestWhatTheReviewFound:
@@ -353,14 +354,28 @@ class TestWhatTheThirdReviewFound:
         for name in ("rates", "parts", "years", "documents", "rates_2", "parts_2", "pinned"):
             assert store.has(hashes[name]), name
 
-    def test_a_store_moved_whose_store_json_is_lost_is_not_refused(self, old_store, tmp_path):
-        """Found by a review: the record left for 0.2 was taken for 0.2's folders, and nothing could write."""
+    def test_a_store_moved_whose_store_json_is_lost_is_not_taken_for_one_of_0_2(self, old_store, tmp_path):
+        """Found by a review: the record left for 0.2 was taken for 0.2's folders.
+
+        Moved, it is a store of 0.5, which this ChartBook reads and does not
+        write: with its store.json lost it is still that for every purpose.
+        It is read, a write of data says that it has no store.json and what was
+        found (not that it is a store of 0.2), a note of a lockfile goes where 0.5 kept
+        them, and no store.json of this version's layout is written over it.
+        """
         root, hashes = old_store
         migrate.run(root)
         (root / "store.json").unlink()  # a sync that has not brought it yet
         (tmp_path / "new.txt").write_bytes(b"new")
-        FolderStore(root).put(tmp_path / "new.txt")
-        assert json.loads((root / "store.json").read_text(encoding="utf-8")) == {"schema": "chartbook/store/v2"}
+        store = FolderStore(root)
+        assert not holds_v1(root) and store.earlier_layout()
+        assert store.has(hashes["rates"]) and len(snapshot.readable_snapshots(store)[0]) == 3
+        with pytest.raises(StoreError, match=r"has no store.json, and holds a pipelines/ folder with snapshots or objects in it"):
+            store.put(tmp_path / "new.txt")
+        noted = len(list((root / "roots").iterdir()))
+        store.add_root(tmp_path / "chartbook.lock", [hashes["rates"]])
+        assert len(list((root / "roots").iterdir())) == noted + 1
+        assert not (root / "store.json").exists() and not (root / "_chartbook").exists()
         assert not migrate.plan(root).needed
 
 
@@ -513,11 +528,37 @@ class TestWhatTheFourthReviewFound:
 
 
 class TestWhatTheFifthReviewFound:
-    """gc refuses a store a migrate has not finished: what it refuses, a migrate must be able to clear."""
+    """gc refuses a store a migrate has not finished: what it refuses, a migrate must be able to clear.
+
+    These tests ran ``store gc --dry-run`` after the migrate and asked for
+    exit 0. That cannot be asked any more, and it is not for want of trying:
+    a store moved from 0.2 has the layout of 0.5, which this ChartBook reads
+    and removes nothing from, so gc stops in it whatever the migrate left,
+    until ``store migrate`` moves a store of 0.5 to this version's layout
+    (the next step of ``docs_src/design/snapshots-and-increments.md``).
+    What they hold instead is the thing they were written for, asked
+    directly: the gate a removal goes through first
+    (``FolderStore._check_migrated``) is shut before the migrate and open
+    after it, and gc's own words are then those of a store of 0.5 and not
+    those of a move it takes for unfinished. A gc run to its end after a
+    migrate comes back with the move of a store of 0.5.
+    """
 
     @staticmethod
     def _store(root: Path, *args: str):
         return CliRunner().invoke(main, ["store", *args], env={"CHARTBOOK_STORE": str(root)})
+
+    def _gc_stops_only_for_the_layout_of_0_5(self, root: Path) -> None:
+        """The migrate left nothing a removal takes for a move unfinished; gc stops, and only because the store is of 0.5."""
+        FolderStore(root)._check_migrated()  # raises if the folders of 0.2, or a journal, are still taken to be there
+        said = self._store(root, "gc", "--dry-run")
+        assert said.exit_code == 1 and "has not finished moving" not in said.output, said.output
+        assert said.output.splitlines() == [
+            f"Error: The store at {FolderStore(root)} has the layout of ChartBook 0.5, which this ChartBook reads and "
+            f"does not write. `chartbook store migrate` moves it to this version's; an earlier ChartBook will not read "
+            f"it afterwards.",
+            "Nothing was removed.",
+        ]
 
     @pytest.mark.parametrize("left", [
         "objects/",
@@ -537,11 +578,10 @@ class TestWhatTheFifthReviewFound:
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("{}", encoding="utf-8")
-        if self._store(root, "gc", "--dry-run").exit_code != 0:
+        if "has not finished moving" in self._store(root, "gc", "--dry-run").output:
             said = self._store(root, "migrate", "--yes")
             assert said.exit_code == 0, said.output
-        said = self._store(root, "gc", "--dry-run")
-        assert said.exit_code == 0, said.output
+        self._gc_stops_only_for_the_layout_of_0_5(root)
         store = FolderStore(root)
         assert store.verify() == [] and all(store.has(content_hash) for content_hash in hashes.values())
 
@@ -560,11 +600,14 @@ class TestWhatTheFifthReviewFound:
         root, hashes = old_store
         migrate.run(root)
         (root / "tmp" / "migrate.jsonl").write_text('{"from": "objects/x", "to": "pipelines/y"}\n', encoding="utf-8")
-        assert self._store(root, "gc", "--dry-run").exit_code != 0
+        said = self._store(root, "gc", "--dry-run")
+        assert said.exit_code != 0 and "has not finished moving" in said.output
+        with pytest.raises(StoreError, match="has not finished moving"):
+            FolderStore(root)._check_migrated()
         found = migrate.plan(root)
         assert found.needed and found.unfinished
         migrate.run(root)
-        assert self._store(root, "gc", "--dry-run").exit_code == 0
+        self._gc_stops_only_for_the_layout_of_0_5(root)
         _all_there(root, hashes)
 
     def test_a_0_2_object_come_after_a_switch_is_moved_not_removed(self, old_store, tmp_path, monkeypatch):

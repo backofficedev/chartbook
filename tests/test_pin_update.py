@@ -152,12 +152,12 @@ class TestPinUpdate:
             """Every file of the lockfile's folder and of the store's notes, by its bytes."""
             return {
                 str(path): path.read_bytes()
-                for top in (consumer, store.root / "roots") for path in sorted(top.rglob("*"))
+                for top in (consumer, store.root / "_chartbook" / "roots") for path in sorted(top.rglob("*"))
                 if path.is_file() and ".git" not in path.parts
             }
 
         # A note of this lockfile from a pin before, which a check that left one would write again
-        (note,) = (store.root / "roots").iterdir()
+        (note,) = (store.root / "_chartbook" / "roots").iterdir()
         note.unlink()
         before = written()
         result = CliRunner().invoke(main, ["pin", "--check"])
@@ -206,7 +206,7 @@ class TestTheOldFlag:
 
     @pytest.mark.parametrize("words", [["pin", "--frozen"], ["pin", "--check", "--frozen"], ["pin", "--frozen", "--project-dir", "."]])
     def test_says_what_does_each_half_of_it(self, consumer, store, words):
-        notes = sorted(path.name for path in (store.root / "roots").iterdir())
+        notes = sorted(path.name for path in (store.root / "_chartbook" / "roots").iterdir())
         result = CliRunner().invoke(main, words)
         assert result.exit_code == 2
         assert (
@@ -214,7 +214,7 @@ class TestTheOldFlag:
             "here, and writes nothing; `chartbook run --frozen` builds from the lockfile, and leaves the store's note that "
             "this machine reads these pins."
         ) in result.output.splitlines()
-        assert sorted(path.name for path in (store.root / "roots").iterdir()) == notes
+        assert sorted(path.name for path in (store.root / "_chartbook" / "roots").iterdir()) == notes
 
     def test_help_offers_update_and_check_and_not_it(self):
         said = CliRunner().invoke(main, ["pin", "--help"]).output

@@ -1,9 +1,11 @@
-"""A version of a dataset whose files the store keeps in several snapshot folders is read where they are.
+"""A version of a dataset whose files a store keeps in several snapshot folders is read where they are.
 
-The store keeps each file once, usually in the first snapshot that had it, so a
+A store of ChartBook 0.5 keeps each file once, usually in the first snapshot that had it, so a
 dataset that grew by a year between two snapshots has its files in two
 folders. Nothing gathers them into one folder on this machine: readers
-take the list of files (``docs_src/design/plan-data-reads.md``).
+take the list of files (``docs_src/design/plan-data-reads.md``). This ChartBook writes every snapshot
+complete, and reads a store of 0.5 as it is: the store here is laid out as 0.5 left it
+(``tests/store_of_0_5.py``).
 """
 
 import os
@@ -21,6 +23,7 @@ from chartbook.cli import main
 from chartbook.errors import NoSinglePathError
 from chartbook.store import FolderStore
 from tests.fixtures import commit_pipeline
+from tests.store_of_0_5 import laid_out_as_0_5
 
 
 @pytest.fixture
@@ -52,7 +55,7 @@ def _write_year(folder: Path, year: int, values: list) -> None:
 
 @pytest.fixture
 def grown(work, store, cache):
-    """An upstream whose Hive dataset grew by a year between two snapshots, and a downstream pinned to the second."""
+    """An upstream whose Hive dataset grew by a year between two snapshots, in a store of 0.5, and a downstream pinned to the second."""
     news = work / "news"
     news.mkdir()
     (news / "chartbook.toml").write_text(
@@ -67,9 +70,12 @@ def grown(work, store, cache):
     )
     _write_year(news, 2023, [1, 2])
     commit_pipeline(news)
-    first = snapshot.make(news, store=store).snapshot
+    snapshot.make(news, store=store)
     _write_year(news, 2024, [3])
-    second = snapshot.make(news, store=store).snapshot
+    snapshot.make(news, store=store)
+    # As ChartBook 0.5 left it: each file once, so the second snapshot's first year is in the first one's folder
+    old = laid_out_as_0_5(store.root)
+    first, second = sorted(snapshot.all_snapshots(old), key=lambda taken: taken.made_at)
     assert second.path != first.path
     forecast = work / "forecast"
     forecast.mkdir()
@@ -77,8 +83,14 @@ def grown(work, store, cache):
         tomli_w.dumps({"project": {"id": "forecast"}, "dependencies": {"acme/news": {"path": "../news"}}}),
         encoding="utf-8", newline="\n",
     )
-    assert lock.pin(forecast, store).problems == []
+    assert lock.pin(forecast, old).problems == []
     return news, forecast, first, second
+
+
+@pytest.fixture
+def old(grown, store):
+    """The store of ``grown``, opened again now that it is laid out as ChartBook 0.5 left it."""
+    return FolderStore(store.root)
 
 
 def _snapshot_folder(taken) -> Path:
@@ -86,9 +98,9 @@ def _snapshot_folder(taken) -> Path:
 
 
 class TestADatasetSpreadOverTwoSnapshots:
-    def test_the_store_keeps_the_first_year_in_the_first_snapshots_folder(self, grown, store):
+    def test_the_store_keeps_the_first_year_in_the_first_snapshots_folder(self, grown, old):
         news, forecast, first, second = grown
-        kept = store.files(second.assets["articles"]["content_hash"])
+        kept = old.files(second.assets["articles"]["content_hash"])
         assert [f.relative for f in kept.files] == ["year=2023/part-0.parquet", "year=2024/part-0.parquet"]
         assert kept.files[0].location == _snapshot_folder(first) / "_data" / "articles" / "year=2023" / "part-0.parquet"
         assert kept.files[1].location == _snapshot_folder(second) / "_data" / "articles" / "year=2024" / "part-0.parquet"
@@ -112,9 +124,9 @@ class TestADatasetSpreadOverTwoSnapshots:
         assert counted["year"].to_list() == [2023, 2024] and counted["n"].to_list() == [2, 1]
         assert data.ref("news:articles", project_dir=forecast).startswith("read_parquet([")
 
-    def test_a_folder_of_tsv_files_is_read_as_tsv_wherever_each_is_kept(self, grown, store):
+    def test_a_folder_of_tsv_files_is_read_as_tsv_wherever_each_is_kept(self, grown, old):
         news, forecast, first, second = grown
-        kept = store.files(second.assets["log"]["content_hash"])
+        kept = old.files(second.assets["log"]["content_hash"])
         assert [f.relative for f in kept.files] == ["part-2023.tsv", "part-2024.tsv"] and not kept.in_place()
         frame = data.load("news:log", project_dir=forecast).collect()
         assert frame.columns == ["n", "m"] and sorted(frame["m"].to_list()) == [10, 20, 30]
@@ -137,10 +149,10 @@ class TestADatasetSpreadOverTwoSnapshots:
         assert report["n_rows"] == 3 and report["file_type"] == "PARQUET"
         assert report["file_size_bytes"] == sum(Path(where).stat().st_size for where in location.inside.values())
 
-    def test_files_lists_each_where_it_is_kept(self, grown, store):
+    def test_files_lists_each_where_it_is_kept(self, grown, old):
         news, forecast, first, second = grown
         found = data.files("news:articles", project_dir=forecast)
-        assert found == [f.location for f in store.files(second.assets["articles"]["content_hash"]).files]
+        assert found == [f.location for f in old.files(second.assets["articles"]["content_hash"]).files]
         assert {p.parents[3] for p in found} == {_snapshot_folder(first), _snapshot_folder(second)}
         assert assets.files("news:articles", project_dir=forecast) == found
         table = assets.index("news:articles", project_dir=forecast).collect()
@@ -171,33 +183,33 @@ class TestADatasetSpreadOverTwoSnapshots:
         written = [p for p in cache.rglob("*") if p.is_file()] if cache.exists() else []
         assert not any(p.suffix == ".parquet" for p in written), written
 
-    def test_a_version_is_laid_out_from_both_folders(self, grown, store, work):
+    def test_a_version_is_laid_out_from_both_folders(self, grown, old, work):
         news, forecast, first, second = grown
-        laid = snapshot.materialize(second, work / "laid", store)
+        laid = snapshot.materialize(second, work / "laid", old)
         assert (work / "laid" / "_data" / "articles" / "year=2023" / "part-0.parquet").read_bytes() == (
             _snapshot_folder(first) / "_data" / "articles" / "year=2023" / "part-0.parquet"
         ).read_bytes()
         assert (work / "laid" / "_data" / "articles" / "year=2024" / "part-0.parquet").is_file()
         assert laid.left_out == []
 
-    def test_restore_puts_both_years_back(self, grown, store):
+    def test_restore_puts_both_years_back(self, grown, old):
         import shutil
 
         news, forecast, first, second = grown
         shutil.rmtree(news / "_data" / "articles")
-        report = snapshot.restore(news, ["articles"], store)
+        report = snapshot.restore(news, ["articles"], old)
         assert [name for name, *_ in report.put_back] == ["articles"] and report.left == []
         assert pl.read_parquet(news / "_data" / "articles", hive_partitioning=True).shape == (3, 2)
 
-    def test_copying_to_another_store_carries_every_file(self, grown, store, work):
+    def test_copying_to_another_store_carries_every_file(self, grown, old, work):
         from chartbook.transfer import copy_snapshot
 
         news, forecast, first, second = grown
         target = FolderStore(work / "other")
-        copy_snapshot(second, store, target)
+        copy_snapshot(second, old, target)
         content_hash = second.assets["articles"]["content_hash"]
         assert {f.relative: f.location.read_bytes() for f in target.files(content_hash).files} == {
-            f.relative: f.location.read_bytes() for f in store.files(content_hash).files
+            f.relative: f.location.read_bytes() for f in old.files(content_hash).files
         }
         assert target.verify() == []
 
@@ -270,7 +282,8 @@ class TestWhatTheFinalReviewFound:
             tomli_w.dumps({"project": {"id": "reader"}, "dependencies": {"acme/news": {"path": "../news"}}}),
             encoding="utf-8", newline="\n",
         )
-        assert lock.pin(reader, store).problems == []
+        # As 0.5 left it, so that the dataset is spread over the two snapshots' folders
+        assert lock.pin(reader, laid_out_as_0_5(store.root)).problems == []
         own = data.sql("select n from {tagged} order by n", project_dir=news).collect()
         theirs = data.sql("select n from {news:tagged} order by n", project_dir=reader).collect()
         assert own["n"].to_list() == theirs["n"].to_list() == [1, 2]

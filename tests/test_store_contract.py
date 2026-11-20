@@ -40,6 +40,11 @@ def a_file(tmp_path) -> Path:
 COMMIT = "a" * 40
 
 
+def _pipelines(store) -> str:
+    """The folder a store keeps its pipelines' folders under: a folder store's own, and a bucket's, which is laid out as ChartBook 0.5 laid a store out."""
+    return "snapshots" if isinstance(store, FolderStore) else "pipelines"
+
+
 class TestObjects:
     def test_put_has_get_delete(self, store, a_file):
         stored = store.put(a_file)
@@ -128,7 +133,7 @@ class TestSnapshotRecords:
 
 
 class TestSnapshotFolders:
-    """A snapshot is a folder in its pipeline's folder: its files at their places, each kept once, its record last."""
+    """A snapshot is a folder in its pipeline's folder: its files at their places, its record last."""
 
     @staticmethod
     def _pipeline(tmp_path, files: dict) -> Path:
@@ -161,7 +166,8 @@ class TestSnapshotFolders:
         assert not store.has(one.content_hash)  # a snapshot once its record is written, not before
         record = pending.write(self._record(pending, COMMIT, rates=one, parts=many))
         assert store.all_snapshot_files() == [Path(record)] and store.snapshot_commits() == {COMMIT}
-        here = "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa"
+        # A folder store keeps the pipelines' folders under snapshots/; a bucket has the layout of 0.5 still
+        here = f"{_pipelines(store)}/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa"
         assert store.files_of(one.content_hash) == [(f"{here}/_data/rates.parquet", 7)]
         assert store.has(one.content_hash) and store.has(many.content_hash)
         assert store.files(one.content_hash).one.location.read_bytes() == b"rates-1"
@@ -169,7 +175,8 @@ class TestSnapshotFolders:
         assert store.incomplete(one.content_hash, 7) is None and store.incomplete(many.content_hash, 2) is None
         assert store.verify() == []
 
-    def test_each_file_is_kept_once(self, store, tmp_path):
+    def test_a_later_snapshot_holds_what_did_not_change_as_well(self, store, tmp_path):
+        """Where its files are kept is the store's own business: a folder store writes each snapshot complete, and a bucket keeps each file once."""
         folder = self._pipeline(tmp_path, {"_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
         first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
         put = first.put(folder / "_data" / "parts")
@@ -178,19 +185,26 @@ class TestSnapshotFolders:
         later = "b" * 40
         second = store.begin("acme/rates", later, "2026-10-17T01:02:03.000000Z", base=folder)
         again = second.put(folder / "_data" / "parts")
-        assert [entry.get("kept_in") for entry in again.stored["files"]] == [
-            "2026-10-16T010203Z_aaaaaaaaaaaa", "2026-10-16T010203Z_aaaaaaaaaaaa", "2026-10-17T010203Z_bbbbbbbbbbbb",
-        ]
+        old, new = "2026-10-16T010203Z_aaaaaaaaaaaa", "2026-10-17T010203Z_bbbbbbbbbbbb"
+        complete = isinstance(store, FolderStore)
+        assert [entry.get("kept_in") for entry in again.stored["files"]] == ([new, new, new] if complete else [old, old, new])
+        assert not any("kept_as" in entry for entry in again.stored["files"])
         second.write(self._record(second, later, parts=again))
+        top = f"{_pipelines(store)}/acme+rates"
         assert {name for name, _ in store.files_of(again.content_hash)} == {
-            "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa/_data/parts/a.txt",
-            "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa/_data/parts/b.txt",
-            "pipelines/acme+rates/2026-10-17T010203Z_bbbbbbbbbbbb/_data/parts/c.txt",
+            f"{top}/{new if complete else old}/_data/parts/a.txt",
+            f"{top}/{new if complete else old}/_data/parts/b.txt",
+            f"{top}/{new}/_data/parts/c.txt",
         }
         # Handed to a reader as its files, each where it is kept: nothing is gathered into one folder
         kept = store.files(again.content_hash)
         assert {f.relative: f.location.read_bytes() for f in kept.files} == {"a.txt": b"a", "b.txt": b"b", "c.txt": b"c"}
-        assert not kept.in_place()
+        if complete:
+            assert kept.in_place()  # every file of it in the snapshot's own folder, and the first one's left as it was
+            assert sorted(p.name for p in (store.root / top / old / "_data" / "parts").iterdir()) == ["a.txt", "b.txt"]
+            assert sorted(p.name for p in (store.root / top / new / "_data" / "parts").iterdir()) == ["a.txt", "b.txt", "c.txt"]
+        else:
+            assert not kept.in_place()
         assert store.verify() == []
 
     def test_one_not_written_leaves_nothing(self, store, tmp_path):
@@ -252,15 +266,19 @@ class TestTheFactory:
         with pytest.raises(ValueError, match="is a gs:// store, and nothing provides one.*entry point named 'gs'"):
             store_module.store_for_url("gs://bucket/prefix")
 
-    def test_the_s3_store_is_found_by_its_entry_point(self, tmp_path, monkeypatch):
+    def test_the_s3_store_is_still_at_its_entry_point_and_a_url_no_longer_opens_it(self, tmp_path, monkeypatch):
+        """Withdrawn in 0.6: the class and its entry point stay, and a URL that names a bucket is refused (tests/test_bucket_withdrawn.py)."""
         pytest.importorskip("boto3")
         from chartbook.stores.s3 import S3Store
 
         store_module._plugin_store_class.cache_clear()
+        assert store_module._plugin_store_class("s3") is S3Store
+        with pytest.raises(store_module.StoreNotAvailableError):
+            store_module.store_for_url("s3://chartbook-test/anywhere")
         monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
         with mocked_s3(monkeypatch):
-            found = store_module.store_for_url("s3://chartbook-test/anywhere")
-        assert isinstance(found, S3Store) and str(found) == "s3://chartbook-test/anywhere"
+            found = S3Store("s3://chartbook-test/anywhere")  # made directly, as its own tests make it
+        assert str(found) == "s3://chartbook-test/anywhere"
         assert found.cache == tmp_path / "cache" / "s3" / "chartbook-test" / "anywhere"
 
     def test_a_plugin_is_found_by_its_scheme(self, monkeypatch):
@@ -313,7 +331,9 @@ class TestWhatTheThirdReviewFound:
         store.tidy()
         assert made.is_dir()
 
-    def test_two_snapshots_putting_back_one_file_both_succeed(self, tmp_path):
+    def test_two_snapshots_begun_over_a_lost_file_each_get_their_own_and_the_recorded_one_is_left(self, tmp_path):
+        """Since 0.3 a file a record names and the store had lost was put back where the record says. A snapshot's
+        folder is not changed once its record is written: it is left as it is, and each new one has its own copy."""
         store = FolderStore(tmp_path.resolve() / "store")
         folder = TestSnapshotFolders._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
         first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
@@ -321,16 +341,19 @@ class TestWhatTheThirdReviewFound:
         first.write(TestSnapshotFolders._record(first, COMMIT, rates=put))
         ((name, _),) = store.files_of(put.content_hash)
         (store.root / name).chmod(0o644)
-        (store.root / name).unlink()  # lost; two snapshots now put it back at once
+        (store.root / name).unlink()  # lost; two snapshots are now begun at once
         a = store.begin("acme/rates", "b" * 40, "2026-10-17T01:02:03.000000Z", base=folder)
         b = store.begin("acme/rates", "c" * 40, "2026-10-18T01:02:03.000000Z", base=folder)
-        a.put(folder / "_data" / "rates.parquet")
-        (store.root / name).chmod(0o644)
-        (store.root / name).unlink()
-        b.put(folder / "_data" / "rates.parquet")
-        assert (store.root / name).read_bytes() == b"rates-1"
-        written = a._write_file(str(folder / "_data" / "rates.parquet"), store.root / name, ("copy",), expect=put.content_hash)
-        assert written[0] == put.content_hash  # the other put it back: no error
+        mine = [pending.put(folder / "_data" / "rates.parquet") for pending in (a, b)]
+        assert a.placed and b.placed and not (store.root / name).exists()
+        for pending, put_again in zip((a, b), mine):
+            pending.write(TestSnapshotFolders._record(pending, pending.commit, rates=put_again))
+            assert (store.pipeline_path("acme/rates") / pending.name / "_data" / "rates.parquet").read_bytes() == b"rates-1"
+        assert not (store.root / name).exists()
+        # A file that is where it is to go already, with the bytes named, is no error: a write tried a second time
+        own = store.pipeline_path("acme/rates") / a.name / "_data" / "rates.parquet"
+        written = a._write_file(str(folder / "_data" / "rates.parquet"), own, ("copy",), expect=put.content_hash)
+        assert written[0] == put.content_hash
 
     def test_a_record_this_machine_cannot_follow_is_said_and_nothing_goes(self, tmp_path):
         import warnings
@@ -357,8 +380,8 @@ class TestWhatTheThirdReviewFound:
 
         store = FolderStore(tmp_path.resolve() / "store")
         store._check_layout(create=True)
-        tmp = store.root / "tmp"
-        tmp.mkdir()
+        tmp = store.root / "_chartbook" / "tmp"
+        tmp.mkdir(parents=True)
         old, new = tmp / "aaaaaaaaaaaa.pending", tmp / "bbbbbbbbbbbb.pending"
         for path in (old, new):
             path.write_text("folder x\n", encoding="utf-8")
@@ -388,4 +411,4 @@ class TestWhatTheThirdReviewFound:
         record = pending.write(TestSnapshotFolders._record(pending, COMMIT, one=put))
         assert store.remove_snapshot(record) is True
         store.tidy()
-        assert list((store.root / "pipelines" / "acme+rates").iterdir()) == []
+        assert list((store.root / "snapshots" / "acme+rates").iterdir()) == []

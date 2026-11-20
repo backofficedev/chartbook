@@ -243,7 +243,7 @@ class TestFrozen:
         monkeypatch.setattr(json, "dump", full)
         with pytest.raises(lock.LockError, match="was written, and the store's note.*No space left"):
             pin_from_snapshots(downstream, store)
-        assert not list((store.root / "roots").glob("*.tmp"))
+        assert not list((store.root / "_chartbook" / "roots").glob("*.tmp"))
         assert (downstream / lock.LOCK_FILE).exists()
 
     def test_a_lockfile_entry_without_an_id_is_a_lock_error(self, downstream, rates, store):
@@ -304,7 +304,7 @@ class TestFrozen:
         pin_from_snapshots(downstream, store)  # the objects get into the store
         (downstream / lock.LOCK_FILE).unlink()
         store.remove_root(downstream / lock.LOCK_FILE)
-        roots = store.root / "roots"
+        roots = store.root / "_chartbook" / "roots"
         mode = roots.stat().st_mode
         os.chmod(roots, 0o555)
         try:
@@ -897,7 +897,7 @@ class TestStoreRoots:
 
     def test_a_note_that_cannot_be_read_stops_everything(self, store, work):
         store.add_root(work / LOCK_FILE, [HELLO])
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         note.write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="Cannot read"):
             store.roots()
@@ -1141,24 +1141,31 @@ class TestCommands:
     def test_gc_dry_run_removes_nothing(self, garbage, downstream):
         result = self._run("store", "gc", "--dry-run")
         assert result.exit_code == 0, result.output
-        assert result.output.splitlines() == [
+        said = result.output.splitlines()
+        assert said[:3] == [
             "Kept: 3 object(s), named by 1 lockfile(s)",
             f"  {downstream / LOCK_FILE}",
-            "Would remove 1 object(s), 5 bytes, that nothing names:",
+            "Would remove 1 snapshot(s) a pin made from a repository and 1 object(s) that nothing names, 33 bytes:",
+        ]
+        # The folder the earlier pin kept them in is named, as any snapshot that goes is
+        assert ", which a pin made " in said[3] and said[3].endswith(": no lockfile pins what it alone holds")
+        assert said[4:] == [
             f"  {HELLO}  5 bytes",
+            # With that folder: its own copies of the files the newer pin holds too
+            "  and the removed snapshots' own copies of files a kept snapshot has too  28 bytes",
         ]
         assert garbage.has(HELLO)
 
     def test_gc_asks_first(self, garbage):
         result = self._run("store", "gc", input="n\n")
         assert result.exit_code == 0, result.output
-        assert "Would remove 1 object(s), 5 bytes, that nothing names." in result.output
+        assert "Would remove 1 snapshot(s) a pin made from a repository and 1 object(s) that nothing names, 33 bytes:" in result.output
         assert "Remove them? [y/N]" in result.output
         assert "Nothing was removed." in result.output
         assert garbage.has(HELLO)
 
         result = self._run("store", "gc", input="y\n")
-        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
+        assert "Removed 0 snapshot(s), 1 snapshot(s) a pin made from a repository and 1 object(s), 33 bytes." in result.output
         assert not garbage.has(HELLO)
 
     def test_gc_with_no_answer_removes_nothing(self, garbage):
@@ -1170,7 +1177,7 @@ class TestCommands:
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 0, result.output
         assert "Remove them?" not in result.output
-        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
+        assert "Removed 0 snapshot(s), 1 snapshot(s) a pin made from a repository and 1 object(s), 33 bytes." in result.output
         assert not garbage.has(HELLO)
         assert "Nothing to remove." in self._run("store", "gc").output
 
@@ -1189,7 +1196,7 @@ class TestCommands:
 
         result = self._run("store", "gc", "--yes", "--forget-missing")
         assert f"  {downstream / LOCK_FILE}  (not found; forgotten)" in result.output
-        assert "Removed 0 snapshot(s) and 3 object(s)" in result.output
+        assert "Removed 0 snapshot(s), 1 snapshot(s) a pin made from a repository and 3 object(s)" in result.output
         assert list(garbage.hashes()) == [] and garbage.roots() == []
 
     def test_gc_stops_at_a_lockfile_it_cannot_read(self, garbage, downstream):

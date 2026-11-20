@@ -543,8 +543,9 @@ def _by_location(inside) -> dict:
 def _kept_apart(sources, inside) -> list:
     """The store's files as ``(where it is, its path inside the asset)``, when where they are does not say their keys; else empty.
 
-    The store keeps each file once, by its bytes: a partition's file can sit
-    at another partition's path, of the same bytes (polars drops the key's
+    A store may keep each file once, by its bytes (a bucket does, and a
+    store that ChartBook 0.5 laid out): a partition's file can then sit at
+    another partition's path, of the same bytes (polars drops the key's
     column when it writes, so two partitions can be one file), and an S3
     store's copy here is named by its hash. A reader that takes a Hive key
     from where a file is would then take the wrong one, or none, and would

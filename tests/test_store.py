@@ -25,7 +25,7 @@ from chartbook.store import (
     LINKS,
     FolderStore,
     MARKER_FILE,
-    SCHEMA,
+    FOLDER_SCHEMA,
     ObjectNotFoundError,
     Store,
     StoredObject,
@@ -129,7 +129,7 @@ def frozen_kind(request, work):
 class TestLayout:
     def test_an_object_no_pipeline_owns_is_a_directory_named_by_its_hash(self, store, work):
         assert store.object_path(HELLO) == (
-            work / "store" / "pipelines" / "+unowned" / HELLO[len("sha256:") :]
+            work / "store" / "_chartbook" / "unowned" / HELLO[len("sha256:") :]
         )
 
     @pytest.mark.parametrize(
@@ -167,7 +167,7 @@ class TestLayout:
     def test_the_first_put_says_which_layout_this_is(self, store, rates):
         store.put(rates)
         marker = json.loads((store.root / MARKER_FILE).read_text(encoding="utf-8"))
-        assert marker == {"schema": SCHEMA}
+        assert marker == {"schema": FOLDER_SCHEMA} == {"schema": "chartbook/store/v3"}
 
     def test_a_store_laid_out_differently_is_refused(self, store, rates):
         store.put(rates)
@@ -277,7 +277,7 @@ class TestPut:
         store.put(rates)
         store.put(partitioned)
         store.put(rates)
-        assert list((store.root / "tmp").iterdir()) == []
+        assert list((store.root / "_chartbook" / "tmp").iterdir()) == []
 
     @needs_symlinks
     def test_a_file_that_is_a_link_is_stored_as_the_file_it_points_at(self, store, rates, work):
@@ -375,7 +375,7 @@ class TestLinks:
         assert f"Could not store {rates}" in str(e.value)
         assert "reflink: " in str(e.value) and "hardlink: " in str(e.value)
         assert list(store.hashes()) == []
-        assert list((store.root / "tmp").iterdir()) == []
+        assert list((store.root / "_chartbook" / "tmp").iterdir()) == []
 
     def test_a_directory_may_use_more_than_one_kind(self, store, partitioned, monkeypatch):
         real_link = os.link
@@ -407,7 +407,7 @@ class TestAskingForAFrozenObject:
         held = frozen.path / "rates.parquet"
         assert not held.samefile(rates) and not held.is_symlink()
         assert list(store.hashes()) == [HELLO]
-        assert list((store.root / "tmp").iterdir()) == []
+        assert list((store.root / "_chartbook" / "tmp").iterdir()) == []
 
         _rewrite(rates, b"changed upstream")
         assert held.read_bytes() == b"hello" and store.verify() == []
@@ -505,10 +505,10 @@ class TestGetHasDelete:
     def test_hashes_are_in_order_and_skip_what_is_not_an_object(self, store, rates, partitioned):
         first = store.put(rates).content_hash
         second = store.put(partitioned).content_hash
-        unowned = store.root / "pipelines" / "+unowned"
+        unowned = store.root / "_chartbook" / "unowned"
         (unowned / "README").write_text("not an object", encoding="utf-8", newline="\n")
         (unowned / "zz").mkdir()
-        (store.root / "pipelines" / "acme+rates").mkdir()  # a pipeline's folder with no snapshot yet
+        (store.root / "snapshots" / "acme+rates").mkdir(parents=True)  # a pipeline's folder with no snapshot yet
         assert list(store.hashes()) == sorted([first, second])
 
 
@@ -661,7 +661,7 @@ class TestTogether:
         assert {r.content_hash for r in results} == {HELLO}
         assert sum(r.created for r in results) == 1
         assert list(store.hashes()) == [HELLO]
-        assert list((store.root / "tmp").iterdir()) == []
+        assert list((store.root / "_chartbook" / "tmp").iterdir()) == []
         assert store.verify() == []
 
     def test_an_object_that_appears_meanwhile_wins(self, store, rates, work):

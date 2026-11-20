@@ -112,11 +112,18 @@ def edit_store(name, spec=None, catalog=None):
         tables[name] = spec
     # Validate before replacement, including canonical duplicates and URLs.
     import tempfile
+    from chartbook.store import StoreNotAvailableError
     with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", dir=path.parent, delete=False, encoding="utf-8", newline="\n") as stream:
         staged = Path(stream.name)
         stream.write(tomlkit.dumps(doc))
     try:
-        Stores.configured(staged)
+        try:
+            Stores.configured(staged, named=path)
+        except StoreNotAvailableError:
+            # A removal is not stopped because another store, of the catalog or of the settings, is not available:
+            # each is taken out or put right in its turn, as its line says
+            if spec is not None:
+                raise
         staged.replace(path)
     finally:
         staged.unlink(missing_ok=True)

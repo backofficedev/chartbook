@@ -18,14 +18,14 @@ url = "~/shared/project-data"
 pipelines = ["acme/rates"]
 
 [stores.public]
-url = "s3://acme-data/chartbook?anonymous=true"
+url = "/shared/public-data/chartbook"
 read_only = true
 
 [pipelines."acme/retired"]
 disabled = true
 ```
 
-Store locations can be folders, `file://` URLs, S3 buckets, or schemes supplied by a store plugin. Relative folders are relative to the catalog file. Platform-specific locations use `{ unix = "…", windows = "…" }`. Store names are single ID components. Two names for the same location are rejected.
+Store locations can be folders, `file://` URLs, or schemes supplied by a store plugin. A store in an S3 bucket is not available in ChartBook 0.6.0: a command that meets one stops and says so, and `chartbook store remove NAME` takes it out of the catalog. Relative folders are relative to the catalog file. Platform-specific locations use `{ unix = "…", windows = "…" }`. Store names are single ID components. Two names for the same location are rejected.
 
 The first store is the default. New snapshots go there unless a store's `pipelines` list routes the pipeline elsewhere. Listing a pipeline in several stores writes it to all of them, with verified copies. `chartbook snapshot --store NAME` overrides routing once; repeat the option for several destinations. At a terminal, the first snapshot asks where to route an unassigned pipeline if several writable stores exist. In batch mode the default applies. Read-only stores are never written.
 

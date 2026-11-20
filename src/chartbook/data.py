@@ -94,8 +94,9 @@ def path(
     ``chartbook.lock`` pins, in the store, not the other pipeline's working
     directory; see :func:`chartbook.assets.path`. Read it; never write to it.
     Another pipeline's dataframe of several files, a Hive folder or a glob,
-    has no one path: the store keeps each file once, so its files may sit
-    in several snapshot folders. Asking raises
+    has no one path: a store may keep each file once (a bucket does, and a
+    store that ChartBook 0.5 laid out), so its files may sit in several
+    snapshot folders. Asking raises
     :class:`~chartbook.errors.NoSinglePathError`; :func:`load` and
     :func:`sql` read it where it is, and :func:`files` lists the files.
 
@@ -147,12 +148,13 @@ def files(
     This is :func:`chartbook.assets.files` with ``kind="dataframe"``. Of
     your own pipeline's dataframe, the files at its declared path. Of
     another pipeline's, the files of the pinned copy in the store, each
-    where the store keeps it: the store keeps each file once, so a dataset
-    that grew over several snapshots has files in several snapshot folders,
-    and no one folder (:func:`path` says so). Where a file is kept need
-    not say its Hive keys: the store keeps each file once, so a partition's
-    file may sit at another partition's path, and an S3 store names its
-    copies by their hashes. Read the dataset with :func:`load` or
+    where the store keeps it: a store may keep each file once (a bucket
+    does, and a store that ChartBook 0.5 laid out), so a dataset that grew
+    over several snapshots may have files in several snapshot folders, and
+    no one folder (:func:`path` says so). Where a file is kept need not
+    say its Hive keys: in such a store a partition's file may sit at
+    another partition's path, and an S3 store names its copies by their
+    hashes. Read the dataset with :func:`load` or
     :func:`sql`, which take each file's keys from its path inside the
     dataset. A ``dodo.py`` names the files as ``file_dep``.
 

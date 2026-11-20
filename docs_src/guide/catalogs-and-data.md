@@ -34,22 +34,32 @@ from three pipelines you clone and build:
 ## A store is a folder
 
 Your own store is a folder on this machine. A store a team shares is a folder a sync service keeps
-in step between machines, Google Drive, Dropbox or OneDrive, or a folder on a shared disk, or an S3
-bucket. Point each machine at the same folder and a snapshot made on one is there for the others
-once the sync has finished. Nothing in ChartBook moves snapshots between machines; the folder does.
+in step between machines, Google Drive, Dropbox or OneDrive, or a folder on a shared disk.
+Point each machine at the same folder and a snapshot made on one is there for the others
+once the sync has finished. Nothing in ChartBook moves snapshots between machines; the folder does. A store in an S3 bucket is not available in ChartBook 0.6.0: it has not been brought to this
+version's store layout yet, and is on the {doc}`roadmap <../roadmap>`; a bucket that 0.5 wrote is as it
+was, and 0.5 still reads and writes it.
 
 Inside, the layout is made to be read by a person:
 
 ```text
 chartbook-store-team/
-  pipelines/
+  snapshots/
     acme+news_headlines/
-      README.txt                           what shared snapshots are, and that gc removes them
+      README.txt                           that each folder is a complete snapshot, and that gc removes them
       2026-05-01T120000Z_a1b2c3d4e5f6/     a snapshot: when it was made _ its commit
         _data/articles/year=2023/...       the pipeline's files, in their own places
-        _chartbook/snapshot.json           the record: every file, its hash, which folder keeps it
-      2026-06-01T120000Z_e5f6a7b8c9d0/     a later one: only what is new or changed
+        _chartbook/snapshot.json           the record: every file, and its hash
+      2026-06-01T120000Z_e5f6a7b8c9d0/     a later one: every file of it again
+  _chartbook/                              ChartBook's own notes; nothing here is for a person
+  store.json                               which layout this is
+  README.txt                               what the folder is, for whoever opens it
 ```
+
+Every snapshot's folder is complete: it holds every file of that version, and can be read, copied
+or sent as it is. A store that ChartBook 0.5 laid out has `pipelines/` at the top and keeps each
+file once; this ChartBook reads such a store as it is, makes no snapshot in it and removes nothing
+from it, and says so.
 
 `CHARTBOOK_STORE` points a process at exactly one store; `chartbook store info` says which stores
 this machine uses and what set them.
@@ -73,12 +83,12 @@ url = "~/data/chartbook"
 url = "~/Google Drive/chartbook-store-team"
 pipelines = ["acme/news_headlines"]
 
-[stores.public]
-url = "s3://acme-data/chartbook?anonymous=true"
+[stores.archive]
+url = "/mnt/archive/chartbook-store"
 read_only = true
 ```
 
-A store is a folder, a `file://` URL, an S3 bucket, or a scheme a plugin provides. `chartbook store
+A store is a folder, a `file://` URL, or a scheme a plugin provides (a store in an S3 bucket is not available in 0.6.0; see the {doc}`roadmap <../roadmap>`). `chartbook store
 add NAME URL` adds one and lists the pipelines it finds; `store remove NAME` removes the entry and
 leaves the files; `store move ID --to NAME` moves a pipeline's snapshots to another store, verifies
 the copies, and removes them from the source. One Drive folder per collaborator, each a store, is
@@ -99,22 +109,21 @@ snapshot`; the catalog runs no pipeline's code.
 
 ## Keeping the store small
 
-The store keeps each file once, usually in the first snapshot that had it. A snapshot whose folder
-holds only what changed, the rest sitting in other snapshots' folders, is **shared**; one whose
-folder holds every file of its version is **standalone**. `chartbook store ls` says which each is and what its folder holds:
+Every snapshot is **complete**: its folder holds every file of its version. `chartbook store ls`
+lists them and what each one's folder holds:
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (3 snapshot(s))
-  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders
-  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in other folders
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  complete   2.4 GB here
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  complete   2.7 GB here
 ```
 
-A snapshot's folder is never deleted by hand, since another snapshot may keep files in it.
+A snapshot's folder is not deleted by hand: a lockfile may pin it.
 `chartbook store gc` removes snapshots safely: it keeps the newest of each pipeline, everything a
-lockfile pins, a snapshot a model's label points into, anything made in the last seven days, and
-every file a remaining snapshot uses, lists what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
+lockfile pins, a snapshot a model's label points into, and anything made in the last seven days,
+lists what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
 says what gc would clear and how much it would free, so a store nobody clears is at least a store
 whose owner was told; `--no-gc-reminder` silences it, and `chartbook catalog build --gc` runs gc
 after the build. Nothing is removed unless you ask.
@@ -125,8 +134,8 @@ $ chartbook catalog build
 `chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
 ```
 
-To give someone one complete copy of a version, `chartbook store export acme/news_headlines --latest
---to FOLDER` writes a standalone snapshot wherever you say. `chartbook store import FOLDER` takes one
+To give someone a version, `chartbook store export acme/news_headlines --latest
+--to FOLDER` writes its snapshot, complete, wherever you say. `chartbook store import FOLDER` takes one
 in.
 
 ## Reading data through a catalog
