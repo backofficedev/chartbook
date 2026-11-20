@@ -74,8 +74,8 @@ acme/report: build
 …
 acme/report: its code reads from a pipeline that chartbook.toml does not declare:
   acme/rates   (in your store: 2 snapshots, the newest of 4f2a91c)
-Add it to [dependencies] and build again? [Y/n] y
-Added to [dependencies] in chartbook.toml: "acme/rates" = {}
+Add it to [dependencies] and build again? [Y/n]: y
+Added to [dependencies] in /work/report/chartbook.toml: "acme/rates" = {}
 acme/rates: 1 pinned
   From its snapshot at 4f2a91c, made 2026-11-19 14:02 UTC.
 Wrote chartbook.lock.
@@ -292,17 +292,21 @@ open:*
 - **It is found when the code asks, not by reading the code.** A read in a build of a pipeline that
   is not declared is refused, as today, and leaves a note for the run that started it: which
   pipeline was asked for, and from which pipeline's folder. Nothing scans source files for names.
-  The error the read prints names `chartbook add`, where it tells today how to write an entry by
-  hand.
+  The error the read prints names `chartbook add` where the store has snapshots of that pipeline,
+  and tells as today how to write an entry by hand. A build whose command is `chartbook run
+  analyze` passes the note up to the run that was typed.
 - **It asks only where yes can work:** at a terminal; for a read made from this pipeline's own
-  folder; and where the stores have exactly one pipeline of that name. Otherwise the build's
-  error stands, as today: in CI, under `--frozen` and `--snapshot`, for a name two pipelines in
-  the stores share, and for one the stores do not have (a folder or a repository is declared by
-  hand). *(Found by review: `chartbook add` writes a name the stores lack, and the pin then
-  fails.)*
-- **Yes writes what `chartbook add` writes,** pins, and runs the build again. One pipeline at a
-  time: a build stops at the first read it is refused, so the second asks again if the code reads
-  another.
+  folder; and where the stores have exactly one pipeline of that name, made in one repository.
+  Otherwise the build's error stands, as today: in CI, under `--frozen` and `--snapshot`, for a
+  name two pipelines in the stores share, for an ID two repositories claim, and for one the
+  stores do not have (a folder or a repository is declared by hand). *(Found by review:
+  `chartbook add` writes a name the stores lack, and the pin then fails.)*
+- **Yes writes what `chartbook add` writes,** pins, and runs the build again, as the same run but
+  for `--force`: what that rebuilds was rebuilt a moment before. One pipeline at a time: a build
+  stops at the first read it is refused, so the second asks again if the code reads another.
+- **The question is asked of who is there now.** Keys pressed while the build ran are thrown away
+  before it is shown, so an Enter typed ten minutes ago is not a yes; and Ctrl-C at the question
+  ends the command.
 - **That run makes no snapshot:** `chartbook.toml` has just changed, and is not committed. It says
   so, as scenario 1 does.
 - **`chartbook add` stays.** Nobody has to know it.
@@ -405,6 +409,7 @@ changes.
 4. `chartbook run --check`; `chartbook check` is gone. *Built 2026-11-19.*
 5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone. *Built 2026-11-19.*
 6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
+   *Built 2026-11-19.*
 7. What is not in your store: the list, in order.
 8. `chartbook catalog open` asks before opening a site that is behind.
 9. `chartbook install agents`.

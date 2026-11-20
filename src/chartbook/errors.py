@@ -293,9 +293,20 @@ class DependencyNotDeclaredError(LookupError):
         elif declared_as:
             lines.append(f"It is declared as {declared_as!r}: read it as {declared_as + rest!r} or {other + rest!r}.")
         else:
+            # What the lockfile pins or the store has a snapshot of is known with no declared key
+            in_the_store = any(declared_key is None and (name == key or name.rsplit("/", 1)[-1] == key) for name, declared_key in known.items())
+            lines += [""]
+            if in_the_store:
+                lines += [
+                    "To read from another pipeline, declare it. Your store has snapshots of this one:",
+                    "",
+                    f"    $ chartbook add {key}",
+                    "",
+                    "(`chartbook run`, typed at a terminal, offers to.) Or say by hand where it is, then pin it:",
+                ]
+            else:
+                lines += ["To read from another pipeline, say where it is, then pin it:"]
             lines += [
-                "",
-                "To read from another pipeline, say where it is, then pin it:",
                 "",
                 "    [dependencies]",
                 (f'    "{key}" = {{ id = "{key}" }}' if found_at and where is None else f'    "{key}" = {{ path = "{where}" }}'),

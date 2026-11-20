@@ -626,6 +626,39 @@ def _can_ask() -> bool:
     return _stdin_is_a_terminal() and _stderr_is_a_terminal()
 
 
+def _confirm(question: str, default: bool) -> bool:
+    """Ask a yes-or-no question that comes after work has run, on stderr; `click.Abort` at Ctrl-C or the end of input.
+
+    Two things a question asked first thing does not meet. A library
+    loaded by then (polars) has installed a signal handler of its own in a
+    way that restarts a read at the terminal, so Ctrl-C at the question
+    did nothing until Enter: the read is made interruptible again. And a
+    key pressed while a build ran, an Enter above all, would answer the
+    question before it was shown: what was typed before is discarded.
+    """
+    import os
+    import signal
+
+    try:
+        signal.siginterrupt(signal.SIGINT, True)
+    except (AttributeError, ValueError, OSError):  # no such call on Windows; not the main thread
+        pass
+    try:
+        if _stdin_is_a_terminal():
+            if os.name == "nt":
+                import msvcrt
+
+                while msvcrt.kbhit():
+                    msvcrt.getwch()
+            else:
+                import termios
+
+                termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
+    except Exception:  # noqa: BLE001 - a terminal that cannot be flushed is asked all the same
+        pass
+    return click.confirm(question, default=default, err=True)
+
+
 def _shown_text(text, width: int = 160) -> str:
     """Text from a folder, as a question shows it: no control or format character, runs of space folded, cut at *width*.
 
@@ -1931,7 +1964,7 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False):
     if _can_ask():
         click.echo("No catalog yet" + (", to show it in." if to_show_a_snapshot else "."), err=True)
         try:
-            agreed = click.confirm(f"Create one over your store at {store}?", default=True, err=True)
+            agreed = _confirm(f"Create one over your store at {store}?", default=True)
         except click.Abort:  # Ctrl-C, or the end of input
             if not required:
                 click.echo("", err=True)
@@ -3063,6 +3096,15 @@ def add_command(pipeline, key, commit, project_dir):
         chartbook add acme/rates --as rates
         chartbook add acme/rates --commit 3f2a9c1
     """
+    _add_dependency(project_dir, pipeline, key=key, commit=commit)
+
+
+def _add_dependency(project_dir, pipeline, key=None, commit=None):
+    """Write a dependency into a pipeline's manifest and pin it, as `chartbook add` does; exit 1 where it cannot be.
+
+    For the command, and for a run that offers to declare a pipeline its
+    build read without declaring it (:func:`_offer_to_add`).
+    """
     from chartbook.identity import validate_pipeline_id
     from chartbook.manifest import dependency_line, validate_dependencies, with_dependency
     from chartbook.store import StoreError
@@ -3123,8 +3165,12 @@ def add_command(pipeline, key, commit, project_dir):
     except (ValueError, OSError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
-    with open(manifest_file, "w", encoding="utf-8", newline="") as f:
-        f.write(changed)
+    try:
+        with open(manifest_file, "w", encoding="utf-8", newline="") as f:
+            f.write(changed)
+    except OSError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"{manifest_file} could not be written: {_explain_os_error(e)}", err=True)
+        raise SystemExit(1)
     click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
     if stale:
         click.echo(
@@ -3542,11 +3588,73 @@ def _echo_snapshot(report, upstream=False):
         click.echo("Stores: " + ", ".join(report.stores))
 
 
+def _offer_to_add(project_dir, report, strict, frozen, added):
+    """After a build that stopped on a read of a pipeline its manifest does not declare: offer to declare it; the ID added, or None.
+
+    Asked only where yes can work (``docs_src/design/one-command.md``): a
+    person is there to answer; the run is a plain one, not ``--frozen``
+    (which writes nothing) nor ``--snapshot`` (which a manifest just
+    changed cannot end in); the read was made from this pipeline's own
+    folder; and the stores have exactly one pipeline of that name. A name
+    two pipelines share, or one the stores do not have (a folder or a
+    repository, which is declared by hand), is left to the build's own
+    error, as before. Yes does what `chartbook add` does.
+
+    :param added: The IDs added before in this command: one is never
+        asked of twice, so that a build that goes on failing ends.
+    """
+    if not report.undeclared or strict or frozen or report.failed is None or report.failed.source != "asked":
+        return None
+    if not _can_ask():
+        return None
+    from chartbook.snapshot import SnapshotError, pipeline_in, readable_snapshots
+    from chartbook.store import StoreError
+
+    from chartbook.snapshot import repository_groups
+
+    asked = report.undeclared[0]
+    try:
+        try:
+            itself = pipeline_in(project_dir)
+        except (SnapshotError, ValueError):
+            itself = None
+        stored = _StoredIds(project_dir)
+        every = readable_snapshots(stored._stores())[0]  # the stores are read once, for the name and for the line
+        stored._ids = sorted({one.pipeline for one in every})
+        found = (asked if asked in stored.ids else None) if "/" in asked else _bare_name_in_stores(asked, stored, itself)
+        if found is None or found == itself or found in added:
+            return None
+        taken = [one for one in every if one.pipeline == found]
+        if len(repository_groups(taken)[0]) > 1:
+            # Two repositories claim the ID: which is meant is said by hand (`repository = "..."`), and a
+            # bare entry could not be pinned
+            return None
+        newest = max(taken, key=lambda one: one.made_at)
+    except (ValueError, StoreError, OSError):
+        return None  # none of that name, or several, or a store that cannot be read: the build's error says the rest
+    count = "1 snapshot" if len(taken) == 1 else f"{len(taken)} snapshots"
+    click.echo(f"{report.failed.id}: its code reads from a pipeline that chartbook.toml does not declare:", err=True)
+    click.echo(f"  {found}   (in your store: {count}, the newest of {newest.commit[:7]})", err=True)
+    try:
+        agreed = _confirm("Add it to [dependencies] and build again?", default=True)
+    except click.Abort:  # Ctrl-C, or the end of input
+        click.echo("", err=True)
+        return None
+    if not agreed:
+        return None
+    _add_dependency(project_dir, found)
+    return found
+
+
 def _run_script(
     project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
-    upstream=False, no_gc_reminder=False,
+    upstream=False, no_gc_reminder=False, added=(),
 ):
-    """Run a named script as `chartbook run` does; exit with its code if it fails."""
+    """Run a named script as `chartbook run` does; exit with its code if it fails.
+
+    :param added: The dependencies this command has added to the manifest
+        at the person's yes (:func:`_offer_to_add`), before running again.
+    """
     from chartbook import lock
     from chartbook import run as runner
     from chartbook.store import StoreError
@@ -3589,6 +3697,15 @@ def _run_script(
         raise SystemExit(1)
 
     if report.failed is not None:
+        now_declared = _offer_to_add(project_dir, report, strict=snapshot is True, frozen=frozen, added=added)
+        if now_declared is not None:
+            # Declared and pinned: the build again, which asks again if its code reads another. Not
+            # --force a second time: what it rebuilds was rebuilt a moment ago, before the build that stopped
+            return _run_script(
+                project_dir, script, force=False, snapshot=snapshot, frozen=frozen, remake=remake,
+                remake_command=remake_command, upstream=upstream, no_gc_reminder=no_gc_reminder,
+                added=(*added, now_declared),
+            )
         click.echo(
             click.style("Error: ", fg="red", bold=True)
             + f"{report.failed.id}: {report.reason}. Nothing after it was run.",

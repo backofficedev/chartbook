@@ -623,6 +623,8 @@ Whether the build tool then skips the step that makes the asset is its own rule:
 chartbook add PIPELINE [--as NAME] [--commit COMMIT] [OPTIONS] [--project-dir PATH]
 ```
 
+**You seldom type this.** A build that reads a pipeline your manifest does not declare is offered it by {ref}`chartbook run <run-asks-to-add>`, at a terminal. The command is for declaring one before any code reads it, under another name (`--as`), or at a commit (`--commit`).
+
 Declare that this pipeline reads another, by the other's ID, and pin it. It writes the entry under `[dependencies]` in `chartbook.toml`, leaving the rest of the file as it is (its comments and order), then runs `chartbook pin`. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.
 
 A bare name is the one pipeline in the stores whose ID ends in it, as `chartbook get-docs` and `data.load(pipeline=...)` read one, and that full ID is written: with the store holding `tutorial/treasury_curve`, `chartbook add treasury_curve` writes `"tutorial/treasury_curve" = {}`. A bare ID the stores hold is written as it is. When several pipelines end in the name, the command lists them and writes nothing; when none does, it says which IDs the stores hold, or that they hold none, and writes nothing. Either way `chartbook.toml` and `chartbook.lock` are as they were.
@@ -981,6 +983,30 @@ No snapshot is made of it. What is looked for is what a snapshot would hold as a
 `build` runs with `CHARTBOOK_BATCH=1` set; another script runs as interactively as the shell it was run from. In a batch run, `data.load` and the other readers read another pipeline only through its pin: an undeclared dependency or an unpinned dependency is refused. Explicit links are honored for development, and `--snapshot` refuses them. `--frozen` and CI ignore links. CI can set the variable too. See {doc}`../guide/depending-on-pipelines`.
 
 In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
+
+(run-asks-to-add)=
+**A read of a pipeline that is not declared: the run offers to add it.** You write the read, and run. The build's read is refused, as ever, since nothing in `[dependencies]` names that pipeline; and where your store has snapshots of it, the run asks:
+
+```console
+$ chartbook run
+ftsfr/rate_forecast: build
+…
+ftsfr/rate_forecast: its code reads from a pipeline that chartbook.toml does not declare:
+  ftsfr/fed_yield_curve   (in your store: 2 snapshots, the newest of 4f2a91c)
+Add it to [dependencies] and build again? [Y/n]: y
+Added to [dependencies] in /work/rate_forecast/chartbook.toml: "ftsfr/fed_yield_curve" = {}
+ftsfr/fed_yield_curve: 3 pinned
+  From its snapshot at 4f2a91c, made 2026-11-19 14:02 UTC.
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+ftsfr/rate_forecast: not snapshotted: 2 files are not committed (`git status` lists them).
+  A snapshot is of a commit: commit, and `chartbook run` again.
+```
+
+Yes does what {ref}`chartbook add <chartbook-add>` does, and builds again. The read is found when the code makes it; nothing reads your source for names. One pipeline is asked of at a time: a build stops at the first read it is refused, so a second is asked of when the build is run again.
+
+It asks only where yes can work. With no one there to answer (a script, a pipe, CI), with `--frozen` or `--snapshot`, for a read made from another pipeline's folder, for a name two pipelines in the stores share, for an ID two repositories claim, and for a pipeline the stores have no snapshot of (a folder or a repository, which is declared by hand), there is no question: the build's own error stands, and it names the entry to write, and `chartbook add` where the store has the pipeline. Keys pressed while the build ran do not answer the question: they are discarded before it is shown.
 
 **Only in a folder you trust to run.** A build script is code. In a pipeline you have not trusted to run, you are asked first when you are at a terminal (`y` trusts it, Enter stops; {ref}`chartbook trust <chartbook-trust>`). Where no one is asked, `chartbook run` stops before anything runs, naming the folder and {ref}`chartbook trust <chartbook-trust>`; catalogs have no runnable members. A pipeline trusted to render only is refused the same way. A project `chartbook init` made is trusted as it is made, and under `CI` the checkout is.
 
