@@ -1269,7 +1269,7 @@ class TestCommands:
         import shlex
 
         # A word of a command, as this system's shells take it
-        typed = subprocess.list2cmdline([str(maker)]) if os.name == "nt" else shlex.quote(str(maker))
+        typed = f'"{maker}"' if os.name == "nt" else shlex.quote(str(maker))
         result = self._run("pin")
         assert result.exit_code == 1 and commit
         # The list of what is not in the store (tests/test_not_in_your_store.py). Its files are there and

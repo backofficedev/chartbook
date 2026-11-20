@@ -171,8 +171,12 @@ def _has(said: list[str], *commands: str) -> bool:
 
 
 def _q(path) -> str:
-    """A path as a command of the list has it: quoted where this system's shell needs it."""
-    return subprocess.list2cmdline([str(path)]) if os.name == "nt" else shlex.quote(str(path))
+    """A path as a command of the list has it: quoted where this system's shells need it.
+
+    On Windows that is always, in double quotes: a path there has a
+    backslash, which Git Bash reads as an escape outside them.
+    """
+    return f'"{path}"' if os.name == "nt" else shlex.quote(str(path))
 
 
 def _up(name: str) -> str:
@@ -1310,8 +1314,13 @@ class TestWhoseTextThisIs:
         assert missing._plain("a\u200bb\x1b[2Jc\u2028d") == "ab[2Jcd"
 
     @pytest.mark.parametrize("word, typed", [
-        ("C:\\work\\rates", "C:\\work\\rates"),
+        ("C:\\work\\rates", '"C:\\work\\rates"'),
         ("C:\\my work\\rates", '"C:\\my work\\rates"'),
+        ("C:\\", '"C:\\\\"'),
+        ("D:\\work\\", '"D:\\work\\\\"'),
+        ("C:/work/rates", "C:/work/rates"),
+        ("https://example.org/acme/rates", "https://example.org/acme/rates"),
+        ("rates-2_a.b", "rates-2_a.b"),
         ("https://example.org/acme/x&calc.exe", '"https://example.org/acme/x&calc.exe"'),
         ("https://dev.azure.com/org/My%20Project/_git/rates", '"https://dev.azure.com/org/My%20Project/_git/rates"'),
         ('a"b', '"a""b"'),
@@ -1320,6 +1329,10 @@ class TestWhoseTextThisIs:
         """Found by the second pass (not run on Windows): `&` ends a command there, and the address that held one was printed bare.
 
         And by the third: a `%` was doubled, which is right in a batch file and wrong at a prompt, where these are pasted.
+
+        And by typing the lines on Windows, 2026-11-20: a path was printed bare, which cmd.exe and PowerShell
+        read and Git Bash does not (`C:\\work\\rates` reached the command as `C:workrates`). In double quotes all
+        three read it.
         """
         assert missing._quoted(word, windows=True) == typed
 
@@ -1329,7 +1342,7 @@ class TestWhoseTextThisIs:
         (And before that, by the third pass: a bare `cd` does not change the drive there. A command that names its folder has no drive to change.)
         """
         assert missing._in("D:\\class\\my rates", windows=True) == ' --project-dir "D:\\class\\my rates"'
-        assert missing._in("D:\\class\\rates", windows=True) == " --project-dir D:\\class\\rates"
+        assert missing._in("D:\\class\\rates", windows=True) == ' --project-dir "D:\\class\\rates"'
         assert missing._in("/work/my rates", windows=False) == " --project-dir '/work/my rates'"
         assert not hasattr(missing, "_cd")
 
@@ -1374,6 +1387,62 @@ class TestWhoseTextThisIs:
         assert "Ran build in 1 pipeline(s)." in done.stdout
         (taken,) = [one for one in snapshot.all_snapshots(store) if one.pipeline == "acme/rates"]
         assert taken.subdirectory == within
+
+
+class TestEachKindOfLine:
+    """The commands of each kind of line, of a list made by hand: one command to a line, and the folder each names."""
+
+    COMMIT = "c" * 40
+
+    @staticmethod
+    def _commands(work: Path, line: missing.Wanted) -> list[str]:
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[line])
+        said = missing.said(listing, here=work / "report")
+        assert said[3].startswith("1. acme/mid") and said[-3:-1] == ["Then here again:", "     chartbook run"]
+        return said[4:said.index("", 4)]
+
+    def test_a_clone_that_was_never_pinned_is_built_in_the_folder_it_has_the_pipeline_in(self, work):
+        line = missing.Wanted("acme/mid", None, "https://example.org/acme/mid", clone=work / "mid", subdirectory="pipelines/mid", placed=True)
+        assert self._commands(work, line) == [f"     chartbook run --snapshot --project-dir {_q(work / 'mid' / 'pipelines' / 'mid')}"]
+
+    def test_a_clone_that_lacks_its_commit_is_fetched_checked_out_and_built_in_that_order(self, work):
+        line = missing.Wanted(
+            "acme/mid", self.COMMIT, "https://example.org/acme/mid", clone=work / "mid", subdirectory="pipelines/mid", placed=True,
+            lacks=True, shallow=True,
+        )
+        assert self._commands(work, line) == [
+            f"     git -C {_q(work / 'mid')} fetch --unshallow",
+            f"     git -C {_q(work / 'mid')} checkout {self.COMMIT[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid' / 'pipelines' / 'mid')}",
+        ]
+
+    def test_a_repository_to_clone_that_was_never_pinned_is_built_in_its_folder_there(self, work):
+        line = missing.Wanted("acme/mid", None, "https://example.org/acme/mid", subdirectory="pipelines/mid", placed=True)
+        assert self._commands(work, line) == [
+            f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid' / 'pipelines' / 'mid')}",
+        ]
+
+    def test_a_folder_whose_repository_is_not_known_is_checked_out_where_it_is(self, work):
+        line = missing.Wanted("acme/mid", self.COMMIT, folder=work / "mid")
+        assert self._commands(work, line) == [
+            f"     git -C {_q(work / 'mid')} checkout {self.COMMIT[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
+        ]
+
+    def test_one_with_no_build_script_is_given_the_snapshot_alone(self, work):
+        line = missing.Wanted("acme/mid", self.COMMIT, folder=work / "mid", top=work / "mid", builds=False)
+        assert self._commands(work, line) == [
+            f"     git -C {_q(work / 'mid')} checkout {self.COMMIT[:12]}",
+            f"     chartbook snapshot --project-dir {_q(work / 'mid')}",
+        ]
+
+    def test_one_whose_repository_is_not_recorded_is_said_in_words(self, work):
+        """No folder to name: the two commands are in a sentence, and joined by no sign a shell reads."""
+        assert self._commands(work, missing.Wanted("acme/mid", self.COMMIT)) == [
+            f"     In a clone of it: `git checkout {self.COMMIT[:12]}`, then `chartbook run --snapshot`"
+        ]
+        assert self._commands(work, missing.Wanted("acme/mid", None)) == ["     In a clone of it: `chartbook run --snapshot`"]
 
 
 class TestARepositoryThatDoesNotHoldIt:

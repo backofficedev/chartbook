@@ -553,8 +553,12 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   same lines are printed on every system, so the tests that type a list's lines in a POSIX shell
   type what a Windows user is given, but for the quotes. Whoever types them stays in their
   folder, so "Then here again:" is the command as it was typed, with the pipeline's folder only
-  where it was typed of another. On Windows a word is quoted as `cmd.exe` and PowerShell both
-  read it (double quotes; a `%` as it is, since a doubled one is one only in a batch file).
+  where it was typed of another. On Windows a word is quoted as `cmd.exe`, PowerShell and Git
+  Bash all read it: double quotes, around every word that holds a backslash, and a `%` as it is
+  (a doubled one is one only in a batch file). *(Found the same day by typing a list's lines on
+  Windows 11: every line ran in Windows PowerShell 5.1 and in `cmd.exe`, quoted words among
+  them, and the last built. In Git Bash a path printed bare, `C:\work\rates`, reached the
+  command as `C:workrates`.)*
   What it costs:
   - *A line no longer stops at its first failure.* `git checkout … && chartbook run --snapshot`
     did not build after a checkout that failed. Two lines pasted together do: the build runs,
@@ -564,7 +568,8 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     it was. The reference says to type the lines one at a time.
   - *One more line for each pipeline that is pinned.*
   - *No one spelling of a folder with a `$NAME` or a backtick in its name is read alike by
-    `cmd.exe` and PowerShell.* The one given is cmd's, and the reference says so.
+    `cmd.exe`, PowerShell and Git Bash,* nor of a network folder (`\\server\…`) by `cmd.exe`
+    and Git Bash. The one given is cmd's, and the reference says so.
   - *A command that names its folder takes the name as the list has it,* where `cd` made it the
     disk's own. A clone found beside the pipeline under the name its address gives (`rates`, of
     a folder `Rates`) is such a name: see "A folder named by another spelling", above.

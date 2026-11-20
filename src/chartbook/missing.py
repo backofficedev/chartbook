@@ -877,8 +877,9 @@ def _plain(text: str, most: int = 300) -> str:
 def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     """A word of a command, as this system's shells take it: quoted where it has to be, and never with a control character.
 
-    :param windows: Whether for Windows, where the word is one that both
-        ``cmd.exe`` and PowerShell take; by the system it runs on, by default.
+    :param windows: Whether for Windows, where the word is one that
+        ``cmd.exe``, PowerShell and Git Bash all take; by the system it runs
+        on, by default.
     """
     text = _plain(str(text), most=4096)
     if not (os.name == "nt" if windows is None else windows):
@@ -889,9 +890,15 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     # nothing typed prevents it: the word is then another word, and still one word.)
     # PowerShell takes the same word, bare or in double quotes, but for a `$NAME` or a backtick in it, which it
     # reads in double quotes and cmd.exe does not: no one spelling is right in both, and cmd's is the one given.
-    if re.fullmatch(r"[A-Za-z0-9_./:\\-]+", text):
+    # Git Bash, which comes with git there, reads a `\` outside quotes as an escape (`C:\work\rates` reaches
+    # the command as `C:workrates`; found by typing it, 2026-11-20), and inside double quotes as itself before
+    # anything a path has. So a word with a backslash is in double quotes, a path among them. (Not right there:
+    # a `$NAME` or a backtick, as in PowerShell, and the `\\` a network path begins with.)
+    if re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
         return text
-    return '"' + text.replace('"', '""') + '"'
+    # A backslash that would come before the closing quote would be read with it, as a quote that is text:
+    # doubled, it is one backslash (`"C:\\"`, of a drive's own folder)
+    return '"' + text.replace('"', '""') + "\\" * (len(text) - len(text.rstrip("\\"))) + '"'
 
 
 def _in(folder: Union[str, Path], windows: Optional[bool] = None) -> str:

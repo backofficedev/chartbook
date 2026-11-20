@@ -1110,7 +1110,7 @@ class TestCommand:
 
         def typed(path) -> str:
             """A word of a command, as this system's shells take it."""
-            return subprocess.list2cmdline([str(path)]) if os.name == "nt" else shlex.quote(str(path))
+            return f'"{path}"' if os.name == "nt" else shlex.quote(str(path))
 
         result = self._run()
         assert result.exit_code == 1 and commit
