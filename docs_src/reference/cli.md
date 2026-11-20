@@ -43,7 +43,7 @@ Every command has a section below. These are the ones reached for most after the
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
 | `chartbook store export` | Write one pipeline's snapshots into a folder, to send to someone |
 | `chartbook store import` | Copy the snapshots a folder holds into this machine's store |
-| `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
+| `chartbook store migrate` | Move a store to this version's layout: one that ChartBook 0.5 laid out, or one made by 0.2 |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install agents` | Set a project up for coding agents: the Claude Code skill, and a ChartBook section in `AGENTS.md` |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
@@ -1561,13 +1561,15 @@ Imported 2 snapshot(s), 2.1 GB copied.
 chartbook store migrate [--dry-run] [OPTIONS] [--yes]
 ```
 
-Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
-each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
-commit, and each file once, under its own name ({design}`plan-0.3.0`). A store of 0.2 is
-refused until it is moved, with a message that says to run this. Moved, it has the layout that
-ChartBook 0.3 to 0.5 gave a store, which this ChartBook reads and does not write (above); of
-such a store the command says `has the layout of ChartBook 0.5: there is nothing to move from 0.2`,
-and moves nothing.
+Move a store to this version's layout, once, on one machine.
+
+**A store that ChartBook 0.5 laid out** (`pipelines/` at its top) is read by this ChartBook as it is and not written (above). This moves it. In each pipeline the newest snapshot its owner made becomes complete under `snapshots/`; every other one its owner made becomes an increment on it under `increments/`, keeping in its own folder only the files that one does not have; and a snapshot that `chartbook pin` made from a repository becomes complete. Files change folder by a rename inside the store and are not read, so a store in a synced folder uploads nothing again; only a file that two folders must each hold is copied, and hashed as it is written. A snapshot's record is rewritten only where it says how the store keeps it. `roots/`, `origins/` and `tmp/` go under `_chartbook/`. What no record names (a `.DS_Store`, a file put there by hand) is not removed: it is moved, at its old path, under `_chartbook/left-by-0.5/`.
+
+`--dry-run` says what would happen, in counts and sizes, and moves nothing. The command says the same, and then, before it asks: nothing else may use the store while it runs, on this machine or another; afterwards every machine that uses it needs this ChartBook, and an earlier one will not read it; and in a synced folder the sync must finish before another machine uses the store. So upgrade ChartBook on every machine first, run this on one of them, and let the sync finish.
+
+It stops before anything moves, and says why, for a record that cannot be read, a snapshot being made, a store whose `store.json` does not say the layout of 0.5, too little room for the copies, and a path that would be too long. A file a record names that is missing does not stop it: it was so before, it is counted and named, and its record goes on naming it. Every step is written to a journal in the store before it is done: a move cut short is taken up by running the command again, every other command on that store stops meanwhile with one line that says so, and a journal another machine started stops this one's move. Before `store.json` is switched it looks once more, and moves what arrived meanwhile by the same rules. A store of this layout with a `pipelines/` folder beside it is not moved again: its refusal says to wait for a sync that may still be bringing a move, or to upgrade the machine that wrote there.
+
+**A store made by ChartBook 0.2** is moved to the layout of 0.3 to 0.5 first, as before ({design}`plan-0.3.0`): a folder for each pipeline, a folder for each snapshot, each file once under its own name. Run the command again to move that one on.
 
 - **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
   is moved, and says so. Run this on one machine; in a store a sync service keeps, the others wait
