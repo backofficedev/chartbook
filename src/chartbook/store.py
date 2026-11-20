@@ -1737,7 +1737,7 @@ class FolderStore(Store):
         self._memo: Optional[tuple] = None
         self._reading = 0
         #: Whether each file asked about is where its record says, within a :meth:`reading` block
-        self._states: dict[str, str] = {}
+        self._states: dict = {}
 
     def __repr__(self) -> str:
         return f"FolderStore({str(self)!r})"
@@ -2890,7 +2890,7 @@ class FolderStore(Store):
         """:func:`_on_disk_state` of a file, asked of the disk once within a :meth:`reading` block."""
         if not self._reading:
             return _on_disk_state(file, pipeline_folder)
-        key = str(file.location)
+        key = (str(file.location), file.size_bytes)
         if key not in self._states:
             self._states[key] = _on_disk_state(file, pipeline_folder)
         return self._states[key]
