@@ -2,12 +2,27 @@
 
 Every command supports `--help`. Everything the CLI needs ships with `pip install chartbook`; see {doc}`../getting-started`.
 
+## The five commands
+
+Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. `chartbook --help` lists them first.
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+
+## More commands
+
+Every command has a section below. These are the ones reached for most after the five:
+
 | Command | Purpose |
 |---------|---------|
 | `chartbook init` | Scaffold a new pipeline project |
 | `chartbook docs build` | Render the documentation site |
 | `chartbook docs open` | Open the rendered site in a browser |
-| `chartbook run` | Make everything current: run the build script, then render the site |
 | `chartbook run --check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
@@ -23,7 +38,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook pin --update` | Move pins forward to each dependency's newest snapshot |
 | `chartbook lineage` | Show and check every snapshot upstream of this pipeline |
-| `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
+| `chartbook run [SCRIPT]` | Run a named script in this pipeline. `build` by default: pin what it reads, run it, look for what the manifest declares, and make its snapshot when everything is committed |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
 | `chartbook store export` | Write one pipeline's snapshots into a folder, to send to someone |

@@ -29,6 +29,18 @@ One install has everything: the command line, data loading, plotting and the sit
 - **Discover.** Many pipelines become one catalog: a searchable website for your team, and an
   index, an `llms.txt` and a command line your agents work from.
 
+## The five commands
+
+Five commands cover most of what people do. The middle three are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+
 ## A pipeline, in three files
 
 A pipeline is a folder in git: a manifest that says what it makes, the code that makes it, and a
@@ -89,6 +101,10 @@ chartbook docs open
 git add -A && git commit -m "First pipeline"
 chartbook snapshot             # the build, by hash, into your store, labelled with the commit
 ```
+
+With two more lines in the manifest, `[scripts]` and `build = "python src/build_chart.py"`,
+`chartbook run` is the first and the last of those in one: it runs the script, looks for
+everything the manifest declares, and takes the snapshot once the work is committed.
 
 Once it has a snapshot, any other pipeline can read that dataset by name, pinned to the exact
 bytes this one made:

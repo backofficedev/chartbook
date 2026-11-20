@@ -207,6 +207,32 @@ again and nothing is written: the same bytes at the same commit are the snapshot
 Change the seed in `build_chart.py`, run it again and rebuild the site: the chart, the glimpse and
 both hashes change with it.
 
+## The five commands
+
+You did each step by hand above, to see what it is. Five commands cover most of what people do
+after that:
+
+| You type | It does |
+|---|---|
+| `chartbook init` | Once: starts a project from the template, in a new folder |
+| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, looks for everything `chartbook.toml` declares, and makes its snapshot when everything is committed |
+| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
+| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
+| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+
+`chartbook run` runs the script the manifest names as `build`. A project `chartbook init` makes
+has one; this pipeline gets one with two more lines in `chartbook.toml`:
+
+```toml
+[scripts]
+build = "python src/build_chart.py"
+```
+
+Then `chartbook run` is steps 3 and 5 in one: it runs the script, looks for everything the
+manifest declares, and takes the snapshot when your work is committed. The site of step 4 is
+still `chartbook docs build`, unless your build script renders it too, as the template's does.
+The rest is in the {doc}`reference/cli`.
+
 ## Next
 
 ::::{grid} 1 2 2 2

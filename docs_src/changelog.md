@@ -135,6 +135,25 @@ Nothing is built yet: `chartbook run` builds it.
 - The template's CI file, its README and the line `chartbook init` ends with say `chartbook run --check`, and so do this repository's examples. A project made from an earlier template has `chartbook check --skip-outputs` in `.github/workflows/python_tests.yml`: change the line.
 - In Python, `chartbook.check.run_checks(..., not_built=[])` gathers the outputs that are not built into the list and does not report them; `skip_outputs` is as it was.
 
+### Changed — `chartbook --help` opens with the five commands most people type
+
+```text
+$ chartbook --help
+…
+Start with these:
+  chartbook init            Start a project from the template
+  chartbook run             Pin, build and snapshot this pipeline
+  chartbook pin --update    Take the newest snapshot of what it reads
+  chartbook catalog open    Browse every snapshot in your stores
+  chartbook install agents  Teach your coding agent ChartBook
+
+More:
+  add                   Declare a dependency on another pipeline by its...
+  …
+```
+
+Twenty-one commands in one alphabetical list said nothing of which matter ({design}`one-command`). The README, the docs' front page, the Quickstart, the CLI reference, the Claude Code skill and the llms files each have the same five in a section of their own, with one table, and a test holds its words in every one of them. Every other command is still listed, under "More", and every command is still documented.
+
 ### Added — `chartbook install agents`: one command for every coding agent
 
 ```text
