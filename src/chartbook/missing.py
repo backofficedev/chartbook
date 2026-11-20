@@ -1024,7 +1024,8 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
                 return "a backtick" if sign == "`" else f"a `{sign}`"
         if re.search(r"\\\$|\$(?![\\/]|$)", word):
             return "a `$`"
-        behind = None if re.search(r"\s", word) else re.search(r"[&|<>^]", word)
+        # A space or a tab, and no other kind: whether PowerShell quotes a word for a space of another kind is not known
+        behind = None if re.search(r"[ \t]", word) else re.search(r"[&|<>^]", word)
         if behind:
             return f"a `{behind[0]}`"
         # As cmd.exe reads a line at its prompt: from a `%` to the next is a name (up to a `:`, which

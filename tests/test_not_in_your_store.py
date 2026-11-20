@@ -1516,6 +1516,7 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         (["C:\\work\\x^y"], "a `^`"),
         (["a|b"], "a `|`"), (["a<b"], "a `<`"), (["a>b"], "a `>`"),
         (["C:\\work\\R&D team\\x^y"], ""),
+        (["C:\\work\\R&D\u00a0team"], "a `&`"),  # a space of another kind is not known to keep the quotes
         ([Path("C:\\work\\$x")], "a `$`"),
     ])
     def test_what_is_read(self, words, said):
