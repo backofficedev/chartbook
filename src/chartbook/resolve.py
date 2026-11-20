@@ -877,7 +877,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         # snapshot to read it from: a pin where the bytes are, and none where they are not
         from chartbook.multi_store import with_dependencies as _with
 
-        if not _with(manifest_dir).has(record["content_hash"], locks.pinned_pipeline(entry, _folder_of(dependency))):
+        if not _with(manifest_dir).has(record["content_hash"], locks.pinned_pipeline(entry)):
             record = None
     if record is None and pinned.kind not in locks.LOCKED_KINDS and locks.from_a_snapshot(entry):
         # A chart, a notebook, a note or a plain file of a dependency pinned
@@ -948,8 +948,10 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(manifest_dir)
     listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {}) if locked else {}
-    # Of that pipeline's own snapshots, and no other's: what a read is handed, and what `store gc` keeps for it
-    pipeline = locks.pinned_pipeline(listed, _folder_of(dependency))
+    # Of that pipeline's own snapshots, and no other's: what a read is handed, and what `store gc` keeps for it. As the
+    # entry itself names it: one that names none (written before 0.3.0) is asked of the whole store, as
+    # `pin --check` asks it, and never by a guess from the folder, whose ID may have changed since
+    pipeline = locks.pinned_pipeline(listed)
     if not store.has(content_hash, pipeline):
         # A snapshot of yours of the pinned commit may hold the same rows, and stand in:
         # for the dependency whole, so one that meets this pin and not another is not read
@@ -1090,9 +1092,9 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
 
     def as_it_was_pinned():
         """What a lockfile of an earlier version names of it, where the store still has it."""
-        if earlier.get("content_hash") and store.has(earlier["content_hash"], locks.pinned_pipeline(entry, _folder_of(dependency))):
+        if earlier.get("content_hash") and store.has(earlier["content_hash"], locks.pinned_pipeline(entry)):
             _note_the_read(lock_path, locked, store)
-            return _held(store, earlier, locks.pinned_pipeline(entry, _folder_of(dependency)), _moment_of(entry))
+            return _held(store, earlier, locks.pinned_pipeline(entry), _moment_of(entry))
         return None
 
     if not isinstance(commit, str) or not commit:
@@ -1516,7 +1518,7 @@ def _resolve_pinned_version(
     from chartbook import lock as locks
 
     entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
-    of_pipeline = locks.pinned_pipeline(entry, _folder_of(dependency))
+    of_pipeline = locks.pinned_pipeline(entry)
     if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"], of_pipeline):
         return _held(store, by_label[0], of_pipeline)
     commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")

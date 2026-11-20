@@ -687,6 +687,60 @@ class TestAnotherPipelinesVersion:
             **before, f"forecast:m@{second}": newest / "_models" / "m.json",
         }
 
+    def test_which_reads_of_a_version_move_when_a_later_snapshot_holds_it_too(self, forecast):
+        """What stays and what moves, said exactly (the fourth review of the store's layout, 2026-11-20).
+
+        Through a lockfile, an asset read by its plain name is the pinned
+        snapshot's own copy until the pin moves, and so is a version read by
+        a label where the pinned snapshot itself holds that version. Every
+        other read of a version is handed the newest snapshot of the
+        pipeline that holds it, and so moves each time a later snapshot
+        holds it too, though no pin has moved: a version named by its hash,
+        in its own pipeline or through a lockfile; a label read in its own
+        pipeline; and a label read through a lockfile whose pinned snapshot
+        does not hold that version.
+        """
+        from chartbook import lock
+
+        first, second = _labelled(forecast)
+        _manifest(forecast, {"champion": first, "challenger": second})
+        _commit(forecast)
+        assert snapshot.make(forecast).made  # the third: it holds the second version, and both labels
+        serve = _serve(forecast)
+        lock.pin(serve)
+        store = default_store()
+        pins = (serve / lock.LOCK_FILE).read_bytes()
+
+        def read() -> dict:
+            through = ("forecast:m", "forecast:m@challenger", f"forecast:m@{second}", "forecast:m@champion", f"forecast:m@{first}")
+            own = ("m@challenger", f"m@{second}", "m@champion", f"m@{first}")
+            return {
+                **{reference: models.path(reference, project_dir=serve).parent.parent for reference in through},
+                **{reference: models.path(reference, project_dir=forecast).parent.parent for reference in own},
+            }
+
+        def another(note: str) -> Path:
+            """One more snapshot of the pipeline, of a commit that changes its README; its folder."""
+            (forecast / "README.md").write_text(f"# Forecast, {note}\n", encoding="utf-8", newline="\n")
+            _commit(forecast)
+            assert snapshot.make(forecast).made
+            return max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at).path.parent.parent
+
+        made = [taken.path.parent.parent for taken in sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)]
+        oldest, pinned = made[0], made[2]
+        stays = ("forecast:m", "forecast:m@challenger")  # the pinned snapshot's own copy: it holds the second version itself
+        of_the_second = (f"forecast:m@{second}", "m@challenger", f"m@{second}")
+        of_the_first = ("forecast:m@champion", f"forecast:m@{first}", "m@champion", f"m@{first}")
+        assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, pinned), **dict.fromkeys(of_the_first, oldest)}
+        # A fourth snapshot, which holds the second version again
+        fourth = another("with a word more")
+        assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, fourth), **dict.fromkeys(of_the_first, oldest)}
+        # And a fifth, in which the model is the first version again: the pinned snapshot does not hold that one
+        (forecast / "_models" / "m.json").write_bytes(b"weights-1")
+        fifth = another("and the model as it first was")
+        assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, fourth), **dict.fromkeys(of_the_first, fifth)}
+        assert (serve / lock.LOCK_FILE).read_bytes() == pins  # and no pin has moved
+
     def test_a_label_the_owner_spells_illegally_is_not_recorded(self, forecast):
         """Found by a reviewer: `check` refuses it, `snapshot` recorded it, and every
         dependant's `pin` then crashed with no lockfile written."""

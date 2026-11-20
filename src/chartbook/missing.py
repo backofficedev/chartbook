@@ -436,7 +436,7 @@ class _Walk:
         # With nothing of it in the lockfile, its entry is the pin, and names a snapshot that is not here.
         # A pinned file is here as a read of it is handed it: whole, in one of that pipeline's own
         # snapshots, and never by another pipeline's copy of the same bytes
-        of = lock.pinned_pipeline(was, folder)
+        of = lock.pinned_pipeline(was)  # as the entry names it; with no name, the whole store is asked, as a read asks it
         return not pins or any(
             not self.store.has(record["content_hash"], of) or snapshot.not_whole(self.store, record, of) for record in pins
         )

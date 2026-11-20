@@ -185,10 +185,14 @@ def pinned_pipeline(entry: Optional[dict], folder: Optional[Union[str, Path]] = 
     """The pipeline a dependency's pins came from, by its own ID.
 
     As its entry in the lockfile says it. An entry written before 0.3.0
-    does not say: for a dependency named by its folder, it is then the
-    pipeline that folder holds, where the folder is on this machine. One
-    answer, for a read, for the checks and for what a lockfile keeps when
-    it is written again; None where nothing says.
+    does not say. With *folder*, for a dependency named by its folder, it
+    is then guessed: the pipeline that folder holds now, where the folder
+    is on this machine. The guess is for finding which snapshots a pin is
+    read from (:func:`read_from`) and nothing else: the folder's ID may
+    have changed since the pin. Every question asked by a hash (is it in
+    the store, where, is it whole) is asked with no *folder*, so that an
+    entry that names no pipeline is asked of the whole store, by a read
+    and by ``pin --check`` alike.
 
     :param folder: The folder of a ``path`` dependency, as the manifest resolves it.
     """
@@ -529,7 +533,7 @@ def still_pinned(
     for asset_id, record in sorted(earlier.items()):
         content_hash = record.get("content_hash")
         try:
-            if not content_hash or not store.has(content_hash, pinned_pipeline(entry, folder)):
+            if not content_hash or not store.has(content_hash, pinned_pipeline(entry)):
                 continue
             if builds is None:
                 builds = read_from(entry, snapshots(), folder)
@@ -1776,7 +1780,7 @@ def _sync_now(
         had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
         had_assets = {k: v for k, v in had.items() if k not in had_labels}
         was = locked.get(key)
-        report.pipelines[key] = pinned_pipeline(was, entry.get("_resolved_path"))
+        report.pipelines[key] = pinned_pipeline(was)  # as the entry names it: with no name, the whole store is asked
         kept_as_it_is = False
         chosen = None  # the snapshot a `rev` walked back to
         rev_failure = None
@@ -2216,7 +2220,7 @@ def your_build(entry: dict, assets: dict, store: Store, snapshots: Callable[[], 
     absent = [
         record for record in assets.values()
         # One kept of an earlier lockfile is a pin only where its bytes are (still_pinned)
-        if record.get("content_hash") and not store.has(record["content_hash"], pinned_pipeline(entry, folder)) and in_lockfile(record)
+        if record.get("content_hash") and not store.has(record["content_hash"], pinned_pipeline(entry)) and in_lockfile(record)
     ]
     if not absent:
         return None
@@ -2562,7 +2566,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
             report.problems.append(FrozenProblem(key, None, does_not_match(key, stood), "differs"))
         for asset_id in sorted(assets):
             content_hash = assets[asset_id].get("content_hash")
-            if content_hash and not in_lockfile(assets[asset_id]) and from_a_snapshot(entry) and not store.has(content_hash, pinned_pipeline(entry, dependencies[key].get("_resolved_path"))):
+            if content_hash and not in_lockfile(assets[asset_id]) and from_a_snapshot(entry) and not store.has(content_hash, pinned_pipeline(entry)):
                 # A record kept of an earlier lockfile, for a store that had its bytes and no snapshot
                 # to read it from (still_pinned): here it is no pin, and is read as any asset the
                 # lockfile does not hold. No rebuild gives a chart's bytes again
@@ -2603,7 +2607,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                         "not_built",
                     )
                 )
-            elif not store.has(content_hash, pinned_pipeline(entry, dependencies[key].get("_resolved_path"))):
+            elif not store.has(content_hash, pinned_pipeline(entry)):
                 plain = False  # a pin from a snapshot, by its bytes: said once for its dependency
                 if assets[asset_id].get("label"):
                     remedy = f"its owner makes a snapshot that holds that version again, and then `chartbook pin --update {key}`"
@@ -2637,7 +2641,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
                         "not_in_store" if plain else "",
                     )
                 )
-            elif unsynced := _incomplete(store, assets[asset_id], pinned_pipeline(entry, dependencies[key].get("_resolved_path"))):
+            elif unsynced := _incomplete(store, assets[asset_id], pinned_pipeline(entry)):
                 in_part.append(asset_id)
                 report.problems.append(
                     FrozenProblem(key, asset_id, f"is pinned at {content_hash[:19]}…, and {unsynced}.")

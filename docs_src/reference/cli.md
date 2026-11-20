@@ -1467,7 +1467,7 @@ Remove them? [y/N]: y
 Removed 6 snapshot(s) and 5 object(s), 2.1 GB.
 ```
 
-The size before the question is of everything that would go: the objects that nothing names, and each removed snapshot's own copy of a file that a kept snapshot has too. With no snapshot to remove the line is `Would remove 5 object(s), 2.1 GB, that nothing names.` The last line says what was removed and freed, after a line for each thing that was kept after all, with why: `Kept after all: ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: a lockfile pins it`.
+The size before the question is of everything that would go: the objects that nothing names, and each removed snapshot's own copy of a file that a kept snapshot has too. With no snapshot to remove the line is `Would remove 5 object(s), 2.1 GB, that nothing names.` The last line says what was removed and freed, after a line for each thing that was kept after all, with why: `Kept after all: ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: a lockfile pins it`. A snapshot that `chartbook pin` made from a repository is listed, asked about and counted with the rest (`Would remove 1 snapshot(s) a pin made from a repository and 1 object(s) that nothing names, 4.1 KB:`). Before a snapshot that holds an asset a lockfile pins goes, the copy of that asset in the snapshot of its pipeline that stays is read and hashed, in the dry run too: where it has other bytes than its record says, nothing of that pipeline goes, and the lines above say which snapshot and which file.
 
 | Option | Effect |
 |--------|--------|

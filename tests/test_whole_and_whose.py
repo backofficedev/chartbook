@@ -949,3 +949,48 @@ class TestARecordThatNamesWhatItGivesNoPlaceFor:
         assert f"The store at {FolderStore(target)} does not hold acme/rates whole after the copy: " in str(stopped.value)
         assert str(stopped.value).endswith("not in the store. Nothing was removed from where it came from.")
         assert (_folder_of(first) / "_data" / "treasury.parquet").is_file() and len(snapshot.all_snapshots(FolderStore(store.root))) == 1
+
+
+class TestALockfileEntryThatNamesNoPipeline:
+    """Written before 0.3.0: every question by hash is asked of the whole store, never of a pipeline guessed from the folder."""
+
+    def test_a_read_and_the_check_agree_when_the_folders_id_has_changed_since(self, work, store):
+        from chartbook import identity
+
+        rates = work / "rates"
+        (rates / "_data").mkdir(parents=True)
+        (rates / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        (rates / ".gitignore").write_text("/_data/\n/chartbook.lock\n", encoding="utf-8", newline="\n")
+        _table(rates, 3)
+        _commit(rates)
+        assert snapshot.pipeline_in(rates) == "rates"  # no [project] id, no remote: its ID is its folder's name
+        snapshot.make(rates, store=store, made_at=NOW)
+        reader = _reader(work / "reader", "rates", "../rates")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        path = reader / "chartbook.lock"
+        document = json.loads(path.read_text(encoding="utf-8"))
+
+        def as_before_0_3_0(node):  # as one written before entries said whose pins they are
+            if isinstance(node, dict):
+                node.pop("pinned_from", None)
+                if isinstance(node.get("location"), dict):
+                    node["location"].pop("pipeline", None)
+            for value in node.values() if isinstance(node, dict) else node if isinstance(node, list) else ():
+                as_before_0_3_0(value)
+
+        as_before_0_3_0(document)
+        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+        (entry,) = lock.read_lock(reader).dependencies
+        assert lock.pinned_pipeline(entry) is None and lock.pinned_pipeline(entry, rates) == "rates"
+        good = Path(data.path("rates:treasury", project_dir=reader))
+        assert good.is_file() and lock.verify(reader, FolderStore(store.root), note=False).problems == []
+        # Its owner pushes it to GitHub: the folder's ID is the remote's from now on, and the snapshot is under the old one
+        _git(rates, "remote", "add", "origin", "https://github.com/acme/rates.git")
+        identity._git_remote_cache.clear()  # the next command is another process
+        assert snapshot.pipeline_in(rates) == "acme/rates" and lock.pinned_pipeline(entry, rates) == "acme/rates"
+        store_module._found_whole.clear()
+        assert Path(data.path("rates:treasury", project_dir=reader)) == good
+        assert lock.verify(reader, FolderStore(store.root), note=False).problems == []
