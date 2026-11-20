@@ -2279,15 +2279,31 @@ def catalog_open(ctx):
     from chartbook.store import StoreError
 
     catalog_path = _catalog_or_make_one()
+    if not catalog_path.is_file():
+        click.echo(f"Error: the settings name a catalog at {catalog_path}, and there is no file there.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to point at one, or 'chartbook catalog init' to make one.", err=True)
+        raise SystemExit(1)
 
     index_path = catalog_path.parent / "docs" / "index.html"
-    try:
-        # Worked out now, from the stores as they are: no run leaves a mark for this
-        said = versions.behind(catalog_path).said()
-    except (ValueError, OSError, StoreError):
-        said = ""  # a catalog or a store that cannot be read now: what there is is opened, and its build says what is wrong
+    said, unknown = "", ""
+    # Of a catalog, which lists stores. Settings may name a pipeline's own manifest, whose site is its own
+    if catalog_path.name == "catalog.toml":
+        try:
+            # Worked out now, from the stores as they are: no run leaves a mark for this
+            state = versions.behind(catalog_path)
+            said, unknown = state.said(), state.unknown
+        except (ValueError, OSError, StoreError) as e:
+            # A catalog or a store that cannot be read now: what there is is opened, and its build says what is wrong
+            unknown = (str(e).strip().splitlines() or ["it could not be read"])[0].rstrip(".")
     if not index_path.is_file():
         said = said or "The catalog's site has not been built yet."
+    elif unknown:
+        # Nobody is asked to build a site that would lose the pages of what is only away
+        click.echo(
+            f"Whether the catalog's site is behind your stores cannot be told now: {unknown}. Opening it as it is.", err=True
+        )
+        said = ""
     if said and _can_ask():
         try:
             build = _confirm(f"{said} Build it before opening?", default=True)

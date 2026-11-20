@@ -24,7 +24,7 @@ version, and shows all of them in one catalog.
 | You want to | You type |
 |---|---|
 | Start a pipeline | `chartbook init` |
-| Build it, make the build available to your other pipelines, and clear out its old versions | `chartbook run` |
+| Build it, and make the build available to your other pipelines | `chartbook run` |
 | Take newer data from a pipeline you depend on | `chartbook pin --update` |
 | Look at everything | `chartbook catalog open` |
 | Teach your coding agent ChartBook | `chartbook install agents` |
@@ -106,12 +106,12 @@ Build them in this order. Each ends with a snapshot, which is what the next one 
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
 2. ftsfr/fed_yield_curve at 5bb7217    https://github.com/ftsfr/fed_yield_curve
      git clone https://github.com/ftsfr/fed_yield_curve /work/fed_yield_curve
-     cd /work/fed_yield_curve && git checkout 5bb7217 && chartbook run --snapshot
+     cd /work/fed_yield_curve && git checkout 5bb72171c0de && chartbook run --snapshot
 3. acme/rates at 4f2a91c    ../rates (a folder on this machine); reads 1 and 2 above
-     cd /work/rates && git checkout 4f2a91c && chartbook run --snapshot
+     cd /work/rates && git checkout 4f2a91c03b6e && chartbook run --snapshot
 
 Then here again:
      cd /work/report && chartbook run
@@ -237,6 +237,12 @@ older snapshot when the new one holds all of its data. It is in {doc}`snapshots-
 held there. Until that page says otherwise a run clears nothing, the line on what `chartbook
 store gc` could clear stays, what is written below is not to be built, and the branch that built
 it is not to be merged.
+
+*Decided later the same day, after a third form was broken too:* no run removes a snapshot in
+0.6.0. A run says what `chartbook store gc` could remove of its pipeline, and `store gc` is given
+better evidence: the store's notes of what each project pins, on every branch and tag
+({doc}`snapshots-and-increments`, "Where it stands"). So the first row of "What everyone learns"
+no longer says that a run clears out old versions.
 ```
 
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
@@ -399,6 +405,20 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   that was never pinned and has a `build` script, `chartbook run --upstream` builds them all, and
   a line says so. *(Found by review: it was offered for a clone of a pipeline named by its ID,
   which `--upstream` does not build.)*
+- **A checkout is made from the repository's top, and then the folder is entered.** *(Found by
+  the second pass of the review: a folder that an earlier line's commit does not have made `cd
+  FOLDER && git checkout` fail at the `cd`, every time.)* A line with no pin, in a repository
+  that a line above has left on another commit, checks out the commit it was read at. A commit in
+  a command is twelve digits, which a large repository has no two of.
+- **One pipeline, read with a pin and without one, is one line where the commit is the same.** *(Found by a
+  mutant no test caught: a reader with no pin, listed first, got a line of its own, and the pinned
+  reader a second one for the same commit, so the same pipeline was built twice.)* The line takes
+  the pin. At another commit they are two builds, and each reader names its own.
+- **A repository that was read and does not hold the pipeline is not built in.** *(Found by the
+  second pass: the only manifest of a repository was taken for whatever pipeline was asked of
+  it, so an entry that named another pipeline's repository was told to build that one, for
+  ever.)* Asked of the pipeline itself, it is left to the pin's own words; further up, its line
+  says it was not found and gives no command.
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
   entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
   is as the command left it.
@@ -425,7 +445,15 @@ its build writes: `chartbook docs open`.
 - **No is not a refusal to open.** `n` opens the site as it is. With no site at all, `n` opens
   nothing and exits 0; where nothing can ask, no site is an error that names `chartbook catalog
   build`, as before.
-- **A store that cannot be read now** does not stop the command: it opens what there is.
+- **What is only away is not called gone.** *(Found by review: with a drive away the site was
+  "behind" by every snapshot it showed, and Enter at the question built a site without them.)*
+  Where the site shows snapshots that are not in the stores now and a store is not there, a
+  record cannot be read, or the build would stop on an ID two repositories claim, nothing is
+  asked: it says that it cannot tell, and opens what there is.
+- **Left as it is: a snapshot that was not all in the store when the site was built.** Its page
+  says so, and the open does not ask again for it once it has arrived. Telling whether it has
+  means laying it out, which is the build's work; counting it without telling would ask on every
+  open for one that never arrives.
 - **What the site was built from is the `index.json` beside it,** which every build writes. No
   new file, and nothing a run has to leave behind.
 
