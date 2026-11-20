@@ -1339,9 +1339,46 @@ class TestWhatIsNotOnIt:
         assert _numbered(result) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
         assert "not known" not in result.output  # and nothing is left unsaid of it
 
-    def test_one_whose_pinned_files_are_all_in_the_store(self, work, theirs, mine, monkeypatch):
-        """mid pinned a file of rates that this store has, of another pipeline that made the same bytes: mid's build can read it, and rates is not to build."""
+    def test_one_whose_pinned_files_are_all_in_a_snapshot_of_its_own(self, work, theirs, mine, monkeypatch):
+        """mid pinned a file of rates, and this store has those bytes whole in another snapshot of rates, of a later commit: mid's build is handed that copy, and rates is not to build."""
         _ready(_pipeline(work, "rates"), theirs)
+        commit = _ready(_pipeline(work, "mid", {"acme/rates": {}}), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        store = mine()
+        (work / "rates" / "notes.txt").write_text("a note\n", encoding="utf-8", newline="\n")
+        _git(work / "rates", "add", "-A")
+        _git(work / "rates", "commit", "--quiet", "-m", "A note")
+        snapshot.make(work / "rates", store=store)  # the same rows, at a commit the pin does not name
+        _away(work, "rates", "mid")
+        assert _numbered(_run(work, monkeypatch, "run")) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
+
+    def test_one_whose_own_copy_of_a_pinned_file_is_not_whole_is(self, work, theirs, mine, monkeypatch):
+        """The same, and the file in that snapshot of rates is cut short (a sync that has not finished, say): no read is handed it, so rates is to build."""
+        rates = _ready(_pipeline(work, "rates"), theirs)
+        commit = _ready(_pipeline(work, "mid", {"acme/rates": {}}), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        store = mine()
+        (work / "rates" / "notes.txt").write_text("a note\n", encoding="utf-8", newline="\n")
+        _git(work / "rates", "add", "-A")
+        _git(work / "rates", "commit", "--quiet", "-m", "A note")
+        kept = Path(snapshot.make(work / "rates", store=store).snapshot.path).parent.parent / "out.csv"
+        kept.chmod(0o644)
+        kept.write_bytes(b"a,b\n")
+        _away(work, "rates", "mid")
+        assert _numbered(_run(work, monkeypatch, "run")) == [
+            f"1. acme/rates at {rates[:7]}    https://example.org/acme/rates",
+            f"2. acme/mid at {commit[:7]}    https://example.org/acme/mid; reads 1 above",
+        ]
+
+    def test_one_whose_pinned_files_only_another_pipeline_holds_is(self, work, theirs, mine, monkeypatch):
+        """mid pinned a file of rates, and this store has those bytes only in a snapshot of another pipeline: a read of rates is never handed another pipeline's copy, so rates is to build, before mid.
+
+        Until each snapshot held its own copy of every file, the same bytes
+        anywhere in the store were read; now an asset of a pipeline is read
+        from that pipeline's own snapshots alone, and the list agrees with
+        the read.
+        """
+        rates = _ready(_pipeline(work, "rates"), theirs)
         commit = _ready(_pipeline(work, "mid", {"acme/rates": {}}), theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         _away(work, "rates", "mid")
@@ -1349,7 +1386,13 @@ class TestWhatIsNotOnIt:
         twin = _pipeline(work, "twin")
         (twin / "out.csv").write_text("a,b\nrates,1\n", encoding="utf-8", newline="\n")
         snapshot.make(twin, store=store)
-        assert _numbered(_run(work, monkeypatch, "run")) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
+        pinned = lock.read_lock(work / "elsewhere" / "mid").assets_of("acme/rates")
+        (table,) = [record["content_hash"] for record in pinned.values() if lock.in_lockfile(record)]
+        assert store.has(table) and not store.has(table, "acme/rates")  # the bytes are there, and are not rates'
+        assert _numbered(_run(work, monkeypatch, "run")) == [
+            f"1. acme/rates at {rates[:7]}    https://example.org/acme/rates",
+            f"2. acme/mid at {commit[:7]}    https://example.org/acme/mid; reads 1 above",
+        ]
 
     def test_what_a_pin_takes_or_gets_by_itself(self, work, theirs, monkeypatch):
         """Asked of each dependency by itself: a folder with a snapshot, a revision its repository is asked for, an ID with a host to clone it from."""

@@ -429,12 +429,17 @@ class _Walk:
         return None, None
 
     def _pin_is_not_here(self, was: dict, assets: dict, folder: Optional[Path]) -> bool:
-        """Whether the store has neither the snapshot a pin names, nor a build of yours of that commit, nor every pinned file."""
+        """Whether the store has neither the snapshot a pin names, nor a build of yours of that commit, nor every pinned file whole in a snapshot of that pipeline."""
         if lock.read_from(was, self.snapshots(), folder):
             return False  # the pin itself, or a build of yours that stands in or does not: said as it is, by the pin
         pins = [record for record in assets.values() if record.get("content_hash") and lock.in_lockfile(record)]
-        # With nothing of it in the lockfile, its entry is the pin, and names a snapshot that is not here
-        return not pins or any(not self.store.has(record["content_hash"]) for record in pins)
+        # With nothing of it in the lockfile, its entry is the pin, and names a snapshot that is not here.
+        # A pinned file is here as a read of it is handed it: whole, in one of that pipeline's own
+        # snapshots, and never by another pipeline's copy of the same bytes
+        of = lock.pinned_pipeline(was, folder)
+        return not pins or any(
+            not self.store.has(record["content_hash"], of) or snapshot.not_whole(self.store, record, of) for record in pins
+        )
 
     def place_of(self, wanted: Wanted) -> tuple[Optional[_Place], str]:
         """Where a pipeline to build has its manifest and lockfile at its commit; or None, and why what it reads is not known."""
