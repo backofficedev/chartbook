@@ -4497,8 +4497,8 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     plan.snapshots_delete = snapshots.remove
     plan.kept_versions = snapshots.kept_versions
     _keep_what_only_they_hold(plan, keep)
-    _keep_what_an_increment_builds_on(store, plan)
     _plan_pinned(store, plan, keep, recent_seconds)
+    _keep_what_an_increment_builds_on(store, plan)
     _hold_back_where_one_that_stays_has_a_hole(store, plan, keep)
     named_by_snapshots = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept + plan.pinned_kept))
     plan.snapshots = len(named_by_snapshots)
@@ -4554,6 +4554,12 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
                 if name not in staying and name not in kept_files and name not in counted:
                     counted.add(name)
                     plan.copies[name] = size
+    # And the one line an increment that goes has for a person, which is ChartBook's own and goes with its folder
+    root = getattr(store, "root", None)
+    for path in going if isinstance(root, Path) and getattr(type(store), "builds_on", None) is not None else []:
+        note = Path(path).parent / "INCREMENT.txt"
+        if store.builds_on(Path(path)) is not None and note.is_file():
+            plan.copies[note.relative_to(root).as_posix()] = note.stat().st_size
     # What no snapshot uses beside that: a snapshot never written, a sync service's copies
     named = {name for names in plan.files.values() for name in names}
     plan.unused = [(name, size) for name, size in store.tidy(dry_run=True, keep=recent_files) if name not in named]
@@ -4596,10 +4602,12 @@ def _keep_what_an_increment_builds_on(store: Store, plan: "GcPlan") -> None:
             complete = asked(store, taken.path)
             if complete is not None:
                 needed.add(str(complete))
-    for taken, why in list(plan.snapshots_delete):
-        if str(taken.path) in needed:
-            plan.snapshots_delete.remove((taken, why))
-            plan.snapshots_kept.append((taken, BUILT_ON))
+    # Any complete snapshot, one a pin made too
+    for delete, keeping in ((plan.snapshots_delete, plan.snapshots_kept), (plan.pinned_delete, plan.pinned_kept)):
+        for taken, why in list(delete):
+            if str(taken.path) in needed:
+                delete.remove((taken, why))
+                keeping.append((taken, BUILT_ON))
 
 
 def _held_by_pipeline(kept: list) -> dict:

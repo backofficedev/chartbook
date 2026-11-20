@@ -221,15 +221,20 @@ class TestGc:
         fresh = FolderStore(store.root)
         assert [record.folder for record in fresh.records()] == [complete] and fresh.verify() == []
 
-    def test_what_it_says_it_frees_is_what_goes(self, unpinned, store):
+    @pytest.mark.parametrize("shape", SHAPES)
+    def test_what_it_says_it_frees_is_what_goes_with_each_increments_line_for_a_person(self, unpinned, store, shape):
         from chartbook.cli import _format_bytes
 
-        complete, increments = with_increments(store.root, "newest")["acme+rates"]
-        size = sum(path.stat().st_size for folder in increments for path in folder.rglob("*") if path.is_file() and path.name not in ("snapshot.json", "INCREMENT.txt"))
+        complete, increments = with_increments(store.root, shape)["acme+rates"]
         plan = lock.plan_gc(FolderStore(store.root))
+        going = [_folder_of(taken) for taken, _ in plan.snapshots_delete]
+        assert going and all(folder in increments for folder in going) and all((folder / "_chartbook" / "INCREMENT.txt").is_file() for folder in going)
+        # Every file of each folder that goes, its INCREMENT.txt among them, and not its record
+        size = sum(path.stat().st_size for folder in going for path in folder.rglob("*") if path.is_file() and path.name != "snapshot.json")
         assert plan.freed_bytes == size
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.output.splitlines()[-1].endswith(f", {_format_bytes(size)}."), result.output
+        assert not any(folder.exists() for folder in going)
 
 
 class TestStoreLs:

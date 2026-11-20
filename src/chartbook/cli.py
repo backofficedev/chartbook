@@ -4049,7 +4049,7 @@ def store_ls(pipeline, store_name):
                         elsewhere += 1
             # Its record names files in another snapshot's folder: the one it builds on, or, as 0.5 wrote
             # one, any earlier ones
-            kind = "increment" if elsewhere else "complete"
+            kind = "increment" if record.increment or elsewhere else "complete"  # by what its record is
             said_shared = said_shared or bool(elsewhere)
             said_complete = said_complete or kind == "complete"
             note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"

@@ -1778,7 +1778,8 @@ def _increment_of(folder: Path, document: dict) -> Optional[tuple]:
         return None
     kept = document.get("stored") if isinstance(document.get("stored"), dict) else {}
     builds_on = kept.get("builds_on")
-    named = builds_on if isinstance(builds_on, str) and is_snapshot_folder(builds_on) else ""
+    # One that says it builds on its own name names no other folder: every file it keeps "there" is a hole
+    named = builds_on if isinstance(builds_on, str) and is_snapshot_folder(builds_on) and builds_on != folder.name else ""
     return named, tree.parent / V3_LAYOUT.pipelines / folder.parent.name
 
 
@@ -2155,9 +2156,6 @@ class FolderStore(Store):
                 f"{self._not_this_users_remedy()}"
             ) from None
         _read_records.pop(str(path), None)
-        # With an increment's record goes its line for a person, which is ChartBook's own note and no file of the snapshot
-        with contextlib.suppress(OSError):
-            (path.parent / INCREMENT_FILE).unlink()
         try:
             (path.parent / CLEARED_FILE).write_text(
                 f"Cleared by `chartbook store gc` on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC.\n"
@@ -2250,6 +2248,9 @@ class FolderStore(Store):
             if record.path.parent.parent.parent == pipeline_path
             or (record.increment and pipeline_path == self.pipelines_path() / record.path.parent.parent.parent.name)
         ]
+        # And the increments of a snapshot the pipeline also has complete, which are not read: their files count as used,
+        # and nothing of them is removed. If the complete one has a hole, such a folder may hold the last copy
+        here += self.doubled_in(self.pipelines_path() / pipeline_path.name)
         doubt = next((record for record in here if not record.readable or not record.whole), None)
         if doubt is not None:
             import warnings
@@ -2284,7 +2285,11 @@ class FolderStore(Store):
             if not recorded and not cleared:
                 if str(folder) in folders or (older_than and now - _newest_in(folder) < PENDING_FOLDER_SECONDS):
                     continue  # a snapshot being made, most likely
+            # Everything ChartBook writes in a snapshot's _chartbook/. An increment's line for a person is its own while
+            # the folder has a record, and goes with the folder once it has none
             own = {folder / OWN_DIR / RECORD_FILE, folder / OWN_DIR / CLEARED_FILE}
+            if recorded:
+                own.add(folder / OWN_DIR / INCREMENT_FILE)
             for directory, _, files in os.walk(folder):
                 for file_name in files:
                     file = Path(directory) / file_name
@@ -3762,7 +3767,11 @@ class _FolderPending(PendingSnapshot):
         if builds_on is not None:
             increments = store.increments_path()
             if increments is None or made_by != "snapshot" or not is_snapshot_folder(builds_on):
-                raise ValueError("An increment is a snapshot its owner made, on one complete snapshot, in a store that keeps increments.")
+                raise StoreError(
+                    f"A snapshot of {pipeline} cannot be kept as an increment on {builds_on!r} in the store at {store}: an "
+                    f"increment is a snapshot its owner made, on one complete snapshot of its pipeline, in a folder "
+                    f"store of this version's layout."
+                )
             self.pipeline_path = increments / pipeline_folder(pipeline)
         self.name: Optional[str] = None
         self.placed = False
@@ -3786,6 +3795,9 @@ class _FolderPending(PendingSnapshot):
                 # Noted first, so that `store gc` never meets the folder without its note
                 self._note_line(FOLDER_MARK + (self.pipeline_path / name).relative_to(self.store.root).as_posix())
                 try:
+                    # A snapshot's folder name is its own in its pipeline, across snapshots/ and increments/
+                    if any(os.path.lexists(tree / self.pipeline_path.name / name) for tree in self.store._trees()):
+                        continue
                     os.mkdir(self.pipeline_path / name)
                 except FileExistsError:
                     continue
@@ -4132,7 +4144,7 @@ class _FolderPending(PendingSnapshot):
 
 
 #: A snapshot's folder: when it was made, to the second in UTC, and the first 12 hex digits of its commit.
-_SNAPSHOT_FOLDER = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}Z_[0-9a-f]{12}$")
+_SNAPSHOT_FOLDER = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}Z_[0-9a-f]{12}\Z")
 
 #: Names Windows keeps for devices, with or without an extension.
 _RESERVED_ON_WINDOWS = frozenset(
