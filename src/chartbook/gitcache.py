@@ -502,6 +502,33 @@ class GitCache:
                 _remove_staging(staging)
         return final
 
+    def paths_at(self, url: str, commit: str, named: str) -> list[str]:
+        """Where the files of one name are at a commit, from the clone as it is: each path from the top, with ``/`` between its parts.
+
+        Nothing is fetched and nothing is checked out: this is for reading
+        a file or two of a commit (:meth:`text_at`), not for building it.
+
+        :raises GitError: If the clone does not have the commit.
+        :raises ValueError: If *commit* is not a full commit hash.
+        """
+        if not _FULL_COMMIT.match(commit):
+            raise ValueError(f"{commit!r} is not a full commit hash.")
+        listed = self._git(f"--git-dir={self.repo_path(url)}", "ls-tree", "-r", "-z", "--name-only", commit)
+        return [path for path in listed.split("\0") if path == named or path.endswith(f"/{named}")]
+
+    def text_at(self, url: str, commit: str, path: str) -> Optional[str]:
+        """A file's text at a commit, from the clone as it is; None if the commit has no such file.
+
+        :param path: The file's path from the top, as :meth:`paths_at` gives it.
+        :raises ValueError: If *commit* is not a full commit hash.
+        """
+        if not _FULL_COMMIT.match(commit):
+            raise ValueError(f"{commit!r} is not a full commit hash.")
+        try:
+            return self._git(f"--git-dir={self.repo_path(url)}", "show", f"{commit}:{path}")
+        except GitError:
+            return None
+
     def get(self, url: str, rev: Optional[str] = None, fetch: bool = True) -> Checkout:
         """Fetch a repository, resolve a revision and check it out.
 

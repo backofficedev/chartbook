@@ -1092,6 +1092,12 @@ class PinReport:
             snapshotted again by a ChartBook that records them.
         not_hashed_now: And those whose pin now says why its rows are not
             hashed (:func:`rows_not_hashed_now`), each with why.
+        not_in_store: Where something could not be pinned for want of a
+            pipeline to build: what this pipeline reads that is not in the
+            store, in the order to build it
+            (:class:`chartbook.missing.Listing`). Set by the commands that
+            make the list, ``chartbook run`` and ``chartbook pin``; None
+            otherwise.
     """
 
     lockfile: Path
@@ -1113,6 +1119,7 @@ class PinReport:
     without_rows: list = field(default_factory=list)
     rows_now: list = field(default_factory=list)
     not_hashed_now: list = field(default_factory=list)
+    not_in_store: Optional[object] = None
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -2227,24 +2234,35 @@ def build_it_said(entry: Optional[dict]) -> str:
     commit's and are put back by ``chartbook pin``, and for a pin that
     names no commit.
     """
+    import re
+
+    from chartbook.identity import plain_line, validate_pipeline_id, web_link
+
     location = (entry or {}).get("location")
     location = location if isinstance(location, dict) else {}
     commit = location.get("commit")
-    if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not commit:
+    if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{7,40}", commit):
         return ""
+    # A lockfile is anyone's, and this is shown: a pipeline's name only if it is an ID, an address
+    # only if it is a plain web address, and a path as one line of text
+    pipeline, repository = location.get("pipeline"), web_link(location.get("repository"))
+    try:
+        pipeline = validate_pipeline_id(pipeline) if isinstance(pipeline, str) and pipeline == plain_line(pipeline) else ""
+    except ValueError:
+        pipeline = ""
+    path = plain_line(location.get("path"), 300)
     # Named by its ID, it may be one folder of a repository of several: said, unless the
     # repository is named as the pipeline is, and so is its own
     of = ""
-    pipeline, repository = location.get("pipeline"), location.get("repository")
-    if isinstance(pipeline, str) and pipeline:
-        named = str(repository or "").rstrip("/").rsplit("/", 1)[-1]
+    if pipeline:
+        named = repository.rstrip("/").rsplit("/", 1)[-1]
         named = named[:-4] if named.endswith(".git") else named
         if named != pipeline.rsplit("/", 1)[-1]:
             of = f", in the folder of {pipeline}"
-    if location.get("kind") == "path" and location.get("path"):
-        where = f"in {location['path']}"
-    elif location.get("repository"):
-        where = f"in a clone of {location['repository']}{of}"
+    if location.get("kind") == "path" and path:
+        where = f"in {path}"
+    elif repository:
+        where = f"in a clone of {repository}{of}"
     else:
         where = f"in a clone of its repository{of}"
     return (
@@ -2315,6 +2333,8 @@ def not_in_store_said(
     build = build_it_said(entry)
     if build:
         lines.append(f"  To build it yourself: {build}.")
+        # This check fetches nothing, so it names what this pipeline lacks and no more
+        lines.append("  What it reads in turn may not be in the store either: `chartbook run` lists all there is to build, in order.")
     lines.append(
         f"  Where a store is shared: point CHARTBOOK_STORE at the one that has {'it' if one else 'them'}; in a "
         f"synced folder, wait for the sync to finish, here and on the machine that made the pin."

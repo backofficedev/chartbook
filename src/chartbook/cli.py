@@ -2484,8 +2484,13 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
         raise SystemExit(1)
 
 
-def _echo_pin_report(report):
-    """Print what a pin or an update did, one line per dependency and exception."""
+def _echo_pin_report(report, listed=()):
+    """Print what a pin or an update did, one line per dependency and exception.
+
+    :param listed: The dependencies that are on the list of what is not in
+        the store (:mod:`chartbook.missing`): the list says what there is
+        to say of them.
+    """
     from chartbook import lock
     from chartbook.check import display_path
     from chartbook.links import read as read_links
@@ -2499,6 +2504,8 @@ def _echo_pin_report(report):
         by_dependency.setdefault(event.dependency, []).append(event)
 
     for dependency, events in by_dependency.items():
+        if dependency in listed:
+            continue
         whole = [e for e in events if e.asset is None]
         assets = [e for e in events if e.asset is not None]
         counts = {}
@@ -2651,7 +2658,8 @@ def _echo_pin_report(report):
         click.echo(lock.floor_said(floor, manifest_shown, report.lockfile.name, lock.where_to_pin(floor)))
     if report.written:
         click.echo(f"Wrote {shown}.")
-    elif report.lockfile.exists():
+    elif report.lockfile.exists() and not (listed and all(event.dependency in listed for event in report.events)):
+        # With everything on the list of what is not in the store, the list says what there is to say
         click.echo(f"{shown} is unchanged.")
 
     stale = report.count("stale")
@@ -2704,16 +2712,37 @@ def _run_pin(project_dir, dependencies=None, on_refused=None):
         if on_refused is not None:
             on_refused()
         raise SystemExit(1)
-    _echo_pin_report(report)
+    listing, no_order = None, None
+    if dependencies is None and report.problems:
+        # What it reads that is not in the store, in the order to build it. Not for --update, which
+        # wants the newest of each, and not the commit its pin names
+        from chartbook import missing
+
+        try:
+            listing = missing.after_pin(project_dir, report, echo=click.echo)
+        except missing.NoOrder as e:
+            no_order = e
+    listed = listing.keys if listing is not None else set()
+    # Always: its closing lines say what was written, the manifest's requires_chartbook among it
+    _echo_pin_report(report, listed=listed)
     if report.unrooted:
         click.echo(
             f"The store's note of this lockfile, for `store gc`, could not be written "
             f"({report.unrooted}); `store gc` goes by the note it has."
         )
-    if report.problems:
+    if no_order is not None:
+        # Said, and nothing undone: the cycle may be one the entry just added has no part in
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"{no_order.root}: {no_order}", err=True)
+        raise SystemExit(1)
+    if listing is not None:
+        for line in missing.said(listing, again="chartbook pin", done="pinned"):
+            click.echo(line, err=True)
+    others = [event for event in report.problems if event.dependency not in listed]
+    if others:
         click.echo(
-            f"\n{len(report.problems)} thing(s) could not be pinned.", err=True
+            f"\n{len(others)} {'other ' if listed else ''}thing(s) could not be pinned.", err=True
         )
+    if report.problems:
         raise SystemExit(1)
 
 
@@ -3678,9 +3707,12 @@ def _run_script(
         if step.source == "git":
             # ChartBook's own copy of a dependency: its lockfile goes nowhere, and its manifest is nobody's to write here
             pins.floor = None
-        if pins.written or any(event.status not in quiet for event in pins.events):
+        # What is on the list of what is not in the store is said there, once the run has stopped
+        listing = getattr(pins, "not_in_store", None)
+        listed = listing.keys if listing is not None else set()
+        if pins.written or any(event.status not in quiet and event.dependency not in listed for event in pins.events):
             click.echo(f"{step.id}: pinning what it depends on")
-            _echo_pin_report(pins)
+            _echo_pin_report(pins, listed=listed)
         elif getattr(pins, "floor", None) is not None:
             # Nothing of the pins to say, and a manifest that admits a ChartBook which cannot read the
             # lockfile: a run writes no manifest, and says each time which command does
@@ -3718,6 +3750,19 @@ def _run_script(
                 remake_command=remake_command, upstream=upstream, no_gc_reminder=no_gc_reminder,
                 added=(*added, now_declared),
             )
+        if report.not_in_store is not None:
+            from chartbook import missing
+
+            # The command to come back with, as it was typed
+            again = "chartbook run" + "".join(
+                f" {flag}" for flag, given in (
+                    ("--force", force), ("--snapshot", snapshot is True), ("--remake", remake), ("--upstream", upstream),
+                ) if given
+            )
+            for line in missing.said(report.not_in_store, again=again):
+                click.echo(line, err=True)
+            if report.reason == runner.NOT_IN_STORE:
+                raise SystemExit(report.exit_code or 1)  # the list has said it
         click.echo(
             click.style("Error: ", fg="red", bold=True)
             + f"{report.failed.id}: {report.reason}. Nothing after it was run.",

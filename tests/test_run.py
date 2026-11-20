@@ -458,7 +458,7 @@ class TestPinning:
         # So there is no snapshot to pin, and the reader is not built
         assert pinned[0].count("no_snapshot") == 1
         assert report.failed.id == "reader"
-        assert report.reason == "what it depends on could not be pinned"
+        assert report.reason == run.NOT_IN_STORE
         assert not (reader / "_output").exists()
 
     def test_a_build_that_is_not_declared_ready_cannot_be_pinned(self, reader, work):
@@ -467,7 +467,10 @@ class TestPinning:
         assert (work / "upstream" / "_data" / "x.parquet").exists()
         report = run.run(reader, echo=_quiet)
         assert report.failed.id == "reader"
-        assert report.reason == "what it depends on could not be pinned"
+        assert report.reason == run.NOT_IN_STORE
+        # Its files are there, and a snapshot is all it lacks: the list says to make one, not to build again
+        (line,) = report.not_in_store.wanted
+        assert line.built and line.folder == work / "upstream"
 
     def test_what_a_pipeline_depends_on_is_pinned_before_it_is_built(self, reader, work):
         """So that its code can read it: here, with `chartbook path upstream:x`."""
@@ -1101,14 +1104,25 @@ class TestCommand:
     ):
         commit = _git(work, "rev-parse", "HEAD")
         monkeypatch.chdir(reader)
+        import shlex
+
+        from chartbook.store import default_store
+
         result = self._run()
-        assert result.exit_code == 1
-        assert (
-            f"upstream: cannot be pinned: it has no snapshot at or before {commit[:7]}, "
-            f"the commit its folder is on. In ../upstream: commit, then run "
-            f"`chartbook snapshot`"
-        ) in result.output.splitlines()
-        assert "Error: reader: what it depends on could not be pinned." in result.output
+        assert result.exit_code == 1 and commit
+        # The list of what is not in the store (tests/test_not_in_your_store.py), in the pin's place
+        assert result.output.splitlines()[2:] == [
+            f"reader cannot be built yet: 1 pipeline it reads is not in the store at {default_store()}.",
+            "Build it first. It ends with a snapshot, which is what this one reads.",
+            "",
+            f"1. upstream    {os.path.join('..', 'upstream')} (a folder on this machine)",
+            f"     cd {shlex.quote(str(work / 'upstream'))} && chartbook run --snapshot",
+            "",
+            "Then here again:",
+            f"     cd {shlex.quote(str(reader))} && chartbook run",
+            "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
+            "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has it, or wait for its sync to finish.",
+        ]
         assert not (work / "upstream_runs.log").exists()
 
     def test_force_is_passed_on(self, work, monkeypatch):

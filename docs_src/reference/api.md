@@ -41,6 +41,7 @@ chartbook
 ../apidocs/chartbook/chartbook.versions
 ../apidocs/chartbook/chartbook.lock
 ../apidocs/chartbook/chartbook.lineage
+../apidocs/chartbook/chartbook.missing
 ../apidocs/chartbook/chartbook.gitcache
 ../apidocs/chartbook/chartbook.replacing
 ../apidocs/chartbook/chartbook.run

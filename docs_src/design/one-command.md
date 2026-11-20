@@ -24,7 +24,7 @@ version, and shows all of them in one catalog.
 | You want to | You type |
 |---|---|
 | Start a pipeline | `chartbook init` |
-| Build it, make the build available to your other pipelines, and clear out its old versions | `chartbook run` |
+| Build it, and make the build available to your other pipelines | `chartbook run` |
 | Take newer data from a pipeline you depend on | `chartbook pin --update` |
 | Look at everything | `chartbook catalog open` |
 | Teach your coding agent ChartBook | `chartbook install agents` |
@@ -99,19 +99,23 @@ The run says all that has to be built, in the order to build it, and stops.
 
 ```text
 $ chartbook run
-acme/report cannot be built yet: 3 pipelines it reads are not in your store.
+Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
+Fetching https://github.com/ftsfr/fed_yield_curve, to see what ftsfr/fed_yield_curve reads in turn.
+acme/report cannot be built yet: 3 pipelines it reads are not in the store at /Users/x/.chartbook/store.
 Build them in this order. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
-     git clone https://github.com/ftsfr/he_kelly_manela && cd he_kelly_manela
-     git checkout 7802799 && chartbook run --snapshot
+     git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
 2. ftsfr/fed_yield_curve at 5bb7217    https://github.com/ftsfr/fed_yield_curve
-     git clone https://github.com/ftsfr/fed_yield_curve && cd fed_yield_curve
-     git checkout 5bb7217 && chartbook run --snapshot
-3. acme/rates at 4f2a91c    ../rates (a folder on this machine); reads 2 above
-     cd ../rates && git checkout 4f2a91c && chartbook run --snapshot
+     git clone https://github.com/ftsfr/fed_yield_curve /work/fed_yield_curve
+     cd /work/fed_yield_curve && git checkout 5bb72171c0de && chartbook run --snapshot
+3. acme/rates at 4f2a91c    ../rates (a folder on this machine); reads 1 and 2 above
+     cd /work/rates && git checkout 4f2a91c03b6e && chartbook run --snapshot
 
-Then `chartbook run` here again.
+Then here again:
+     cd /work/report && chartbook run
+Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
 **6. Look.**
@@ -233,6 +237,12 @@ older snapshot when the new one holds all of its data. It is in {doc}`snapshots-
 held there. Until that page says otherwise a run clears nothing, the line on what `chartbook
 store gc` could clear stays, what is written below is not to be built, and the branch that built
 it is not to be merged.
+
+*Decided later the same day, after a third form was broken too:* no run removes a snapshot in
+0.6.0. A run says what `chartbook store gc` could remove of its pipeline, and `store gc` is given
+better evidence: the store's notes of what each project pins, on every branch and tag
+({doc}`snapshots-and-increments`, "Where it stands"). So the first row of "What everyone learns"
+no longer says that a run clears out old versions.
 ```
 
 - **What is cleared is what `chartbook store gc` would remove of this pipeline today,** by the
@@ -352,6 +362,77 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   name a host to clone it from; and, with `--upstream`, a folder on this machine. The list is for
   the rest. *(Found by review: the page read as if nothing were built today.)*
 
+*Built 2026-11-19* (`chartbook/missing.py`), with what building it settled:
+
+- **Every command can be pasted from any folder.** The proposal's `git clone … && cd name` made a
+  clone inside the folder it was typed in, and its `cd ../rates` held only from one folder. A
+  folder is named whole, and a repository is cloned beside the pipeline's own repository. The
+  last lines say how to come back: `cd /work/report && chartbook run`.
+- **A clone you already have is read where it is.** The pipeline's own repository, or a folder
+  beside it named as `git clone` names one, whose `origin` is the address a pin records: the
+  repository's files are read from it at the commit to build, nothing is fetched, and its line
+  says to build there. A repository that wants a password cannot be fetched from here at all, and
+  a class has its clones side by side. *(Found by review: it was first told by the ID of the
+  pipeline in the folder, which took a folder of another history for the clone and missed a
+  pipeline in a folder of its repository.)*
+- **No command moves the pipeline's own repository.** *(Found by review: in a repository of
+  several pipelines the list said `git checkout`, and its last command then built the pipeline
+  itself as it was at that commit.)* What is wanted there at another commit is built in a
+  worktree of that commit, and the reader's checkout stays on its branch. A worktree of that
+  name is used only where git says it is one, on that commit. *(Found by the third pass: a
+  leftover folder of the name was taken for it.)*
+- **An address is one only if it is a plain web address,** which is all a snapshot records.
+  *(Found by review: one that began with `--upload-pack=` was refused by the fetch and printed in
+  a `git clone` to paste.)* A pipeline's name is one only if it is an ID. Everything shown is
+  shown without control characters.
+- **A line written for a folder holds once the lines above it are done.** *(Found by review: one
+  pipeline wanted at two commits had its second line written from where the folder was before
+  the first line moved it.)*
+- **The store that was looked in is named,** as it was in every message this takes the place of.
+- **A line names the lines it reads:** `reads 1 and 2 above`, where "reads 2 above" could be
+  taken for a count or for a line.
+- **The last line is the other way on:** where a store is shared, nothing has to be built. On a
+  team that is the likelier cause, and it was in every message this list takes the place of.
+- **`chartbook pin --update` keeps its own words.** It asks for the newest snapshot of each, and
+  the list would say to build the commit a pin names.
+- **An ID the store has in other letters is not on the list.** It is a name to put right, and the
+  pin says which.
+- **A folder that is built and was never pinned is not built again.** With nothing uncommitted
+  and every declared file on disk, its line says `built already` and `chartbook snapshot`; so
+  does a pipeline with no `build` script. The words this list takes the place of said "commit,
+  then run `chartbook snapshot`", and a build may take an hour. Never for a pinned one: *(found by
+  review)* its files may be of another build than the pin's, and a snapshot of them would carry
+  the pinned commit's name.
+- **With `--upstream` to offer, the list offers it:** where every line is a `path` entry's folder
+  that was never pinned and has a `build` script, `chartbook run --upstream` builds them all, and
+  a line says so. *(Found by review: it was offered for a clone of a pipeline named by its ID,
+  which `--upstream` does not build.)*
+- **A checkout is made from the repository's top, and then the folder is entered.** *(Found by
+  the second pass of the review: a folder that an earlier line's commit does not have made `cd
+  FOLDER && git checkout` fail at the `cd`, every time.)* A line with no pin, in a repository
+  that a line above has left on another commit, checks out the commit it was read at. A commit in
+  a command is twelve digits, which a large repository has no two of.
+- **One pipeline, read with a pin and without one, is one line where the commit is the same.** *(Found by a
+  mutant no test caught: a reader with no pin, listed first, got a line of its own, and the pinned
+  reader a second one for the same commit, so the same pipeline was built twice.)* The line takes
+  the pin. At another commit they are two builds, and each reader names its own.
+- **A repository that was read and does not hold the pipeline is not built in.** *(Found by the
+  second pass: the only manifest of a repository was taken for whatever pipeline was asked of
+  it, so an entry that named another pipeline's repository was told to build that one, for
+  ever.)* Asked of the pipeline itself, it is left to the pin's own words; further up, its line
+  says it was not found and gives no command. *(Found by the third pass: a manifest that could
+  not be read, and one past the two hundredth of its repository, were said not to be there.
+  The first is its folder's all the same; the second line says how far the search went.)*
+- **A clone that lacks its commit is fetched, and built in the folder the clone has the pipeline
+  in now.** *(Found by the third pass: after the fetch the list said to build at the top of the
+  clone.)* The line says that the folder is a guess.
+- **On Windows the lines are for `cmd.exe` at its prompt:** `cd /d`, and a `%` as it is. *(Found
+  by the third pass, by reading: a bare `cd` does not change the drive, and a doubled `%` is one
+  only in a batch file. Nothing here was run on Windows.)*
+- **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
+  entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
+  is as the command left it.
+
 ## The catalog knows when it is behind
 
 *Decided 2026-11-19: `chartbook catalog open` asks before it opens a site that is behind.*
@@ -418,7 +499,7 @@ changes.
 5. `chartbook pin --update`; `chartbook update` and `pin --frozen` are gone. *Built 2026-11-19.*
 6. `chartbook run` asks to add a pipeline that code reads and the manifest does not declare.
    *Built 2026-11-19.*
-7. What is not in your store: the list, in order.
+7. What is not in your store: the list, in order. *Built 2026-11-19.*
 8. `chartbook catalog open` asks before opening a site that is behind.
 9. `chartbook install agents`.
 10. The first screen: `--help`, the Quickstart, the README, the skill.
