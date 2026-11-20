@@ -386,7 +386,9 @@ class SnapshotReport:
         not_whole: For a snapshot that was made of the same files, commit
             and pins as one already in the store, because that one lacks a
             file of its own (:meth:`chartbook.store.Store.holes_of`): that
-            one, and the files it lacks. It is left as it is.
+            one, the files it lacks, and the store it lacks them in where
+            that is another store this run sends the snapshot to (None
+            where it is the one the snapshot is made in). It is left as it is.
     """
 
     snapshot: Snapshot
@@ -2627,7 +2629,7 @@ def make(
         # The lineage is checked in every store, where the pins were read
         # from: a snapshot pinned from a read-only store is written to another
         stood_in = _check_lineage(directory, pipeline, stores, deep)
-        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in)
+        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in, also=tuple(targets[1:]))
         if len(targets) > 1:
             from chartbook.transfer import NotWholeThere, copy_snapshot
             for target in targets[1:]:
@@ -2677,8 +2679,8 @@ def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> 
 
 
 def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at: Optional[str],
-             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None) -> SnapshotReport:
-    """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`)."""
+             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, also: tuple = ()) -> SnapshotReport:
+    """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`); *also* are the other stores it is then sent to."""
     raw = _read_manifest_file(directory)
     check_within(directory, pipeline)
     check_own_name(directory, pipeline, raw)
@@ -2691,7 +2693,7 @@ def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at
     with tempfile.TemporaryDirectory(prefix="chartbook-snapshot-") as staging:
         try:
             report = _make(
-                directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in, staging=Path(staging)
+                directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in, staging=Path(staging), also=also,
             )
             report.stores = [str(store)]
             return report
@@ -2718,12 +2720,36 @@ def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
             )
 
 
+def _holes_there(other: Store, taken: Snapshot) -> Optional[tuple]:
+    """What another store's own record of one snapshot lacks there: that record, the files, and the store; None where it lacks nothing.
+
+    Its record is found as any is (:func:`find`), by its commit and its
+    folder in the repository, and is this snapshot by its pipeline and its
+    time. A store with no record of it lacks nothing: the snapshot is
+    written there whole. Nor does one that keeps each file once (a bucket),
+    or one that cannot be asked now, whose copy then says what is wrong.
+    """
+    if getattr(type(other), "holes_of", Store.holes_of) is Store.holes_of:
+        return None
+    try:
+        for theirs in find(other, taken.commit, taken.subdirectory):
+            if theirs.pipeline == taken.pipeline and theirs.made_at == taken.made_at and theirs.path is not None:
+                holes = other.holes_of(theirs.path)
+                return (theirs, holes, other) if holes else None
+    except (SnapshotError, StoreError, OSError):
+        pass
+    return None
+
+
 def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
-          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, staging: Optional[Path] = None) -> SnapshotReport:
+          built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, staging: Optional[Path] = None,
+          also: tuple = ()) -> SnapshotReport:
     """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written.
 
     :param staging: A folder for what is staged for the snapshot, which the
         caller removes once this has returned (:func:`_staged`).
+    :param also: The other stores this run sends the snapshot to: the one
+        it stands on must be whole in each that has a record of it.
     """
     assets: dict[str, dict] = {}
     held: dict[str, dict] = {}
@@ -2848,10 +2874,12 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     # be the one a pin takes. What it was pinned to is part of what a
     # snapshot says, so one whose pins have moved since is not given back
     # Each that this could stand on is asked whether it is whole: its own files, at the sizes its
-    # record says, one question for each (Store.holes_of). The newest that is whole is stood on. One
-    # that is not is not stood on, nor written to, since a snapshot's folder is not changed once its
-    # record is written; and only where none is whole is a new one made from the files at hand, the
-    # report saying which file the newest of them lacks
+    # record says, one question for each (Store.holes_of), here and in every other store this run
+    # sends it to that has a record of it already (one that has none is sent it whole). The newest
+    # that is whole in each of them is stood on. One that is not is not stood on, nor written to,
+    # since a snapshot's folder is not changed once its record is written; and only where none is
+    # whole is a new one made from the files at hand, the report saying which file the newest of
+    # them lacks, and in which store where that is not this one
     same = None
     not_whole = None
     rows_first_said, rows_first_count = None, 0  # the one of the same files that says nothing of the rows this one records
@@ -2861,11 +2889,15 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         # One made under another ID is not this pipeline's, whose ID has
         # changed since (a remote added, a folder renamed): it gets its own
         if taken.pipeline == snapshot.pipeline and identity_keys(snapshot) <= identity_keys(taken):
-            holes = store.holes_of(taken.path) if taken.path is not None else []
-            if not holes:
+            holed = (taken, store.holes_of(taken.path), None) if taken.path is not None else (taken, [], None)
+            for other in also:
+                if holed[1]:
+                    break
+                holed = _holes_there(other, taken) or holed
+            if not holed[1]:
                 same, not_whole = taken, None
                 break
-            not_whole = not_whole or (taken, holes)
+            not_whole = not_whole or holed
     if not_whole is not None and not_whole[0].built_by_run:
         # The bytes are still the ones a run built, from these same pins: the whole one says so too
         snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))

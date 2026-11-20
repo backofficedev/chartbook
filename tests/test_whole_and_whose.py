@@ -279,29 +279,139 @@ class TestAVersionPinnedByItsLabel:
 
 
 class TestASnapshotSentToTwoStores:
-    def test_a_hole_in_the_second_stores_copy_is_said_in_its_own_words(self, rates, work, store):
-        """Which store, which snapshot, which file, and the way out: not `store move`'s words, nor "rerun to finish"."""
+    """The snapshot a run stands on is whole in every store the run sends it to: a hole in another store's copy is a hole."""
+
+    @staticmethod
+    def _both(store, there):
+        return {"store": _two_stores(store, there), "store_names": ["here", "there"]}
+
+    @pytest.fixture
+    def holed(self, rates, work, store):
+        """A snapshot in two stores, whose copy in the second has lost its table for good: that copy, and the second store's folder."""
         there = work / "there"
-        first = snapshot.make(rates, store=_two_stores(store, there), store_names=["here", "there"], made_at=NOW)
-        assert first.made
+        assert snapshot.make(rates, **self._both(store, there), made_at=NOW).made
         (copy,) = snapshot.all_snapshots(FolderStore(there))
         _lose(_folder_of(copy) / "_data" / "treasury.parquet")
+        return copy, there
+
+    def test_a_hole_in_the_second_stores_copy_makes_a_new_snapshot_that_both_hold_whole(self, rates, store, holed):
+        copy, there = holed
+        again = snapshot.make(rates, **self._both(store, there), made_at=LATER)
+        assert again.made and again.snapshot.made_at == LATER
+        lacking, files, where = again.not_whole
+        assert (Path(lacking.path), files, str(where)) == (Path(copy.path), ["_data/treasury.parquet"], str(FolderStore(there)))
+        for root in (store.root, there):
+            (new,) = [taken for taken in snapshot.all_snapshots(FolderStore(root)) if taken.made_at == LATER]
+            assert FolderStore(root).verify_snapshot(new.path) == []  # each of its own files read and hashed
+        assert not (_folder_of(copy) / "_data" / "treasury.parquet").exists()  # and that one is left as it is
+
+    def test_the_run_after_that_stands_on_the_new_one_and_none_fails(self, rates, store, holed):
+        """The case the third review brought: nothing changes in the pipeline, and no run stops, at once or for ever."""
+        _, there = holed
+        made = [snapshot.make(rates, **self._both(store, there), made_at=made_at) for made_at in (LATER, LAST)]
+        assert [report.made for report in made] == [True, False]
+        assert made[1].snapshot.made_at == LATER and made[1].not_whole is None
+        assert [len(snapshot.all_snapshots(FolderStore(root))) for root in (store.root, there)] == [2, 2]
+
+    def test_a_store_with_no_record_of_it_is_sent_it_whole_and_no_new_one_is_made(self, rates, work, store):
+        """A store added to the catalog later: the snapshot stood on is written there, as before."""
+        first = snapshot.make(rates, store=store, made_at=NOW).snapshot
+        there = work / "there"
+        report = snapshot.make(rates, **self._both(store, there), made_at=LATER)
+        assert not report.made and Path(report.snapshot.path) == Path(first.path) and report.not_whole is None
+        (copy,) = snapshot.all_snapshots(FolderStore(there))
+        assert copy.made_at == NOW and FolderStore(there).verify_snapshot(copy.path) == []
+
+    def test_an_older_one_whole_in_both_is_stood_on(self, rates, work, store):
+        there = work / "there"
+        old = snapshot.make(rates, **self._both(store, there), made_at=OLD).snapshot
+        table = _folder_of(old) / "_data" / "treasury.parquet"
+        kept = table.read_bytes()
+        _lose(table)  # the first store's copy lacks its table, so the next run makes a new one, whole in both
+        assert snapshot.make(rates, **self._both(store, there), made_at=NOW).made
+        table.write_bytes(kept)  # the sync brings it after all: the older one is whole in both again
+        store_module._found_whole.clear()
+        (newer,) = [taken for taken in snapshot.all_snapshots(FolderStore(there)) if taken.made_at == NOW]
+        _lose(_folder_of(newer) / "_data" / "treasury.parquet")  # and the newer one loses its table in the second
+        report = snapshot.make(rates, **self._both(store, there), made_at=LATER)
+        assert not report.made and report.snapshot.made_at == OLD and report.not_whole is None
+        assert [len(snapshot.all_snapshots(FolderStore(root))) for root in (store.root, there)] == [2, 2]
+
+    def test_only_a_store_the_run_writes_to_is_asked_and_once(self, rates, store, holed, monkeypatch):
+        """With one store nothing else is asked; each other store costs one `find` and one `holes_of`."""
+        _, there = holed
+        asked: list = []
+        find, holes_of = snapshot.find, FolderStore.holes_of
+
+        def finding(where, *args, **kwargs):
+            asked.append(("find", str(where)))
+            return find(where, *args, **kwargs)
+
+        def asking(self, record):
+            asked.append(("holes_of", str(self)))
+            return holes_of(self, record)
+
+        monkeypatch.setattr(snapshot, "find", finding)
+        monkeypatch.setattr(FolderStore, "holes_of", asking)
+        here, second = str(FolderStore(store.root)), str(FolderStore(there))
+        # One store, given as it is, or as the one store of a catalog that the run writes to
+        for one in ({"store": FolderStore(store.root)}, {"store": _two_stores(store, there), "store_names": ["here"]}):
+            asked.clear()
+            assert not snapshot.make(rates, **one, made_at=LATER).made
+            assert asked.count(("holes_of", here)) == 1 and not [what for what, where in asked if where == second]
+        asked.clear()
+        assert snapshot.make(rates, **self._both(store, there), made_at=LATER).made
+        assert [what for what, where in asked if where == second] == ["find", "holes_of"]
+
+    def test_the_line_names_the_other_store_and_the_file(self, rates, work, store, monkeypatch):
+        from chartbook.cli import _when
+
+        there = work / "there"
+        for root in (store.root, there):
+            root.mkdir()
+        monkeypatch.delenv(config.STORE_ENV_VAR, raising=False)
+        home = config.get_global_config_dir()
+        home.mkdir(parents=True, exist_ok=True)
+        (home / "catalog.toml").write_text(
+            tomli_w.dumps({"project": {"name": "Catalog"}, "stores": {"here": {"url": str(store.root)}, "there": {"url": str(there)}}}),
+            encoding="utf-8", newline="\n",
+        )
+        monkeypatch.chdir(rates)
+        typed = ["snapshot", "--store", "here", "--store", "there"]
+        first = CliRunner().invoke(main, typed)
+        assert first.exit_code == 0, first.output
+        (copy,) = snapshot.all_snapshots(FolderStore(there))
+        _lose(_folder_of(copy) / "_data" / "treasury.parquet")
+        again = CliRunner().invoke(main, typed)
+        assert again.exit_code == 0, again.output
+        assert (
+            f"  The same files as the snapshot made {_when(copy.made_at)} ({_folder_of(copy).name}), which lacks "
+            f"_data/treasury.parquet in the store at {FolderStore(there)}: this one is whole, and that one is left as it is."
+        ) in again.output.splitlines()
+        third = CliRunner().invoke(main, typed)
+        assert third.exit_code == 0 and "No new snapshot" in third.output and "which lacks" not in third.output, third.output
+
+    def test_a_copy_there_with_other_bytes_at_its_size_is_said_and_nothing_is_written_over_it(self, rates, store, work):
+        """What a size cannot tell is found when the copy is read and hashed: which store, which snapshot, which file, and the way out."""
+        there = work / "there"
+        assert snapshot.make(rates, **self._both(store, there), made_at=NOW).made
+        (copy,) = snapshot.all_snapshots(FolderStore(there))
+        damaged = _folder_of(copy) / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))
         before = sorted(p.relative_to(there).as_posix() for p in there.rglob("*") if p.is_file())
-        for made_at in (LATER, LAST):
-            with pytest.raises(snapshot.NotInEveryStore) as said:
-                snapshot.make(rates, store=_two_stores(store, there), store_names=["here", "there"], made_at=made_at)
-            assert str(said.value) == (
-                f"The store at {FolderStore(there)} has the snapshot of acme/rates made {NOW} already, in "
-                f"{_folder_of(copy).name}, and not whole: _data/treasury.parquet is not in the store. The snapshot in "
-                f"{FolderStore(store.root)} is whole. If a sync is still bringing the file there, it arrives with the "
-                f"sync. If it is lost for good, that store's copy stays as it is until a later snapshot of acme/rates "
-                f"is sent there, and then goes with `chartbook store gc` there once nothing keeps it."
-            )
+        with pytest.raises(snapshot.NotInEveryStore) as said:
+            snapshot.make(rates, **self._both(store, there), made_at=LATER)
+        assert str(said.value).startswith(
+            f"The store at {FolderStore(there)} has the snapshot of acme/rates made {NOW} already, in "
+            f"{_folder_of(copy).name}, and not whole: _data/treasury.parquet is no longer what its record says"
+        )
+        assert str(said.value).endswith(
+            f"The snapshot in {FolderStore(store.root)} is whole. If a sync is still bringing the file there, it arrives "
+            f"with the sync. If it is lost for good, that store's copy stays as it is until a later snapshot of "
+            f"acme/rates is sent there, and then goes with `chartbook store gc` there once nothing keeps it."
+        )
         assert sorted(p.relative_to(there).as_posix() for p in there.rglob("*") if p.is_file()) == before
-        # The way out, carried out: the pipeline changes, a later snapshot goes to both, whole
-        _table(rates, 4)
-        later = snapshot.make(rates, store=_two_stores(store, there), store_names=["here", "there"], made_at=LAST)
-        assert later.made and len(snapshot.all_snapshots(FolderStore(there))) == 2
 
 
 class TestTheNewestWholeMatchIsStoodOn:

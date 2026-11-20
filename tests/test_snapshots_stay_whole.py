@@ -290,7 +290,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
         before = _state(_folder_of(first)), _state(_folder_of(second))
         again = snapshot.make(rates, store=FolderStore(store.root), made_at=LATER)
         assert again.made and again.snapshot.path not in (first.path, second.path)
-        assert again.not_whole == (second, ["_data/treasury.parquet"])
+        assert again.not_whole == (second, ["_data/treasury.parquet"], None)
         _whole(again.snapshot)
         assert not lost.exists() and (_state(_folder_of(first)), _state(_folder_of(second))) == before
 
@@ -317,7 +317,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
         first = snapshot.make(rates, store=store, made_at=NOW).snapshot
         _lose(_folder_of(first) / "README.md")
         again = snapshot.make(rates, store=FolderStore(store.root), made_at=LATER)
-        assert again.made and again.not_whole == (first, ["README.md"])
+        assert again.made and again.not_whole == (first, ["README.md"], None)
         _whole(again.snapshot)
         assert not (_folder_of(first) / "README.md").exists()
 
@@ -327,7 +327,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
         _writable(short)
         short.write_bytes(b"other")  # a sync that has brought the first bytes of it
         again = snapshot.make(rates, store=FolderStore(store.root), made_at=LATER)
-        assert again.made and again.not_whole == (first, ["_data/treasury.parquet"])
+        assert again.made and again.not_whole == (first, ["_data/treasury.parquet"], None)
         assert short.read_bytes() == b"other"
         _whole(again.snapshot)
 

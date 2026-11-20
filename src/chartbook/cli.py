@@ -3634,12 +3634,14 @@ def _echo_snapshot(report, upstream=False):
             f"meet a pin of {'it' if count == 1 else 'them'}."
         )
     if getattr(report, "not_whole", None) and report.made:
-        # Made of the same files as one already here, because that one lacks a file of its own in the store
-        holed, files = report.not_whole
+        # Made of the same files as one already here, because that one lacks a file of its own in the store:
+        # the one it is made in, or another this run sends it to, which is then named
+        holed, files, where = report.not_whole
         more = f" and {len(files) - 1} more" if len(files) > 1 else ""
+        there = f" at {_printable(str(where))}" if where is not None else ""
         click.echo(
             f"  The same files as the snapshot made {_when(holed.made_at)} ({holed.path.parent.parent.name}), which "
-            f"lacks {_printable(files[0])}{more} in the store: this one is whole, and that one is left as it is."
+            f"lacks {_printable(files[0])}{more} in the store{there}: this one is whole, and that one is left as it is."
         )
     if getattr(report, "rows_said", None):
         # Each dataframe whose file changed, beside the snapshot before this one
