@@ -71,12 +71,20 @@ def _same_place(a, b):
     return str(a) == str(b)
 
 
+def _check_writable(store):
+    """Stop before anything is copied if a store is one this ChartBook reads and does not write (a folder store of 0.5)."""
+    check = getattr(store, "check_writable", None)
+    if check is not None:
+        check()
+
+
 def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
     from chartbook.identity import validate_pipeline_id
     validate_pipeline_id(pipeline)
     target_entry = stores.named(to)
     stores.for_writing(pipeline, [to])
     target = target_entry.store
+    _check_writable(target)
     sources = []
     total = 0
     for entry in stores.entries:
@@ -89,6 +97,8 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
             raise StoreError(f"Stores {entry.name!r} and {to!r} are one store under two names; nothing was moved")
         if chosen and entry.read_only and not keep:
             raise StoreError(f"Source store {entry.name!r} is read-only; use --keep")
+        if chosen and not keep:
+            _check_writable(entry.store)  # nothing is removed from a store of 0.5: found out before anything is copied
         if chosen:
             sources.append((entry, chosen))
             total += sum(entry.store.size_of(h) for h in set().union(*(t.hashes() for t in chosen)))
@@ -117,7 +127,7 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
             raise StoreError(f"Target failed verification; source retained: {problems[0]}")
     if not keep:
         for entry, chosen in sources:
-            # Oldest first lets the store preserve files referenced by remaining snapshots.
+            # Oldest first lets a store that keeps each file once (a bucket) preserve files referenced by remaining snapshots.
             for taken in sorted(chosen, key=lambda t: t.made_at):
                 entry.store.remove_snapshot(taken.path)
     if route and stores.catalog:

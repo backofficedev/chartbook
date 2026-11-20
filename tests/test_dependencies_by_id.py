@@ -611,7 +611,7 @@ class TestWhatTheThirdReviewFound:
         from chartbook.store import default_store
 
         work, first, second = elsewhere
-        newer = default_store().root / "pipelines" / "acme+rates" / f"2026-01-01T000000Z_{'e' * 12}" / "_chartbook"
+        newer = default_store().root / "snapshots" / "acme+rates" / f"2026-01-01T000000Z_{'e' * 12}" / "_chartbook"
         newer.mkdir(parents=True)
         (newer / "snapshot.json").write_text(json.dumps({"schema": "chartbook/snapshot/v9"}), encoding="utf-8", newline="\n")
         forecast = _forecast(work / "forecast", {"acme/rates": {}})

@@ -1,6 +1,9 @@
-"""Snapshots are standalone or shared, and the store says so: a README in each pipeline's folder, `store ls`, and a gc reminder.
+"""What the store says of its snapshots: a README in each pipeline's folder, `store ls`, and a gc reminder.
 
-``docs_src/design/plan-data-reads.md``, step 4.
+``docs_src/design/plan-data-reads.md``, step 4, where a snapshot was
+standalone or shared. A store of this version holds each snapshot complete
+(``docs_src/design/snapshots-and-increments.md``), and says so; the earlier
+words are those of a store ChartBook 0.5 laid out, which is read as it is.
 """
 
 import re
@@ -51,9 +54,11 @@ class TestTheReadme:
     def test_the_first_snapshot_leaves_one_and_later_ones_leave_it_alone(self, news, store):
         first = snapshot.make(news, store=store).snapshot
         note = Path(first.path).parent.parent.parent / README_FILE
-        assert note.is_file() and note.parent == store.root / "pipelines" / "news"
+        assert note.is_file() and note.parent == store.root / "snapshots" / "news"
         text = note.read_text(encoding="utf-8")
-        assert "chartbook store gc" in text and "shared" in text and "standalone" in text and "Do not delete" in text
+        assert "Each folder here is one complete snapshot" in text and "can be read or copied as it is" in text
+        assert "Remove one with `chartbook store gc`, not by hand" in text
+        assert "shared" not in text and "standalone" not in text  # the words of a store of 0.5
         note.write_text(text + "A note of my own.\n", encoding="utf-8", newline="\n")
         _write_year(news, 2024, [3])
         snapshot.make(news, store=store)
@@ -68,14 +73,34 @@ class TestTheReadme:
         plan = lock.plan_gc(store, keep_days=0)
         assert plan.snapshots_delete
         lock.run_gc(plan, store)
-        assert (store.root / "pipelines" / "news" / README_FILE).is_file()
+        assert (store.root / "snapshots" / "news" / README_FILE).is_file()
 
 
 class TestStoreLs:
-    def test_standalone_then_shared(self, news, store):
+    def test_complete_and_complete(self, news, store):
         first = snapshot.make(news, store=store).snapshot
         _write_year(news, 2024, [3])
         second = snapshot.make(news, store=store).snapshot
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0, result.output
+        lines = [line for line in result.output.splitlines() if line.startswith("  20")]
+        assert len(lines) == 2
+        for taken, line in zip((first, second), lines):
+            assert Path(taken.path).parent.parent.name in line and "  complete " in line and "other folders" not in line
+        assert "news (2 snapshot(s))" in result.output and "never by hand" in result.output
+        assert "shared" not in result.output and "standalone" not in result.output
+        # One pipeline, and none
+        one = CliRunner().invoke(main, ["store", "ls", "news"]).output
+        assert sum(1 for line in one.splitlines() if line.startswith("  20") and "  complete " in line) == 2
+        assert "No snapshot of other." in CliRunner().invoke(main, ["store", "ls", "other"]).output
+
+    def test_standalone_then_shared_in_a_store_of_0_5(self, news, store):
+        from tests.store_of_0_5 import laid_out_as_0_5
+
+        snapshot.make(news, store=store)
+        _write_year(news, 2024, [3])
+        snapshot.make(news, store=store)
+        first, second = sorted(snapshot.all_snapshots(laid_out_as_0_5(store.root)), key=lambda taken: taken.made_at)
         result = CliRunner().invoke(main, ["store", "ls"])
         assert result.exit_code == 0, result.output
         lines = [line for line in result.output.splitlines() if line.startswith("  20")]
@@ -85,6 +110,7 @@ class TestStoreLs:
         assert Path(second.path).parent.parent.name in lines[1] and "shared" in lines[1]
         assert re.search(r"[1-9]\d* file\(s\) in other folders", lines[1]), lines[1]
         assert "news (2 snapshot(s))" in result.output and "never by hand" in result.output
+        assert "complete" not in result.output
         # One pipeline, and none
         one = CliRunner().invoke(main, ["store", "ls", "news"]).output
         assert sum(1 for line in one.splitlines() if line.startswith("  20") and "  shared " in line) == 1
@@ -113,7 +139,7 @@ class TestTheGcReminder:
         assert "Snapshot made" in result.output
         assert "`chartbook store gc` would clear 1 snapshot(s), freeing" in result.output
         assert "Nothing is removed unless you ask" in result.output
-        assert (store.root / "pipelines" / "news").is_dir() and len(list(store.all_snapshot_files())) == 3  # said, not done
+        assert (store.root / "snapshots" / "news").is_dir() and len(list(store.all_snapshot_files())) == 3  # said, not done
 
     def test_silenced_and_quiet_when_there_is_nothing_to_clear(self, news, store):
         result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news)])

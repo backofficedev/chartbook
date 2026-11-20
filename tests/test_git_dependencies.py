@@ -690,7 +690,7 @@ class TestPinning:
         }
 
     def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
-        """The store lost the one file two assets share: put back, each reads it under its own name."""
+        """The store lost the files of two assets with the same bytes: put back, each reads its own under its own name."""
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
         (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
@@ -698,7 +698,7 @@ class TestPinning:
         _commit(upstream, "A twin")
         lock.pin(downstream, git_cache=cache)
         before = (downstream / LOCK_FILE).read_bytes()
-        assert len(default_store().files_of(HELLO)) == 1  # kept once
+        assert len(default_store().files_of(HELLO)) == 2  # each in its own place, in the snapshot the pin made
         assert default_store().delete(HELLO)
 
         store_module._found_whole.clear()  # this process may have found it whole before
@@ -1032,8 +1032,8 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         from chartbook import data
 
         monkeypatch.chdir(downstream)
-        assert "/pipelines/other/" in Path(data.path("acme/other:same")).as_posix()
-        assert "/pipelines/upstream/" in Path(data.path("acme/upstream:committed")).as_posix()
+        assert "/snapshots/other/" in Path(data.path("acme/other:same")).as_posix()
+        assert "/snapshots/upstream/" in Path(data.path("acme/upstream:committed")).as_posix()
 
 
 class TestPuttingBackInAnS3Store:

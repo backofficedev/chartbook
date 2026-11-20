@@ -243,7 +243,7 @@ class TestFrozen:
         monkeypatch.setattr(json, "dump", full)
         with pytest.raises(lock.LockError, match="was written, and the store's note.*No space left"):
             pin_from_snapshots(downstream, store)
-        assert not list((store.root / "roots").glob("*.tmp"))
+        assert not list((store.root / "_chartbook" / "roots").glob("*.tmp"))
         assert (downstream / lock.LOCK_FILE).exists()
 
     def test_a_lockfile_entry_without_an_id_is_a_lock_error(self, downstream, rates, store):
@@ -304,7 +304,7 @@ class TestFrozen:
         pin_from_snapshots(downstream, store)  # the objects get into the store
         (downstream / lock.LOCK_FILE).unlink()
         store.remove_root(downstream / lock.LOCK_FILE)
-        roots = store.root / "roots"
+        roots = store.root / "_chartbook" / "roots"
         mode = roots.stat().st_mode
         os.chmod(roots, 0o555)
         try:
@@ -897,7 +897,7 @@ class TestStoreRoots:
 
     def test_a_note_that_cannot_be_read_stops_everything(self, store, work):
         store.add_root(work / LOCK_FILE, [HELLO])
-        (note,) = (store.root / "roots").glob("*.json")
+        (note,) = (store.root / "_chartbook" / "roots").glob("*.json")
         note.write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="Cannot read"):
             store.roots()

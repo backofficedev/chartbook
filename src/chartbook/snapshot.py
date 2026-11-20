@@ -31,16 +31,18 @@ to. A snapshot that would be the same as the one before it is not made.
 Where they are kept::
 
     ~/.chartbook/store/
-      pipelines/
+      snapshots/
         ftsfr+fed_yield_curve/                 the pipeline
           2026-10-13T182205Z_4f2a91c0e1b2/     when it was made _ its commit
-            _data/treasury_rates.parquet       what is new in it, in its place
+            _data/treasury_rates.parquet       every file of it, in its place
             _chartbook/snapshot.json           the record
 
 A record is JSON in the index's format, like a lockfile: an envelope and
 one record for each asset, each with its content hash, and, for each of
-its files, where the store keeps it (``stored``): each file is kept once in
-the pipeline's folder, usually in the first snapshot that had it
+its files, where the store keeps it (``stored``): in a folder store, the
+snapshot's own folder, which holds every file of it; in a bucket, and in a
+store ChartBook 0.5 laid out, each file once in the pipeline's folder,
+usually in the first snapshot that had it
 (:class:`chartbook.store.PendingSnapshot`). A snapshot keeps what it names
 from being cleared (:func:`chartbook.lock.plan_gc`).
 

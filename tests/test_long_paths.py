@@ -58,7 +58,7 @@ def test_a_snapshot_that_would_write_too_long_a_path_writes_nothing_and_says_why
     monkeypatch.setenv("CHARTBOOK_STORE", str(root))
     with pytest.raises(PathTooLongError, match="characters long, and Windows refuses a path of 260 or more"):
         snapshot.make(pipeline)
-    assert not any(path.is_file() for path in (root / "pipelines").rglob("*")) if (root / "pipelines").exists() else True
+    assert not any(path.is_file() for path in (root / "snapshots").rglob("*")) if (root / "snapshots").exists() else True
 
 
 def test_store_info_warns_when_the_folder_leaves_too_little_room(windows, tmp_path, monkeypatch):
@@ -99,7 +99,7 @@ def windows_refuses(windows, monkeypatch):
 
 def test_the_check_comes_before_the_folder_it_guards(windows_refuses, pipeline, tmp_path, monkeypatch):
     """Found by a reviewer: the snapshot's folder was made before any check, so Windows said "No such file" first."""
-    # A root whose snapshot folder alone crosses 248: pipelines/acme+rates/<31> adds 53
+    # A root whose snapshot folder alone crosses 248: snapshots/acme+rates/<31> adds 53
     deep = tmp_path.resolve() / ("d" * max(1, 200 - len(str(tmp_path.resolve()))))
     root = deep / "store"
     monkeypatch.setenv("CHARTBOOK_STORE", str(root))

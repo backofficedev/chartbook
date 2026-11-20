@@ -3922,11 +3922,13 @@ class _PutLater:
     def _put_from_clone(self, key: str, held: list, after: "Lock") -> dict:
         """Put what was held from one dependency's clone, as a snapshot a pin made in its pipeline's folder; what was put, by stand-in.
 
-        The files go where its owner's snapshots keep theirs, each kept once
-        (:class:`chartbook.store.PendingSnapshot`), and the snapshot is
-        written only if it holds something the store did not: a pin of bytes
-        its owner's snapshot already holds adds nothing. A pin by ID never
-        takes such a snapshot for its owner's (``made_by``).
+        The files go where its owner's snapshots keep theirs, in its
+        pipeline's folder (:class:`chartbook.store.PendingSnapshot`), and
+        the snapshot is written only if it holds something the store did
+        not: a pin of bytes its owner's snapshot already holds adds nothing.
+        One that is written in a folder store is complete, as any snapshot
+        there is. A pin by ID never takes such a snapshot for its owner's
+        (``made_by``).
         """
         entry = next((e for e in after.dependencies if e.get("id") == key), {})
         commit = (entry.get("location") or {}).get("commit")
@@ -4208,6 +4210,10 @@ class GcPlan:
         kept_versions: Each version of an asset marked ``keep = true`` that
             a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
             what the marks keep, for the bill.
+        copies_bytes: The size of the files that go with the removed
+            snapshots' folders and are of objects that stay: where each
+            snapshot is complete, a snapshot that stays has its own copy
+            of them. Not in *delete*, which is of objects nothing names.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.
@@ -4231,6 +4237,7 @@ class GcPlan:
     files: dict = field(default_factory=dict)
     recent_files: set = field(default_factory=set)
     unused: list = field(default_factory=list)
+    copies_bytes: int = 0
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -4239,8 +4246,13 @@ class GcPlan:
 
     @property
     def size_bytes(self) -> int:
-        """The total size of what would be removed."""
+        """The total size of the objects that would be removed: those nothing names."""
         return sum(size for _, size in self.delete)
+
+    @property
+    def freed_bytes(self) -> int:
+        """What carrying out the plan frees: the objects nothing names, and the removed snapshots' own copies of files that objects which stay have too."""
+        return self.size_bytes + self.copies_bytes
 
 
 def plan_gc(
@@ -4431,24 +4443,41 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     plan.snapshots = len(named_by_snapshots)
     keep |= named_by_snapshots
 
+    # Where each asset's files would be once the snapshots to be removed are gone. A store whose snapshots
+    # are each complete says so (FolderStore.files_left): a removed snapshot's folder goes whole, with its
+    # own copy of every file, whatever a snapshot that stays holds of the same bytes. Any other store (a
+    # bucket, which keeps each file once; several read as one) is asked as before: every file stays where
+    # a record names it
+    going = [taken.path for taken, _ in plan.snapshots_delete + plan.pinned_delete]
+    says_what_is_left = getattr(type(store), "files_left", Store.files_left) is not Store.files_left
+
+    def files_left(content_hash: str) -> list:
+        return store.files_left(content_hash, going) if says_what_is_left else store.files_of(content_hash)
+
     # A file another kept asset uses is not freed, and one two assets share is counted once
-    kept_files = {name for content_hash in keep for name, _ in store.files_of(content_hash)}
+    kept_files = {name for content_hash in keep for name, _ in files_left(content_hash)}
     plan.files = {}
     counted: set = set()
     recent_files: set = set()
+    stay: list = []
     for content_hash in store.hashes():
         if content_hash in keep:
             plan.kept += 1
+            stay.append(content_hash)
             continue
         try:
             age = store.age_of(content_hash)
         except ObjectNotFoundError:
             continue  # gone since it was listed: another gc, or a put replacing it
-        if age < recent_seconds:
-            plan.recent.append(content_hash)
-            recent_files |= {name for name, _ in store.files_of(content_hash)}
-            continue
         files = store.files_of(content_hash)
+        left = store.files_left(content_hash, going) if files and says_what_is_left else files
+        if age < recent_seconds and (left or not files):
+            # Spared for being new, where something of it stays: an object no pipeline owns, or one a
+            # snapshot that stays holds. One only removed snapshots hold goes with their folders
+            plan.recent.append(content_hash)
+            recent_files |= {name for name, _ in left}
+            stay.append(content_hash)
+            continue
         if files:
             freed = {name: size for name, size in files if name not in kept_files and name not in counted}
             counted |= set(freed)
@@ -4457,6 +4486,17 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
         else:
             plan.delete.append((content_hash, store.size_of(content_hash)))
     plan.recent_files = recent_files
+    if says_what_is_left and plan.snapshots_delete:
+        # The removed snapshots' own copies of files an object that stays has too: of no object that
+        # goes, and freed all the same. Of the snapshots the plan lists: a record a pin made goes
+        # without a word, as before, and what its folder holds is not counted
+        unsaid = [taken.path for taken, _ in plan.pinned_delete]
+        for content_hash in stay:
+            staying = {name for name, _ in files_left(content_hash)}
+            for name, size in store.files_left(content_hash, unsaid):
+                if name not in staying and name not in kept_files and name not in counted:
+                    counted.add(name)
+                    plan.copies_bytes += size
     # What no snapshot uses beside that: a snapshot never written, a sync service's copies
     named = {name for names in plan.files.values() for name in names}
     plan.unused = [(name, size) for name, size in store.tidy(dry_run=True, keep=recent_files) if name not in named]

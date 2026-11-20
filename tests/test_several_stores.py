@@ -161,12 +161,12 @@ def test_move_leaves_no_files_of_the_pipeline_in_its_source(tmp_path):
     stray = Path(kept.path).parent.parent / "README (1).md"
     stray.write_text("copy")
     os.utime(stray, (0, 0))
-    before = _files_under(source.root / "pipelines" / pipeline_folder("acme/other"))
+    before = _files_under(source.root / "snapshots" / pipeline_folder("acme/other"))
     stores = Stores([NamedStore("one", str(source), source), NamedStore("two", str(target), target)])
     count, _ = move("acme/upstream", stores, "two")
     assert count == 2
-    assert not _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream"))
-    assert _files_under(source.root / "pipelines" / pipeline_folder("acme/other")) == before
+    assert not _files_under(source.root / "snapshots" / pipeline_folder("acme/upstream"))
+    assert _files_under(source.root / "snapshots" / pipeline_folder("acme/other")) == before
     assert not source.verify(kept.hashes())
     assert not target.verify(first.hashes() | second.hashes())
 
@@ -181,7 +181,7 @@ def test_move_that_cannot_remove_files_still_routes_and_says_what_moved(tmp_path
     configure(tmp_path, monkeypatch, {"one": {"url": str(source)}, "two": {"url": str(tmp_path / "two")}})
 
     def refuse(self, pipeline, dry_run=False):
-        raise TidyError("Cannot remove one/pipelines/acme+upstream/x: Permission denied.", [], [("x", "Permission denied")])
+        raise TidyError("Cannot remove one/snapshots/acme+upstream/x: Permission denied.", [], [("x", "Permission denied")])
 
     monkeypatch.setattr(FolderStore, "tidy_pipeline", refuse)
     with pytest.raises(StoreError, match="Moved 1 snapshot.*left behind.*Permission denied"):
@@ -203,11 +203,11 @@ def test_move_refuses_one_store_under_two_names(tmp_path):
     except OSError:
         pytest.skip("no symlinks here")
     alias = FolderStore(tmp_path / "alias")
-    before = _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream"))
+    before = _files_under(source.root / "snapshots" / pipeline_folder("acme/upstream"))
     stores = Stores([NamedStore("one", str(source), source), NamedStore("two", str(alias), alias)])
     with pytest.raises(StoreError, match="one store under two names"):
         move("acme/upstream", stores, "two")
-    assert _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream")) == before
+    assert _files_under(source.root / "snapshots" / pipeline_folder("acme/upstream")) == before
     assert not source.verify(taken.hashes())
 
 
@@ -248,10 +248,10 @@ def test_move_with_keep_leaves_the_source_whole(tmp_path):
     (tmp_path / "two").mkdir()
     source, target = FolderStore(tmp_path / "one"), FolderStore(tmp_path / "two")
     taken = snapshot.make(folder, source).snapshot
-    before = _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream"))
+    before = _files_under(source.root / "snapshots" / pipeline_folder("acme/upstream"))
     stores = Stores([NamedStore("one", str(source), source), NamedStore("two", str(target), target)])
     move("acme/upstream", stores, "two", keep=True)
-    assert _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream")) == before
+    assert _files_under(source.root / "snapshots" / pipeline_folder("acme/upstream")) == before
     assert not source.verify(taken.hashes())
 
 
@@ -331,7 +331,7 @@ def test_move_between_folder_and_s3_preserves_files_and_retention_notes(tmp_path
         stores = Stores([NamedStore("local", str(local), local), NamedStore("remote", str(remote), remote)])
         move("acme/upstream", stores, "remote")
         assert not local.all_snapshot_files()
-        assert not _files_under(local.root / "pipelines" / "acme+upstream")
+        assert not _files_under(local.root / "snapshots" / "acme+upstream")
         assert remote.all_snapshot_files()
         assert not remote.verify(taken.hashes())
         root = remote.root_of(lockfile, "colleague")

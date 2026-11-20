@@ -79,7 +79,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME, UNDECLARED_ENV_VAR
-from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
+from chartbook.store import EarlierLayoutError, ReadOnlyStoreError, Store, StoreError, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -1679,6 +1679,12 @@ def run(
                         why = "nothing it declares is there to take" + (f": {listed}" if listed else "")
                     except snapshots.NotInEveryStore as error:
                         why = f"not in every store it goes to. {str(error).rstrip('.')}"
+                    except EarlierLayoutError as error:
+                        # A store of ChartBook 0.5 is read as it is, and no snapshot is made in it until it is moved
+                        why = (
+                            f"the store at {error.store} has the layout of ChartBook 0.5.\n"
+                            f"  `chartbook store migrate` moves it. An earlier ChartBook will not read it afterwards"
+                        )
                     except ReadOnlyStoreError as error:
                         why = str(error).rstrip(".")
                         other = _a_store_to_send_it_to(store, step.id)

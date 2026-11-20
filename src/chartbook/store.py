@@ -1729,12 +1729,16 @@ class FolderStore(Store):
         # No store.json, so nothing is remembered: one may arrive, or the store be made, at any moment
         return V2_LAYOUT if holds_v2(self.root) else V3_LAYOUT
 
+    def earlier_layout(self) -> bool:
+        """Whether this store is laid out as ChartBook 0.5 laid one out: read as it is, and not written with data."""
+        return not self._places().writes
+
     def check_writable(self) -> None:
         """Refuse to write data to, or remove anything from, a store laid out as ChartBook 0.5 laid one out.
 
         :raises EarlierLayoutError: Saying so, and which command moves it.
         """
-        if not self._places().writes:
+        if self.earlier_layout():
             raise EarlierLayoutError(self)
 
     def roots_path(self) -> Path:
@@ -1743,9 +1747,13 @@ class FolderStore(Store):
 
     # The pipelines and their snapshots
 
+    def pipelines_path(self) -> Path:
+        """The folder of the pipelines' folders: ``snapshots/`` (``pipelines/`` in a store of 0.5)."""
+        return self.root / self._places().pipelines
+
     def pipeline_path(self, pipeline: str) -> Path:
         """The folder of one pipeline's snapshots."""
-        return self.root / self._places().pipelines / pipeline_folder(pipeline)
+        return self.pipelines_path() / pipeline_folder(pipeline)
 
     def records(self) -> list[KeptRecord]:
         """Every snapshot's record in the store, made by an owner or by a pin, oldest folder first in each pipeline.

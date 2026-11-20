@@ -220,9 +220,20 @@ class TestTheBucketIsAFolderStore:
         assert json.loads(client.get_object(Bucket=BUCKET, Key="stores/one/store.json")["Body"].read()) == {"schema": store_module.SCHEMA}
 
     def test_a_folder_store_synced_into_the_bucket_is_read(self, work, client):
+        """A folder store laid out as ChartBook 0.5 laid one out, which is the layout a bucket has still.
+
+        A folder store of this version keeps its snapshots under
+        ``snapshots/``, and is not this store until the bucket has that
+        layout too (``docs_src/design/snapshots-and-increments.md``, step 4
+        of its order of work).
+        """
+        from tests.store_of_0_5 import laid_out_as_0_5
+
         local = FolderStore(work / "folder")
         folder = _pipeline(work, {"_data/rates.parquet": b"rates-1", "_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
         record, put = _snapshot(local, folder, {"rates": "_data/rates.parquet", "parts": "_data/parts"})
+        local = laid_out_as_0_5(local.root)
+        (record,) = local.all_snapshot_files()
         for file in sorted(p for p in local.root.rglob("*") if p.is_file()):
             client.put_object(Bucket=BUCKET, Key="synced/" + file.relative_to(local.root).as_posix(), Body=file.read_bytes())
         bucket = S3Store(f"s3://{BUCKET}/synced", cache=work / "cache", client=client)
@@ -1326,7 +1337,7 @@ class TestWhatTheFourthReviewFound:
         target = str(work / named) if named == "notes.txt" else named
         if named == "notes.txt":
             Path(target).write_text("not a lockfile", encoding="utf-8", newline="\n")
-        (note,) = (work / "store" / "roots").glob("*.json")
+        (note,) = (work / "store" / "_chartbook" / "roots").glob("*.json")
         note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": target, "hashes": [stored.content_hash]}), encoding="utf-8", newline="\n")
         assert [str(root.lockfile) for root in store.roots()] == [str(Path(target))]
         read = []
@@ -1344,7 +1355,7 @@ class TestWhatTheFourthReviewFound:
         store = FolderStore(work / "store")
         stored = store.put(a_file)
         store.add_root(work / "chartbook.lock", [stored.content_hash])
-        (note,) = (work / "store" / "roots").glob("*.json")
+        (note,) = (work / "store" / "_chartbook" / "roots").glob("*.json")
         note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": named, "hashes": [stored.content_hash]}), encoding="utf-8", newline="\n")
         plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
         assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []

@@ -1,19 +1,21 @@
 """Sending one pipeline's snapshots to someone else: ``chartbook store export`` and ``store import``.
 
-A pipeline's folder in a store (``pipelines/<pipeline>/``) is what a person
-sends a collaborator, and copied by hand into another store's ``pipelines/``
+A pipeline's folder in a store (``snapshots/<pipeline>/``) is what a person
+sends a collaborator, and copied by hand into another store's ``snapshots/``
 it is that pipeline's snapshots there too. These two commands do the same,
 checked:
 
 - **Export** writes chosen snapshots of one pipeline into a folder laid out
-  as a store, ``<to>/pipelines/<pipeline>/``: every snapshot by default, the
-  newest with ``latest``, or the ones named. Each file is kept once, in the
-  first exported snapshot that has it, so the newest alone is a complete
-  snapshot, every file it needs in its own folder.
+  as a store, ``<to>/snapshots/<pipeline>/``: every snapshot by default, the
+  newest with ``latest``, or the ones named. Each is a complete snapshot,
+  every file of it in its own folder.
 - **Import** copies the snapshots of such a folder, or of a pipeline's folder
   copied by hand, into this machine's store, oldest first. Every file is
-  hashed as it is copied and checked against its record; a file the store
-  holds already is not copied again, and nothing there is written over.
+  hashed as it is copied and checked against its record; a snapshot the
+  store has already is not copied again, and nothing there is written over.
+  A folder from a store of ChartBook 0.5 (``pipelines/<pipeline>/``, its
+  files kept once) is read as it is, and each of its snapshots is written
+  complete.
 
 Only what a snapshot's record names goes: its data, its documents and its
 index, never anything that runs. A snapshot a pin made from a clone is not
@@ -30,8 +32,10 @@ from typing import Callable, Iterable, Optional, Union
 
 from chartbook.store import (
     OWN_DIR,
-    PIPELINES_DIR,
     RECORD_FILE,
+    V2_LAYOUT,
+    V3_LAYOUT,
+    EarlierLayoutError,
     FolderStore,
     KeptRecord,
     Store,
@@ -76,16 +80,21 @@ def _records_in(folder: Path) -> list[KeptRecord]:
 
 
 def _pipeline_folders(source: Path) -> list[Path]:
-    """The pipelines' folders a folder holds: a store's (``pipelines/*``), or the one it is."""
-    if (source / PIPELINES_DIR).is_dir():
-        return sorted(p for p in (source / PIPELINES_DIR).iterdir() if p.is_dir() and not p.name.startswith("+"))
+    """The pipelines' folders a folder holds: a store's or an export's (``snapshots/*``; ``pipelines/*`` in one of ChartBook 0.5), or the one it is.
+
+    Both names are looked under: a store of 0.5 that was moved from one of
+    0.2 has a ``snapshots/`` too, with no pipeline's folder in it.
+    """
+    held = [source / layout.pipelines for layout in (V3_LAYOUT, V2_LAYOUT) if (source / layout.pipelines).is_dir()]
+    if held:
+        return sorted(p for folder in held for p in folder.iterdir() if p.is_dir() and not p.name.startswith("+"))
     if any(p.is_dir() and is_snapshot_folder(p.name) for p in source.iterdir()):
         return [source]
     return sorted(p for p in source.iterdir() if p.is_dir() and any(q.is_dir() and is_snapshot_folder(q.name) for q in p.iterdir()))
 
 
 def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[str], None] = lambda line: None) -> Copied:
-    """Copy snapshots, each by its record, into a store: oldest first, each file once, every byte checked.
+    """Copy snapshots, each by its record, into a store: oldest first, each complete, every byte checked.
 
     A snapshot the store has already (its pipeline, commit and time) is not
     copied again. One whose file is not what its record says, or whose
@@ -202,13 +211,14 @@ def export(
     which: Union[str, list, None] = None,
     echo: Callable[[str], None] = lambda line: None,
 ) -> Copied:
-    """Write snapshots of one pipeline from a store into a folder laid out as a store: ``<to>/pipelines/<pipeline>/``.
+    """Write snapshots of one pipeline from a store into a folder laid out as a store: ``<to>/snapshots/<pipeline>/``.
 
     :param which: None for every snapshot its owner made; ``"latest"`` for
         the newest; or a list of the ones to write, each a commit (or the
         start of one) or ``commit@made_at``.
     :raises SharingError: If the store has no snapshot of the pipeline, or
-        none of those asked for.
+        none of those asked for; or if the folder holds an export of the
+        pipeline already, or one laid out as ChartBook 0.5 laid one out.
     """
     folder = store.pipeline_path(pipeline)
     records = [r for r in store.records() if r.readable and r.made_by == "snapshot" and r.pipeline == pipeline]
@@ -226,21 +236,33 @@ def export(
             chosen += [r for r in matched if r not in chosen]
         records = chosen
     to = Path(to).expanduser().resolve()
-    if (to / PIPELINES_DIR / folder.name).exists() and any((to / PIPELINES_DIR / folder.name).iterdir()):
-        raise SharingError(f"{to / PIPELINES_DIR / folder.name} is there already: export into another folder.")
-    return copy_snapshots(records, FolderStore(to), echo)
+    target = FolderStore(to)
+    try:
+        target.check_writable()
+    except EarlierLayoutError:
+        # An export, or a store, that ChartBook 0.5 wrote there: nothing is added to one
+        raise SharingError(
+            f"{to} holds a store or an export of ChartBook 0.5 ({V2_LAYOUT.pipelines}/): export into another folder."
+        ) from None
+    there = target.pipelines_path() / folder.name
+    if there.exists() and any(there.iterdir()):
+        raise SharingError(f"{there} is there already: export into another folder.")
+    return copy_snapshots(records, target, echo)
 
 
 def import_snapshots(store: FolderStore, source: Union[str, Path], echo: Callable[[str], None] = lambda line: None) -> Copied:
     """Copy the snapshots a folder holds into a store: an export, a store, or a pipeline's folder copied by hand.
 
     :raises SharingError: If the folder holds no snapshot.
+    :raises EarlierLayoutError: If the store is laid out as ChartBook 0.5
+        laid one out: no snapshot is made in one.
     """
     source = Path(source).expanduser().resolve()
     if not source.is_dir():
         raise SharingError(f"{source} is not a folder.")
+    store.check_writable()
     inside = Path(os.path.realpath(store.root))
-    if source == inside or source.is_relative_to(inside / PIPELINES_DIR):
+    if source == inside or source.is_relative_to(inside / store.pipelines_path().relative_to(store.root)):
         raise SharingError(f"{source} is in the store it would be imported into.")
     records = [record for folder in _pipeline_folders(source) for record in _records_in(folder)]
     if not records:

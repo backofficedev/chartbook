@@ -49,17 +49,19 @@ def _files(folder: Path) -> list:
 
 
 class TestExport:
-    def test_every_snapshot_each_file_once(self, two_snapshots, tmp_path):
+    def test_every_snapshot_each_complete(self, two_snapshots, tmp_path):
         store, first, second, rates = two_snapshots
         done = sharing.export(store, "acme/rates", tmp_path / "out")
         assert len(done.copied) == 2 and done.refused == []
-        sent = tmp_path / "out" / "pipelines" / "acme+rates"
+        sent = tmp_path / "out" / "snapshots" / "acme+rates"
         assert _files(sent) == _files(store.pipeline_path("acme/rates"))  # laid out as the store keeps it
+        # The year both snapshots have is in each one's folder
+        assert len([name for name in _files(sent) if name.endswith("_data/years/2025.txt")]) == 2
 
     def test_the_newest_alone_is_a_complete_snapshot(self, two_snapshots, tmp_path):
         store, first, second, rates = two_snapshots
         sharing.export(store, "acme/rates", tmp_path / "out", "latest")
-        (folder,) = (p for p in (tmp_path / "out" / "pipelines" / "acme+rates").iterdir() if p.is_dir())  # beside its README.txt
+        (folder,) = (p for p in (tmp_path / "out" / "snapshots" / "acme+rates").iterdir() if p.is_dir())  # beside its README.txt
         assert folder.name == "2026-10-02T100000Z_" + second.commit[:12]
         assert {"_data/years/2025.txt", "_data/years/2026.txt", "_data/latest.txt"} <= set(_files(folder))
 
@@ -98,17 +100,23 @@ class TestImport:
         (entry,) = lock.read_lock(forecast).dependencies
         assert entry["location"]["commit"] == second.commit and entry["pinned_from"] == "acme/rates"
 
-    def test_what_the_store_has_is_not_copied_again(self, two_snapshots, tmp_path):
+    def test_a_snapshot_the_store_has_is_not_copied_again_and_a_new_one_is_written_complete(self, two_snapshots, tmp_path):
         store, first, second, rates = two_snapshots
         sharing.export(store, "acme/rates", tmp_path / "old", [f"{first.commit}@{first.made_at}"])
         theirs = FolderStore(tmp_path.resolve() / "theirs")
         sharing.import_snapshots(theirs, tmp_path / "old")
+        older = theirs.pipeline_path("acme/rates") / ("2026-10-01T100000Z_" + first.commit[:12])
+        before = {name: (older / name).stat().st_mtime_ns for name in _files(older)}
         sharing.export(store, "acme/rates", tmp_path / "new")
         done = sharing.import_snapshots(theirs, tmp_path / "new")
         assert done.there == [("acme/rates", first.commit, first.made_at)] and len(done.copied) == 1
-        # Only what is new: the year, the changed file, and the snapshot's own index and record
+        assert {name: (older / name).stat().st_mtime_ns for name in _files(older)} == before  # left as it was
+        # Every file of it, the year the store had already among them
         newer = theirs.pipeline_path("acme/rates") / ("2026-10-02T100000Z_" + second.commit[:12])
-        assert _files(newer) == ["_chartbook/index.json", "_chartbook/snapshot.json", "_data/latest.txt", "_data/years/2026.txt"]
+        assert _files(newer) == [
+            "_chartbook/index.json", "_chartbook/snapshot.json", "_data/latest.txt", "_data/years/2025.txt",
+            "_data/years/2026.txt", "chartbook.toml",
+        ]
         assert theirs.verify() == []
 
     def test_a_folder_copied_by_hand_and_a_file_not_what_its_record_says(self, two_snapshots, tmp_path):
@@ -131,12 +139,12 @@ class TestImport:
         store, first, second, rates = two_snapshots
         sent = tmp_path / "acme+rates"
         shutil.copytree(store.pipeline_path("acme/rates"), sent)
-        planted = next(sent.rglob("2025.txt"))
         mine = tmp_path / "mine.txt"
         mine.write_bytes(b"2025")  # the bytes its record says, on the receiver's disk
-        planted.chmod(0o644)
-        planted.unlink()
-        planted.symlink_to(mine)
+        for planted in list(sent.rglob("2025.txt")):  # in each snapshot's folder: each holds every file of it
+            planted.chmod(0o644)
+            planted.unlink()
+            planted.symlink_to(mine)
         theirs = FolderStore(tmp_path.resolve() / "theirs")
         done = sharing.import_snapshots(theirs, sent)
         assert done.copied == [] and all("is a link, or leads out of the folder" in why for _, why in done.refused)
@@ -203,7 +211,7 @@ class TestTheCommands:
         assert "--store NAME" in said.output
         # A copy a pin made from a clone is not one the owner made, and export writes only those: it does not count
         shutil.copytree(store.root, other, dirs_exist_ok=True)
-        records = list(other.glob("pipelines/*/*/_chartbook/snapshot.json"))
+        records = list(other.glob("snapshots/*/*/_chartbook/snapshot.json"))
         assert len(records) == 2
         for record in records:
             record.chmod(0o644)
