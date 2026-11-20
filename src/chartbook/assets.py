@@ -214,8 +214,9 @@ def path(
     moves only when you run ``chartbook pin --update``. It must have been pinned
     (``chartbook pin``), and is for reading: never write to it.
 
-    **Another pipeline's folder or glob of files has no one path.** The
-    store keeps each file once, so a snapshot's files may sit in other
+    **Another pipeline's folder or glob of files has no one path.** A
+    store may keep each file once (a bucket does, and a store that
+    ChartBook 0.5 laid out), so a snapshot's files may sit in other
     snapshots' folders. Asking raises
     :class:`~chartbook.errors.NoSinglePathError`, whatever the folders
     happen to hold today, so that a call that works does not stop working
@@ -310,8 +311,9 @@ def files(
     under a folder or matched by a glob, but ``.DS_Store`` and the few
     others operating systems write by themselves. Of another pipeline's
     asset they are the files of the pinned copy, as its record lists them,
-    each where the store keeps it: the store keeps each file once, so they
-    may sit in several snapshots' folders, and this is the call to read
+    each where the store keeps it: a store may keep each file once (a
+    bucket does, and a store that ChartBook 0.5 laid out), so they may
+    sit in several snapshots' folders, and this is the call to read
     them by (polars and DuckDB take a list of files; so does a ``dodo.py``
     for its ``file_dep``). They are sorted by their path inside the asset,
     so a dataset of a file a year is read in order of the years.
@@ -577,7 +579,7 @@ def _docs_info(
         stores, taken = newest if newest is not None else _newest_snapshot(manifest, pipeline_key)
         if not taken.documents:
             raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
-        kept = stores.files(taken.documents["content_hash"], pipeline_key).by_relative()
+        kept = stores.files(taken.documents["content_hash"], taken.pipeline, snapshot=(taken.commit, taken.made_at)).by_relative()
         manifest_file = kept.get("chartbook.toml")
         if manifest_file is None:
             raise KeyError(f"The newest snapshot of {pipeline_key} keeps no chartbook.toml among its documents")
@@ -613,7 +615,7 @@ def _docs_info(
             record = taken.assets.get(str(ref)) or {}
             if not record.get("content_hash"):
                 raise KeyError(f"The newest snapshot of {pipeline_key} keeps no file of {shown}")
-            files = stores.files(record["content_hash"], pipeline_key).files
+            files = stores.files(record["content_hash"], taken.pipeline, snapshot=(taken.commit, taken.made_at)).files
             if len(files) != 1:
                 raise KeyError(f"{pipeline_key}'s {shown} is {len(files)} files, not one page")
             return "path", declared, Path(files[0].location)

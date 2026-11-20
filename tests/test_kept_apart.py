@@ -1,10 +1,12 @@
 """A dataset's Hive keys come from each file's path inside it, never from where the store keeps the file.
 
-The store keeps each file once, by its bytes: a partition's file can sit at
-another partition's path (two partitions of the same bytes, as polars writes
-them when it drops the key's column), and an S3 store's copy here is named by
-its hash. Found reviewing 0.5.0 (2026-11-01): reads then took 2023 for 2024,
-or no key at all.
+A store that keeps each file once, by its bytes, as a folder store of
+ChartBook 0.5 and a bucket do: a partition's file can sit at another
+partition's path (two partitions of the same bytes, as polars writes them
+when it drops the key's column), and an S3 store's copy here is named by its
+hash. Found reviewing 0.5.0 (2026-11-01): reads then took 2023 for 2024, or
+no key at all. A folder store of this version writes each file at its own
+path; one of 0.5 is laid out here by hand (``tests/store_of_0_5.py``).
 """
 
 from pathlib import Path
@@ -17,6 +19,7 @@ from chartbook import config, data, lock, snapshot
 from chartbook import store as store_module
 from chartbook.store import FolderStore
 from tests.fixtures import commit_pipeline
+from tests.store_of_0_5 import laid_out_as_0_5
 
 
 def _partition(folder: Path, year: int, values: list, fmt: str = "parquet") -> None:
@@ -63,16 +66,31 @@ class TestOnAFolderStore:
 
     @pytest.mark.parametrize("across", [False, True], ids=["one snapshot", "two snapshots"])
     def test_two_partitions_of_the_same_bytes_keep_their_own_keys(self, tmp_path, store, across):
+        """In a store of ChartBook 0.5, which kept the two as one file."""
         news, reader = _pipelines(tmp_path.resolve())
         _partition(news, 2023, [1, 2])
         commit_pipeline(news)
         if across:
             snapshot.make(news, store=store)
-        _partition(news, 2024, [1, 2])  # the same bytes as 2023's file: kept once
+        _partition(news, 2024, [1, 2])  # the same bytes as 2023's file: kept once by 0.5
+        snapshot.make(news, store=store)
+        assert lock.pin(reader, laid_out_as_0_5(store.root)).problems == []
+        files = data.files("news:articles", project_dir=reader)
+        assert len(files) == 2 and len(set(files)) == 1  # one file, at 2023's path, for both
+        assert _years(reader) == ([2023, 2023, 2024, 2024], {2023: 2, 2024: 2})
+
+    @pytest.mark.parametrize("across", [False, True], ids=["one snapshot", "two snapshots"])
+    def test_two_partitions_of_the_same_bytes_are_two_files_in_a_store_of_this_version(self, tmp_path, store, across):
+        news, reader = _pipelines(tmp_path.resolve())
+        _partition(news, 2023, [1, 2])
+        commit_pipeline(news)
+        if across:
+            snapshot.make(news, store=store)
+        _partition(news, 2024, [1, 2])  # the same bytes as 2023's file, and a file of its own all the same
         snapshot.make(news, store=store)
         assert lock.pin(reader, store).problems == []
         files = data.files("news:articles", project_dir=reader)
-        assert len(files) == 2 and len(set(files)) == 1  # one file, at 2023's path, for both
+        assert [file.parent.name for file in files] == ["year=2023", "year=2024"] and len({file.parents[3] for file in files}) == 1
         assert _years(reader) == ([2023, 2023, 2024, 2024], {2023: 2, 2024: 2})
 
     def test_a_dataset_whose_files_sit_at_their_own_paths_is_read_as_before(self, tmp_path, store):

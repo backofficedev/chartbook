@@ -1,15 +1,28 @@
-"""A store in an S3 bucket: ``[store] url = "s3://bucket/prefix"``.
+"""A store in an S3 bucket: ``[store] url = "s3://bucket/prefix"``. Withdrawn in ChartBook 0.6.
+
+**Not available in 0.6.** This version lays a folder store out anew (complete
+snapshots and increments, ``chartbook/store/v3``), and a bucket has not been
+brought to that layout yet: it is on the roadmap. A URL that names a bucket
+is refused where it would become a store
+(:func:`chartbook.store.store_for_url`,
+:class:`chartbook.store.StoreNotAvailableError`), so nothing here is reached
+through a setting, a catalog or a command. The class stays, with its entry
+point and its tests, which make it directly and keep it from rotting until
+it is brought to the layout; ChartBook 0.5 still reads and writes a bucket.
+What follows describes it as it is.
 
 Needs boto3 1.35 or newer, which ``pip install chartbook[s3]`` installs.
-The bucket is laid out exactly as a folder store is (:mod:`chartbook.store`),
-under the prefix: ``store.json``; ``pipelines/<pipeline>/<snapshot>/``
-with the pipeline's files at their own paths and
-``_chartbook/snapshot.json``, the record, written last;
+The bucket is laid out exactly as a folder store of ChartBook 0.5 is
+(:data:`chartbook.store.V2_LAYOUT`), under the prefix: ``store.json``;
+``pipelines/<pipeline>/<snapshot>/`` with the pipeline's files at their
+own paths and ``_chartbook/snapshot.json``, the record, written last;
 ``pipelines/+unowned/<hash>/`` for an object put with no pipeline;
-``origins/``, ``roots/`` and ``tmp/``. So ``aws s3 sync`` of a folder
-store into a bucket is this store, and back. A bucket of ChartBook 0.2's
-layout is refused, as a folder of it is, until ``chartbook store
-migrate`` has moved it.
+``origins/``, ``roots/`` and ``tmp/``. So ``aws s3 sync`` of such a folder
+store into a bucket is this store, and back. A folder store this
+ChartBook makes has another layout (``snapshots/``, ``_chartbook/``, every
+snapshot complete), which a bucket does not have yet: nothing here has
+changed for it. A bucket of ChartBook 0.2's layout is refused, as a folder
+of it is, until ``chartbook store migrate`` has moved it.
 
 Readers open files, so what they read is a copy on this machine, in a
 cache folder for the bucket. The records are downloaded into it at their
@@ -88,6 +101,7 @@ from chartbook.replacing import rename_when_let, replace_when_let
 from chartbook.store import (
     _of_shape,
     CLEARED_FILE,
+    FOLDER_SCHEMA,
     FOLDER_MARK,
     FROZEN_LINKS,
     LINKS,
@@ -812,6 +826,15 @@ class S3Store(Store):
                 f"{SCHEMA!r}. Once every machine that uses this store has ChartBook 0.3, run `chartbook store "
                 f"migrate` on one of them; until then, use ChartBook 0.2 with it."
             )
+        if schema == FOLDER_SCHEMA:
+            # No newer ChartBook reads it: it is this one's folder store, copied into a bucket file by file
+            raise StoreError(
+                f"The store {self} has the layout {FOLDER_SCHEMA!r}: that of a folder store of this ChartBook, "
+                f"copied into the bucket as it is (by a sync, or by hand). A bucket is laid out as {SCHEMA!r}, and "
+                f"this one is not read. Point CHARTBOOK_STORE at the folder it was copied from; `chartbook store "
+                f"move PIPELINE --to NAME --keep` copies a pipeline's snapshots from one of a catalog's stores "
+                f"into another, a bucket among them."
+            )
         if schema != SCHEMA:
             raise StoreError(
                 f"The store {self} has the layout {schema!r}, and this version of ChartBook "
@@ -1326,7 +1349,10 @@ class S3Store(Store):
             for asset in self._held(seen, content_hash, pipeline) for file in asset.files
         )
 
-    def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> KeptFiles:
+    def files(
+        self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None,
+        snapshot: Optional[tuple] = None,
+    ) -> KeptFiles:
         """The asset's files, each where the cache keeps it checked, downloaded if they were not yet (:meth:`chartbook.store.Store.files`).
 
         Each file is downloaded once into the cache, by its hash, and its
@@ -1339,6 +1365,9 @@ class S3Store(Store):
         :param pipeline: The pipeline the asset is of, whose folder is
             looked in first.
         :param name: For an asset of one file, the name it is read by.
+        :param snapshot: The snapshot it is read from, which a folder store
+            takes notice of; not this one, which keeps each file once and
+            serves it from the cache by its hash.
         :raises ObjectNotFoundError: If the store has no such asset.
         :raises StoreError: If no copy of it is all in the bucket yet, or
             none is what its record says; nothing of such a file is kept.
@@ -1664,7 +1693,8 @@ class S3Store(Store):
         return bool(remote) and names[0] not in remote
 
     def incomplete(
-        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False,
+        pipeline: Optional[str] = None,  # which a folder store asks by; a bucket keeps each file once
     ) -> Optional[str]:
         """Why an asset is not whole as its record has it, by the keys a listing gives and their sizes; None if it is.
 
@@ -1825,7 +1855,7 @@ class S3Store(Store):
         cached = self._unowned_cache(content_hash).joinpath(*parts)
         return cached.is_file() and _hash_once(cached) == content_hash
 
-    def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list[StoreProblem]:
+    def verify(self, content_hashes: Optional[Iterable[str]] = None, pipeline: Optional[str] = None) -> list[StoreProblem]:
         """Download every asset again, into a temporary folder, and report each that is not what its record or name says.
 
         The cache is left as it is: what this machine read and checked

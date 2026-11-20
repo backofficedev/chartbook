@@ -23,7 +23,7 @@ from click.testing import CliRunner
 
 from chartbook import store as store_module
 from chartbook import config, data, index, lock, snapshot
-from chartbook.cli import main
+from chartbook.cli import _format_bytes, main
 from chartbook.manifest import load_manifest
 from chartbook.snapshot import SnapshotError
 from chartbook.store import default_store
@@ -123,7 +123,7 @@ class TestMaking:
         assert sorted(taken.assets) == ["chart/curve", "rates"]
         # In the pipeline's folder, in a folder named by when it was made and its commit
         store = default_store()
-        folder = store.root / "pipelines" / "acme+maker" / store_module.snapshot_folder_name(taken.made_at, commit)
+        folder = store.root / "snapshots" / "acme+maker" / store_module.snapshot_folder_name(taken.made_at, commit)
         assert taken.path == folder / "_chartbook" / "snapshot.json"
 
         # The bytes are in the store, at their path in the pipeline, under the hash the record gives
@@ -171,7 +171,7 @@ class TestMaking:
             snapshot.make(maker)
         assert "'acme/maker:other' at '../secret.txt'" in str(e.value)
         assert "outside the pipeline's folder" in str(e.value)
-        assert not (default_store().root / "pipelines").exists()
+        assert not (default_store().root / "snapshots").exists()
 
     def test_a_path_naming_a_folder_with_a_glob_character_is_refused(self, maker, work):
         """Found by a reviewer: `_data/[raw]` was stored as the folder, and its record read back as a pattern."""
@@ -273,7 +273,7 @@ class TestEverythingMustBeCommitted:
         assert "acme/maker has changes that are not committed:" in said
         assert " M maker/chartbook.toml" in said
         assert "everything in the pipeline's folder must be committed first." in said
-        assert not (default_store().root / "pipelines").exists()
+        assert not (default_store().root / "snapshots").exists()
 
     def test_a_new_file_git_does_not_ignore(self, maker):
         (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
@@ -1155,10 +1155,11 @@ class TestClearingOldSnapshots:
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0)
         lock.run_gc(plan, store)
-        # Its folder goes, or keeps only what a later snapshot uses, and says so
+        # Its folder goes whole: every snapshot holds its own files, and no later one keeps any in it
         folder = first.path.parent.parent
         assert not first.path.exists()
-        assert not folder.exists() or (folder / "_chartbook" / "CLEARED.txt").is_file()
+        assert not folder.exists() and not second.path.parent.parent.exists()
+        assert not list(store.root.rglob("CLEARED.txt"))
         assert third.path.exists() and _origins_note(third).exists()
 
     def test_the_command(self, three, monkeypatch):
@@ -1169,12 +1170,14 @@ class TestClearingOldSnapshots:
         # No lockfile names them: the kept snapshot does
         assert said.startswith(f"Kept: {len(third.hashes())} object(s), named by 0 lockfile(s) or a kept snapshot\n")
         assert f"Kept: 1 snapshot(s), naming {len(third.hashes())} object(s): 1 because it is the newest of its pipeline" in said
-        assert "Would remove 2 snapshot(s):" in said
-        assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
-        # Their objects were stored a moment ago, so this run spares them;
-        # the next run, an hour on, removes them
+        # What only they hold goes with their folders, though it was stored a moment ago: a snapshot's
+        # folder goes whole, and an object is spared for being new only where something of it stays.
+        # One line says both, with the one size of all that goes
         only_theirs = (first.hashes() | second.hashes()) - third.hashes()
-        assert f"Kept: {len(only_theirs)} object(s) nothing names, stored in the last hour" in said
+        freed = _format_bytes(lock.plan_gc(default_store()).freed_bytes)
+        assert f"Would remove 2 snapshot(s) and {len(only_theirs)} object(s) that nothing names, {freed}:\n" in said
+        assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
+        assert "stored in the last hour" not in said
         assert first.path.exists()  # a dry run
 
         kept = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])
@@ -1184,8 +1187,9 @@ class TestClearingOldSnapshots:
 
         done = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert done.exit_code == 0, done.output
-        assert "Removed 2 snapshot(s) and 0 object(s)" in done.output
+        assert done.output.splitlines()[-1] == f"Removed 2 snapshot(s) and {len(only_theirs)} object(s), {freed}."
         assert not first.path.exists() and third.path.exists()
+        assert not first.path.parent.parent.exists() and not second.path.parent.parent.exists()  # no folder left behind
         assert snapshot.all_snapshots(default_store()) == [third]
 
     def test_what_no_snapshot_and_no_lockfile_names_is_cleared(self, maker, work):

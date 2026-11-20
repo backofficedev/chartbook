@@ -60,8 +60,9 @@ class DeclaredDataframe:
             ending says it (:mod:`chartbook.formats`).
         read_options: Its ``read_options``, if the manifest gives them.
         files, listed, inside: For one read from the store, its files as
-            :class:`chartbook.resolve.FileLocation` has them: the store keeps
-            each file once, so they may sit in several snapshot folders, and
+            :class:`chartbook.resolve.FileLocation` has them: a store may
+            keep each file once (a bucket does, and a store that ChartBook
+            0.5 laid out), so they may sit in several snapshot folders, and
             *path* is then no folder to read.
     """
 

@@ -89,6 +89,16 @@ TO_KNOW = (
 class _Main(_Group):
     renamed = {"browse": "docs open"}
 
+    def invoke(self, ctx):
+        """Run the command; a store that this version does not open (one in a bucket) is said in one line, by whichever command meets it."""
+        from chartbook.store import StoreNotAvailableError
+
+        try:
+            return super().invoke(ctx)
+        except StoreNotAvailableError as error:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+            raise SystemExit(1)
+
     def format_commands(self, ctx, formatter):
         """The commands everyone learns, as they are typed, and then the rest by name.
 
@@ -153,6 +163,19 @@ class _Catalog(_Group):
 
 class _Install(_Group):
     renamed = {"skill": "claude-skill"}
+
+
+class _Ls(_Group):
+    """`chartbook ls` and each of its listings: a store that is not read is said plainly, with exit 1, by whichever of them meets it."""
+
+    def invoke(self, ctx):
+        from chartbook.store import StoreError
+
+        try:
+            return super().invoke(ctx)
+        except StoreError as error:  # a store this version does not read, or one with two layouts in it
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+            raise SystemExit(1)
 
 
 @click.group(cls=_Main)
@@ -1438,11 +1461,15 @@ def path_command(ref, kind, project_dir, list_files):
 
     The pipeline must be in [dependencies], and what is printed is the path
     of the copy that chartbook.lock pins, in the store: not the other
-    pipeline's own directory. Run `chartbook pin` first. That copy stays as
-    it is until `chartbook pin --update`. Another pipeline's folder or glob of
-    files has no one path, since the store keeps each file once and a
-    snapshot's files may sit in other snapshots' folders: print them with
-    --files.
+    pipeline's own directory. Run `chartbook pin` first. It is the pinned
+    snapshot's own copy (for a `git` dependency, the copy in the newest
+    snapshot of the pinned commit), and the path stays the same while that
+    snapshot is in the store and whole. Where it is not, the newest
+    snapshot of that pipeline that holds the asset whole is printed, and
+    never another pipeline's copy. Another pipeline's folder or glob of
+    files has no one path, since a store may keep each file once (a bucket
+    does), a snapshot's files then sitting in other snapshots' folders:
+    print them with --files.
 
     With --files, the asset's files are printed instead, one per line: the
     file, a folder's files, or a glob's matches, as
@@ -1757,7 +1784,7 @@ def _json_option(command):
     return click.option("--json", "as_json", is_flag=True, help="Print the listing as JSON, for a script or an agent")(command)
 
 
-@main.group(invoke_without_command=True)
+@main.group(cls=_Ls, invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 @_json_option
 @click.pass_context
@@ -3793,6 +3820,16 @@ def _echo_snapshot(report, upstream=False):
             f"the rows of {count} dataframe{'' if count == 1 else 's'}: this one records them, so that a rebuild can "
             f"meet a pin of {'it' if count == 1 else 'them'}."
         )
+    if getattr(report, "not_whole", None) and report.made:
+        # Made of the same files as one already here, because that one lacks a file of its own in the store:
+        # the one it is made in, or another this run sends it to, which is then named
+        holed, files, where = report.not_whole
+        more = f" and {len(files) - 1} more" if len(files) > 1 else ""
+        there = f" at {_printable(str(where))}" if where is not None else ""
+        click.echo(
+            f"  The same files as the snapshot made {_when(holed.made_at)} ({holed.path.parent.parent.name}), which "
+            f"lacks {_printable(files[0])}{more} in the store{there}: this one is whole, and that one is left as it is."
+        )
     if getattr(report, "rows_said", None):
         # Each dataframe whose file changed, beside the snapshot before this one
         # Named by its commit too: the one before may be of another branch, and its rows are then another's
@@ -4070,8 +4107,9 @@ def restore_command(names, project_dir):
 def store():
     """Look after the named stores that keep pinned files and snapshots.
 
-    Define stores in catalog.toml under [stores]. Each can be a local or
-    shared folder, or a bucket. CHARTBOOK_STORE selects the process's only
+    Define stores in catalog.toml under [stores]. Each is a folder, local
+    or shared (a store in a bucket is not available in this version, and a
+    command that meets one says so). CHARTBOOK_STORE selects the process's only
     store. Without catalog stores, [store] url in user or system settings
     is the fallback, then ~/.chartbook/store. `chartbook store info` lists
     the configured stores; --store NAME selects one for maintenance.
@@ -4082,20 +4120,18 @@ def store():
 @click.argument("pipeline", required=False)
 @click.option("--store", "store_name", help="List one named catalog store")
 def store_ls(pipeline, store_name):
-    """List the snapshots in the store, each standalone or shared.
+    """List the snapshots in the store, and how much each one's folder holds.
 
     One line per snapshot, newest last within its pipeline: when it was
-    made, its commit, whether its folder is standalone (it holds every
-    file of its version) or shared (it holds only what changed, and the
-    rest of its files sit in other snapshots' folders), and how much
-    its own folder holds. The store keeps each file once, which is what
-    keeps a large dataset from costing its size again on every snapshot.
+    made, its commit, how the store keeps it, and how much its folder
+    holds. A complete snapshot's folder holds every file of its version,
+    and can be read or copied as it is. An increment's folder holds the
+    files that the complete snapshot it builds on does not have; the rest
+    are in that one's folder. A snapshot is removed with `chartbook store
+    gc`, never by hand.
 
-    Because of that, a snapshot's folder is not to be deleted by hand:
-    another snapshot may keep files in it. `chartbook store gc` removes
-    snapshots safely. `chartbook store export PIPELINE --latest --to
-    FOLDER` writes one complete copy of the newest version wherever you
-    say.
+    A store that ChartBook 0.5 laid out keeps each file once:
+    there an increment's other files may be in several snapshots' folders.
 
     \b
     Examples:
@@ -4103,7 +4139,7 @@ def store_ls(pipeline, store_name):
         chartbook store ls acme/news_headlines
         chartbook store ls --store team
     """
-    from chartbook.store import StoreError, StoreUnreachableError
+    from chartbook.store import FolderStore, StoreError, StoreUnreachableError
 
     try:
         stores = _stores_to_list(store_name)
@@ -4111,6 +4147,7 @@ def store_ls(pipeline, store_name):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     shown = unreachable = unread = 0
+    said_complete = said_shared = False
     for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
@@ -4157,8 +4194,12 @@ def store_ls(pipeline, store_name):
                         here += file.size_bytes
                     else:
                         elsewhere += 1
-            kind = "standalone" if elsewhere == 0 else "shared"
-            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in other folders"
+            # Its record names files in another snapshot's folder: the one it builds on, or, as 0.5 wrote
+            # one, any earlier ones
+            kind = "increment" if record.increment or elsewhere else "complete"  # by what its record is
+            said_shared = said_shared or bool(elsewhere)
+            said_complete = said_complete or kind == "complete"
+            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
@@ -4178,10 +4219,9 @@ def store_ls(pipeline, store_name):
         if unreachable and unreachable == len(stores):
             raise SystemExit(1)
         return
-    click.echo(
-        "A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, "
-        "which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand."
-    )
+    if said_complete or said_shared:
+        # One line: the store's README says how snapshots are removed
+        click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
 
 
 def _stores_to_list(store_name):
@@ -4263,13 +4303,14 @@ def store_info(store_name):
         if configured is not None and (configured.catalog is not None or store_name is not None):
             from chartbook.snapshot import readable_snapshots
             entries = [configured.named(store_name)] if store_name else configured.entries
+            refused = False
             for entry in entries:
                 status = "read-only" if entry.read_only else "writable"
                 if not entry.reachable:
                     status += ", unreachable"
                 click.echo(f"Store {entry.name}: {entry.store} ({status})")
                 if entry.reachable:
-                    from chartbook.store import FolderStore, StoreUnreachableError
+                    from chartbook.store import FolderStore, StoreError, StoreUnreachableError
 
                     if isinstance(entry.store, FolderStore):
                         _say_how_long_paths_are(entry.store.root)
@@ -4277,6 +4318,10 @@ def store_info(store_name):
                         found, unreadable = readable_snapshots(entry.store)
                     except (StoreUnreachableError, OSError) as error:
                         click.echo(f"  Unreachable: {error}")
+                        continue
+                    except StoreError as error:  # a layout this version does not read, or two in one folder
+                        click.echo(f"  Not read: {_said(error)}")
+                        refused = True
                         continue
                     counts = {}
                     for taken in found:
@@ -4292,6 +4337,8 @@ def store_info(store_name):
                         click.echo(f"  {clearable}")
                 if entry.pipelines:
                     click.echo("  Routed: " + ", ".join(entry.pipelines))
+            if refused:
+                raise SystemExit(1)  # one of them is a store this version does not read, or has two layouts in it
             return
     except (ValueError, OSError) as error:
         raise click.ClickException(str(error)) from None
@@ -4320,12 +4367,14 @@ def store_info(store_name):
     except ValueError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + without_credentials(str(e)), err=True)
         raise SystemExit(1)
-    # The store of that kind, as the first pin or read would make it: a bucket
-    # needs its library, and this is where to hear that it is missing, not then
+    # The store of that kind, as the first pin or read would make it: one that is not available in this
+    # version (a bucket), or of a kind nothing provides, is said here, and not only then
+    from chartbook.store import StoreError
+
     try:
         store_for_url(url)
         not_usable = None
-    except ValueError as e:
+    except (ValueError, StoreError) as e:
         not_usable = e
     said_by = {
         "environment": f"set by {STORE_ENV_VAR}",
@@ -4345,8 +4394,17 @@ def store_info(store_name):
     click.echo("  where what is read from a remote store is kept on this machine")
     _say_how_long_paths_are(folder)
     if folder is None or folder.exists():
+        from chartbook.store import StoreError
+
         try:
-            clearable = _what_gc_would_clear(store_for_url(url))
+            the_store = store_for_url(url)
+            if folder is not None:
+                # Asked which layout it has: one this version does not read, or two in one folder, is said here too
+                the_store.earlier_layout()
+            clearable = _what_gc_would_clear(the_store)
+        except StoreError as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            raise SystemExit(1)
         except (ValueError, OSError):
             clearable = None
         if clearable:
@@ -4361,15 +4419,20 @@ def _what_gc_would_clear(the_store) -> "str | None":
         plan = lock.plan_gc(the_store)
     except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
         return None
-    # A record a pin made goes with gc too, but holds nothing of its own: gc says nothing of it, and neither does this
-    cleared = len(plan.snapshots_delete)
-    if not cleared and not plan.delete:
+    # A snapshot a pin made from a repository goes with gc too, with its own copy of every file
+    cleared, pinned = len(plan.snapshots_delete), len(plan.pinned_delete)
+    if not cleared and not pinned and not plan.delete:
         return None
+    by_pins = f"{pinned} snapshot(s) a pin made from a repository, whose files no lockfile needs from them"
     if cleared:
+        # With the snapshots' own copies of files that objects which stay have too: each snapshot is complete
         return (
-            f"`chartbook store gc` would clear {cleared} snapshot(s), freeing {_format_bytes(plan.size_bytes)}: "
-            f"older than {plan.keep_days:g} days, and neither pinned nor the newest of their pipeline."
+            f"`chartbook store gc` would clear {cleared} snapshot(s), freeing {_format_bytes(plan.freed_bytes)}: "
+            f"older than {plan.keep_days:g} days, and neither pinned nor the newest of their pipeline"
+            f"{f'; and {by_pins}' if pinned else ''}."
         )
+    if pinned:
+        return f"`chartbook store gc` would clear {by_pins}, freeing {_format_bytes(plan.freed_bytes)}."
     return f"`chartbook store gc` would clear {len(plan.delete)} object(s) nothing names, freeing {_format_bytes(plan.size_bytes)}."
 
 
@@ -4384,7 +4447,7 @@ def _say_how_long_paths_are(folder) -> None:
     except (stores.StoreError, OSError):
         return
     # Before any snapshot: an ID of 34 characters, and an ordinary file 30 deep in its pipeline
-    expected = max(longest, made, len(str(folder)) + len("\\pipelines\\") + 34 + 33 + 30)
+    expected = max(longest, made, len(str(folder)) + len("\\snapshots\\") + 34 + 33 + 30)
     if expected < stores.WINDOWS_PATH_LIMIT - 20:
         return
     click.echo(
@@ -4396,11 +4459,148 @@ def _say_how_long_paths_are(folder) -> None:
     )
 
 
+def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
+    """`chartbook store migrate` for a store that ChartBook 0.5 laid out, for one whose move was cut short, and for a moved one with what 0.5 keeps at its top: say what would happen, ask, move, and say what the whole move came to."""
+    from chartbook import migrate_0_5
+    from chartbook.store import FOLDER_SCHEMA, StoreError, this_machine
+
+    def counts(found, verb: str) -> list:
+        are = "are" if verb == "become" else "were"
+        aside = f"{migrate_0_5.LEFT_ASIDE}/"
+        lines = [
+            f"  {found.complete} snapshot(s) {verb} complete ({found.by_pins} of them made by a pin), {found.increments} "
+            f"{verb} increments on the newest of their pipeline.",
+            f"  {found.renamed} file(s), {_format_bytes(found.renamed_bytes)}, {are} moved inside the store by rename: "
+            f"nothing is copied or uploaded again for these.",
+            f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {are} copied: each is in two folders that must each hold it.",
+            f"  What is left of pipelines/ {'goes' if verb == 'become' else 'went'} aside whole, under {aside}: its old records and "
+            f"notes, and {found.aside} file(s) that no record names. Nothing is removed.",
+        ]
+        if found.missing:
+            first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.missing[:3])
+            lines.append(
+                f"  {len(found.missing)} file(s) a record names are missing or of another size, as before the move: {first}"
+                f"{' and more' if len(found.missing) > 3 else ''}. "
+                + (
+                    "If a sync is still bringing them, wait and run again."
+                    if verb == "become"
+                    else "`chartbook store verify` names each. One that a sync brings later is not moved in: it goes aside "
+                    "with the rest when `chartbook store migrate` is run again."
+                )
+            )
+        if found.set_aside:
+            named = ", ".join(f"{pipeline}/{snapshot}" for pipeline, snapshot in found.set_aside[:3])
+            lines.append(
+                f"  {len(found.set_aside)} snapshot(s) {'go' if verb == 'become' else 'went'} aside without being moved in: {named}"
+                f"{' and more' if len(found.set_aside) > 3 else ''}. Run that pipeline again with this ChartBook."
+            )
+        arrived = [path for path in found.late if path not in {pair[0] for pair in found.in_place}]
+        if arrived:
+            lines.append(
+                f"  {len(arrived)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
+                f"aside: {', '.join(arrived[:3])}{' and more' if len(arrived) > 3 else ''}. `chartbook store verify` "
+                f"names the snapshot that lacks each."
+            )
+        if found.in_place:
+            def size(of) -> str:
+                return "no plain file" if of is None else _format_bytes(of)
+
+            named = ", ".join(
+                place + (f" ({size(here)} in place, {size(there)} at the old place)" if here != there else "")
+                for _, place, there, here in found.in_place[:3]
+            )
+            lines.append(
+                f"  {len(found.in_place)} file(s) a record names {are} not moved, a file being where each goes already: {named}"
+                f"{' and more' if len(found.in_place) > 3 else ''}. What is in place stays, and the file at the old place "
+                f"{'goes' if verb == 'become' else 'went'} aside with the old folder. `chartbook store verify` says whether what "
+                f"is in place is right."
+            )
+        if found.copied_as_is:
+            lines.append(
+                f"  {len(found.copied_as_is)} file(s) were copied as they are, though their bytes are not what their records "
+                f"say: {', '.join(found.copied_as_is[:3])}{' and more' if len(found.copied_as_is) > 3 else ''}. "
+                f"`chartbook store verify` says more."
+            )
+        return lines
+
+    root = the_store.root
+    synced = "In a synced folder, let the sync finish before another machine uses the store."
+    try:
+        started = migrate_0_5.journal_of(root)
+        found = migrate_0_5.plan(root)
+        migrate_0_5.check(root, found)
+        moved = migrate_0_5.marker_of(root) == FOLDER_SCHEMA
+        # The question is skipped only where this machine's own journal says a move is under way
+        mine = started is not None and started.get("machine") == this_machine(create=False)
+        if mine:
+            click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
+        elif moved:
+            click.echo(
+                f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
+                f"({', '.join(name + '/' for name in migrate_0_5.old_left(root))}). Its notes are moved under _chartbook/, and "
+                f"pipelines/ goes aside whole: nothing under it is moved in."
+            )
+        elif migrate_0_5.new_there(root):
+            click.echo(
+                f"The store at {the_store} has the layout of ChartBook 0.5, and folders of this version's beside it: it "
+                f"looks half moved, and the move goes on from the folders as they are. {found.pipelines} pipeline(s), "
+                f"{found.snapshots} snapshot(s)."
+            )
+        else:
+            click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: {found.pipelines} pipeline(s), {found.snapshots} snapshot(s).")
+        if not mine:
+            for line in counts(found, "become")[0 if not moved else 3:]:
+                click.echo(line)
+        if dry_run:
+            click.echo("Nothing was moved.")
+            return
+        if not mine:
+            click.echo("Nothing else may use the store while this runs, on this machine or another.")
+            click.echo("Afterwards every machine that uses it needs this ChartBook: an earlier one will not read it.")
+            click.echo(synced)
+            if not yes and not click.confirm("Move it?", default=False):
+                click.echo("Nothing was moved.")
+                return
+        done = migrate_0_5.run(root)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    except OSError as e:
+        # A failure of the disk part way: every step done is done, and the rest is still to do
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"The move stopped: {_said(e)}. The store is as far as the move got, and nothing is lost: run "
+            f"`chartbook store migrate` again, and it goes on.",
+            err=True,
+        )
+        raise SystemExit(1)
+    click.echo(f"The store at {the_store} has this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
+    for line in counts(done, "became")[0 if not moved else 3:]:
+        click.echo(line)
+    if done.kept:
+        click.echo(f"The old folder, with its records, is kept at {done.kept}: it may be removed once the move has been checked.")
+    click.echo(synced)
+
+
 @store.command("migrate")
 @click.option("--dry-run", is_flag=True, help="Say what would be moved, and move nothing")
 @click.option("--yes", "-y", is_flag=True, help="Do not ask")
 def store_migrate(dry_run, yes):
-    """Move a store made by ChartBook 0.2 to the layout of 0.3.
+    """Move a store to this version's layout: one that ChartBook 0.5 laid out, or one made by 0.2.
+
+    A store of 0.5 (`pipelines/` at its top) is read as it is and not
+    written. This moves it, once, on one machine: in each pipeline the
+    newest snapshot its owner made becomes complete under `snapshots/`,
+    the others it made become increments on it under `increments/`, and
+    a snapshot a pin made becomes complete. Files change folder by rename,
+    so a store in a synced folder uploads nothing again; only a file that
+    two folders must each hold is copied. What no record names is moved
+    aside under `_chartbook/left-by-0.5/`, never removed. Nothing else
+    may use the store while it runs, and afterwards every machine that
+    uses it needs this ChartBook. Cut short, it is run again and goes on.
+
+    A store made by ChartBook 0.2 is moved to the layout of 0.3 to 0.5
+    first, as before; run the command again to move that one on.
 
     ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
     for each snapshot in it named by when it was made and its commit, and
@@ -4417,15 +4617,15 @@ def store_migrate(dry_run, yes):
     second. The files of a glob, whose records give no hash for each file,
     are read once to hash them: in a folder that streams its files (Google
     Drive's), that downloads them. A migrate cut short is run again and
-    goes on where it stopped. A store in a bucket is moved by syncing it to
-    a folder (`aws s3 sync`), moving that, and syncing it back.
+    goes on where it stopped. A store in a bucket is not moved: it is not
+    available in this version, and a command that meets one says so.
 
     \b
     Examples:
         chartbook store migrate --dry-run
         chartbook store migrate
     """
-    from chartbook import migrate
+    from chartbook import migrate, migrate_0_5
     from chartbook.store import FolderStore, StoreError, default_store
 
     try:
@@ -4436,8 +4636,7 @@ def store_migrate(dry_run, yes):
     if not isinstance(the_store, FolderStore):
         click.echo(
             click.style("Error: ", fg="red", bold=True)
-            + f"The store at {the_store} is not a folder. Sync it to one (`aws s3 sync`), set CHARTBOOK_STORE to "
-            f"that folder, run this, and sync it back.",
+            + f"The store at {the_store} is not a folder, and this command moves a store in a folder.",
             err=True,
         )
         raise SystemExit(1)
@@ -4446,8 +4645,22 @@ def store_migrate(dry_run, yes):
     except StoreError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
+    if not plan.needed and migrate_0_5.to_move(the_store.root):
+        # A store of 0.5, a move to this layout that was cut short, or a moved store with what 0.5 keeps at its top
+        _move_from_0_5(the_store, dry_run, yes)
+        return
     if not plan.needed:
-        click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
+        try:
+            # Asked of the store itself: one with two layouts in it is neither, and says so
+            earlier = the_store.earlier_layout()
+        except StoreError as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            raise SystemExit(1)
+        if earlier:
+            # What this command moves is a store of 0.2. One of 0.3 to 0.5 is read as it is, and is not this version's
+            _move_from_0_5(the_store, dry_run, yes)
+        else:
+            click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
         return
     left = len(plan.records) - plan.done
     if plan.layout == "chartbook/store/v2" and not plan.unfinished:
@@ -4484,6 +4697,7 @@ def store_migrate(dry_run, yes):
         click.echo("What was moved stays moved: run this again to go on.", err=True)
         raise SystemExit(1)
     click.echo(f"Moved. The store at {the_store} has the layout of ChartBook 0.3; `chartbook store verify` checks it.")
+    click.echo("Run `chartbook store migrate` once more to move it on to this version's layout.")
 
 
 def _folder_store_or_exit():
@@ -4519,14 +4733,14 @@ def _say_copied(done, verb: str) -> None:
 def store_export(pipeline, to, latest, snapshots):
     """Write one pipeline's snapshots into a folder, to send to someone.
 
-    The folder is laid out as a store is: TO/pipelines/PIPELINE/, a folder
-    for each snapshot, each file once, with its record. Send that folder;
+    The folder is laid out as a store is: TO/snapshots/PIPELINE/, a folder
+    for each snapshot, complete, with its record. Send that folder;
     whoever receives it runs `chartbook store import` on it, or copies it
-    into their store's pipelines/ by hand.
+    into their store's snapshots/ by hand.
 
     Every snapshot its owner made is written, or with --latest the newest
-    alone (one complete snapshot, readable without ChartBook), or each
-    --snapshot named. Only what a snapshot's record names is written: its
+    alone, or each --snapshot named. Each is complete, and readable
+    without ChartBook. Only what a snapshot's record names is written: its
     data, its documents and its index, never anything that runs. With
     several stores in the catalog, the one that holds the pipeline is
     used; --store NAME chooses when more than one does.
@@ -4550,7 +4764,7 @@ def store_export(pipeline, to, latest, snapshots):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     _say_copied(done, "Exported")
-    click.echo(f"Send {Path(to).expanduser().resolve() / 'pipelines'}; `chartbook store import` there takes it in.")
+    click.echo(f"Send {Path(to).expanduser().resolve() / 'snapshots'}; `chartbook store import` there takes it in.")
 
 
 @store.command("import")
@@ -4562,8 +4776,8 @@ def store_import(folder):
     pipeline's folder from a store (its snapshots' folders, each with
     _chartbook/snapshot.json). Every file is hashed as it is copied and
     checked against its record: a snapshot with a file that is not what its
-    record says is refused, and said. A file the store holds already is
-    not copied again, a snapshot it has already is left as it is, and
+    record says is refused, and said. Each snapshot is written complete, a
+    snapshot the store has already is left as it is, and
     nothing in the store is written over. A pipeline in this store then
     pins the snapshots by the pipeline's ID, with `chartbook pin` and
     `chartbook pin --update`.
@@ -4595,6 +4809,11 @@ def store_verify():
     anything edited in the store by hand. Every byte is read, so on a large
     store it takes a while.
 
+    In a folder store each snapshot is checked for itself: every file its
+    record names is read in the snapshot's own folder, and every one that
+    is missing there or has other bytes is said with the snapshot's name,
+    though another snapshot has the same bytes.
+
     Examples:
         chartbook store verify
         CHARTBOOK_STORE=/shared/store chartbook store verify
@@ -4612,8 +4831,10 @@ def store_verify():
     for problem in problems:
         click.echo(problem.format())
     if problems:
+        # By object: one that two snapshots have each lost a file of is said twice above, and is one object
+        wrong = len({problem.content_hash for problem in problems})
         click.echo(
-            f"\n{len(problems)} of {total} object(s) in {the_store} are "
+            f"\n{wrong} of {total} object(s) in {the_store} are "
             f"not what their names say.",
             err=True,
         )
@@ -4627,13 +4848,52 @@ def _printable(text) -> str:
 
 
 def _note_path(the_store, name: str) -> str:
-    """Where a store keeps the note *name* under ``roots/``, as a person finds it: a folder's in its own system's separators."""
+    """Where a store keeps the note *name* of a lockfile, as a person finds it: a folder's in its own system's separators.
+
+    A folder store keeps its notes under ``_chartbook/roots/``; one laid
+    out as ChartBook 0.5 laid one out, and a bucket, under ``roots/``.
+    """
     import os
 
     from chartbook.store import FolderStore, ROOTS_DIR
 
-    sep = os.sep if isinstance(the_store, FolderStore) else "/"
-    return f"{the_store}{sep}{ROOTS_DIR}{sep}{name}"
+    if isinstance(the_store, FolderStore):
+        # Under the store as it is shown, which carries no password
+        folder = os.sep.join(the_store.roots_path().relative_to(the_store.root).parts)
+        return f"{the_store}{os.sep}{folder}{os.sep}{name}"
+    return f"{the_store}/{ROOTS_DIR}/{name}"
+
+
+def _when_it_goes(why: str) -> str:
+    """When a snapshot that `store gc` keeps for *why* goes, in the words of the plan's own reasons: the way out for one that has lost a file for good."""
+    if "builds on it" in why:
+        return "once the increments that build on it have gone, each for its own reason (`chartbook store gc --dry-run` says which stay, and why)"
+    if "was made from" in why:
+        return "once the snapshot that was made from it goes, or with a `chartbook store gc` without `--keep-lineage`"
+    if "newest that names its repository" in why:
+        return "once a newer snapshot of its pipeline names its repository (one made in a clone that has its remote)"
+    if "repository's address" in why or "address of a kept" in why:
+        return "once the kept snapshots it ties to their repository have gone"
+    if "that stays has" in why:
+        return "once the snapshot that holds its pipeline back is whole again, or has gone"
+    if "cannot be found" in why:
+        return "with `chartbook store gc --forget-missing`, which lets go of what a lockfile that cannot be found pinned"
+    if "another machine" in why or "not read here" in why:
+        return "once that machine's lockfile pins another (`chartbook pin --update` there), or its note is removed from the store"
+    if "lockfile" in why:
+        return "once no lockfile pins it: `chartbook pin --update` in the pipeline that does moves its pin to a newer snapshot"
+    if "newest of its pipeline" in why:
+        return "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it"
+    if "branch or tag" in why or "label points" in why:
+        return "once a newer snapshot takes its place for that name, or with `chartbook store gc --aggressive`, which lets names keep nothing"
+    if "keep = true" in why:
+        return (
+            "once the mark `keep = true` is taken out of its pipeline's chartbook.toml, that is committed, and a "
+            "snapshot is made since (`chartbook run` in its folder)"
+        )
+    if "days" in why:
+        return "once it is older than that"
+    return "once that is no longer so"
 
 
 def _format_bytes(size):
@@ -4695,6 +4955,15 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     snapshot a git tag or branch names, or one holding a labelled model
     version that no lockfile pins, goes once nothing else keeps it.
 
+    While a snapshot that stays lacks a file of its own (a sync that has
+    not brought it, a file removed by hand), no snapshot of its pipeline is
+    removed, since a read of the one with the hole is handed another's
+    copy. gc names the pipeline, the snapshot and the file. Wait for the
+    sync, or see `chartbook store verify`, which lists everything missing.
+    gc says why that snapshot stays, and so when one that has lost a file
+    for good goes: once a newer one is made, once no lockfile pins it, or
+    with the option that lets go of what keeps it.
+
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
     --forget-missing to let those go. A note only ever adds to what is kept:
@@ -4703,14 +4972,15 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     machine, which a store in a shared or synced folder has, is kept with
     --forget-missing or without, as is a note from before notes named their
     machine and a sync service's copy of a note; each is listed with its
-    file under roots/, which you remove once no machine needs it. In your
+    file under _chartbook/roots/, which you remove once no machine needs it. In your
     own store, under ~/.chartbook, a note from before notes named their
     machine is this machine's: its lockfile is read, and the note is
     removed once this machine has a note of that lockfile and the lockfile
     is read here, or with --forget-missing once the lockfile is gone.
 
     What would be removed is listed, and nothing is removed until you say
-    yes. An object stored in the last hour is never removed: a pin puts
+    yes. An object stored in the last hour is never removed, but what only
+    a removed snapshot holds, which goes with its folder: a pin puts
     files in the store before it writes the lockfile that names them. In a
     store users share, what another user put there may be theirs alone to
     remove: gc removes what it can, says what it removed, lists each thing
@@ -4732,20 +5002,40 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
     try:
         the_store = default_store()
-        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive)
+        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive, hashed=True)
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
-    def carry_out() -> tuple[int, int]:
+    def say_held_back(held_back: dict, kept: list, not_intact: set) -> None:
+        """Say of each pipeline none of whose snapshots is removed which snapshot lacks which file, or has it with other bytes, why that one stays, and what to do."""
+        reasons = {taken.path: why for taken, why in kept}
+        for pipeline, (record, file, count) in sorted(held_back.items()):
+            why = reasons.get(record, "")
+            stays = f"stays{f' because {why}' if why else ''}"
+            if pipeline in not_intact:
+                # Found by reading it: the file is there, at the size its record says, and is not what it was
+                more = f" (and {count - 1} more of its files)" if count > 1 else ""
+                wrong = f"in its snapshot {record.parent.parent.name}, {_printable(file)}{more}, and it {stays}"
+            else:
+                more = f" and {count - 1} more" if count > 1 else ""
+                wrong = f"its snapshot {record.parent.parent.name} lacks {_printable(file)}{more}, and {stays}"
+            click.echo(f"Nothing of {_printable(pipeline)} is removed: {wrong}.")
+            click.echo(
+                f"  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists "
+                f"everything missing. If it is lost for good, that snapshot goes {_when_it_goes(why)}."
+            )
+
+    def carry_out():
         """Remove what the plan says to, and say what could not be removed, if anything could not."""
         try:
-            return lock.run_gc(plan, the_store)
+            return lock.carry_out_gc(plan, the_store)
         except lock.GcError as e:
             # Everything else went: say so, then each thing that stayed and what to do
-            if e.removed_snapshots or e.removed:
-                click.echo(f"Removed {e.removed_snapshots} snapshot(s) and {e.removed} object(s), {_format_bytes(e.size_bytes)}.")
+            if e.removed_snapshots or e.removed or e.pinned:
+                by_pins = f", {e.pinned} snapshot(s) a pin made from a repository" if e.pinned else ""
+                click.echo(f"Removed {e.removed_snapshots} snapshot(s){by_pins} and {e.removed} object(s), {_format_bytes(e.size_bytes)}.")
             click.echo(click.style("Error: ", fg="red", bold=True) + f"{len(e.failures)} thing(s) could not be removed:", err=True)
             for _, why in e.failures:
                 click.echo(f"  {_printable(_said(why))}", err=True)  # the store's words name the thing and say what to do
@@ -4830,43 +5120,63 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             "(for a note from before notes did, the newest holding each object it "
             "named). --forget-missing lets them go."
         )
+    say_held_back(plan.held_back, plan.snapshots_kept + plan.pinned_kept, plan.not_intact)
 
-    if not plan.delete and not plan.snapshots_delete:
+    if not plan.delete and not plan.snapshots_delete and not plan.pinned_delete:
         click.echo("Nothing to remove.")
         if not dry_run:
             carry_out()  # forgets the missing, if asked to
         return
 
-    if plan.snapshots_delete:
-        click.echo(f"Would remove {len(plan.snapshots_delete)} snapshot(s):")
+    # The size of what goes: the objects nothing names and, with a snapshot's folder, its own copies of
+    # files that a kept snapshot has too (GcPlan.freed_bytes); and after the yes, of what went (GcDone)
+    freed = _format_bytes(plan.freed_bytes)
+    if plan.snapshots_delete or plan.pinned_delete:
+        # A snapshot a pin made from a repository goes as any does, its whole folder: said, and asked about
+        counted = [f"{len(plan.snapshots_delete)} snapshot(s)"] if plan.snapshots_delete else []
+        counted += [f"{len(plan.pinned_delete)} snapshot(s) a pin made from a repository"] if plan.pinned_delete else []
+        counted += [f"{len(plan.delete)} object(s) that nothing names"] if plan.delete else []
+        click.echo(f"Would remove {', '.join(counted[:-1]) + ' and ' if counted[1:] else ''}{counted[-1]}, {freed}:")
         for taken, why in plan.snapshots_delete:
             click.echo(
                 f"  {taken.pipeline} at {taken.commit[:7]}, made "
                 f"{_when(taken.made_at)}: {why}"
             )
-    summary = (
-        f"{len(plan.delete)} object(s), {_format_bytes(plan.size_bytes)}, that "
-        f"nothing names"
-    )
-    if dry_run:
-        if plan.delete:
-            click.echo(f"Would remove {summary}:")
+        for taken, why in plan.pinned_delete:
+            click.echo(f"  {taken.pipeline} at {taken.commit[:7]}, which a pin made {_when(taken.made_at)}: {why}")
+        if dry_run and plan.delete:
             for content_hash, size in plan.delete:
                 click.echo(f"  {content_hash}  {_format_bytes(size)}")
+            if plan.copies_bytes:
+                click.echo(
+                    f"  and the removed snapshots' own copies of files a kept snapshot has too  "
+                    f"{_format_bytes(plan.copies_bytes)}"
+                )
+    elif dry_run:
+        click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names:")
+        for content_hash, size in plan.delete:
+            click.echo(f"  {content_hash}  {_format_bytes(size)}")
+        if plan.copies_bytes:
+            click.echo(f"  and the copies of files a kept snapshot has too, in the folders that go  {_format_bytes(plan.copies_bytes)}")
+    else:
+        click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names.")
+    if dry_run:
         return
-    if plan.delete:
-        click.echo(f"Would remove {summary}.")
     if not yes and not click.confirm("Remove them?", default=False):
         click.echo("Nothing was removed.")
         return
-    removed_snapshots, removed = carry_out()
-    click.echo(
-        f"Removed {removed_snapshots} snapshot(s) and {removed} object(s), "
-        f"{_format_bytes(plan.size_bytes)}."
+    done = carry_out()
+    # What the plan made again at the yes keeps, each with why: pinned meanwhile only where it was
+    for taken, why in done.kept_after_all:
+        made = "which a pin made" if any(taken.path == pinned.path for pinned, _ in plan.pinned_delete) else "made"
+        click.echo(f"Kept after all: {taken.pipeline} at {taken.commit[:7]}, {made} {_when(taken.made_at)}: {why}")
+    if done.objects_kept:
+        click.echo(f"Kept after all: {done.objects_kept} object(s), which a lockfile or a snapshot names or uses now")
+    say_held_back(
+        {pipeline: held for pipeline, held in done.held_back.items() if pipeline not in plan.held_back}, done.kept, done.not_intact
     )
-    spared = len(plan.snapshots_delete) - removed_snapshots + len(plan.delete) - removed
-    if spared:
-        click.echo(f"{spared} of them were pinned while you were deciding, and kept.")
+    by_pins = f", {done.pinned} snapshot(s) a pin made from a repository" if done.pinned else ""
+    click.echo(f"Removed {done.snapshots} snapshot(s){by_pins} and {done.objects} object(s), {_format_bytes(done.freed_bytes)}.")
 
 @main.command()
 @click.option(
@@ -5632,7 +5942,7 @@ def ls_versions(ctx, as_json):
     if ctx.obj.get("catalog") is None:
         _catalog_or_make_one()
     stores = Stores.configured(ctx.obj.get("catalog"))
-    found, unreadable = readable_snapshots(stores)
+    found, unreadable = readable_snapshots(stores)  # a store that is not read is said by the group (_Ls)
     if as_json or ctx.obj.get("json"):
         _echo_json([
             {"pipeline": taken.pipeline, "commit": taken.commit, "made_at": taken.made_at, "store": stores.name_of(taken.path)}

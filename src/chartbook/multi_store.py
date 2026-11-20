@@ -11,7 +11,7 @@ from pathlib import Path
 
 import tomli
 
-from chartbook.store import (FolderStore, ObjectNotFoundError, ReadOnlyStoreError, StoreError,
+from chartbook.store import (FolderStore, ObjectNotFoundError, ReadOnlyStoreError, StoreError, StoreNotAvailableError,
                             StoreUnreachableError, store_for_url)
 
 
@@ -49,7 +49,12 @@ class Stores:
             raise ValueError("At least one store is required")
 
     @classmethod
-    def configured(cls, catalog=None):
+    def configured(cls, catalog=None, named=None):
+        """The stores a catalog lists, or the one the settings name.
+
+        :param named: The catalog's path as a message names it, where
+            *catalog* is a staged copy of it that is being checked.
+        """
         from chartbook.config import (get_default_catalog_path, get_store_url,
                                       folder_of_store_url, store_kind)
         from chartbook.manifest import resolve_platform_path
@@ -97,7 +102,15 @@ class Stores:
             from chartbook.identity import validate_pipeline_id
             for pipeline in pipelines:
                 validate_pipeline_id(pipeline)
-            entries.append(NamedStore(name, url, store_for_url(url), read_only, tuple(pipelines), not entries))
+            try:
+                opened = store_for_url(url)
+            except StoreNotAvailableError as error:
+                # Every command stops with the line, and says which store of the catalog it is and how to take it out
+                raise StoreNotAvailableError(
+                    f"{error} It is the store {name!r} of the catalog {named or path}: `chartbook store remove {name}` takes it out "
+                    f"of the catalog, and leaves the bucket as it is."
+                ) from None
+            entries.append(NamedStore(name, url, opened, read_only, tuple(pipelines), not entries))
         if entries:
             from chartbook.config import get_store_setting
             _, origin = get_store_setting()
@@ -223,19 +236,20 @@ class Stores:
             except (StoreUnreachableError, OSError) as error:
                 self._unreachable(entry, error)
 
-    def files(self, content_hash, pipeline=None, name=None):
+    def files(self, content_hash, pipeline=None, name=None, snapshot=None):
         failures = []
         for store in self._holding(content_hash, pipeline):
             try:
-                return store.files(content_hash, pipeline, name)
+                return store.files(content_hash, pipeline, name, snapshot=snapshot)
             except (StoreError, OSError) as error:
                 failures.append(error)
         if failures:
             raise failures[0]
         raise ObjectNotFoundError(f"No reachable store holds {content_hash}")
 
-    def incomplete(self, content_hash, size_bytes, files=None, every=False):
-        problems = [s.incomplete(content_hash, size_bytes, files, every) for s in self._holding(content_hash)]
+    def incomplete(self, content_hash, size_bytes, files=None, every=False, pipeline=None):
+        # In the stores that have it for that pipeline, as a read of it looks for it
+        problems = [s.incomplete(content_hash, size_bytes, files, every, pipeline=pipeline) for s in self._holding(content_hash, pipeline)]
         return None if None in problems else (problems[0] if problems else "not in any store")
 
     def hashes(self):
@@ -269,7 +283,7 @@ class Stores:
     def roots(self):
         return self._collect("roots")
 
-    def verify(self, content_hashes=None):
+    def verify(self, content_hashes=None, pipeline=None):
         if content_hashes is None:
             problems = []
             for entry in self._available():
@@ -282,14 +296,14 @@ class Stores:
         problems, unheld, first = [], set(wanted), None
         for entry in self._available():
             try:
-                held = [content_hash for content_hash in wanted if entry.store.has(content_hash)]
+                held = [content_hash for content_hash in wanted if entry.store.has(content_hash, pipeline)]
             except (StoreUnreachableError, OSError) as error:
                 self._unreachable(entry, error)
                 continue
             first = first or entry.store
             unheld.difference_update(held)
             if held:
-                problems.extend(entry.store.verify(held))
+                problems.extend(entry.store.verify(held) if pipeline is None else entry.store.verify(held, pipeline))
         if unheld and first is not None:
             problems.extend(first.verify([content_hash for content_hash in wanted if content_hash in unheld]))
         return problems
@@ -364,13 +378,22 @@ def with_dependencies(folder, store=None):
             url = entry["store"]
             if not isinstance(url, str) or not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url) or store_kind(url) == "folder":
                 raise ValueError(f"Dependency {key!r}: store must be a portable store URL, never a folder")
-            urls.append(url)
+            urls.append((key, url))
     if not urls:
         return base
     entries = list(base.entries) if isinstance(base, Stores) else [NamedStore("default", str(base), base, create=True)]
     seen = {entry.url for entry in entries}
-    for url in urls:
+    for key, url in urls:
         if url not in seen:
-            entries.append(NamedStore(f"dependency-{len(entries)}", url, store_for_url(url), read_only=True))
+            try:
+                opened = store_for_url(url)
+            except StoreNotAvailableError as error:
+                # The line's own ways out are the settings and a catalog, and this URL is in neither: say where it is
+                raise StoreNotAvailableError(
+                    f"{error} It is the store that the dependency {key!r} names, `[dependencies.\"{key}\"] store` in "
+                    f"{folder / 'chartbook.toml'}: take that line out, and the dependency is read from the stores this "
+                    f"machine is set to use."
+                ) from None
+            entries.append(NamedStore(f"dependency-{len(entries)}", url, opened, read_only=True))
             seen.add(url)
     return Stores(entries, getattr(base, "catalog", None))

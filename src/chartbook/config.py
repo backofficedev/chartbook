@@ -23,9 +23,10 @@ keeps their own choices for everything else::
     └── git/                 # clones of git dependencies
 
 ``[store] url`` says where the store is: a folder (a bare path or
-``file:///``), an S3 bucket (``s3://bucket/prefix``, with
-``pip install chartbook[s3]``), or another kind of store a plugin provides,
-by its scheme. ``CHARTBOOK_STORE`` overrides it. ``[git] path`` and
+``file:///``), or another kind of store a plugin provides, by its scheme
+(a store in an S3 bucket, ``s3://bucket/prefix``, is not opened by this
+version: :class:`chartbook.store.StoreNotAvailableError`).
+``CHARTBOOK_STORE`` overrides it. ``[git] path`` and
 ``CHARTBOOK_GIT_CACHE`` do the same for the git cache, ``[cache] path`` and
 ``CHARTBOOK_CACHE`` for the cache of a remote store; ``[catalog] path``
 names the default catalog. Which store a machine uses is never a fact
@@ -373,8 +374,9 @@ def get_store_url() -> str:
     4. ``~/.chartbook/store``.
 
     A bare path is a folder. ``file://`` is a folder too. ``s3://`` is a
-    bucket, with ``pip install chartbook[s3]``; another scheme names a kind
-    of store a plugin provides. ``[store] path`` is still read, as a
+    bucket, which this version does not open
+    (:class:`chartbook.store.StoreNotAvailableError`); another scheme names
+    a kind of store a plugin provides. ``[store] path`` is still read, as a
     folder, with a warning. A
     relative folder in a settings file is relative to that file's folder.
 

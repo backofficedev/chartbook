@@ -150,8 +150,9 @@ Snapshot made: 5 files, 23 MB.
   ~/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4
 ```
 
-**5a. A script does both at once.** `chartbook run --snapshot` is a run and then a snapshot, by
-the same rule, and takes `--complete` too.
+**5a. A script does both at once.** `chartbook run --snapshot` builds and then makes a snapshot,
+choosing which kind by the same rule, and takes `--complete` too. It is not the two commands
+typed one after the other: {doc}`one-command` has a table of how they differ.
 
 **6. Looking at the store.**
 
@@ -315,8 +316,10 @@ second row. That row is its price.
 **`--complete` makes a complete one.** *Decided 2026-11-20, in place of "typed, the word means a
 complete one" (2026-11-19), which went with a run that made snapshots by itself.* `chartbook
 snapshot --complete` ends with a complete snapshot whatever the rule would choose. `chartbook run
---snapshot` is a run and then `chartbook snapshot`, by the same rule, and takes `--complete`
-too; it stays the strict form it is in {doc}`one-command`. Nothing is renamed.
+--snapshot` chooses the kind of its snapshot by the same rule, and takes `--complete` too; it
+stays the strict form it is in {doc}`one-command`, which says how it differs from `chartbook
+snapshot` typed after a run (what it does with an uncommitted lockfile, which store it asks,
+what its record says of the build). Nothing is renamed.
 
 - **Where the newest snapshot is an increment of these same files, `--complete` makes a new,
   complete one.** *Proposed by Claude (found by review), and decided 2026-11-19 for a typed
@@ -625,15 +628,53 @@ and his other work read them with 0.5 until then.*
   snapshots share.)
 - **A snapshot that `chartbook pin` made from a repository becomes a complete one,** with a copy
   of each file it shared.
-- **A folder that held files for later snapshots and is no snapshot goes,** once the files that
-  records name are out of it.
-- **What no record names is not removed.** It is listed, and left where it is.
-- **It can be stopped and taken up again,** by the journal the move from 0.2 keeps.
+- **The move removes nothing of anyone's.** *(Changed when it was built, after the third review
+  of the mover.)* Once the files that records name are in their new places and the new records
+  are written, what is left of `pipelines/` is moved aside whole, in one rename, to
+  `_chartbook/left-by-0.5/pipelines`: the old records, the folders that held files for later
+  snapshots and were no snapshot, the old notes, and every file that no record names. Left
+  under `pipelines/` it would make a store of both layouts, which every command refuses. A
+  person removes that folder once the move has been checked. A top `README.txt` that a person
+  wrote goes aside too; only ChartBook's own text is replaced.
 - **Nobody else writes to the store meanwhile,** and every machine that shares it needs this
   ChartBook afterwards: a 0.5 that has not yet seen the new `store.json` would go on writing a
-  `pipelines/` folder. The command says both before it starts, and looks once more at the end
-  for anything that arrived during the move.
-- **In a bucket a move is a copy and a delete,** file by file.
+  `pipelines/` folder. The command says both before it starts.
+- **A store in a bucket is not moved.** *Decided 2026-11-20; the first draft had "in a bucket a
+  move is a copy and a delete, file by file".* It is withdrawn in 0.6 (step 4 of "The order of
+  work"); the bucket itself is as it was.
+
+As built, after three reviews of the mover, by three rules:
+
+1. **Nothing that was true before the move stops it half way.** What can stop it is found before
+   the first file moves, each with its way out: a record that cannot be read, or that names a
+   file outside its pipeline's folder; a folder with files and no record (a sync brings a record
+   last); two names the disk does not tell apart; a folder that may not be written; a folder
+   that is a link. A file that is missing, or is not what its record says, does not stop it: it
+   was so before, it is asked about, and the last lines name it.
+2. **The folders are the truth.** A journal, `_chartbook/move-to-v3.jsonl`, says only that a move
+   is under way and on which machine; while it is there every other command stops with one line.
+   What is left to do is worked out from the folders, so a move cut short at any step is taken up
+   by running the command again, with the journal or without it. The old records stay under
+   `pipelines/` until the last step, so a plan made at any moment sees all of them. A test stops
+   the move after every step, removes the journal, and compares the result file by file.
+3. **`chartbook store migrate` can always be run again on a moved store, and is the one remedy.**
+   A machine that had not been brought the move may write afterwards where 0.5 keeps things: a
+   note of a lockfile in `roots/`, a snapshot in `pipelines/`. Every other command then refuses
+   the store and names this one. Run again, it puts the notes with the others and moves that
+   `pipelines/` aside whole, beside the first. A snapshot written there is not moved in: it is
+   named, and its pipeline is run again with this ChartBook. *(The second review's rule moved
+   such a snapshot in where its files could be found, and set it aside file by file where not;
+   the third review broke both, and neither is built.)*
+
+- **A file changes folder by a rename and is not read.** The copies are few: a file that several
+  older snapshots share and the newest lacks, a file a snapshot kept once under two names, and
+  what a pin-made snapshot shared. On a skeleton of a real store of 23 GB (its records, with
+  empty files of the real sizes) the move came to 38 snapshots, 32 complete and 6 increments,
+  6,015 renames and 6 copies of 858 KB together.
+- **An increment made by a move builds on a snapshot made after it.** Nothing that reads one may
+  take the complete snapshot for the older.
+- **A store of 0.2 takes two runs:** the first moves it to the layout of 0.5 and says to run the
+  command once more.
 
 ## What a person can do with a complete snapshot
 
@@ -644,7 +685,7 @@ data in mind.
 - Somebody without ChartBook reads the files.
 - Somebody with ChartBook runs `chartbook store import` on it, which hashes every file against
   its record as it copies. *Proposed by Claude, 2026-11-19: `import` takes one snapshot's folder
-  as well as a pipeline's.*
+  as well as a pipeline's. Not built with the layout: it takes a folder laid out as a store.*
 - `chartbook store export` writes a folder laid out as a store of this layout; with `--latest`
   that is one complete snapshot, as today.
 - A pipeline copied from one store to another (`store move`, `store import`) keeps its form:
@@ -685,8 +726,13 @@ files for what it changes.
    written; a snapshot of either kind is read, and every new one is written complete for now; a
    store of 0.5 is read as it is; `store gc`, `store verify`, `store move`, `restore` and `store
    ls` on the new layout.
-3. `chartbook store migrate` from the layout of 0.5.
-4. The S3 store, and `store export` and `store import`.
+3. `chartbook store migrate` from the layout of 0.5. *Steps 2 and 3 are one pull request: main
+   never names a command that cannot yet move a store.* `store export`, `store import` and `store
+   move` of the folder store came with them, since each has to keep a snapshot's form.
+4. ~~The S3 store.~~ *Not for 0.6.0. Decided 2026-11-20: the maintainer had not asked for it,
+   and the priority is a store in a folder. A store in a bucket is withdrawn in 0.6: one opened
+   by its URL is refused with one line, its code and its own tests are kept, and bringing it to
+   this layout is on the roadmap. The bucket itself is as it was, and ChartBook 0.5 reads it.*
 5. Increments are made: which one `chartbook snapshot` makes, the line that says which, and
    `--complete` on it and on `chartbook run --snapshot`. (That a run no longer ends with a snapshot is
    {doc}`one-command`'s own step.)

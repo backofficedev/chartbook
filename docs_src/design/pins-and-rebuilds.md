@@ -1017,6 +1017,16 @@ together. The changelog's "Read this first" says the same.
   "What you see" there, the author's and the student's catalogs each of two stores: it found
   nothing to mend.
 
+
+*Added 2026-11-20, with `chartbook store migrate` for a store of 0.5.* **A store is moved once, by one
+machine, after everyone has upgraded.** A store that 0.5 laid out is read by 0.6 as it is, so nobody
+has to move anything on the day they upgrade. To make snapshots in it again: see that every machine
+that uses the store has this ChartBook (an earlier one will not read it afterwards, and a 0.5 that
+has not yet seen the new `store.json` would go on writing a `pipelines/` folder); run `chartbook
+store migrate` on one of them, with nothing else using the store; and, in a synced folder, let the
+sync finish before another machine uses it. `--dry-run` says what would happen first. Files change
+folder by rename, so nothing is uploaded again ({doc}`snapshots-and-increments`, "Moving a store to
+this layout").
 ## What it costs
 
 *As built (step 4), measured 2026-11-17 by the test under a memory limit, on the machine the note

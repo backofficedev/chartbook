@@ -168,7 +168,7 @@ class TestWithMkDocs:
 def _plant(store_root: Path, commit: str, document: dict) -> Path:
     """Write a snapshot record straight into a folder store, as anyone who can write a shared one could."""
     named = commit[:12] if len(commit) == 40 and all(c in "0123456789abcdef" for c in commit) else "0" * 12
-    folder = store_root / "pipelines" / "pipeline_a" / f"2026-01-01T000000Z_{named}" / "_chartbook"
+    folder = store_root / "snapshots" / "pipeline_a" / f"2026-01-01T000000Z_{named}" / "_chartbook"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "snapshot.json"  # named as a record is, or it is passed over
     path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
@@ -269,7 +269,7 @@ class TestWhatTheReviewFound:
         commit = "b6ea3aa" + "0" * 33
 
         def taken(made_at, folder, pipeline="acme/x"):
-            path = Path("store") / "pipelines" / "acme+x" / folder / "_chartbook" / "snapshot.json"
+            path = Path("store") / "snapshots" / "acme+x" / folder / "_chartbook" / "snapshot.json"
             return SimpleNamespace(pipeline=pipeline, commit=commit, made_at=made_at, path=path)
 
         first = taken("2026-10-31T14:54:10.168357Z", "2026-10-31T145410Z_b6ea3aa00000")
@@ -512,10 +512,14 @@ class TestWhatTheLinksReviewFound:
         root, first, second = trained
         from tests.fixtures import publish_catalog
         publish_catalog(root)
-        # A version is built without its data; its documents it cannot do without
-        readme = default_store().files(first.documents["content_hash"]).by_relative()["README.md"]
-        os.chmod(readme, 0o600)
-        readme.write_bytes(readme.read_bytes()[:-1])
+        # A version is built without its data; its documents it cannot do without. Every snapshot that has
+        # these documents has its own copy of them, and each is damaged: one left whole would be read
+        store = default_store()
+        readmes = [store.root / name for name, _ in store.files_of(first.documents["content_hash"]) if name.endswith("/README.md")]
+        assert first.path.parent.parent / "README.md" in readmes
+        for readme in readmes:
+            os.chmod(readme, 0o600)
+            readme.write_bytes(readme.read_bytes()[:-1])
         _build(root, monkeypatch)
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
         name = versions.version_name(first.commit, first.made_at)

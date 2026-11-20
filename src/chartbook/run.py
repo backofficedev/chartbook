@@ -1311,6 +1311,13 @@ def run(
                         if step.snapshot_first and step.source == "asked" and not snapshot else ""
                     )
                     raise RunError(f"{error}{why} Nothing was built.") from None
+                try:
+                    # A store that takes no snapshot (laid out as ChartBook 0.5 laid one out, say) says so now too
+                    snapshots.check_store_takes_one(step.id, store)
+                except StoreError as error:
+                    raise RunError(f"{error} Nothing was built.") from None
+                except OSError:
+                    pass  # a store that cannot be reached is said where the snapshot is made, as before
                 # And a store that may only be read would refuse it after the build: said now, with the way out
                 only_read = _no_store_to_write(store, step.id)
                 if only_read:

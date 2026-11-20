@@ -112,7 +112,8 @@ joined = data.sql("""
 
 ## Another pipeline's folder has files and no path
 
-The store keeps each file once, usually in the first snapshot that had it. A dataset that grew by a year
+A store need not keep a dataset's files in one folder. A bucket, and a store that ChartBook 0.5 laid
+out, keep each file once, usually in the first snapshot that had it: there a dataset that grew by a year
 between two snapshots has its files in two snapshot folders. There is no one folder to hand out,
 so `data.path` of another pipeline's folder or glob dataset raises, whatever the folders happen to
 hold today, and says what to call instead:
@@ -125,8 +126,8 @@ data.files('news_headlines:articles') to your own reader.
 
 `data.files` lists every file, sorted by its path inside the dataset, wherever each is kept. A build
 tool takes the list, and so do polars and DuckDB for the rows. Not for the Hive keys: where a file is
-kept need not say them (two partitions of the same bytes are kept once, at one partition's path, and
-an S3 store names its copies by their hashes), so read a partitioned dataset with `data.load` or
+kept need not say them (a store that keeps each file once has two partitions of the same bytes at one
+partition's path, and an S3 store names its copies by their hashes), so read a partitioned dataset with `data.load` or
 `data.sql`, which take each file's keys from its path inside the dataset.
 
 ```python
@@ -173,8 +174,8 @@ like.
 $ chartbook path repo_public
 /work/rates/_data/repo_public.parquet
 $ chartbook path news_headlines:articles --files
-/Users/x/Google Drive/chartbook-store/pipelines/news_headlines/2026-05-01T120000Z_a1b2c3d4e5f6/_data/articles/year=2023/part-0.parquet
-/Users/x/Google Drive/chartbook-store/pipelines/news_headlines/2026-06-01T120000Z_e5f6a7b8c9d0/_data/articles/year=2024/part-0.parquet
+/Users/x/Google Drive/chartbook-store/snapshots/news_headlines/2026-06-01T120000Z_e5f6a7b8c9d0/_data/articles/year=2023/part-0.parquet
+/Users/x/Google Drive/chartbook-store/snapshots/news_headlines/2026-06-01T120000Z_e5f6a7b8c9d0/_data/articles/year=2024/part-0.parquet
 ```
 
 ```makefile

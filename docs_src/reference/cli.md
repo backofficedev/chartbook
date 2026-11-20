@@ -44,7 +44,7 @@ Every command has a section below. These are the ones reached for most after tho
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
 | `chartbook store export` | Write one pipeline's snapshots into a folder, to send to someone |
 | `chartbook store import` | Copy the snapshots a folder holds into this machine's store |
-| `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
+| `chartbook store migrate` | Move a store to this version's layout: one that ChartBook 0.5 laid out, or one made by 0.2 |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install agents` | Set a project up for coding agents: the Claude Code skill, and a ChartBook section in `AGENTS.md` |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
@@ -271,15 +271,16 @@ A name the manifest does not declare exits `1` and says which table to add (or, 
 
 ```console
 $ chartbook path fed_yield_curve:treasury_rates
-/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-26T182205Z_9b1e22d7a0c4/_data/treasury_rates.parquet
+/Users/x/.chartbook/store/snapshots/fed_yield_curve/2026-10-26T182205Z_9b1e22d7a0c4/_data/treasury_rates.parquet
 
 $ chartbook path fed_yield_curve:chart/curve_today
-/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-12T091500Z_4f2a91c0e1b2/_output/curve_today.html
+/Users/x/.chartbook/store/snapshots/fed_yield_curve/2026-10-26T182205Z_9b1e22d7a0c4/_output/curve_today.html
 ```
 
 The path is into the store, in the folder of the snapshot that keeps the file, under its own
-name. An asset of several files, a folder or a glob, has no one path: the store keeps each file
-once, so a snapshot's files may sit in other snapshots' folders. Asking exits `1` and says
+name. An asset of several files, a folder or a glob, has no one path: a store need not keep its
+files in one folder (a bucket, and a store that ChartBook 0.5 laid out, keep each file once, so a
+snapshot's files may sit in other snapshots' folders). Asking exits `1` and says
 so, whatever the folders happen to hold today; `--files` prints the files, each where the store
 keeps it, and `data.load` reads them. Nothing is gathered into this machine's cache.
 
@@ -537,7 +538,7 @@ Error: acme/forecast cannot have a snapshot: its pins do not account for every d
   rates: is in [dependencies] and not in the lockfile. Run `chartbook pin`.
 ```
 
-After a snapshot, one line on stderr says what `chartbook store gc` would clear, if anything, as {ref}`catalog build <chartbook-catalog>` says it; `--no-gc-reminder` silences it. Nothing is removed unless you ask. The first snapshot of a pipeline leaves a `README.txt` in the pipeline's folder of the store, for whoever finds the folder: a later snapshot's folder holds only what changed, so folders are removed with `chartbook store gc` and never by hand ({ref}`store ls <chartbook-store>`).
+After a snapshot, one line on stderr says what `chartbook store gc` would clear, if anything, as {ref}`catalog build <chartbook-catalog>` says it; `--no-gc-reminder` silences it. Nothing is removed unless you ask. The first snapshot of a pipeline leaves a `README.txt` in the pipeline's folder of the store, for whoever finds the folder: each folder there is a complete snapshot, and one is removed with `chartbook store gc` and never by hand ({ref}`store ls <chartbook-store>`).
 
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
 
@@ -555,7 +556,7 @@ Error: ftsfr/fed_yield_curve has changes that are not committed:
 A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.
 ```
 
-**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time, holding only the files that changed, since the store keeps each file once. If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
+**The same bytes make no new snapshot.** `chartbook snapshot` hashes what the build made and compares it with the snapshots of this pipeline at this commit: the same bytes and the same pins mean it has nothing to do, and it says so. A pipeline that pulls data from outside builds other bytes on another day, with no file changed; build again and snapshot again, and the commit is the same and the snapshot is new, named by its time, and complete: its folder holds every file, those that did not change too (a bucket, which keeps each file once, holds only the ones that changed). If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
 
 ```console
 $ chartbook snapshot
@@ -1305,7 +1306,7 @@ A changed record is described in a reviewer's words: *data changed* (a content o
 (chartbook-store)=
 ## chartbook store
 
-The store keeps files under the hash of what is in them. It is a folder on this machine, a folder machines share (on a shared disk, or synced by a service such as Google Drive), or a bucket. It is where `chartbook snapshot` puts what a pipeline built, and where `chartbook pin` finds it.
+The store keeps files under the hash of what is in them. It is a folder on this machine, a folder machines share (on a shared disk, or synced by a service such as Google Drive). A store in a bucket is not available in ChartBook 0.6.0: it has not been brought to this version's layout yet ({doc}`../roadmap`), and a command that meets one says so. It is where `chartbook snapshot` puts what a pipeline built, and where `chartbook pin` finds it.
 
 It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`, or add this to `~/.chartbook/settings.toml`, or to the organization's settings file (`/etc/chartbook/settings.toml`, or the file `CHARTBOOK_SYSTEM_SETTINGS` names), which every user on the machine shares and the user's file overrides:
 
@@ -1316,7 +1317,25 @@ url = "/a/bigger/disk/chartbook-store"
 
 `chartbook store info` says which one this machine uses, and what set it.
 
-**A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), or at one bucket (`s3://bucket/prefix`, with `pip install chartbook[s3]`; see {doc}`configuration`), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A dependency named by its ID (`"acme/rates" = {}`) is pinned and updated from the store alone, with no folder of it on that machine. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone (for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `chartbook run --frozen` writes nothing but, where it can, this machine's note for `store gc`, and is what CI should run to build; `chartbook pin --check` checks, and writes nothing to the project or the store. Under CI with no `CHARTBOOK_MACHINE_ID`, every note names the lockfile's path alone, so each run at the same checkout path replaces the last one's. Each machine's notes are its own (they name the machine, from `~/.chartbook/machine-id`, as well as the lockfile's path, since two machines can have a project at the same path), and `store gc` keeps what another machine's lockfiles recorded at their last pin. It is best run by the store's owner, from the machine the snapshots were made on: a label another machine gave is known here only through the snapshots that recorded it.
+**What is in the folder.** `snapshots/` holds one folder for each pipeline, and in it one folder for each snapshot, complete: every file of that version, in its own place. `_chartbook/` holds ChartBook's own notes (of the lockfiles that pin what is here, of the folders snapshots were made from, and what is being written). `store.json` says which layout this is, and `README.txt` says all of this to whoever opens the folder.
+
+**A store that ChartBook 0.5 laid out** has `pipelines/` at the top, and keeps each file once. This ChartBook reads it as it is: `chartbook pin`, `chartbook pin --update`, every read, the catalog, `store ls`, `store info` and `store verify` work in it, and the notes of lockfiles are written where it keeps them. It makes no snapshot in it and removes nothing from it. `chartbook snapshot`, `chartbook run --snapshot`, `chartbook store gc`, and a `store move` or `store import` that would write to it or remove from it, stop and say:
+
+```text
+The store at /Users/x/.chartbook/store has the layout of ChartBook 0.5, which this ChartBook reads and does not write. `chartbook store migrate` moves it to this version's; an earlier ChartBook will not read it afterwards.
+```
+
+A plain `chartbook run` there builds as usual, and its last lines say why there is no snapshot. `chartbook run --snapshot` stops before it builds, and its message ends `Nothing was built.`
+
+A folder with no `store.json` in which `pipelines/` holds a snapshot's folder, or `roots/` the note of a lockfile, is taken for such a store whose `store.json` has not arrived yet (a sync brings folders before files): it is read as one, a pin's note is written where 0.5 kept them, and no store is made over it. A command that would write data to it stops with a message of its own, which says what was found and the way out:
+
+```text
+The store at /shared/store has no store.json, and holds a roots/ folder with notes in it: what a store of ChartBook 0.5 holds, whose store.json may not have arrived yet (a sync that has not finished). Until it has, the folder is read as that store, and no data is written to it or removed from it. If it is no store of ChartBook 0.5 any more, remove roots/ from it and try again. If it is one whose store.json is lost for good, put one back that holds {"schema": "chartbook/store/v2"}.
+```
+
+A folder with both layouts in it is neither read nor written: a `store.json` that says this version's layout over a `pipelines/` folder with snapshots in it, or one that says the layout of 0.5 over a `snapshots/` folder with snapshots in it, most likely a store of 0.5 that this version wrote into before its `store.json` had arrived; or no `store.json` at all, and snapshots under both `pipelines/` and `snapshots/`, which read as either would pass the other's over. Every command that reads the store says so, and how to part the two, the store of 0.5 staying where every machine expects it: move `snapshots/` and `_chartbook/` out into a folder of their own, beside a `store.json` that holds `{"schema": "chartbook/store/v3"}`, and see that the `store.json` left behind holds `{"schema": "chartbook/store/v2"}`.
+
+**A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A dependency named by its ID (`"acme/rates" = {}`) is pinned and updated from the store alone, with no folder of it on that machine. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `_chartbook/roots/` writable for everyone (`roots/` in a store that ChartBook 0.5 laid out; for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `chartbook run --frozen` writes nothing but, where it can, this machine's note for `store gc`, and is what CI should run to build; `chartbook pin --check` checks, and writes nothing to the project or the store. Under CI with no `CHARTBOOK_MACHINE_ID`, every note names the lockfile's path alone, so each run at the same checkout path replaces the last one's. Each machine's notes are its own (they name the machine, from `~/.chartbook/machine-id`, as well as the lockfile's path, since two machines can have a project at the same path), and `store gc` keeps what another machine's lockfiles recorded at their last pin. It is best run by the store's owner, from the machine the snapshots were made on: a label another machine gave is known here only through the snapshots that recorded it.
 
 ### store info
 
@@ -1334,7 +1353,7 @@ Cache: /Users/x/.chartbook/cache
   where what is read from a remote store is kept on this machine
 ```
 
-What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming `pip install chartbook[s3]`, and exits `1`, rather than at the first pin or read; so is a scheme nothing installed provides.
+What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a scheme nothing installed provides is an error here, and exits `1`, rather than at the first pin or read. So is a store in an S3 bucket, which is not available in ChartBook 0.6.0: the command names the store and says the one line every command says of it.
 
 `--store NAME` shows just that catalog store. Without it, every store is shown, including read-only and unreachable stores.
 
@@ -1344,18 +1363,20 @@ What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `
 chartbook store ls [PIPELINE] [--store NAME]
 ```
 
-List the snapshots in the store, one line each, newest last within its pipeline: the folder's name (when it was made and the commit), whether it is **standalone** or **shared**, and how much its own folder holds.
+List the snapshots in the store, one line each, newest last within its pipeline: the folder's name (when it was made and the commit), that it is **complete**, and how much its folder holds.
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (3 snapshot(s))
-  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders
-  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in other folders
-A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  complete   2.4 GB here
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  complete   2.7 GB here
+A complete snapshot's folder holds every file of its version, and can be read or copied as it is. Remove snapshots with `chartbook store gc`, never by hand.
 ```
 
-Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset and says which folder keeps each. The store keeps each file once, usually in the first snapshot that had it, so a snapshot's folder may hold only what is new or changed (shared) rather than every file of its version (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot's folder is not to be deleted by hand, since another snapshot may keep files in it: `chartbook store gc` removes snapshots and keeps every file a remaining one uses. A `README.txt` in each pipeline's folder of the store says the same, for whoever finds the folder. For one complete copy of a version, `chartbook store export PIPELINE --latest --to FOLDER`.
+Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and its folder holds every one of them, each in its own place, so the folder can be read, copied or sent as it is. A dataset costs its whole size at each snapshot. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it: `chartbook store gc` removes snapshots, each with its whole folder. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder.
+
+A snapshot is listed as **complete** where its folder holds every file of its version, and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
@@ -1376,6 +1397,18 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
+
+In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and every one that is missing there, or has other bytes, is said with the snapshot's name, a snapshot's files together, though another snapshot has the same bytes:
+
+```console
+$ chartbook store verify
+sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
+sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
+
+1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
+```
+
+Nothing puts a file back into a snapshot: its folder is not changed once its record is written. A read of it is handed the copy in the newest snapshot of its pipeline that holds the asset whole (never another pipeline's copy, whatever its bytes), and `store gc` removes no snapshot of that pipeline while a snapshot that stays lacks a file. A `chartbook run` that would otherwise say `No new snapshot` of the one with the hole stands on the newest whole snapshot of the same files, and only where none is whole makes a new one and says which file the other lacks. A run that writes to several stores stands on a snapshot only where each of them that has it has it whole, and otherwise makes a new one, whole in each, naming the store and the file the other lacks. `store move`, `store import` and a snapshot sent to several stores read and hash a store's own snapshot of the same moment before they take it to be there: one that is not whole is named with its store and its file, nothing is written over it, and nothing is removed from where it came from.
 
 **Why an object can change.** The store never moves or copies a file if it can avoid it. It tries four ways to hold one, cheapest first:
 
@@ -1414,8 +1447,18 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest holding a version of an asset marked `keep = true` (with `--aggressive` too) | Every version `acme/docs` ever built of `embeddings`, the output of a paid API run ({doc}`../guide/keeping-costly-outputs`). The command says what the marks keep: `Kept for \`keep = true\`: 3 version(s) of acme/docs:embeddings, 4.2 GB, in 3 snapshot(s)` |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
+| A snapshot of its pipeline that stays has lost a file | Each snapshot's folder holds its own copy of every file, and the newest snapshot of `rates` lacks its `treasury.parquet` (a sync that has not brought it, a file removed by hand). No snapshot of `rates` is removed meanwhile: a read of the one with the hole is handed the copy in another snapshot of `rates` |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, and the ones a tag or a label names.
+
+Where a snapshot that stays lacks a file of its own, `gc` says which, why that snapshot stays, and what to do:
+
+```text
+Nothing of acme/rates is removed: its snapshot 2026-11-19T140200Z_4f2a91c0e1b2 lacks _data/treasury.parquet, and stays because it is the newest of its pipeline.
+  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. If it is lost for good, that snapshot goes once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it.
+```
+
+A snapshot that is itself to be removed holds nothing back, whatever it has lost, and the same bytes in another pipeline never count.
 
 It lists what it would remove and asks before removing anything:
 
@@ -1426,12 +1469,14 @@ Kept: 14 object(s), named by 3 lockfile(s) or a kept snapshot
   /work/rate_forecast/chartbook.lock
   /Volumes/usb/old_project/chartbook.lock  (not found; its pins are kept)
 Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 7 days
-Would remove 6 snapshot(s):
+Would remove 6 snapshot(s) and 5 object(s) that nothing names, 2.1 GB:
   ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 7 days
   …
-Would remove 5 object(s), 2.1 GB, that nothing names.
-Remove them? [y/N]:
+Remove them? [y/N]: y
+Removed 6 snapshot(s) and 5 object(s), 2.1 GB.
 ```
+
+The size before the question is of everything that would go: the objects that nothing names, and each removed snapshot's own copy of a file that a kept snapshot has too. With no snapshot to remove the line is `Would remove 5 object(s), 2.1 GB, that nothing names.` The last line says what was removed and freed, after a line for each thing that was kept after all, with why: `Kept after all: ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: a lockfile pins it`. A snapshot that `chartbook pin` made from a repository is listed, asked about and counted with the rest (`Would remove 1 snapshot(s) a pin made from a repository and 1 object(s) that nothing names, 4.1 KB:`). Before a snapshot that holds an asset a lockfile pins goes, the copy of that asset in the snapshot of its pipeline that stays is read and hashed, in the dry run too: where it has other bytes than its record says, nothing of that pipeline goes, and the lines above say which snapshot and which file.
 
 | Option | Effect |
 |--------|--------|
@@ -1447,11 +1492,11 @@ What it is careful about:
 - **It looks again when you say yes.** The list is made before the question, and a `chartbook pin` can land while you decide. Whatever became pinned in between is kept, and the command says so.
 - **A snapshot's branches are read from the folder it was made from; its labels from there and from the snapshots themselves.** The store notes that folder beside each pipeline's snapshots, and each snapshot records the labels its manifest had when it was made. If the folder is gone (a deleted project, a throwaway checkout, another machine's), the labels the newest snapshot recorded still count, so a label given on one machine keeps its version on another once a snapshot follows it, and a label taken away releases it once a snapshot follows that; nothing is known about branches, and the other rules apply.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
-- **Another machine's lockfile keeps what it recorded at its last pin.** In a store that machines share, each note names the machine its lockfile is on, and records the objects and the snapshots the lockfile pinned. Each `chartbook pin` and `chartbook pin --update`, and each `--frozen` and read through the lockfile, replaces that machine's note for that lockfile with what the lockfile pins then (a `--frozen` or a read writes nothing when the note says that already). A lockfile at the same path here is another file, so `gc` keeps what the note recorded and does not open that path. It lists the note as `(on another machine, <its host name>: what it recorded at its last pin is kept; note <store>/roots/<file>)`. `--forget-missing` does not forget it: only that machine can tell that its lockfile is gone, and its own `gc --forget-missing` does. A machine that only reads leaves its note this way where the store can be written; on a store it may only read, `--frozen` says its note could not be written, and `gc` on another machine does not know what it reads. Under CI (the `CI` environment variable set, and no `CHARTBOOK_MACHINE_ID`), `pin`, `pin --update`, `run`, `--frozen` and a read write their note under the lockfile's path alone, with no machine name, as notes were written before they named machines: a runner with a fresh home each run would otherwise have a new name, and leave a note under each. So each run at the same checkout path replaces the last one's note, and `gc` on a runner whose store lasts reads its lockfile and keeps what it pins.
+- **Another machine's lockfile keeps what it recorded at its last pin.** In a store that machines share, each note names the machine its lockfile is on, and records the objects and the snapshots the lockfile pinned. Each `chartbook pin` and `chartbook pin --update`, and each `--frozen` and read through the lockfile, replaces that machine's note for that lockfile with what the lockfile pins then (a `--frozen` or a read writes nothing when the note says that already). A lockfile at the same path here is another file, so `gc` keeps what the note recorded and does not open that path. It lists the note as `(on another machine, <its host name>: what it recorded at its last pin is kept; note <store>/_chartbook/roots/<file>)`. `--forget-missing` does not forget it: only that machine can tell that its lockfile is gone, and its own `gc --forget-missing` does. A machine that only reads leaves its note this way where the store can be written; on a store it may only read, `--frozen` says its note could not be written, and `gc` on another machine does not know what it reads. Under CI (the `CI` environment variable set, and no `CHARTBOOK_MACHINE_ID`), `pin`, `pin --update`, `run`, `--frozen` and a read write their note under the lockfile's path alone, with no machine name, as notes were written before they named machines: a runner with a fresh home each run would otherwise have a new name, and leave a note under each. So each run at the same checkout path replaces the last one's note, and `gc` on a runner whose store lasts reads its lockfile and keeps what it pins.
 - **Which machine is which.** A machine is named by a random name made once and kept in `~/.chartbook/machine-id`, beside what the operating system calls the machine (`/etc/machine-id`, `MachineGuid`, the hardware's UUID; the host name where there is none), so a home folder copied to another machine (by a migration, a restored backup, or a sync service) gets a name of its own there. Machines are told apart by that identity, or by `CHARTBOOK_MACHINE_ID`, and by nothing else: a note records the host name and a hardware address for you to read, and nothing goes by them, since one machine's may change. So a clone that kept the operating system's identity (a virtual machine cloned without a new `/etc/machine-id`, or Windows without sysprep; an image with one baked in), with a copied home, is not told apart from the machine it was cloned from: the two share a name and one note per path. Each machine that lasts needs an identity of its own, or a `CHARTBOOK_MACHINE_ID` of its own. Never copy `machine-id` between machines, and never keep `~/.chartbook` itself in a synced folder. `CHARTBOOK_MACHINE_ID` also names a machine that comes and goes with a fresh home folder (a CI runner that pins, a container): give each run the same one, and check its project out at the same path, so that each run's note replaces the last one's rather than piling up.
-- **Old notes and copies.** In your own store, under `~/.chartbook` (the default one), a note from before notes named their machine can only be this machine's. Its lockfile is read alone, as it was before notes named their machine, and what the note recorded keeps nothing more. The next `chartbook pin`, `chartbook pin --update`, `--frozen` or read through that lockfile writes this machine's note and removes the old one; `gc` removes an old note once this machine has a note of the same lockfile and that lockfile is read here (while it cannot be found, a drive unplugged, what the old note recorded is kept), or, with `--forget-missing`, once the lockfile is gone, and names its file under `roots/` on the lockfile's line. A CI runner with no `CHARTBOOK_MACHINE_ID` writes its notes this way, under the path alone, and its own pins and reads replace such a note rather than remove it. In any other store, such a note, and a sync service's copy of a note (`<name> (1).json`) in any store, may be any machine's: what they recorded is kept, and nothing removes them for you, since nothing can tell whose they are. A note from before notes recorded snapshots keeps, of the snapshots holding each object it names, the newest. A note or a copy that cannot be read (half synced) stops `gc`, which names it and says what to do. To let go of a machine that is no longer used, or of an old note or a copy, remove its file from `roots/` in the store; `gc` names each file, and each is JSON naming its `lockfile`, `machine` and `host`.
+- **Old notes and copies.** In your own store, under `~/.chartbook` (the default one), a note from before notes named their machine can only be this machine's. Its lockfile is read alone, as it was before notes named their machine, and what the note recorded keeps nothing more. The next `chartbook pin`, `chartbook pin --update`, `--frozen` or read through that lockfile writes this machine's note and removes the old one; `gc` removes an old note once this machine has a note of the same lockfile and that lockfile is read here (while it cannot be found, a drive unplugged, what the old note recorded is kept), or, with `--forget-missing`, once the lockfile is gone, and names its file under `_chartbook/roots/` on the lockfile's line. A CI runner with no `CHARTBOOK_MACHINE_ID` writes its notes this way, under the path alone, and its own pins and reads replace such a note rather than remove it. In any other store, such a note, and a sync service's copy of a note (`<name> (1).json`) in any store, may be any machine's: what they recorded is kept, and nothing removes them for you, since nothing can tell whose they are. A note from before notes recorded snapshots keeps, of the snapshots holding each object it names, the newest. A note or a copy that cannot be read (half synced) stops `gc`, which names it and says what to do. To let go of a machine that is no longer used, or of an old note or a copy, remove its file from `_chartbook/roots/` in the store; `gc` names each file, and each is JSON naming its `lockfile`, `machine` and `host`.
 - **Only a lockfile on this machine is read.** The store's note for each lockfile is written by whoever can write to the store, so `gc` reads only an absolute path named `chartbook.lock` that is not a network path. Any other (a project on a network drive among them) is not read: the pins its note records are kept, `--forget-missing` included, and `gc` says it did not read it.
-- **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them. So the run that removes a snapshot's record may leave its objects for the next run.
+- **An object stored in the last hour is never removed, but what only a removed snapshot holds.** A pin puts files in the store before it writes the lockfile that names them, so an object no pipeline owns, and one a snapshot that stays holds, are spared for an hour. What only the removed snapshots hold goes with their folders, new or not: a snapshot's folder goes whole. (In a bucket, which keeps each file once, the run that removes a snapshot's record may leave its objects for the next run.)
 - **If a lockfile, a note or a snapshot's record cannot be read, nothing is removed.** `gc` stops, says which, and says what to do. In a store a sync service keeps, a file can be there before its bytes (empty, or cut short), and that is the likeliest cause: run `gc` again once the sync has finished. A note or a record that stays unreadable is removed by hand: a note is written again by the next `chartbook pin`, `chartbook pin --update`, `--frozen` or read through its lockfile, and a record is one snapshot's, which the store then has no more.
 - **What it cannot remove is said, and the rest goes.** In a store users share, an object or a record another user put there sits in a folder of theirs that you may not write. `gc` removes everything else in the plan, prints what it removed, lists each thing it could not remove with its path and what to do (its owner removes it, with `chartbook store gc` there or by hand, or gives you write permission on it and on the folder holding it), and exits `1`. What a record that stayed names stays with it, and an object that stayed is in the next run's list.
 
@@ -1468,12 +1513,13 @@ chartbook store export PIPELINE --to FOLDER [--latest | --snapshot COMMIT[OPTION
 ```
 
 Write one pipeline's snapshots into a folder, to send to a collaborator. The folder is laid out as
-a store is, `FOLDER/pipelines/<pipeline>/`: a folder for each snapshot, the pipeline's files at
-their own paths, each file once, and each snapshot's record. Every snapshot the pipeline's owner
-made is written; with `--latest`, the newest alone, which is then one complete snapshot, every
-file it needs in its own folder and readable without ChartBook; with `--snapshot`, each one named,
-by its commit (or its start) and, where one commit has several, `@` and when it was made. Only what
+a store is, `FOLDER/snapshots/<pipeline>/`: a folder for each snapshot, complete, the pipeline's
+files at their own paths, and each snapshot's record. Every snapshot the pipeline's owner
+made is written; with `--latest`, the newest alone; with `--snapshot`, each one named,
+by its commit (or its start) and, where one commit has several, `@` and when it was made. Each is
+readable without ChartBook. Only what
 a snapshot's record names goes: its data, its documents and its index, never anything that runs.
+A folder that holds an export or a store of ChartBook 0.5 is not added to: export into another.
 
 With several stores in the catalog, the one that holds the pipeline is used, and `--store NAME` chooses when more than one does.
 
@@ -1486,8 +1532,10 @@ chartbook store import FOLDER
 Copy the snapshots a folder holds into this machine's store: what `chartbook store export` wrote,
 a store, or one pipeline's folder copied by hand out of one. They go in oldest first, each file
 hashed as it is copied and checked against its record: a snapshot with a file that is not what its
-record says is refused, said, and the rest go in. A file the store holds already is not copied
-again, a snapshot it has already is left as it is, and nothing is written over. A pipeline then
+record says is refused, said, and the rest go in. Each snapshot is written complete, a snapshot
+the store has already is left as it is, and nothing is written over. An export or a pipeline's
+folder that ChartBook 0.5 wrote (`pipelines/<pipeline>/`, each file once) is taken in too, each of
+its snapshots written complete. A pipeline then
 pins them by the pipeline's ID, as `"acme/rates" = {}` in `[dependencies]`, with `chartbook pin`
 and `chartbook pin --update`.
 
@@ -1506,10 +1554,21 @@ Imported 2 snapshot(s), 2.1 GB copied.
 chartbook store migrate [--dry-run] [OPTIONS] [--yes]
 ```
 
-Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
-each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
-commit, and each file once, under its own name ({design}`plan-0.3.0`). A store of 0.2 is
-refused until it is moved, with a message that says to run this.
+Move a store to this version's layout, once, on one machine.
+
+**A store that ChartBook 0.5 laid out** (`pipelines/` at its top) is read by this ChartBook as it is and not written (above). This moves it. In each pipeline the newest snapshot its owner made becomes complete under `snapshots/`; every other one its owner made becomes an increment on it under `increments/`, keeping in its own folder only the files that one does not have; and a snapshot that `chartbook pin` made from a repository becomes complete. Files change folder by a rename inside the store and are not read, so a store in a synced folder uploads nothing again; only a file that two folders must each hold is copied, and hashed as it is written. A snapshot's record is rewritten only where it says how the store keeps it. `roots/`, `origins/` and `tmp/` go under `_chartbook/`. Last, what is left of `pipelines/` (the old records, the notes, every file no record names, anything that arrived meanwhile) is moved aside in one rename, to `_chartbook/left-by-0.5/pipelines`: the move removes nothing but its own journal, and that folder may be removed once the move has been checked.
+
+The move never renames a file onto one that is there. Where a file is already at the place a record's file goes (a move on another machine half arrived, a sync put a file back), what is in place stays and the file at the old place goes aside with the old folder; the dry run and the last lines count such files and name the first few, with both sizes where they differ, and `chartbook store verify` says whether what is in place is right. It does not stop the move.
+
+`--dry-run` says what would happen, in counts and sizes, and moves nothing. The command says the same, and then, before it asks: nothing else may use the store while it runs, on this machine or another; afterwards every machine that uses it needs this ChartBook, and an earlier one will not read it; and in a synced folder the sync must finish before another machine uses the store. So upgrade ChartBook on every machine first, run this on one of them, and let the sync finish.
+
+Whatever was true before a move and would stop it half way is found before anything moves, and said with its way out: a record that cannot be followed (one that names a file outside its pipeline's folder among them), a folder with files and no record yet, a snapshot being made, a `store.json` that says neither layout, a folder this user may not write, a folder that is a link, a file or a link where the move makes a folder, two names the disk does not tell apart, too little room for the copies, and a path that would be too long. A file a record names that is missing does not stop it: it was so before, it is counted and named by the dry run and again by the last lines, and its record goes on naming it; nor does a file to be copied whose bytes are not what its record says, which is copied as it is and named in the last lines. A `README.txt` a person wrote at the top is moved aside, not replaced.
+
+The folders are the truth: every plan is made from the store as it is, so a move cut short goes on by running the command again, whatever became of its journal. The journal (`_chartbook/move-to-v3.jsonl`) only says that a move is under way and which machine began it. While it is there every other command on that store stops with one line that says so; one another machine began stops this one's move, and says how to take the move over if that machine cannot finish; one that cannot be read stops the command, with the way out (wait for a sync, or remove it and run again). With the journal gone, a store whose `store.json` still says 0.5 while it has folders of this layout is refused by every other command, which says to wait for a sync that may still be bringing a move and then to run this one: what a move renamed is under the new folders and nowhere else, so nothing says to take them out of the store. And the snapshot the others build on does not change once a move has begun: one that a machine still on 0.5 makes while a move is cut short becomes an increment on it, like any other.
+
+The command can always be run again on a moved store, and is the one remedy where a machine that had not been brought the move wrote `pipelines/`, `roots/`, `origins/` or `tmp/` at its top afterwards: every other command refuses such a store and names this one. It merges the notes under `_chartbook/`: one the store has stays and the late one goes aside, but of two notes of one lockfile the store keeps the later, and the other goes aside first. And it moves `pipelines/` aside, whole: nothing under it is moved in, an object no pipeline owns neither, and the last lines name each snapshot there, to be made again with this ChartBook, and each file that arrived for a snapshot already moved, with where it is.
+
+**A store made by ChartBook 0.2** is moved to the layout of 0.3 to 0.5 first, as before ({design}`plan-0.3.0`): a folder for each pipeline, a folder for each snapshot, each file once under its own name. Run the command again to move that one on.
 
 - **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
   is moved, and says so. Run this on one machine; in a store a sync service keeps, the others wait
@@ -1522,8 +1581,8 @@ refused until it is moved, with a message that says to run this.
   on where it stopped.
 - **What no snapshot names**, a `git` dependency's pins in 0.2, goes to `pipelines/+unowned/`,
   where it is kept while a lockfile names it.
-- **A bucket** is moved as a folder: sync it to one (`aws s3 sync`), point `CHARTBOOK_STORE` at the
-  folder, run this, and sync it back.
+- **A store in a bucket** is not moved: it is not available in ChartBook 0.6.0 (see the
+  {doc}`roadmap <../roadmap>`), and a command that meets one stops and says so.
 
 ```console
 $ chartbook store migrate --dry-run

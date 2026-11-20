@@ -152,20 +152,19 @@ repository, `{ git = "https://…", rev = "v1.2" }`: `chartbook pin` pins the fi
 
 ## What a snapshot is in the store
 
-Every snapshot is a complete version: its record lists every file of every asset and says which
-folder keeps each. The store keeps each file once, so a snapshot's folder may hold only what is
-new or changed. `chartbook store ls` calls a folder that holds every file **standalone** and one that
-holds only what changed **shared**:
+Every snapshot is a complete version: its record lists every file of every asset, and its folder
+in the store holds every one of them, each in its own place. `chartbook store ls` lists the
+snapshots and what each one's folder holds:
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (2 snapshot(s))
-  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  complete   2.4 GB here
 ```
 
-That is what keeps a growing dataset from costing its whole size again on every snapshot. It also
-means a snapshot's folder is never deleted by hand: another snapshot may keep files in it.
+So a snapshot's folder can be read or copied as it is, and a dataset costs its whole size at each
+snapshot. A snapshot's folder is not deleted by hand: a lockfile may pin it.
 `chartbook store gc` removes snapshots safely, and after a snapshot or a catalog build one line says
 what it would clear. {doc}`catalogs-and-data` has the store side of this.
 
