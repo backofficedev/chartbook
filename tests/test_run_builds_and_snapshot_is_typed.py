@@ -466,6 +466,16 @@ class TestASnapshotIsTyped:
             "  not built: acme/demo:out (./out.csv)",
         ]
 
+    def test_typed_from_another_folder_the_command_it_names_says_which_pipeline(self, demo, work, store, monkeypatch):
+        """`chartbook run`, typed where the person stands, would build whatever is there: the hint carries the folder it was given."""
+        monkeypatch.chdir(work)
+        result = _snapshot("--project-dir", str(demo))
+        assert result.exit_code == 1
+        assert result.output.splitlines()[0] == (
+            "Error: acme/demo has built nothing it declares, so there is nothing to take a snapshot of. "
+            f"Build it first: `chartbook run --project-dir {missing._quoted(demo)}`."
+        )
+
     def test_the_lockfile_a_run_wrote_is_one_more_file_to_commit(self, demo, store, upstream):
         """A snapshot is labelled with a commit, and whoever builds that commit again reads what its lockfile pins."""
         _snapshot_of(upstream, store)

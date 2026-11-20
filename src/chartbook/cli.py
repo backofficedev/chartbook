@@ -3411,7 +3411,11 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
     try:
         report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None, complete=complete)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        said = _explain_os_error(e)
+        if isinstance(e, snapshots.NothingToSnapshot) and here:
+            # The command it names builds this pipeline from wherever the snapshot was typed
+            said = said.replace("Build it first: `chartbook run`.", f"Build it first: `chartbook run{here}`.")
+        click.echo(click.style("Error: ", fg="red", bold=True) + said, err=True)
         # Nothing of it is there to take: each thing, and why, since the run that built it said only
         # that this command makes a snapshot. A reason may run to several lines (an engine's own
         # message): its first says it

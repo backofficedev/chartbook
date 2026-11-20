@@ -146,8 +146,9 @@ class NothingToSnapshot(SnapshotError):
     """A pipeline with nothing to take a snapshot of: it declares nothing with a path, or has built none of what it declares.
 
     Not a fault of anything: a pipeline just begun. ``chartbook snapshot``
-    says so, and a run that ends with a snapshot where it can says it in
-    its own words.
+    says so and lists what is not built; ``chartbook run --snapshot``,
+    which was asked to end with one, fails with it. A plain ``chartbook
+    run`` makes no snapshot, and never meets it.
 
     Attributes:
         not_built: What it declares and has not built, each with its path
@@ -917,14 +918,6 @@ def code_of(directory: Union[str, Path]) -> Code:
         raise SnapshotError(f"the repository at {top} has no commit yet") from None
     subdirectory = directory.relative_to(top).as_posix()
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
-
-
-def on_a_branch(directory: Union[str, Path]) -> bool:
-    """Whether a branch is checked out in a pipeline's repository, and not a commit by its hash."""
-    try:
-        return bool(_git(Path(directory).resolve(), "symbolic-ref", "--quiet", "HEAD").strip())
-    except SnapshotError:
-        return False
 
 
 def uncommitted(directory: Union[str, Path], ignoring: tuple = (), only: str = ".") -> list[str]:
@@ -2767,7 +2760,9 @@ def make(
         those the catalog sends the pipeline to, or its first.
     :param ask: Whether, at a terminal, a pipeline the catalog sends
         nowhere may be asked about when there are several stores to write
-        to. A run passes False: it asks nothing, and follows the catalog.
+        to. A run that makes a snapshot (``chartbook run --snapshot``, and
+        ``--upstream`` of what it builds first) passes False: it asks
+        nothing, and follows the catalog. A plain run makes none.
     :param complete: Write a complete snapshot in every store it goes to,
         whatever the rule of adding up would choose (``--complete``).
         Where the newest snapshot of the same commit, bytes and pins is

@@ -700,8 +700,6 @@ data in mind.
   today its unchanged files were kept once. A large pipeline that makes a complete snapshot often
   takes more room than it did. Snapshots are fewer than when every run made one.
 - **`--complete` in a script copies everything each time.** Without it the rule decides.
-- **Until increments are made (step 5 below), main keeps every snapshot complete.** Nobody but
-  the maintainer uses main.
 
 ## Not doing
 
