@@ -1060,18 +1060,32 @@ def execute(
         environment[RUN_DIR_ENV_VAR] = where
         environment[RUN_SCRIPT_ENV_VAR] = name
         environment[RUN_STACK_ENV_VAR] = json.dumps([*_stack(), [where, name]])
+    # A run that started this one, where this is a script a build runs (`build = "chartbook run analyze"`):
+    # its file is left named for a script that is not asked about, and is told what this one's reads were
+    outer = environment.get(UNDECLARED_ENV_VAR, "").strip()
     notes = None
     if undeclared is not None:
-        # A file of its own for this script's refused reads, which the reads are told of by its name
-        handle, notes = tempfile.mkstemp(prefix="chartbook-undeclared-", suffix=".jsonl")
-        os.close(handle)
-        environment[UNDECLARED_ENV_VAR] = notes
-    else:
-        environment.pop(UNDECLARED_ENV_VAR, None)  # never another run's file
+        try:
+            # A file of its own for this script's refused reads, which the reads are told of by its name
+            handle, notes = tempfile.mkstemp(prefix="chartbook-undeclared-", suffix=".jsonl")
+            os.close(handle)
+            environment[UNDECLARED_ENV_VAR] = notes
+        except OSError:
+            notes = None  # nowhere to note them: the build runs all the same, and nothing is offered
     try:
         code = _execute(script, directory, environment)
         if notes is not None:
-            undeclared.extend(_undeclared_reads(notes))
+            found = _undeclared_reads(notes)
+            undeclared.extend(found)
+            if outer and found:
+                try:
+                    descriptor = os.open(outer, os.O_WRONLY | os.O_APPEND)
+                    try:
+                        os.write(descriptor, "".join(json.dumps(note) + "\n" for note in found).encode("utf-8"))
+                    finally:
+                        os.close(descriptor)
+                except OSError:
+                    pass
     finally:
         if notes is not None:
             try:
@@ -1085,9 +1099,10 @@ def _undeclared_reads(notes: str) -> list[dict]:
     """The reads a script was refused, as it noted them: each a pipeline, a reference and a folder; a line that is not one is passed over."""
     found = []
     try:
-        with open(notes, encoding="utf-8") as f:
+        # Whatever a build wrote there: bytes that are no text are no note, and never the failure of a build that went well
+        with open(notes, encoding="utf-8", errors="replace") as f:
             lines = f.read().splitlines()
-    except OSError:
+    except (OSError, ValueError):
         return found
     for line in lines:
         try:
@@ -1607,15 +1622,21 @@ def run(
                         os.environ.pop("CHARTBOOK_FROZEN", None)
                     else:
                         os.environ["CHARTBOOK_FROZEN"] = old_frozen
+            # What its own code read and its manifest does not declare: only reads made from this
+            # pipeline's folder, since another's manifest is not this run's to write. Said of a build
+            # that fails, by its script or by what it did not write
+            its_own = []
+            for note in refused:
+                try:
+                    same = os.path.samefile(note["from"], step.directory)  # however either is spelled
+                except OSError:
+                    same = note["from"] == str(step.directory.resolve())
+                if same and note["pipeline"] not in its_own:
+                    its_own.append(note["pipeline"])
             if code != 0:
                 report.failed, report.exit_code = step, code
                 report.reason = f"its {script!r} script exited with {code}"
-                # What its own code read and its manifest does not declare: only reads made from this
-                # pipeline's folder, since another's manifest is not this run's to write
-                own = str(step.directory.resolve())
-                for note in refused:
-                    if note["from"] == own and note["pipeline"] not in report.undeclared:
-                        report.undeclared.append(note["pipeline"])
+                report.undeclared = its_own
                 break
             if step.source == "git":
                 mark_built(step.directory)
@@ -1631,6 +1652,7 @@ def run(
                 if forgotten:
                     things = "1 thing" if len(forgotten) == 1 else f"{len(forgotten)} things"
                     report.failed, report.exit_code = step, 1
+                    report.undeclared = its_own  # a build that went on past a read it was refused, and wrote less
                     report.reason = (
                         f"its build did not write {things} {MANIFEST_NAME} declares: "
                         + ", ".join(f"{name} ({path})" for name, path in forgotten[:10])

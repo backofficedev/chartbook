@@ -84,6 +84,24 @@ def _reading(work: Path, monkeypatch, *references: str, name: str = "report") ->
     return directory
 
 
+def _noting(directory: Path, *notes: dict, exits: int = 1, writes: bool = False) -> None:
+    """Make a pipeline's build one that notes these reads as refused, where it is told of a file to note them in, and exits."""
+    lines = "".join(json.dumps(note) + "\n" for note in notes)
+    (directory / "build.py").write_text(
+        "import os, sys\n"
+        f"named = os.environ.get({resolve.UNDECLARED_ENV_VAR!r})\n"
+        "if named:\n"
+        f"    open(named, 'a', encoding='utf-8').write({lines!r})\n"
+        + ("open('out.csv', 'w').write('a,b\\n')\n" if writes else "")
+        + f"sys.exit({exits})\n",
+        encoding="utf-8", newline="\n",
+    )
+
+
+def _note(directory: Path, pipeline: str) -> dict:
+    return {"pipeline": pipeline, "reference": f"{pipeline}:out", "from": str(directory)}
+
+
 @pytest.fixture
 def at_a_terminal(monkeypatch):
     monkeypatch.setattr(cli, "_can_ask", lambda: True)
@@ -151,6 +169,81 @@ class TestAtATerminal:
         assert result.output.count("its code reads from a pipeline that chartbook.toml does not declare:") == 2
         assert _declared(report) == {"acme/rates": {}, "acme/prices": {}} and _built(report) == 1
 
+    def test_the_first_read_refused_is_the_one_asked_of(self, work, store, monkeypatch, at_a_terminal):
+        _stored(work, store, "acme/rates")
+        _stored(work, store, "acme/prices")
+        report = _reading(work, monkeypatch)
+        _noting(report, _note(report, "acme/rates"), _note(report, "acme/rates"), _note(report, "acme/prices"))
+        found = run.run(report, echo=lambda line: None)
+        assert found.undeclared == ["acme/rates", "acme/prices"]  # each once, in the order they were refused
+        result = CliRunner().invoke(main, ["run"], input="n\n")
+        assert "  acme/rates   (in your store: " in result.output and "  acme/prices   " not in result.output
+
+    def test_a_build_that_went_on_past_the_read_and_wrote_less_is_asked_of_too(self, work, store, monkeypatch, at_a_terminal):
+        """Found by review: a build that swallowed the refusal and exited 0 failed for the output it then lacked, and its note was thrown away."""
+        _stored(work, store, "acme/rates")
+        report = _reading(work, monkeypatch)
+        _noting(report, _note(report, "acme/rates"), exits=0)
+        result = CliRunner().invoke(main, ["run"], input="n\n")
+        assert result.exit_code == 1
+        assert "acme/report: its code reads from a pipeline that chartbook.toml does not declare:" in result.output.splitlines()
+        assert "its build did not write 1 thing chartbook.toml declares: out (./out.csv)" in result.output
+
+    def test_the_build_again_is_the_same_run_but_for_force(self, work, store, monkeypatch, at_a_terminal):
+        """Found by review: with --force, each yes built every git dependency once more. What --force rebuilds was rebuilt a moment before."""
+        _stored(work, store, "acme/rates")
+        _reading(work, monkeypatch, "acme/rates:out")
+        seen = []
+        real = run.run
+
+        def watched(*arguments, **options):
+            seen.append({key: options.get(key) for key in ("force", "frozen", "remake", "upstream", "snapshot")})
+            return real(*arguments, **options)
+
+        monkeypatch.setattr(run, "run", watched)
+        result = CliRunner().invoke(main, ["run", "--force", "--remake", "--upstream"], input="y\n")
+        assert result.exit_code == 0, result.output
+        first, again = seen
+        assert first == {"force": True, "frozen": False, "remake": True, "upstream": True, "snapshot": run.WHEN_COMMITTED}
+        assert again == {**first, "force": False}
+
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a file read-only to its owner's write on Windows")
+    def test_a_manifest_that_cannot_be_written_is_said_and_is_no_traceback(self, work, store, monkeypatch, at_a_terminal):
+        _stored(work, store, "acme/rates")
+        report = _reading(work, monkeypatch, "acme/rates:out")
+        (report / "chartbook.toml").chmod(0o444)
+        try:
+            result = CliRunner().invoke(main, ["run"], input="y\n")
+        finally:
+            (report / "chartbook.toml").chmod(0o644)
+        assert result.exit_code == 1 and isinstance(result.exception, SystemExit)
+        assert f"Error: {report / 'chartbook.toml'} could not be written: " in result.output
+        assert _declared(report) == {}
+
+    def test_a_build_that_is_another_script_of_the_run(self, work, store, monkeypatch, at_a_terminal):
+        """Found by review: `build = "chartbook run analyze"` was refused its read with an error that said a run offers, and no run offered."""
+        _stored(work, store, "acme/rates")
+        report = _reading(work, monkeypatch, "acme/rates:out")
+        table = tomli.loads((report / "chartbook.toml").read_text(encoding="utf-8"))
+        table["scripts"] = {"analyze": table["scripts"]["build"], "build": f'"{sys.executable}" -m chartbook.cli run analyze'}
+        (report / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
+        _git(report, "commit", "--quiet", "-am", "The build runs another script")
+        result = CliRunner().invoke(main, ["run"], input="y\n")
+        assert "acme/report: its code reads from a pipeline that chartbook.toml does not declare:" in result.output.splitlines()
+        assert _declared(report) == {"acme/rates": {}}
+        assert result.exit_code == 0, result.output
+
+    def test_a_folder_named_in_another_letter_case(self, work, store, monkeypatch, at_a_terminal):
+        """Found by review: the read names its folder as the disk does, and the run was given it otherwise."""
+        _stored(work, store, "acme/rates")
+        report = _reading(work, monkeypatch, "acme/rates:out")
+        other = report.parent / "REPORT"
+        if not other.is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        monkeypatch.chdir(work)
+        result = CliRunner().invoke(main, ["run", "--project-dir", str(other)], input="n\n")
+        assert "acme/report: its code reads from a pipeline that chartbook.toml does not declare:" in result.output.splitlines()
+
     def test_a_bare_name_is_the_one_pipeline_the_stores_have_of_it(self, work, store, monkeypatch, at_a_terminal):
         _stored(work, store, "acme/rates")
         report = _reading(work, monkeypatch, "rates:out")
@@ -163,13 +256,7 @@ class TestAtATerminal:
         """The same pipeline is never offered twice in one command: the second failure is the build's own."""
         _stored(work, store, "acme/rates")
         report = _reading(work, monkeypatch, "acme/rates:out")
-        note = json.dumps({"pipeline": "acme/rates", "reference": "acme/rates:out", "from": str(report)})
-        (report / "build.py").write_text(
-            "import os, sys\n"
-            f"open(os.environ[{resolve.UNDECLARED_ENV_VAR!r}], 'a').write({note!r} + '\\n')\n"
-            "sys.exit(3)\n",
-            encoding="utf-8", newline="\n",
-        )
+        _noting(report, _note(report, "acme/rates"), exits=3)
         result = CliRunner().invoke(main, ["run"], input="y\ny\n")
         assert result.exit_code == 3
         assert result.output.count("its code reads from a pipeline that chartbook.toml does not declare:") == 1
@@ -177,11 +264,51 @@ class TestAtATerminal:
         assert _declared(report) == {"acme/rates": {}}  # what was added at the yes stays
 
 
+class TestTheQuestion:
+    """It comes after a build, which may have run for minutes: it is asked of who is there now."""
+
+    @pytest.mark.skipif(os.name == "nt", reason="the terminal is emptied by another call on Windows")
+    def test_keys_pressed_before_it_are_thrown_away_and_ctrl_c_ends_the_read(self, monkeypatch):
+        """Found by review: an Enter typed while the build ran was a yes, and Ctrl-C did nothing until Enter once polars was loaded."""
+        import signal
+        import termios
+
+        import click
+
+        done = []
+        monkeypatch.setattr(cli, "_stdin_is_a_terminal", lambda: True)
+        monkeypatch.setattr(sys, "stdin", type("ATerminal", (), {"fileno": lambda self: 7})())
+        monkeypatch.setattr(termios, "tcflush", lambda descriptor, queue: done.append(("emptied", descriptor, queue)))
+        monkeypatch.setattr(signal, "siginterrupt", lambda number, flag: done.append(("interrupts", number, flag)))
+
+        def asked(question, default, err):
+            done.append(("asked", question, default, err))
+            return False
+
+        monkeypatch.setattr(click, "confirm", asked)
+        assert cli._confirm("Add it?", default=True) is False
+        assert done == [
+            ("interrupts", signal.SIGINT, True),
+            ("emptied", 7, termios.TCIFLUSH),  # what was typed and not yet read, and nothing written
+            ("asked", "Add it?", True, True),  # on stderr, after both
+        ]
+
+    def test_where_input_is_no_terminal_nothing_is_thrown_away(self, monkeypatch):
+        """A pipe's lines are the answers meant for it."""
+        import click
+
+        monkeypatch.setattr(cli, "_stdin_is_a_terminal", lambda: False)
+        monkeypatch.setattr(sys, "stdin", type("APipe", (), {"fileno": lambda self: pytest.fail("looked at")})())
+        monkeypatch.setattr(click, "confirm", lambda question, default, err: True)
+        assert cli._confirm("Add it?", default=False) is True
+
+
 class TestWhereYesCannotWork:
     """No question: the build's own error stands, and nothing is written."""
 
     def _refused(self, result, report) -> None:
-        assert result.exit_code == 1, result.output
+        assert result.exit_code == 1 and isinstance(result.exception, SystemExit), result.output
+        assert "Nothing after it was run." in result.output  # the build's own failure, said as ever
         assert "does not declare:" not in result.output and ASKS not in result.output
         assert _declared(report) == {} and _built(report) == 0
 
@@ -214,24 +341,51 @@ class TestWhereYesCannotWork:
         """Another pipeline's manifest is not this run's to write."""
         _stored(work, store, "acme/rates")
         report = _reading(work, monkeypatch)
-        note = json.dumps({"pipeline": "acme/rates", "reference": "acme/rates:out", "from": str(work / "elsewhere")})
-        (report / "build.py").write_text(
-            "import os, sys\n"
-            f"open(os.environ[{resolve.UNDECLARED_ENV_VAR!r}], 'a').write({note!r} + '\\n')\n"
-            "sys.exit(1)\n",
-            encoding="utf-8", newline="\n",
-        )
+        (work / "elsewhere").mkdir()
+        _noting(report, _note(work / "elsewhere", "acme/rates"))
         self._refused(CliRunner().invoke(main, ["run"], input="y\n"), report)
 
     def test_for_another_script(self, work, store, monkeypatch, at_a_terminal):
-        """Only a build is a batch run: another script reads as the shell it was run from would."""
+        """Only a build is asked about: another script is told of no file to note a read in, whatever it does."""
         _stored(work, store, "acme/rates")
         report = _reading(work, monkeypatch, "acme/rates:out")
+        _noting(report, _note(report, "acme/rates"))
         table = tomli.loads((report / "chartbook.toml").read_text(encoding="utf-8"))
-        table["scripts"]["look"] = f'"{sys.executable}" -c "import sys; sys.exit(1)"'
+        table["scripts"]["look"] = f'"{sys.executable}" build.py'
         (report / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
         result = CliRunner().invoke(main, ["run", "look"], input="y\n")
         assert result.exit_code == 1 and ASKS not in result.output and _declared(report) == {}
+
+    def test_for_an_id_two_repositories_claim(self, work, store, monkeypatch, at_a_terminal):
+        """Found by review: it was offered, and yes left an entry that could not be pinned. Which repository is meant is said by hand."""
+        for owner in ("alice", "bob"):
+            # Two repositories, each with a first commit of its own (one first commit would be a fork, taken as one)
+            directory = _pipeline(work / owner, {"project": {"id": "acme/rates"}, "dataframes": {"out": {"path": "./out.csv", "docs": owner}}})
+            _git(directory, "remote", "add", "origin", f"https://example.org/{owner}/rates.git")
+            (directory / "out.csv").write_text(f"a,b\n{owner},1\n", encoding="utf-8", newline="\n")
+            snapshot.make(directory, store=store)
+        report = _reading(work, monkeypatch, "acme/rates:out")
+        self._refused(CliRunner().invoke(main, ["run"], input="y\n"), report)
+
+    def test_for_a_read_of_the_pipeline_itself(self, work, store, monkeypatch, at_a_terminal):
+        report = _reading(work, monkeypatch)
+        (report / "out.csv").write_text("a,b\n", encoding="utf-8", newline="\n")
+        snapshot.make(report, store=store)
+        (report / "out.csv").unlink()
+        _noting(report, _note(report, "acme/report"))
+        self._refused(CliRunner().invoke(main, ["run"], input="y\n"), report)
+
+    def test_where_the_stores_cannot_be_read(self, work, store, monkeypatch, at_a_terminal):
+        from chartbook.store import StoreError
+
+        _stored(work, store, "acme/rates")
+        report = _reading(work, monkeypatch, "acme/rates:out")
+
+        def unreadable(self):
+            raise StoreError("the store's notes cannot be read")
+
+        monkeypatch.setattr(cli._StoredIds, "_stores", unreadable)
+        self._refused(CliRunner().invoke(main, ["run"], input="y\n"), report)
 
 
 class TestTheNote:
@@ -257,9 +411,61 @@ class TestTheNote:
         assert run.execute(script, work, "build", undeclared=noted) == 0
         named = seen.read_text(encoding="utf-8")
         assert named and named != str(work / "an-outer-runs.jsonl") and not os.path.exists(named)
-        # And a script that is not asked about is told of no file
+        # A script that is not asked about is left with the file of the run that started it, if one did
+        assert run.execute(script, work, "test") == 0
+        assert seen.read_text(encoding="utf-8") == str(work / "an-outer-runs.jsonl")
+        monkeypatch.delenv(resolve.UNDECLARED_ENV_VAR)
         assert run.execute(script, work, "test") == 0
         assert seen.read_text(encoding="utf-8") == ""
+
+    def test_what_a_script_noted_is_passed_to_the_run_that_started_it(self, work, monkeypatch):
+        outer = work / "an-outer-runs.jsonl"
+        outer.write_text("", encoding="utf-8")
+        monkeypatch.setenv(resolve.UNDECLARED_ENV_VAR, str(outer))
+        note = _note(work, "acme/rates")
+        _noting(work, note, exits=0)
+        noted: list = []
+        assert run.execute(f'"{sys.executable}" build.py', work, "build", undeclared=noted) == 0
+        assert noted == [note] and run._undeclared_reads(str(outer)) == [note]
+
+    def test_a_file_that_is_gone_is_not_made_again(self, work, monkeypatch):
+        """Found by review: a process the build left behind made the file again after the run had removed it, for good."""
+        gone = work / "removed-by-its-run.jsonl"
+        monkeypatch.setenv(resolve.UNDECLARED_ENV_VAR, str(gone))
+        resolve._note_an_undeclared_read(resolve.parse_declared_ref("acme/rates:out"), work)
+        assert not gone.exists()
+        gone.write_text("", encoding="utf-8")
+        resolve._note_an_undeclared_read(resolve.parse_declared_ref("acme/rates:out"), work)
+        assert run._undeclared_reads(str(gone)) == [_note(work, "acme/rates")]
+
+    def test_bytes_that_are_no_text_do_not_fail_a_build_that_went_well(self, work, store, monkeypatch):
+        """Found by review: a build that wrote such bytes into the file had its good run fail on reading them."""
+        report = _reading(work, monkeypatch)
+        (report / "build.py").write_text(
+            "import os\n"
+            f"open(os.environ[{resolve.UNDECLARED_ENV_VAR!r}], 'ab').write(b'\\xff\\xfe not text\\n')\n"
+            "open('out.csv', 'w').write('a,b\\n')\n",
+            encoding="utf-8", newline="\n",
+        )
+        found = run.run(report, echo=lambda line: None)
+        assert found.failed is None and found.undeclared == []
+        # And a note beside them is one all the same
+        mixed = work / "mixed.jsonl"
+        mixed.write_bytes(b"\xff\xfe not text\n" + (json.dumps(_note(report, "acme/rates")) + "\n").encode("utf-8"))
+        assert run._undeclared_reads(str(mixed)) == [_note(report, "acme/rates")]
+
+    def test_with_nowhere_to_note_them_the_build_runs_all_the_same(self, work, store, monkeypatch):
+        """Found by review: a temporary folder that cannot be written stopped the build, in CI too, where nothing is ever asked."""
+        import tempfile
+
+        report = _reading(work, monkeypatch)
+
+        def nowhere(*arguments, **options):
+            raise OSError(2, "No such file or directory")
+
+        monkeypatch.setattr(tempfile, "mkstemp", nowhere)
+        found = run.run(report, echo=lambda line: None)
+        assert found.failed is None and (report / "out.csv").is_file()
 
     def test_lines_that_are_no_note_are_passed_over(self, work):
         notes = work / "notes.jsonl"
@@ -297,6 +503,31 @@ class TestTheReadsOwnError:
         with pytest.raises(DependencyNotDeclaredError) as raised:
             data.path("acme/rates:out")
         said = str(raised.value).splitlines()
-        assert "To read from another pipeline, declare it. Where your store has snapshots of it:" in said
+        assert "To read from another pipeline, declare it. Your store has snapshots of this one:" in said
         assert "    $ chartbook add acme/rates" in said
         assert "(`chartbook run`, typed at a terminal, offers to.) Or say by hand where it is, then pin it:" in said
+
+    def test_names_it_under_the_name_the_store_has(self, work, store, monkeypatch):
+        """A read that spells the ID in another letter case is told the ID to add, not the spelling it used."""
+        from chartbook import data
+        from chartbook.errors import DependencyNotDeclaredError
+
+        _stored(work, store, "acme/rates")
+        _reading(work, monkeypatch)
+        monkeypatch.setenv(resolve.BATCH_ENV_VAR, "1")
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.path("Acme/Rates:out")
+        assert "    $ chartbook add acme/rates" in str(raised.value).splitlines()
+
+    def test_does_not_name_it_for_a_pipeline_the_store_does_not_have(self, work, store, monkeypatch):
+        """Found by review: followed, `chartbook add acme/nowhere` left an entry that stopped every later run at the pin."""
+        from chartbook import data
+        from chartbook.errors import DependencyNotDeclaredError
+
+        _stored(work, store, "acme/rates")
+        _reading(work, monkeypatch)
+        monkeypatch.setenv(resolve.BATCH_ENV_VAR, "1")
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.path("acme/nowhere:out")
+        said = str(raised.value)
+        assert "chartbook add" not in said and "To read from another pipeline, say where it is, then pin it:" in said.splitlines()

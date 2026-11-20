@@ -1797,13 +1797,21 @@ def _note_an_undeclared_read(asset: "AssetRef", manifest_dir: Path) -> None:
         return
     import json
 
+    line = json.dumps({
+        "pipeline": asset.pipeline_id, "reference": str(asset), "from": str(Path(manifest_dir).resolve()),
+    }) + "\n"
     try:
-        with open(path, "a", encoding="utf-8", newline="\n") as f:
-            f.write(json.dumps({
-                "pipeline": asset.pipeline_id, "reference": str(asset), "from": str(Path(manifest_dir).resolve()),
-            }) + "\n")
+        # Appended in one write, and never made: a process the build left behind, reading after the
+        # run has removed its file, writes nowhere
+        descriptor = os.open(path, os.O_WRONLY | os.O_APPEND)
+    except OSError:
+        return
+    try:
+        os.write(descriptor, line.encode("utf-8"))
     except OSError:
         pass
+    finally:
+        os.close(descriptor)
 
 
 def batch() -> bool:
