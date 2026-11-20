@@ -113,7 +113,8 @@ Wrote AGENTS.md: a ChartBook section, for the agents that read that file (ChartB
 ```
 
 - **Two halves.** The Claude Code skill for you, as `chartbook install claude-skill` installs it, and, in a pipeline's folder, a ChartBook section in the project's `AGENTS.md`, which other coding agents read: what the project is, the commands that matter, where the whole reference is ({design}`one-command`).
-- **The section is between two marker lines.** Run again after an upgrade, the command replaces what is between them and leaves the rest of the file alone. A section somebody wrote in is replaced at a yes or with `-f`; marker lines that do not hold one section are an error, and nothing is written.
+- **The section is between two marker lines.** Run again after an upgrade, the command replaces what is between them and leaves the rest of the file alone, byte for byte; the file is written whole or not at all.
+- **Nothing a person wrote is replaced unasked.** The opening marker carries a hash of the section's text, so one that somebody wrote in, of any version, is replaced only at a yes or with `-f`. A newer ChartBook's section is left as it is. A line that only mentions a marker is the project's own text; marker lines that do not hold one section are an error that says which lines, and nothing is written.
 - **A section from an older ChartBook is said,** as a stale skill is: in one line to a person at a terminal, and by `chartbook run --check`.
 - Outside a project it installs the skill and says what the other half is for. `chartbook install claude-skill` is as it was.
 
@@ -130,7 +131,8 @@ The catalog's site is behind your stores: 3 snapshots are not in it yet. Build i
 - **A site that was never built is asked for the same way,** where the command stopped with `Catalog docs not found`. Where nothing can ask, that is still an error, and it names `chartbook catalog build`.
 - **Behind is worked out when you ask,** by comparing the snapshots the site was built from (the `index.json` beside it) with those in the catalog's stores now: ones the site does not show yet, and ones it shows that are gone. So a snapshot that came through a synced folder from another machine counts, and nothing has to be left behind by a run.
 - **Where nothing can ask,** it opens what there is and says how far behind it is, on stderr.
-- In Python: `chartbook.versions.behind(catalog_toml)` gives a `Behind` (`built`, `missing`, `gone`; false when the site shows what the stores have), and `Behind.said()` the sentence.
+- **What is only away is not called gone.** With a store that is not there now, a record that cannot be read, or an ID two repositories claim, nothing is asked: a build then would take pages out of the site. It says it cannot tell, and opens the site as it is.
+- In Python: `chartbook.versions.behind(catalog_toml)` gives a `Behind` (`built`, `missing`, `gone`, and `unknown`, why it cannot be told; false when the site shows what the stores have), and `Behind.said()` the sentence.
 
 ### Added — What a pipeline reads that is not in your store: the list, in the order to build it
 
@@ -144,9 +146,9 @@ Build them in this order. Each ends with a snapshot, which is what the next one 
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
 2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
-     cd /work/fed_yield_curve && git checkout 0db8051 && chartbook run --snapshot
+     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
 
 Then here again:
      cd /work/report && chartbook run
@@ -158,7 +160,7 @@ Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the o
 - **A clone you already have is read where it is,** with nothing fetched: this pipeline's own repository, or a folder beside it whose `origin` is the address a pin records. A class has its clones side by side, and a repository that wants a password cannot be fetched from here.
 - **A line says what is known:** it may lack its commit (never pinned), its address (`its repository is not recorded`), or what it reads in turn (`its repository could not be fetched (…)`).
 - **Every command can be pasted from any folder, in order,** and following them ends in a build: tests type each line as printed, and then the last, for a chain, a repository of two pipelines, one pipeline wanted at two commits, and a pipeline in this pipeline's own repository. A pipeline with no `build` script is given `chartbook snapshot`, and so is a folder that was never pinned, is committed and has its declared files on disk (`built already`).
-- **No command moves this pipeline's own repository:** a pipeline in it that is wanted at another commit is built in a `git worktree` of that commit.
+- **No command moves this pipeline's own repository:** a pipeline in it that is wanted at another commit is built in a `git worktree` of that commit. In any other repository the checkout is made from its top before the folder is entered, so that a line holds whatever commit the lines above left the clone on.
 - **An address is printed and fetched only if it is a plain web address,** a pipeline's name only if it is an ID, and all of it without control characters: a lockfile is anyone's. The words `chartbook pin --check` has for a pin that is not in the store follow the same rule now.
 - **Pipelines that are not in the store and read each other** are an error, in the words of any cycle.
 - `chartbook pin --update` is as it was. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline lacks and add `` `chartbook run` lists all there is to build, in order``.

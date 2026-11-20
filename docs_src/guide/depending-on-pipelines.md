@@ -201,9 +201,9 @@ Build them in this order. Each ends with a snapshot, which is what the next one 
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799 && chartbook run --snapshot
+     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
 2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
-     cd /work/fed_yield_curve && git checkout 0db8051 && chartbook run --snapshot
+     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
 
 Then here again:
      cd /work/report && chartbook run

@@ -2314,15 +2314,31 @@ def catalog_open(ctx):
     from chartbook.store import StoreError
 
     catalog_path = _catalog_or_make_one()
+    if not catalog_path.is_file():
+        click.echo(f"Error: the settings name a catalog at {catalog_path}, and there is no file there.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to point at one, or 'chartbook catalog init' to make one.", err=True)
+        raise SystemExit(1)
 
     index_path = catalog_path.parent / "docs" / "index.html"
-    try:
-        # Worked out now, from the stores as they are: no run leaves a mark for this
-        said = versions.behind(catalog_path).said()
-    except (ValueError, OSError, StoreError):
-        said = ""  # a catalog or a store that cannot be read now: what there is is opened, and its build says what is wrong
+    said, unknown = "", ""
+    # Of a catalog, which lists stores. Settings may name a pipeline's own manifest, whose site is its own
+    if catalog_path.name == "catalog.toml":
+        try:
+            # Worked out now, from the stores as they are: no run leaves a mark for this
+            state = versions.behind(catalog_path)
+            said, unknown = state.said(), state.unknown
+        except (ValueError, OSError, StoreError) as e:
+            # A catalog or a store that cannot be read now: what there is is opened, and its build says what is wrong
+            unknown = (str(e).strip().splitlines() or ["it could not be read"])[0].rstrip(".")
     if not index_path.is_file():
         said = said or "The catalog's site has not been built yet."
+    elif unknown:
+        # Nobody is asked to build a site that would lose the pages of what is only away
+        click.echo(
+            f"Whether the catalog's site is behind your stores cannot be told now: {unknown}. Opening it as it is.", err=True
+        )
+        said = ""
     if said and _can_ask():
         try:
             build = _confirm(f"{said} Build it before opening?", default=True)
@@ -5286,52 +5302,82 @@ def install_agents(ctx, force):
     Examples:
         chartbook install agents
     """
+    import os
+
+    import tomli
+
     from chartbook import agents
     from chartbook.check import display_path
+
+    def stop(said: str) -> None:
+        click.echo(click.style("Error: ", fg="red", bold=True) + said, err=True)
+        raise SystemExit(1)
 
     failed = False
     try:
         ctx.invoke(install_claude_skill, force=force, project=False)
     except SystemExit as stopped:  # declined at its question, or no skill in the package: the other half is still done
         failed = bool(stopped.code)
+    except click.Abort:  # its question, where nobody could answer it
+        click.echo("", err=True)
+        click.echo("The skill was left as it is: `chartbook install claude-skill` installs it, and asks.", err=True)
+        failed = True
+    except (OSError, RuntimeError) as e:  # a folder that cannot be written; no input to ask of
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"the skill could not be installed: {_explain_os_error(e)}", err=True)
+        failed = True
 
     project = agents.project_folder()
     if project is None:
         click.echo(
-            "No chartbook.toml here or above: the AGENTS.md half is for a project. Run `chartbook install agents` "
-            "in a pipeline's folder to write it."
+            "No chartbook.toml here, or above in this repository: the AGENTS.md half is for a project. Run "
+            "`chartbook install agents` in a pipeline's folder to write it."
         )
         raise SystemExit(1 if failed else 0)
+    try:
+        tomli.loads((project / "chartbook.toml").read_bytes().decode("utf-8"))
+    except (OSError, ValueError) as e:
+        stop(f"{display_path(project / 'chartbook.toml', relative_to=Path.cwd())} cannot be read as a manifest ({_said(e)}), so no AGENTS.md was written beside it.")
     file = project / agents.FILE
     shown = display_path(file, relative_to=Path.cwd())
+    # A link is written through only to a file of the project that is there: never to one outside it, or to nothing
+    to = ""
+    if file.is_symlink():
+        real = Path(os.path.realpath(file))
+        if not real.is_file():
+            stop(f"{shown} is a link to {real}, which is not there. Nothing was written.")
+        if project.resolve() not in real.parents:
+            stop(f"{shown} is a link to {real}, outside this project. Nothing was written to it.")
+        to = f" (a link to {display_path(real, relative_to=project.resolve())})"
     try:
         existed = file.exists()
         text = file.read_bytes().decode("utf-8") if existed else ""
         found = agents.read(text)
     except agents.Malformed as e:
-        click.echo(
-            click.style("Error: ", fg="red", bold=True)
-            + f"{shown}: {e}. Put the missing line back, or take out the one that is left, and run this again. "
-            "Nothing was written to it.",
-            err=True,
-        )
-        raise SystemExit(1)
+        stop(f"{shown}: {e}. Nothing was written to it: put its marker lines right, or take them out, and run this again.")
     except (OSError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + f"{shown} cannot be read as text: {_explain_os_error(e)}", err=True)
-        raise SystemExit(1)
+        stop(f"{shown} cannot be read as text: {_explain_os_error(e)}")
 
-    if agents.same(found):
+    standing = agents.standing(found)
+    if standing == "current":
         click.echo(f"{shown}: its ChartBook section is up to date (ChartBook {__version__}).")
         raise SystemExit(1 if failed else 0)
-    if agents.changed_by_hand(found) and not force:
-        said = f"The ChartBook section of {shown} was changed since ChartBook {__version__} wrote it."
+    if standing == "newer" and not force:
+        # As for the skill: two environments on two versions do not take turns at one committed file
+        click.echo(
+            f"{shown}: its ChartBook section is for ChartBook {found.version}, newer than this one, {__version__}. "
+            "Left as it is (--force writes this version's)."
+        )
+        raise SystemExit(1 if failed else 0)
+    if standing == "by hand" and not force:
+        said = (
+            f"The ChartBook section of {shown} was changed since ChartBook {found.version} wrote it." if found.hashed and found.version
+            else f"The ChartBook section of {shown} is not one that `chartbook install agents` wrote."
+        )
         if not _can_ask():
-            click.echo(
-                click.style("Error: ", fg="red", bold=True)
-                + f"{said} Notes of your own go outside its two marker lines; --force replaces what is between them.",
-                err=True,
+            stop(
+                f"{said} Notes of your own go outside its two marker lines. `chartbook install agents --force` replaces what "
+                "is between them, and skill files changed by hand too."
             )
-            raise SystemExit(1)
         click.echo(f"{said} Notes of your own go outside its two marker lines.", err=True)
         try:
             agreed = _confirm("Replace what is between them?", default=False)
@@ -5339,24 +5385,23 @@ def install_agents(ctx, force):
             click.echo("", err=True)
             agreed = False
         if not agreed:
+            click.echo(f"{shown} was left as it is.")
             raise SystemExit(1 if failed else 0)
     try:
-        with open(file, "w", encoding="utf-8", newline="") as f:
-            f.write(agents.written(found))
+        agents.write(file, agents.written(found))
     except OSError as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + f"{shown} could not be written: {_explain_os_error(e)}", err=True)
-        raise SystemExit(1)
+        stop(f"{shown} could not be written, and is as it was: {_explain_os_error(e)}")
     if not existed:
         click.echo(f"Wrote {shown}: a ChartBook section, for the agents that read that file (ChartBook {__version__}).")
-    elif not found.own:
-        click.echo(f"Added a ChartBook section to {shown} (ChartBook {__version__}). The rest of the file is as it was.")
-    elif found.version and found.version != __version__:
+    elif standing == "none":
+        click.echo(f"Added a ChartBook section to {shown}{to} (ChartBook {__version__}). The rest of the file is as it was.")
+    elif found.version and found.version != __version__ and standing in ("older", "newer"):
         click.echo(
-            f"Updated the ChartBook section of {shown} from ChartBook {found.version} to {__version__}. "
+            f"Updated the ChartBook section of {shown}{to} from ChartBook {found.version} to {__version__}. "
             "The rest of the file is as it was."
         )
     else:
-        click.echo(f"Wrote the ChartBook section of {shown} again (ChartBook {__version__}). The rest of the file is as it was.")
+        click.echo(f"Wrote the ChartBook section of {shown}{to} again (ChartBook {__version__}). The rest of the file is as it was.")
     if failed:
         raise SystemExit(1)
 
