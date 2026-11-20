@@ -1909,39 +1909,43 @@ class FolderStore(Store):
         """The folder of one pipeline's snapshots."""
         return self.pipelines_path() / pipeline_folder(pipeline)
 
+    def increments_path(self) -> Optional[Path]:
+        """The folder of the pipelines' folders for snapshots kept as increments; None in a layout that has none."""
+        places = self._places()
+        return self.root / places.increments if places.increments else None
+
+    def _trees(self) -> list[Path]:
+        """The folders that hold snapshots' folders: ``snapshots/``, and ``increments/`` where the layout has it. An increment's files are in both."""
+        increments = self.increments_path()
+        return [self.pipelines_path()] + ([increments] if increments is not None else [])
+
+    def _in_a_tree(self, path: Path) -> bool:
+        """Whether a path, followed through any link, is inside one of the folders that hold snapshots (:meth:`_trees`)."""
+        real = Path(os.path.realpath(path))
+        return any(real.is_relative_to(Path(os.path.realpath(tree))) for tree in self._trees())
+
     def records(self) -> list[KeptRecord]:
-        """Every snapshot's record in the store, made by an owner or by a pin, oldest folder first in each pipeline.
+        """Every snapshot's record in the store, made by an owner or by a pin, complete or an increment, oldest folder first in each pipeline.
 
         A record whose pipeline is not its folder's, or whose commit is not
         its folder's, is one that cannot be read: a folder is named for
         people, and a record in another pipeline's folder is not that
-        pipeline's, nor is it read as its own.
+        pipeline's, nor is it read as its own. An increment is a snapshot
+        of its pipeline like any other, found here among them whichever
+        folder it is in (:meth:`records_in`).
         """
         self._check_layout()
         if self._memo is not None and self._reading:
             return list(self._memo[1])
-        pipelines = self.root / self._places().pipelines
-        try:
-            folders = sorted(os.listdir(pipelines))
-        except (FileNotFoundError, NotADirectoryError):
-            return []
-        found = []
-        for name in folders:
-            if name == UNOWNED_DIR:
-                continue
+        names: set = set()
+        for tree in self._trees():
             try:
-                snapshots = sorted(n for n in os.listdir(pipelines / name) if is_snapshot_folder(n))
-            except (NotADirectoryError, FileNotFoundError):
+                names.update(os.listdir(tree))
+            except (FileNotFoundError, NotADirectoryError):
                 continue
-            for snapshot_name in snapshots:
-                path = pipelines / name / snapshot_name / OWN_DIR / RECORD_FILE
-                if not os.path.isfile(_any_length(path)):  # a record past Windows' limit is there, not being made
-                    continue  # being made, or cleared
-                kept = read_kept_record(path)
-                if kept.readable and (pipeline_folder(kept.pipeline) != name or not snapshot_name.endswith("_" + kept.commit[:12])):
-                    # In another pipeline's folder, or another commit's: not read, and said so where it is met
-                    kept = KeptRecord(path, readable=False, stamp=kept.stamp)
-                found.append(kept)
+        found = []
+        for name in sorted(names - {UNOWNED_DIR}):
+            found.extend(self.records_in(self.pipelines_path() / name))
         index: dict = {}
         for record in found:
             if record.readable:
@@ -1951,7 +1955,30 @@ class FolderStore(Store):
         return list(found)
 
     def records_in(self, pipeline_path: Path) -> list[KeptRecord]:
-        """The records in one pipeline's folder, read as they are now, as :meth:`records` reads them."""
+        """The records of one pipeline, by its folder under ``snapshots/``, read as they are now: its complete snapshots and its increments, in the order of their folders' names.
+
+        The same snapshot (pipeline, commit and time) is never in both
+        folders. Where a store has both, the complete one is the snapshot,
+        and the other is not listed: ``store verify`` names it
+        (:meth:`doubled_in`).
+        """
+        return self._records_and_doubled(pipeline_path)[0]
+
+    def doubled_in(self, pipeline_path: Path) -> list[KeptRecord]:
+        """The increments of one pipeline that are of a snapshot the pipeline also has complete, and so are not read."""
+        return self._records_and_doubled(pipeline_path)[1]
+
+    def _records_and_doubled(self, pipeline_path: Path) -> tuple[list, list]:
+        complete = self._records_in_folder(pipeline_path)
+        increments = self.increments_path()
+        beside = self._records_in_folder(increments / pipeline_path.name) if increments is not None and pipeline_path.parent == self.pipelines_path() else []
+        moments = {(record.pipeline, record.commit, record.made_at) for record in complete if record.readable}
+        doubled = [record for record in beside if record.readable and (record.pipeline, record.commit, record.made_at) in moments]
+        kept = complete + [record for record in beside if not any(record is other for other in doubled)]
+        return sorted(kept, key=lambda record: record.folder.name), doubled
+
+    def _records_in_folder(self, pipeline_path: Path) -> list[KeptRecord]:
+        """The records in one folder of snapshots' folders, as they are now."""
         name = pipeline_path.name
         try:
             snapshots = sorted(n for n in os.listdir(pipeline_path) if is_snapshot_folder(n))
@@ -1960,10 +1987,11 @@ class FolderStore(Store):
         found = []
         for snapshot_name in snapshots:
             path = pipeline_path / snapshot_name / OWN_DIR / RECORD_FILE
-            if not os.path.isfile(_any_length(path)):
-                continue
+            if not os.path.isfile(_any_length(path)):  # a record past Windows' limit is there, not being made
+                continue  # being made, or cleared
             kept = read_kept_record(path)
             if kept.readable and (pipeline_folder(kept.pipeline) != name or not snapshot_name.endswith("_" + kept.commit[:12])):
+                # In another pipeline's folder, or another commit's: not read, and said so where it is met
                 kept = KeptRecord(path, readable=False, stamp=kept.stamp)
             found.append(kept)
         return found
@@ -2076,7 +2104,7 @@ class FolderStore(Store):
         self._forget()
         places = self._places()
         pipelines = Path(os.path.realpath(self.root / places.pipelines))
-        if folder.is_symlink() or folder.parent.is_symlink() or not Path(os.path.realpath(path)).is_relative_to(pipelines):
+        if folder.is_symlink() or folder.parent.is_symlink() or not self._in_a_tree(path):
             raise StoreError(
                 f"The snapshot record {self._shown(path)} is in a folder that is a link to another place: it is not "
                 f"cleared from this store. Clear it where its folder is."
@@ -2388,7 +2416,8 @@ class FolderStore(Store):
         for asset in held:
             # A link first, there or not: what it leads to is never read, nor taken for a sync to wait for
             for file in asset.files:
-                if _is_or_under_a_link(file.location, self.root / places.pipelines, checked) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
+                tree = next((tree for tree in self._trees() if file.location.is_relative_to(tree)), self.root / places.pipelines)
+                if _is_or_under_a_link(file.location, tree, checked) or not self._in_a_tree(file.location):
                     raise StoreError(
                         f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of the "
                         f"store, or is under a link; it is not read. `chartbook store verify` checks a store."
@@ -2958,7 +2987,7 @@ class FolderStore(Store):
             for file in asset.files:
                 if not os.path.lexists(file.location):
                     continue
-                if os.path.islink(file.location) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
+                if os.path.islink(file.location) or not self._in_a_tree(file.location):
                     raise StoreError(
                         f"{file.path} of {content_hash} in the store at {self} is a link, or leads out of the store: "
                         f"it is not removed. `chartbook store verify` checks a store."
@@ -3309,9 +3338,9 @@ def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     A file that is a link is no sync's doing, and is not judged here:
     :meth:`FolderStore.get` refuses it, and :meth:`FolderStore.verify` says so.
     """
-    pipelines = Path(os.path.realpath(asset.record.folder.parent.parent))
+    trees = [Path(os.path.realpath(tree)) for tree in _trees_beside(asset.record.folder.parent.parent)]
     for file in asset.files:
-        if os.path.islink(file.location) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
+        if os.path.islink(file.location) or not any(Path(os.path.realpath(file.location)).is_relative_to(tree) for tree in trees):
             continue
         try:
             size = os.stat(file.location).st_size
@@ -3322,6 +3351,23 @@ def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     return None
 
 
+def _trees_beside(tree: Path) -> list[Path]:
+    """The folders of one store that hold snapshots' folders, given one of them: ``snapshots/`` and ``increments/`` are one store's, and an increment's files are in both."""
+    if tree.name in (V3_LAYOUT.pipelines, INCREMENTS_DIR):
+        return [tree.parent / V3_LAYOUT.pipelines, tree.parent / INCREMENTS_DIR]
+    return [tree]
+
+
+def _on_disk_where_kept(file: KeptFile, pipeline_folder: Path) -> Path:
+    """A record's file as the disk names it (:func:`on_disk`), under the pipeline's folder that keeps it: its record's own, or, for an increment's file kept in the snapshot it builds on, that pipeline's folder under ``snapshots/``."""
+    for folder in (pipeline_folder, pipeline_folder.parent.parent / V3_LAYOUT.pipelines / pipeline_folder.name):
+        try:
+            return on_disk(folder, list(file.location.relative_to(folder).parts))
+        except ValueError:
+            continue
+    return file.location
+
+
 def _is_whole(file: KeptFile, pipeline_folder: Path) -> bool:
     """Whether a file a record names is where its record says, at the size it says: one question of the disk, and nothing read.
 
@@ -3330,7 +3376,7 @@ def _is_whole(file: KeptFile, pipeline_folder: Path) -> bool:
     brought part of it) and one that cannot be asked about are not it.
     """
     try:
-        location = on_disk(pipeline_folder, list(file.location.relative_to(pipeline_folder).parts))
+        location = _on_disk_where_kept(file, pipeline_folder)
         return not os.path.islink(location) and os.stat(_any_length(location)).st_size == file.size_bytes
     except (OSError, ValueError):
         return False
@@ -3407,10 +3453,9 @@ def handed(asset: KeptAsset) -> KeptFiles:
     files = []
     for file in sorted(asset.files, key=lambda file: file.relative):
         try:
-            parts = file.location.relative_to(pipeline_folder).parts
-        except ValueError:
-            parts = ()
-        location = on_disk(pipeline_folder, list(parts)) if parts else file.location
+            location = _on_disk_where_kept(file, pipeline_folder)
+        except OSError:
+            location = file.location
         files.append(file if location == file.location else dataclasses.replace(file, location=location))
     at = plain_parts(asset.at) if asset.at else []
     home = asset.record.folder.joinpath(*at) if at else asset.record.folder
@@ -3768,7 +3813,7 @@ class _FolderPending(PendingSnapshot):
     def _inside(self, target: Path) -> None:
         """Refuse to write where a link leads: a record or a folder of the store may be anyone's."""
         pipelines = Path(os.path.realpath(self.store.root / self.store._places().pipelines))
-        if os.path.islink(target) or not Path(os.path.realpath(target.parent)).is_relative_to(pipelines):
+        if os.path.islink(target) or not self.store._in_a_tree(target.parent):
             raise StoreError(
                 f"{target} is a link, or under one that leads out of the store: nothing is written there. "
                 f"`chartbook store verify` checks a store."

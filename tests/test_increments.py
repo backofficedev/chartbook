@@ -1,0 +1,179 @@
+"""A folder store reads snapshots kept as increments (``docs_src/design/snapshots-and-increments.md``).
+
+An increment is a snapshot of its pipeline like any other: its folder is
+``increments/<pipeline>/<snapshot>/``, it holds the files that one complete
+snapshot of the pipeline does not have, and its record says where each of
+its files is, in one of the two folders. Nothing in ordinary use makes one
+yet; ``tests/increments.py`` writes what ``chartbook store migrate`` will.
+
+Each thing here is asked of a store in both shapes: an older complete
+snapshot with later increments on it, and the newest complete with the
+older ones increments on it.
+"""
+
+import json
+import os
+import stat
+from pathlib import Path
+
+import polars as pl
+import pytest
+import tomli_w
+from click.testing import CliRunner
+
+from chartbook import config, data, lock, snapshot
+from chartbook import store as store_module
+from chartbook.cli import main
+from chartbook.errors import AssetNotPinnedError
+from chartbook.store import FolderStore
+from tests.fixtures import _git
+from tests.increments import with_increments
+
+OLDER, OLD, OLDISH = "2025-12-01T09:15:00.000000Z", "2026-01-01T09:15:00.000000Z", "2026-02-01T09:15:00.000000Z"
+SHAPES = ("oldest", "newest")
+
+
+@pytest.fixture
+def work(tmp_path):
+    return tmp_path.resolve()
+
+
+@pytest.fixture
+def store(work, monkeypatch):
+    monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "store"))
+    monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "cache"))
+    return FolderStore(work / "store")
+
+
+def _commit(folder: Path, message: str = "Work") -> None:
+    if not (folder / ".git").exists():
+        _git(folder, "init", "--quiet", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "--quiet", "--allow-empty", "-m", message)
+
+
+def _table(folder: Path, days: int) -> None:
+    pl.DataFrame({"day": list(range(days)), "rate": [4.0 + day / 10 for day in range(days)]}).write_parquet(
+        folder / "_data" / "treasury.parquet"
+    )
+
+
+def _part(folder: Path, year: int) -> None:
+    (folder / "_data" / "parts").mkdir(exist_ok=True)
+    pl.DataFrame({"year": [year], "rate": [float(year)]}).write_parquet(folder / "_data" / "parts" / f"{year}.parquet")
+
+
+def _chart(folder: Path, text: str) -> None:
+    (folder / "_output" / "curve.html").write_text(f"<p>{text}</p>\n", encoding="utf-8", newline="\n")
+
+
+def _folder_of(taken) -> Path:
+    return Path(taken.path).parent.parent
+
+
+def _lose(path: Path) -> None:
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+    path.unlink()
+    then = path.parent.stat().st_mtime - 2 * 3600
+    os.utime(path.parent, (then, then))
+    store_module._found_whole.clear()
+
+
+@pytest.fixture
+def rates(work, store):
+    """A pipeline with a table, a dataset in parts and a chart, which git ignores, and a README it tracks."""
+    folder = work / "rates"
+    (folder / "_data").mkdir(parents=True)
+    (folder / "_output").mkdir()
+    (folder / "chartbook.toml").write_text(
+        tomli_w.dumps({
+            "project": {"id": "acme/rates"},
+            "dataframes": {
+                "treasury": {"path": "./_data/treasury.parquet", "docs": "d"},
+                "parts": {"path": "./_data/parts/", "docs": "d"},
+            },
+            "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "treasury", "docs": "d"}},
+        }),
+        encoding="utf-8", newline="\n",
+    )
+    (folder / "README.md").write_text("# acme/rates\n", encoding="utf-8", newline="\n")
+    (folder / ".gitignore").write_text("/_data/\n/_output/\n/chartbook.lock\n", encoding="utf-8", newline="\n")
+    _table(folder, 3)
+    _part(folder, 2020)
+    _chart(folder, "one")
+    _commit(folder)
+    return folder
+
+
+def _reader(folder: Path) -> Path:
+    folder.mkdir()
+    (folder / "chartbook.toml").write_text(
+        tomli_w.dumps({"project": {"id": f"acme/{folder.name}"}, "dependencies": {"acme/rates": {"path": "../rates"}}}),
+        encoding="utf-8", newline="\n",
+    )
+    return folder
+
+
+@pytest.fixture
+def three(rates, work, store):
+    """Three snapshots of rates, each with a part more and another chart; a reader pinned to each of them. The snapshots, oldest first, and the readers."""
+    taken, readers = [], []
+    for number, (made_at, year, text) in enumerate(((OLDER, 2020, "one"), (OLD, 2021, "two"), (OLDISH, 2022, "three"))):
+        _part(rates, year)
+        _chart(rates, text)
+        taken.append(snapshot.make(rates, store=FolderStore(store.root), made_at=made_at).snapshot)
+        readers.append(_reader(work / f"reader{number}"))
+        assert lock.pin(readers[-1], FolderStore(store.root)).problems == []
+    return taken, readers
+
+
+@pytest.fixture(params=SHAPES)
+def kept(request, three, store):
+    """The same store with all but one snapshot of rates kept as increments, in one of the two shapes: the complete one's folder, the increments' folders, the snapshots and the readers."""
+    taken, readers = three
+    complete, increments = with_increments(store.root, request.param)["acme+rates"]
+    return complete, increments, taken, readers
+
+
+class TestWhatAnIncrementIs:
+    def test_its_folder_its_record_and_its_line_for_a_person(self, kept, store):
+        complete, increments, taken, _ = kept
+        assert len(increments) == 2 and all(folder.parent == store.root / "increments" / "acme+rates" for folder in increments)
+        for folder in increments:
+            document = json.loads((folder / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+            assert document["stored"] == {"builds_on": complete.name}
+            assert (folder / "_chartbook" / "INCREMENT.txt").read_text(encoding="utf-8") == (
+                f"The rest of this snapshot's files are in snapshots/acme+rates/{complete.name}\n"
+            )
+            kept_in = {entry["kept_in"] for part in document["records"] for entry in part["stored"]["files"]}
+            assert kept_in == {folder.name, complete.name}
+            assert not (folder / "_data" / "treasury.parquet").exists()  # the table never changed: kept once, in the complete one
+        records = FolderStore(store.root).records()
+        assert [(record.folder.name, record.increment, record.builds_on) for record in records] == sorted(
+            [(complete.name, False, "")] + [(folder.name, True, complete.name) for folder in increments]
+        )
+        assert {(record.pipeline, record.made_at) for record in records} == {("acme/rates", one.made_at) for one in taken}
+
+    def test_every_snapshot_is_whole_and_verifies(self, kept, store):
+        complete, increments, taken, _ = kept
+        fresh = FolderStore(store.root)
+        for record in fresh.records():
+            assert fresh.holes_of(record.path) == [] and fresh.verify_snapshot(record.path) == []
+        assert fresh.verify() == []
+        result = CliRunner().invoke(main, ["store", "verify"])
+        assert result.exit_code == 0, result.output
+
+
+class TestReads:
+    def test_each_pin_is_read_where_its_files_are(self, kept, store):
+        complete, increments, taken, readers = kept
+        folders = {folder.name: folder for folder in [complete, *increments]}
+        for one, reader in zip(taken, readers):
+            folder = folders[_folder_of(one).name]
+            assert lock.verify(reader, FolderStore(store.root), note=False).problems == []
+            # The table is in the complete one's folder whichever snapshot is read; the chart is in the snapshot's own
+            assert Path(data.path("acme/rates:treasury", project_dir=reader)) == complete / "_data" / "treasury.parquet"
+            parts = [Path(path) for path in data.files("acme/rates:parts", project_dir=reader)]
+            assert [path.name for path in parts] == sorted(f"{year}.parquet" for year in (2020, 2021, 2022))[: taken.index(one) + 1]
+            assert all(path.is_file() and path.parents[2] in (folder, complete) for path in parts)
+            assert data.load("acme/rates:parts", project_dir=reader).collect().height == taken.index(one) + 1
