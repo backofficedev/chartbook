@@ -443,14 +443,30 @@ stays as the first half alone.
 with what building it settled:
 
 - **The project is the nearest folder with a `chartbook.toml`,** from the working directory up to
-  the top of its git repository, and never the home folder. That is where `AGENTS.md` is written.
-- **The opening marker names the version,** as the skill's `SKILL.md` does. A section of an
-  older version is replaced and said. One that names this version and has other text was written
-  in by somebody: it is replaced at a yes or with `--force`, and where nothing can ask the
-  command stops and says that notes go outside the two lines.
-- **Marker lines that do not hold one section are an error,** and nothing is written. Guessing
-  where a section ends would delete a project's own text.
-- **Both halves are done** even where the skill's own question was answered no.
+  the top of its git repository, and never the home folder; in no repository, the folder itself
+  or nothing. That is where `AGENTS.md` is written. *(Found by review: with no repository the
+  walk went up to the top of the disk.)*
+- **Nothing a person wrote is replaced unasked.** *(Found by review: only a section naming
+  exactly this version was protected; a newer one, an older one written in, and markers typed by
+  hand were all replaced without a word.)* The opening marker names the version, as the skill's
+  `SKILL.md` does, and carries a hash of the section's text. A section that is as some ChartBook
+  left it is replaced when it is an older one, and left when it is a newer one, as the skill
+  is. Any other is replaced at a yes or with `--force`, and where nothing can ask the command
+  stops and says that notes go outside the two lines.
+- **A marker is a whole line, from its first column, outside a code fence.** *(Found by review:
+  a line that mentioned a marker was taken for one, and the project's text between two of them
+  was replaced.)* A marker line with other text on it, and marker lines that do not hold one
+  section, are an error that says which lines, and nothing is written.
+- **The rest of the file is kept byte for byte, and the file is written whole or not at all.**
+  *(Found by review: blank lines were cut, one CRLF turned the section to CRLF, a byte-order mark
+  hid the section, and a write that failed part-way left the project's notes cut short.)*
+- **A link is written through only to a file of the project that is there.**
+- **Both halves are done** where the skill's question was answered no, could not be answered, or
+  its folder could not be written. *(Found by review: only the first of those.)*
+- **The section sends an agent to nothing that writes over a person's files.** *(Found by
+  review: it named `chartbook docs build`, which asks before it replaces `docs/`, and told the
+  agent to do what a message says.)* It names what only reads, and says to show a stopped
+  command's message to the person, and not to answer, force or trust on its own.
 - **A section from an older ChartBook is said** as a stale skill is: in one line to a person at a
   terminal, and by `chartbook run --check`.
 - **The section is short.** It says what an agent gets wrong without it (build with `chartbook

@@ -1577,17 +1577,20 @@ Wrote AGENTS.md: a ChartBook section, for the agents that read that file (ChartB
 **The section is ChartBook's, and the rest of the file is yours.** It stands between two marker lines:
 
 ```markdown
-<!-- chartbook:start version=0.6.0; written by `chartbook install agents`, which replaces everything down to chartbook:end. Notes of your own go outside these two lines. -->
+<!-- chartbook:start version=0.6.0 text=c82741d26430; written by `chartbook install agents`, which replaces everything down to chartbook:end. Notes of your own go outside these two lines. -->
 ## ChartBook
 …
 <!-- chartbook:end -->
 ```
 
-Run again after an upgrade, the command replaces what is between them and says so (`Updated the ChartBook section of AGENTS.md from ChartBook 0.5.1 to 0.6.0. The rest of the file is as it was.`). A file the project already has gets the section added at its end; one with none is made. Its line endings are kept. When the section is already this version's, nothing is written. Commit `AGENTS.md`: it is for everyone who works in the repository.
+Run again after an upgrade, the command replaces what is between them and says so (`Updated the ChartBook section of AGENTS.md from ChartBook 0.5.1 to 0.6.0. The rest of the file is as it was.`). A file the project already has gets the section added at its end, and the rest of it is kept byte for byte: its line endings, a byte-order mark, blank lines at its end. One with none is made. When the section is already this version's, nothing is written. The file is written whole or not at all. Commit `AGENTS.md`: it is for everyone who works in the repository.
 
-- **A section somebody wrote in.** One that names this version and has other text is replaced only when you say so at the question, or with `-f`. Where nothing can ask, the command exits `1` and says that notes of your own go outside the two lines.
-- **Marker lines that do not hold one section** (a start with no end, two of either) are an error that says which line, and nothing is written.
-- **Outside a project** (no `chartbook.toml` here or above, up to the top of the git repository and never the home folder) it installs the skill and says that the `AGENTS.md` half is for a project.
+- **Nothing a person wrote is replaced unasked.** The opening marker carries the version and a hash of the section's text (`text=…`), so a section somebody has written in is told from one that is as ChartBook left it, whatever its version. One that was written in, or that `chartbook install agents` did not write at all (markers typed by hand, no hash), is replaced only when you say so at the question, or with `-f`, which is for the skill's files too. Where nothing can ask, the command exits `1` and says that notes of your own go outside the two lines.
+- **A newer ChartBook's section is left as it is,** and the command says so: `AGENTS.md` is committed, and two environments on two versions would otherwise take turns at it.
+- **A marker is a whole line.** From its first column, the comment and nothing else, and not inside a fenced code block. A line that only mentions one (in a sentence, indented as code, in an example) is the project's own text and is left alone. A marker line with other text after it, and marker lines that do not hold one section (a start with no end, two of either), are an error that says which lines, and nothing is written.
+- **A file that is a link** is written through to a file of the project that is there (`AGENTS.md` linked to `CLAUDE.md`, say), and stays a link. One that leads outside the project, or to nothing, is an error.
+- **Both halves are done.** Where the skill's question is declined or cannot be answered, or its folder cannot be written, the section is still written; the command then exits `1` and says what was left.
+- **Outside a project** it installs the skill and says that the `AGENTS.md` half is for a project. A project is the folder you are in, or the nearest above it in the same git repository, that holds a `chartbook.toml`; in no repository, only the folder itself. Never the home folder.
 - **A section from an older ChartBook** teaches that version's commands. Every other command, run by a person at a terminal, says so in one line, and `chartbook run --check` as a `warning:`, as for a stale skill (below).
 
 (chartbook-install-claude-skill)=
