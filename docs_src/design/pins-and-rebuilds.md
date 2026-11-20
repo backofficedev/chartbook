@@ -805,6 +805,16 @@ for `chartbook>=0.5.1,<0.6` in its own `pyproject.toml`: another 0.5 release wou
 student at their next `uv sync`, mid-homework, and 0.6.0 reaches none of them until step 8 raises
 that line.*
 
+```{admonition} The store's layout changes in 0.6.0 after all
+:class: note
+
+*Decided 2026-11-19, after this was written and tried:* {doc}`snapshots-and-increments` gives the
+store a new layout. So the first row of the table below is true of the two versions as they were
+on 2026-11-18, and not of 0.6.0 as it is to be released: 0.6.0 reads a store of 0.5 as it is,
+makes no snapshot in one until `chartbook store migrate` has moved it, and 0.5 does not read a
+store that has been moved.
+```
+
 **A store is shared across versions. A lockfile is not.** Each half was tried on 2026-11-18, with
 ChartBook 0.5.1 as PyPI has it and this version, on one scratch store, and the first on copies of
 the maintainer's own stores:
