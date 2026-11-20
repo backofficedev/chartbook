@@ -769,10 +769,10 @@ class TestAFolderWithBothLayoutsAndNoStoreJson:
         assert str(refused.value) == (
             f"The store at {store} has no store.json, and holds snapshots of both layouts: laid out as ChartBook 0.5 "
             f"laid them out under pipelines/ ({of_0_5}), and as this version lays them out under snapshots/ "
-            f"({_folder_of(taken)}). It is neither read nor written as it is. To part the two, the store of 0.5 staying "
-            f"here, where every machine expects it: move snapshots/ and _chartbook/ out of it into a folder of their "
-            f'own, beside a store.json that holds {{"schema": "chartbook/store/v3"}}, which is then a store of this '
-            f'version\'s layout; and see that the store.json here holds {{"schema": "chartbook/store/v2"}}.'
+            f"({_folder_of(taken)}). It is neither read nor written as it is. If the store, or a move of it to this "
+            f"version's layout, may still be arriving by a sync, wait for the sync to finish. If its store.json is lost "
+            f'for good, put one back that holds {{"schema": "chartbook/store/v2"}}. Then run `chartbook store migrate`, '
+            f"which goes on from the folders as they are."
         )
         for arguments in (["store", "verify"], ["store", "ls"], ["store", "info"], ["store", "gc", "--dry-run"]):
             result = CliRunner().invoke(main, arguments)
@@ -808,10 +808,10 @@ class TestAStoreThatIsRefusedAmongSeveral:
             encoding="utf-8", newline="\n",
         )
         info = CliRunner().invoke(main, ["store", "info"])
-        assert info.exit_code == 1 and "  Not read: The store at" in info.output and "a snapshots/ folder that holds" in info.output
+        assert info.exit_code == 1 and "  Not read: The store at" in info.output and "folders laid out as this version lays them out" in info.output
         listed = CliRunner().invoke(main, ["ls", "versions"])
         assert listed.exception is None or isinstance(listed.exception, SystemExit), repr(listed.exception)
-        assert listed.exit_code == 1 and listed.output.startswith("Error: The store at") and "a snapshots/ folder that holds" in listed.output
+        assert listed.exit_code == 1 and listed.output.startswith("Error: The store at") and "folders laid out as this version lays them out" in listed.output
 
 
 class TestWhatLineageCountsAsThere:

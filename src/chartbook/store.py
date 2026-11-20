@@ -2616,10 +2616,12 @@ class FolderStore(Store):
         arrived, or was removed: no store is made over it, it is read as
         one, its notes of lockfiles go where 0.5 wrote them, and
         :meth:`check_writable` refuses the rest. And one whose ``store.json``
-        says one of the two layouts while it holds snapshots laid out as
-        the other (``pipelines/`` under this version's, ``snapshots/``
-        under 0.5's) is refused whole: those would be passed over without
-        a word.
+        says one of the two layouts while it holds folders of the other
+        (what 0.5 keeps at the top under this version's; ``snapshots/`` or
+        ``increments/`` under 0.5's) is refused whole: those would be passed
+        over without a word. It is a move that was cut short or is still
+        arriving, so the way out it names is ``chartbook store migrate``,
+        and never to take a folder out of the store.
 
         :param create: If True, a store that does not exist yet is made:
             its ``store.json``, and the note for whoever opens the folder.
@@ -2644,7 +2646,11 @@ class FolderStore(Store):
                 raise StoreError(
                     f"The store at {self} has no store.json, and holds snapshots of both layouts: laid out as "
                     f"ChartBook 0.5 laid them out under {V2_LAYOUT.pipelines}/ ({self._shown(both[0])}), and as this "
-                    f"version lays them out under {V3_LAYOUT.pipelines}/ ({self._shown(both[1])}). {self._how_to_part()}"
+                    f"version lays them out under {V3_LAYOUT.pipelines}/ ({self._shown(both[1])}). It is neither read nor "
+                    f"written as it is. If the store, or a move of it to this version's layout, may still be arriving by a "
+                    f"sync, wait for the sync to finish. If its store.json is lost for good, put one back that holds "
+                    f"{json.dumps({'schema': SCHEMA})}. Then run `chartbook store migrate`, which goes on from the folders "
+                    f"as they are."
                 )
             if not create:
                 return  # nothing here yet; nothing to misread
@@ -2709,37 +2715,21 @@ class FolderStore(Store):
                     f"a move may still be arriving, wait for the sync to finish. Then run `chartbook store migrate`, "
                     f"which moves it in."
                 )
-        # The snapshots of the other layout, which this one's store.json would have passed over without a word
-        other = V2_LAYOUT if layout is V3_LAYOUT else V3_LAYOUT
-        found = _snapshot_folder_in(self.root, other)
+        # A store.json of 0.5 over this layout's own trees, which it would have passed over without a word: a move
+        # cut short whose journal is gone, or one that a sync is still bringing. What a move renamed is under those
+        # trees and nowhere else, so nothing here says to take them out of the store
+        found = None
+        if layout is V2_LAYOUT:
+            found = _snapshot_folder_in(self.root, V3_LAYOUT) or _snapshot_folder_in(self.root, V3_LAYOUT, INCREMENTS_DIR)
         if found is not None:
-            if layout is V3_LAYOUT:
-                what = (
-                    f"says {FOLDER_SCHEMA!r}, this version's layout, and a {other.pipelines}/ folder that holds snapshots "
-                    f"laid out as ChartBook 0.5 laid them out ({self._shown(found)}). If `chartbook store migrate` moved "
-                    f"this store on another machine, a sync may still be bringing the move: wait for it to finish. If a "
-                    f"machine that still has ChartBook 0.5 made that snapshot after the move: upgrade ChartBook on that "
-                    f"machine, remove that folder from the store, and run its pipeline again there. If neither, this is "
-                    f"most likely a store of 0.5 that this ChartBook wrote into before its store.json had arrived"
-                )
-            else:
-                what = (
-                    f"says {SCHEMA!r}, the layout of ChartBook 0.5, and a {other.pipelines}/ folder that holds snapshots "
-                    f"laid out as this version lays them out ({self._shown(found)}): most likely a store this ChartBook "
-                    f"made here before a store of 0.5, on its way by a sync, arrived with its store.json"
-                )
-            raise StoreError(f"The store at {self} has a store.json that {what}. {self._how_to_part()}")
+            raise StoreError(
+                f"The store at {self} has a store.json that says {SCHEMA!r}, the layout of ChartBook 0.5, and folders "
+                f"laid out as this version lays them out ({self._shown(found)}): a move to this version's layout that was "
+                f"cut short, or one on another machine that a sync is still bringing. It is neither read nor written as "
+                f"it is. If a move may still be arriving by a sync, wait for the sync to finish. Then run `chartbook "
+                f"store migrate`, which goes on from the folders as they are."
+            )
         self._layout, self._layout_checked = layout, True
-
-    @staticmethod
-    def _how_to_part() -> str:
-        """What a folder with both layouts in it says to do: the store of 0.5 stays where every machine expects it."""
-        return (
-            f"It is neither read nor written as it is. To part the two, the store of 0.5 staying here, where every "
-            f"machine expects it: move {V3_LAYOUT.pipelines}/ and {OWN_DIR}/ out of it into a folder of their own, "
-            f"beside a store.json that holds {json.dumps({'schema': FOLDER_SCHEMA})}, which is then a store of this "
-            f"version's layout; and see that the store.json here holds {json.dumps({'schema': SCHEMA})}."
-        )
 
     @staticmethod
     def _move_into_place(
@@ -3664,17 +3654,18 @@ def holds_v1(root: Path) -> bool:
     return any(next(_files_in(Path(path)), None) is not None for path in commits)
 
 
-def _snapshot_folder_in(root: Path, layout: Layout) -> Optional[Path]:
+def _snapshot_folder_in(root: Path, layout: Layout, tree: Optional[str] = None) -> Optional[Path]:
     """A folder where a store laid out as *layout* keeps a pipeline's snapshots that is named as a snapshot's is: the first found, or None.
 
     ``pipelines/<pipeline>/<snapshot>/`` for the layout of ChartBook 0.5,
     or an object no pipeline owns there (``pipelines/+unowned/<hex>/``);
-    ``snapshots/<pipeline>/<snapshot>/`` for this version's. By the folders
-    alone, a file in them or not: a sync brings a folder before the files
-    in it, and a store whose folders have come is one already.
+    ``snapshots/<pipeline>/<snapshot>/`` for this version's, or under
+    *tree* where one is given (``increments``). By the folders alone, a file
+    in them or not: a sync brings a folder before the files in it, and a
+    store whose folders have come is one already.
     """
     try:
-        pipelines = sorted((entry for entry in os.scandir(root / layout.pipelines) if entry.is_dir()), key=lambda entry: entry.name)
+        pipelines = sorted((entry for entry in os.scandir(root / (tree or layout.pipelines)) if entry.is_dir()), key=lambda entry: entry.name)
     except OSError:
         return None
     for pipeline in pipelines:

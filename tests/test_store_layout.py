@@ -22,6 +22,7 @@ import tomli_w
 from click.testing import CliRunner
 
 from chartbook import config, data, lock, snapshot
+from chartbook import store as store_module
 from chartbook.cli import _format_bytes, main
 from chartbook.store import EarlierLayoutError, FolderStore, StoreError
 from tests.fixtures import _git
@@ -1258,12 +1259,10 @@ class TestAPinWhoseNoteTheStoreDidNotTake:
         assert (reader / "chartbook.lock").is_file()
 
 
-#: The end of what a folder with both layouts in it says: how to part the two, the store of 0.5 staying where it is
-HOW_TO_PART = (
-    "It is neither read nor written as it is. To part the two, the store of 0.5 staying here, where every machine "
-    "expects it: move snapshots/ and _chartbook/ out of it into a folder of their own, beside a store.json that holds "
-    '{"schema": "chartbook/store/v3"}, which is then a store of this version\'s layout; and see that the store.json '
-    'here holds {"schema": "chartbook/store/v2"}.'
+#: The end of what a store.json of 0.5 over this version's trees says: what a move renamed is under them and nowhere else
+GOES_ON = (
+    "It is neither read nor written as it is. If a move may still be arriving by a sync, wait for the sync to finish. "
+    "Then run `chartbook store migrate`, which goes on from the folders as they are."
 )
 
 
@@ -1272,7 +1271,7 @@ class TestAFolderWithBothLayoutsInIt:
 
     Whichever layout the ``store.json`` says, the snapshots of the other
     would be passed over without a word: so it is refused whole, and the
-    message says how to part the two.
+    message says to run `chartbook store migrate`.
     """
 
     @pytest.fixture
@@ -1303,10 +1302,9 @@ class TestAFolderWithBothLayoutsInIt:
                 f"wait for the sync to finish. Then run `chartbook store migrate`, which moves it in."
             )
         return (
-            f"The store at {store} has a store.json that says 'chartbook/store/v2', the layout of ChartBook 0.5, and a "
-            f"snapshots/ folder that holds snapshots laid out as this version lays them out "
-            f"({root / 'snapshots' / 'acme+rates' / of_this}): most likely a store this ChartBook made here before a "
-            f"store of 0.5, on its way by a sync, arrived with its store.json. {HOW_TO_PART}"
+            f"The store at {store} has a store.json that says 'chartbook/store/v2', the layout of ChartBook 0.5, and "
+            f"folders laid out as this version lays them out ({root / 'snapshots' / 'acme+rates' / of_this}): a move to "
+            f"this version's layout that was cut short, or one on another machine that a sync is still bringing. {GOES_ON}"
         )
 
     @pytest.mark.parametrize("marker", ["chartbook/store/v3", "chartbook/store/v2"])
@@ -1333,7 +1331,7 @@ class TestAFolderWithBothLayoutsInIt:
         """The mirror with nothing of 0.5 in it but its store.json, which a sync brought first and wrote over this one's."""
         taken = snapshot.make(rates, store=store, made_at=SECOND).snapshot
         (store.root / "store.json").write_text('{"schema": "chartbook/store/v2"}\n', encoding="utf-8", newline="\n")
-        with pytest.raises(StoreError, match=r"a snapshots/ folder that holds snapshots laid out as this version lays them out"):
+        with pytest.raises(StoreError, match=r"and folders laid out as this version lays them out"):
             FolderStore(store.root).records()
         for arguments in (["store", "verify"], ["store", "info"], ["store", "ls"]):
             result = CliRunner().invoke(main, arguments)
@@ -1347,7 +1345,7 @@ class TestAFolderWithBothLayoutsInIt:
         (root / "store.json").write_text(json.dumps({"schema": marker}) + "\n", encoding="utf-8", newline="\n")
         before = _tree(root)
         # (`store migrate` is the one command that does not refuse it: it is the remedy, tests/test_migrate_0_5.py)
-        both = "at its top what ChartBook 0.5 keeps there (pipelines/" if marker.endswith("v3") else "a snapshots/ folder that holds"
+        both = "at its top what ChartBook 0.5 keeps there (pipelines/" if marker.endswith("v3") else "and folders laid out as this version lays them out"
         for arguments in (
             ["store", "verify"], ["store", "info"], ["store", "ls"], ["store", "gc", "--dry-run"],
             ["pin", "--project-dir", str(reader)], ["snapshot", "--project-dir", str(rates)],
@@ -1360,23 +1358,32 @@ class TestAFolderWithBothLayoutsInIt:
             assert "of this version already" not in result.output and "OK (" not in result.output
         assert _tree(root) == before
 
-    @pytest.mark.parametrize("marker", ["chartbook/store/v3", "chartbook/store/v2"])
-    def test_parted_as_the_message_says_both_are_stores_and_the_one_of_0_5_is_where_it_was(self, mixed, reader, work, marker):
-        """The remedy, carried out as written: snapshots/ and _chartbook/ out, beside a store.json of this layout; the store.json here says 0.5."""
+    def test_the_remedy_carried_out_with_a_store_json_of_0_5_the_move_goes_on_around_what_is_there(self, mixed, reader, monkeypatch):
+        """`chartbook store migrate`, as the message says: the two snapshots of 0.5 are moved in beside the one of this layout, and the pin reads."""
         root, of_0_5, of_this = mixed
-        (root / "store.json").write_text(json.dumps({"schema": marker}) + "\n", encoding="utf-8", newline="\n")
-        moved = work / "of-this-layout"
-        moved.mkdir()
-        for name in ("snapshots", "_chartbook"):
-            shutil.move(str(root / name), str(moved / name))
-        (moved / "store.json").write_text('{"schema": "chartbook/store/v3"}\n', encoding="utf-8", newline="\n")
         (root / "store.json").write_text('{"schema": "chartbook/store/v2"}\n', encoding="utf-8", newline="\n")
-        earlier, this = FolderStore(root), FolderStore(moved)
-        assert earlier.earlier_layout() and len(snapshot.all_snapshots(earlier)) == 2 and earlier.verify() == []
-        assert not this.earlier_layout() and len(snapshot.all_snapshots(this)) == 1 and this.verify() == []
-        # And the pipeline that was pinned to a snapshot of 0.5 reads it again, its store where it always was
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        assert result.exit_code == 0 and "looks half moved, and the move goes on from the folders as they are" in result.output.replace("\n", " "), result.output
+        store_module._read_records.clear()
+        moved = FolderStore(root)
+        assert not moved.earlier_layout() and moved.verify() == []
+        assert sorted(record.folder.name for record in moved.records()) == sorted(of_0_5 + [of_this])
         assert data.load("acme/rates:treasury", project_dir=reader).collect().shape == (3, 2)
-        assert [root_.lockfile for root_ in earlier.roots()] == [reader / "chartbook.lock"]
+        assert [root_.lockfile for root_ in moved.roots()] == [reader / "chartbook.lock"]
+
+    def test_the_remedy_carried_out_with_a_store_json_of_this_layout_the_folder_of_0_5_goes_aside_whole(self, mixed, monkeypatch):
+        """`chartbook store migrate`, as the message says: nothing under pipelines/ is moved in, and its snapshots are named."""
+        root, of_0_5, of_this = mixed
+        (root / "store.json").write_text('{"schema": "chartbook/store/v3"}\n', encoding="utf-8", newline="\n")
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        said = result.output.replace("\n", " ")
+        assert result.exit_code == 0 and f"2 snapshot(s) went aside without being moved in: acme+rates/{of_0_5[0]}, acme+rates/{of_0_5[1]}." in said, result.output
+        store_module._read_records.clear()
+        moved = FolderStore(root)
+        assert moved.verify() == [] and [record.folder.name for record in moved.records()] == [of_this]
+        assert sorted(p.name for p in (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+rates").iterdir() if p.is_dir()) == of_0_5
 
 
 class TestAPipelineNamedAsACommitIs:

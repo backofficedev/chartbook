@@ -4343,7 +4343,13 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
             first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.missing[:3])
             lines.append(
                 f"  {len(found.missing)} file(s) a record names are missing or of another size, as before the move: {first}"
-                f"{' and more' if len(found.missing) > 3 else ''}. If a sync is still bringing them, wait and run again."
+                f"{' and more' if len(found.missing) > 3 else ''}. "
+                + (
+                    "If a sync is still bringing them, wait and run again."
+                    if verb == "become"
+                    else "`chartbook store verify` names each. One that a sync brings later is not moved in: it goes aside "
+                    "with the rest when `chartbook store migrate` is run again."
+                )
             )
         if found.set_aside:
             named = ", ".join(f"{pipeline}/{snapshot}" for pipeline, snapshot in found.set_aside[:3])
@@ -4351,11 +4357,26 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                 f"  {len(found.set_aside)} snapshot(s) {'go' if verb == 'become' else 'went'} aside without being moved in: {named}"
                 f"{' and more' if len(found.set_aside) > 3 else ''}. Run that pipeline again with this ChartBook."
             )
-        if found.late:
+        arrived = [path for path in found.late if path not in {pair[0] for pair in found.in_place}]
+        if arrived:
             lines.append(
-                f"  {len(found.late)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
-                f"aside: {', '.join(found.late[:3])}{' and more' if len(found.late) > 3 else ''}. `chartbook store verify` "
+                f"  {len(arrived)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
+                f"aside: {', '.join(arrived[:3])}{' and more' if len(arrived) > 3 else ''}. `chartbook store verify` "
                 f"names the snapshot that lacks each."
+            )
+        if found.in_place:
+            def size(of) -> str:
+                return "no plain file" if of is None else _format_bytes(of)
+
+            named = ", ".join(
+                place + (f" ({size(here)} in place, {size(there)} at the old place)" if here != there else "")
+                for _, place, there, here in found.in_place[:3]
+            )
+            lines.append(
+                f"  {len(found.in_place)} file(s) a record names {are} not moved, a file being where each goes already: {named}"
+                f"{' and more' if len(found.in_place) > 3 else ''}. What is in place stays, and the file at the old place "
+                f"{'goes' if verb == 'become' else 'went'} aside with the old folder. `chartbook store verify` says whether what "
+                f"is in place is right."
             )
         if found.copied_as_is:
             lines.append(

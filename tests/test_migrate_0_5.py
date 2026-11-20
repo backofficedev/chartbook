@@ -24,6 +24,7 @@ from chartbook.cli import main
 from chartbook.gitcache import GitCache
 from chartbook.store import FolderStore, StoreError
 from tests.fixtures import _git
+from tests.rich_store_of_0_5 import not_its_own, watch
 from tests.store_of_0_5 import cleared_as_0_5, laid_out_as_0_5
 
 TIMES = ("2025-10-01T09:15:00.000000Z", "2025-11-01T09:15:00.000000Z", "2025-12-01T09:15:00.000000Z", "2026-01-01T09:15:00.000000Z")
@@ -332,6 +333,27 @@ class TestCutShortAndRunAgain:
         # And the command goes on
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert result.exit_code == 0 and "was cut short: it goes on where it stopped." in result.output, result.output
+
+    def test_with_the_journal_removed_every_other_command_says_to_run_it_and_none_to_take_the_new_folders_out(self, of_0_5, monkeypatch):
+        """A store.json of 0.5 over both trees, and no journal: what the move renamed is under the new trees and nowhere else."""
+        root, readers = of_0_5
+        last_write = max(number for number, step in enumerate(migrate_0_5.plan(root).steps, 1) if step.op == "write")
+        with pytest.raises(_Stop):
+            migrate_0_5.run(root, after_step=_stop_after(last_write))
+        (root / migrate_0_5.JOURNAL).unlink()
+        store_module._read_records.clear()
+        monkeypatch.chdir(readers["rates3"])
+        for typed in (["pin", "--check"], ["store", "ls"], ["store", "verify"], ["store", "info"], ["store", "gc", "--dry-run"], ["ls", "versions"]):
+            result = CliRunner().invoke(main, typed)
+            said = result.output.replace("\n", " ")
+            assert result.exit_code == 1 and "Then run `chartbook store migrate`, which goes on from the folders as they are." in said, (typed, said)
+            assert "out of it" not in said and "move snapshots/" not in said, (typed, said)
+        with pytest.raises(Exception) as read:
+            data.path("acme/rates:treasury", project_dir=readers["rates3"])
+        assert "which goes on from the folders as they are" in str(read.value)
+        assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
+        store_module._read_records.clear()
+        assert FolderStore(root).verify() == [] and CliRunner().invoke(main, ["pin", "--check"]).exit_code == 0
         assert FolderStore(root).verify() == [] and data.path("acme/rates:treasury", project_dir=readers["rates3"])
 
     def test_a_journal_another_machine_started_stops_this_ones_move(self, of_0_5, monkeypatch):
@@ -666,37 +688,25 @@ class TestAStoreOf02SaysToRunItOnceMore:
 class TestTheMoverRemovesNothingOfAnyones:
     """It renames, copies, writes its own files, merges the top's folders and, last, moves what is left of pipelines/ aside in one rename."""
 
-    def test_nothing_is_unlinked_but_what_chartbook_itself_wrote(self, of_0_5, monkeypatch):
-        import shutil
-
+    def test_nothing_is_removed_or_written_over_but_what_chartbook_itself_wrote(self, of_0_5, monkeypatch):
+        """Every remover, every rename onto a path that is there, every file opened for writing over one: its journal, the marker, its own temporary files."""
         root, _ = of_0_5
         (root / "pipelines" / "acme+once" / "README.txt").write_text("Dana's notes.\n", encoding="utf-8", newline="\n")
+        mark = root / "snapshots" / ("0" * 40) / "MOVED.txt"
+        was = mark.read_bytes()
         gone: list = []
-        real = {"unlink": os.unlink, "remove": os.remove, "rmdir": os.rmdir, "rmtree": shutil.rmtree, "Path.unlink": Path.unlink, "Path.rmdir": Path.rmdir}
-
-        def recording(name):
-            def call(path, *args, **kwargs):
-                gone.append((name, Path(str(path)).relative_to(root).as_posix() if Path(str(path)).is_relative_to(root) else str(path)))
-                return real[name](path, *args, **kwargs)
-            return call
-
-        for name in ("unlink", "remove", "rmdir"):
-            monkeypatch.setattr(os, name, recording(name))
-        monkeypatch.setattr(shutil, "rmtree", recording("rmtree"))
-        monkeypatch.setattr(Path, "unlink", recording("Path.unlink"))
-        monkeypatch.setattr(Path, "rmdir", recording("Path.rmdir"))
-        done = migrate_0_5.run(root)
-        monkeypatch.undo()
-        removed = sorted({path for _, path in gone if not path.startswith(("snapshots/" + "0" * 40,))})
-        # Its journal, and the one file of the mark that the move from 0.2 left (removed with the mark, below)
-        assert removed == ["MOVED.txt", "_chartbook/move-to-v3.jsonl"], removed
-        assert any(name == "rmtree" and path == "snapshots/" + "0" * 40 for name, path in gone)
+        with monkeypatch.context() as patch:
+            watch(patch, root, gone)
+            done = migrate_0_5.run(root)
+        assert not_its_own(gone) == [] and ("unlink", "_chartbook/move-to-v3.jsonl") in gone
         assert (root / done.kept / "acme+once" / "README.txt").read_text(encoding="utf-8") == "Dana's notes.\n"
+        # The mark the move from 0.2 left is aside with all else, not removed
+        assert not mark.exists() and (root / "_chartbook" / "left-by-0.5" / "snapshots" / ("0" * 40) / "MOVED.txt").read_bytes() == was
 
-    def test_the_steps_are_of_seven_kinds_and_the_last_is_one_rename_of_what_is_left(self, of_0_5):
+    def test_the_steps_are_of_six_kinds_and_the_last_is_one_rename_of_what_is_left(self, of_0_5):
         root, _ = of_0_5
         steps = migrate_0_5.plan(root).steps
-        assert {step.op for step in steps} <= {"rename", "copy", "write", "note", "movedir", "aside", "unmark"}
+        assert {step.op for step in steps} == {"rename", "copy", "write", "note", "movedir", "aside"}
         assert (steps[-1].op, steps[-1].source, steps[-1].target) == ("aside", "pipelines", "_chartbook/left-by-0.5/pipelines")
 
     def test_a_read_only_temporary_left_by_a_copy_cut_short_is_chartbooks_to_replace(self, of_0_5):
@@ -872,7 +882,9 @@ class TestOnAMovedStore:
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert result.exit_code == 0, result.output
         said = result.output.replace("\n", " ")
-        assert f"1 file(s) arrived for a snapshot that is moved already, and went aside: _chartbook/left-by-0.5/pipelines/acme+once/{snapshot_folder.name}/_output/curve.html" in said
+        # Where it is: the old folder of this run, beside the one the first move left
+        where = f"_chartbook/left-by-0.5/pipelines (2)/acme+once/{snapshot_folder.name}/_output/curve.html"
+        assert f"1 file(s) arrived for a snapshot that is moved already, and went aside: {where}." in said and (root / where).read_bytes() == b"late"
         assert "`chartbook store verify` names the snapshot that lacks each." in said
 
     def test_a_persons_readme_on_a_moved_store_is_never_touched(self, moved):
