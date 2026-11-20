@@ -652,6 +652,36 @@ class TestAnotherPipelinesVersion:
         for reference in (f"acme/forecast:m@{first}", f"forecast:m@{first}", "acme/forecast:m@champion", "forecast:m@champion"):
             assert models.path(reference, project_dir=serve).read_bytes() == b"weights-1", reference
 
+    def test_the_path_of_each_stays_when_the_owner_makes_another_snapshot_of_the_same_models(self, forecast):
+        """Each snapshot holds its own copy of every file, and a read is handed the same one each time.
+
+        The pinned snapshot's own for the model as pinned; the earliest-made
+        snapshot that holds it for a version named by its label or by its
+        hash, which the pinned snapshot need not hold (found by the second
+        review of the store's layout, 2026-11-20).
+        """
+        from chartbook import lock
+
+        first, second = _labelled(forecast)
+        serve = _serve(forecast)
+        lock.pin(serve)
+        store = default_store()
+        # The two snapshots' folders, in the order they were made (their names tell only to the second)
+        made = [taken.path.parent.parent for taken in sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)]
+        references =("forecast:m", "forecast:m@champion", f"forecast:m@{first}", f"forecast:m@{second}")
+        before = {reference: models.path(reference, project_dir=serve) for reference in references}
+        assert before == {
+            "forecast:m": made[1] / "_models" / "m.json",
+            "forecast:m@champion": made[0] / "_models" / "m.json",
+            f"forecast:m@{first}": made[0] / "_models" / "m.json",
+            f"forecast:m@{second}": made[1] / "_models" / "m.json",
+        }
+        # Something else of the pipeline changes, and it makes a third snapshot, which holds the second version again
+        (forecast / "README.md").write_text("# Forecast, with a word more\n", encoding="utf-8", newline="\n")
+        _commit(forecast)
+        assert snapshot.make(forecast).made and len(store.all_snapshot_files()) == 3
+        assert {reference: models.path(reference, project_dir=serve) for reference in references} == before
+
     def test_a_label_the_owner_spells_illegally_is_not_recorded(self, forecast):
         """Found by a reviewer: `check` refuses it, `snapshot` recorded it, and every
         dependant's `pin` then crashed with no lockfile written."""
