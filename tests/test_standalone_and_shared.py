@@ -150,15 +150,22 @@ class TestTheGcReminder:
         result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news), "--no-gc-reminder"])
         assert result.exit_code == 0 and "store gc" not in result.output
 
-    def test_nothing_is_said_of_what_gc_removes_without_saying(self, monkeypatch):
-        """A record a pin made, whose files a kept snapshot holds: gc says "Nothing to remove." of it, and so must this."""
+    def test_a_snapshot_a_pin_made_that_gc_would_remove_is_said(self, monkeypatch):
+        """A snapshot a pin made holds its own copy of every file, and gc lists it, asks and removes it: this line says it too.
+
+        Until each snapshot was complete such a record held nothing of its
+        own, gc said "Nothing to remove." of it, and so did this line.
+        """
         from chartbook import lock
         from chartbook.cli import _what_gc_would_clear
 
         plan = lock.GcPlan()
         plan.pinned_delete.append((object(), "no lockfile pins what it alone holds"))
         monkeypatch.setattr(lock, "plan_gc", lambda *args, **kwargs: plan)
-        assert _what_gc_would_clear(None) is None
+        assert _what_gc_would_clear(None) == (
+            "`chartbook store gc` would clear 1 snapshot(s) a pin made from a repository, whose files no lockfile needs "
+            "from them, freeing 0 bytes."
+        )
 
     def test_store_info_says_it_too(self, news, store):
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")
