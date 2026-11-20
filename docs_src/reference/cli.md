@@ -612,7 +612,7 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook pin -
 Ran build in 1 pipeline(s).
 ```
 
-1. It checks that everything is committed **before** it builds, so nothing is built for an hour and then left without a snapshot. `chartbook.lock` does not count: the pin before the build is about to write that file, and the snapshot records what it says; commit the lockfile after. It also refuses here where the catalog says the store its snapshot goes to may only be read, with the way out `chartbook snapshot` gives. (A store that is away, or a folder the system will not let you write, is found by the snapshot, after the build.)
+1. It checks that everything is committed **before** it builds, so nothing is built for an hour and then left without a snapshot. `chartbook.lock` does not count: the pin before the build is about to write that file, and the snapshot records what it says; commit the lockfile after. It also refuses here where the catalog says the store its snapshot goes to may only be read, and says how to send the pipeline to a store that can be written. (A store that is away, or a folder the system will not let you write, is found by the snapshot, after the build.)
 2. It builds, and looks for what `chartbook.toml` declares.
 3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot. So does a build that makes a commit.
 4. It makes the snapshot, and records in it that the build ran in the same command.

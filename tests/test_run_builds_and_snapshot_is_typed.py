@@ -539,9 +539,56 @@ class TestASnapshotIsTyped:
             f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
             f"`cd` into the folder, and `chartbook snapshot` again."
         ]
+        # The run that is asked for a snapshot says the same, before it builds
+        strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
+        assert strict.exit_code == 1 and _ran(demo) == 1 and strict.output.splitlines() == [
+            f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
+            f"`cd` into the folder, and `chartbook run --snapshot` again."
+        ]
+        assert _snapshots(store) == []
         # And from inside the folder, however it was spelled, a run's last line names no folder
         monkeypatch.chdir(demo)
         assert _after_the_run(_run("--project-dir", str(other))) == _closing()
+
+    def test_a_folder_of_a_larger_repository_named_in_another_letter_case_is_refused_too(self, work, store, monkeypatch):
+        """Found by review: such a snapshot was made, and recorded the spelling as the pipeline's place. A pipeline that read the folder by its real name then pinned an older snapshot without a word."""
+        mono = work / "mono"
+        a = _folder(mono / "pipes" / "a")
+        _committed(mono)
+        other = mono / "PIPES" / "A"
+        if not other.is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        monkeypatch.chdir(work)
+        assert _run("--project-dir", str(a)).exit_code == 0
+        refused = "is named otherwise than the disk names it, so where it is in its repository cannot be told."
+        typed = _snapshot("--project-dir", str(other))
+        assert typed.exit_code == 1 and typed.output.splitlines() == [
+            f"Error: {other} {refused} `cd` into the folder, and `chartbook snapshot` again."
+        ]
+        strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
+        assert strict.exit_code == 1 and f"Error: {other} {refused}" in strict.output and _ran(a) == 1
+        assert _snapshots(store) == []
+        # Named as the disk names it, the snapshot is made, and says where the pipeline is
+        made = _snapshot("--project-dir", str(a))
+        assert made.exit_code == 0 and MADE in made.output.splitlines()
+        (taken,) = _snapshots(store)
+        assert taken.subdirectory == "pipes/a"
+
+    def test_a_folder_in_another_of_unicodes_forms_is_no_mistake(self, work, store, monkeypatch):
+        """Git and the system may write one name two ways. Whoever typed it made no mistake, and is not refused."""
+        import unicodedata
+
+        directory = _folder(work / "mono" / unicodedata.normalize("NFC", "d\u00e9p\u00f4t") / "pipe")
+        _committed(work / "mono")
+        monkeypatch.chdir(work)
+        other = work / "mono" / unicodedata.normalize("NFD", "d\u00e9p\u00f4t") / "pipe"
+        if not other.is_dir():
+            pytest.skip("this disk tells the two forms apart")
+        assert str(other) != str(directory)
+        assert _run("--project-dir", str(directory)).exit_code == 0
+        for spelled in (directory, other):
+            result = _snapshot("--project-dir", str(spelled))
+            assert "is named otherwise" not in result.output, result.output
 
     def test_a_lockfile_that_git_ignores_holds_nothing_up(self, demo, store, upstream):
         """A project that keeps its lockfile out of git has chosen that: the snapshot records what it was built from all the same."""
@@ -893,6 +940,7 @@ class TestNothingSaysARunMakesASnapshot:
         r"one command of a working day", r"takes the snapshot (when|once)", r"strict form of `chartbook run`",
         r"[Tt]he five commands", r"Five commands cover", r"WHEN_COMMITTED", r"not_snapshotted",
         r"`chartbook run` again\b(?! (after|once))", r"a build of committed work ends with",
+        r"built at a commit \(`chartbook run`\)",
     ]
 
     def test_in_no_file_a_person_or_an_assistant_learns_from(self):

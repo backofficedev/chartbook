@@ -283,8 +283,13 @@ other half of step 2 stands: a run looks for what was declared (item 5).
   removed,** and its command carries `--project-dir` where the snapshot was given it. *(Found by
   the review of the code: "commit it" committed the deletion, and the command, typed where the
   person stood, built and snapshotted another pipeline.)*
-- **A folder named in another letter case than the disk's** gets the words a run had for it
-  (`cd` into the folder), where pathlib's own had come back. *(Found by the review of the code.)*
+- **A folder named in another letter case than the disk's is refused, in words** (`cd` into the
+  folder), by `chartbook snapshot` and by `chartbook run --snapshot`. *(Found by the review of
+  the code: pathlib's own words had come back where the repository's folder was the one spelled
+  otherwise; and where a folder inside it was, the snapshot recorded that spelling as the
+  pipeline's place, and a pipeline that read the folder by its real name pinned an older one
+  without a word. That was older than this step, and a run's last line now hands the spelling
+  over.)*
 - **A git dependency the run builds is not told of snapshots.** *(Found by a mutant no test
   caught.)*
 
