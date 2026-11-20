@@ -41,7 +41,7 @@ import tomli
 
 from chartbook import lock, snapshot
 from chartbook.refs import AssetRef
-from chartbook.store import Store, StoreError, default_store
+from chartbook.store import Store, StoreError, StoreNotAvailableError, default_store
 
 #: How many snapshots up the walk goes before it stops and says so:
 #: deeper than any real graph, and a bound on one a store was made to loop
@@ -175,6 +175,8 @@ def walk(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, reh
     try:
         root.gaps = snapshot.lineage_gaps(directory, store)
         locked = lock.read_lock(directory / lock.LOCK_FILE)
+    except StoreNotAvailableError:
+        raise  # a store this version does not open stops every command with its one line, this one too
     except Exception as error:  # a lockfile written by hand: said, not raised
         root.gaps = [f"its lockfile cannot be checked: {error}"]
     found, unreadable = snapshot.readable_snapshots(store)

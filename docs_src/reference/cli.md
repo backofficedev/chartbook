@@ -1360,7 +1360,7 @@ Cache: /Users/x/.chartbook/cache
   where what is read from a remote store is kept on this machine
 ```
 
-What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming `pip install chartbook[s3]`, and exits `1`, rather than at the first pin or read; so is a scheme nothing installed provides.
+What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a scheme nothing installed provides is an error here, and exits `1`, rather than at the first pin or read. So is a store in an S3 bucket, which is not available in ChartBook 0.6.0: the command names the store and says the one line every command says of it.
 
 `--store NAME` shows just that catalog store. Without it, every store is shown, including read-only and unreachable stores.
 
@@ -1588,8 +1588,8 @@ The command can always be run again on a moved store, and is the one remedy wher
   on where it stopped.
 - **What no snapshot names**, a `git` dependency's pins in 0.2, goes to `pipelines/+unowned/`,
   where it is kept while a lockfile names it.
-- **A bucket** is moved as a folder: sync it to one (`aws s3 sync`), point `CHARTBOOK_STORE` at the
-  folder, run this, and sync it back.
+- **A store in a bucket** is not moved: it is not available in ChartBook 0.6.0 (see the
+  {doc}`roadmap <../roadmap>`), and a command that meets one stops and says so.
 
 ```console
 $ chartbook store migrate --dry-run

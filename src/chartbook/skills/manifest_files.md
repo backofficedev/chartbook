@@ -342,7 +342,7 @@ name = "Company Analytics Catalog"
 url = "~/data/chartbook"
 
 [stores.team]
-url = "s3://team-data/chartbook"
+url = "~/team-drive/chartbook"
 pipelines = ["acme/rates"]
 
 [stores.shared]

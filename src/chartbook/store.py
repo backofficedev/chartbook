@@ -1182,7 +1182,7 @@ class Store(abc.ABC):
     lockfiles (roots) that keep them. A kind of store provides these
     methods and nothing else is asked of it. :class:`FolderStore` is the
     one every install has; :class:`chartbook.stores.s3.S3Store` is a
-    bucket, behind ``pip install chartbook[s3]``.
+    bucket, which this version does not open (:func:`store_for_url`).
     """
 
     @abc.abstractmethod

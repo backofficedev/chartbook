@@ -3971,8 +3971,9 @@ def restore_command(names, project_dir):
 def store():
     """Look after the named stores that keep pinned files and snapshots.
 
-    Define stores in catalog.toml under [stores]. Each can be a local or
-    shared folder, or a bucket. CHARTBOOK_STORE selects the process's only
+    Define stores in catalog.toml under [stores]. Each is a folder, local
+    or shared (a store in a bucket is not available in this version, and a
+    command that meets one says so). CHARTBOOK_STORE selects the process's only
     store. Without catalog stores, [store] url in user or system settings
     is the fallback, then ~/.chartbook/store. `chartbook store info` lists
     the configured stores; --store NAME selects one for maintenance.
@@ -3993,7 +3994,7 @@ def store_ls(pipeline, store_name):
     are in that one's folder. A snapshot is removed with `chartbook store
     gc`, never by hand.
 
-    A store that ChartBook 0.5 laid out, and a bucket, keep each file once:
+    A store that ChartBook 0.5 laid out keeps each file once:
     there an increment's other files may be in several snapshots' folders.
 
     \b
@@ -4480,8 +4481,8 @@ def store_migrate(dry_run, yes):
     second. The files of a glob, whose records give no hash for each file,
     are read once to hash them: in a folder that streams its files (Google
     Drive's), that downloads them. A migrate cut short is run again and
-    goes on where it stopped. A store in a bucket is moved by syncing it to
-    a folder (`aws s3 sync`), moving that, and syncing it back.
+    goes on where it stopped. A store in a bucket is not moved: it is not
+    available in this version, and a command that meets one says so.
 
     \b
     Examples:
@@ -4499,8 +4500,7 @@ def store_migrate(dry_run, yes):
     if not isinstance(the_store, FolderStore):
         click.echo(
             click.style("Error: ", fg="red", bold=True)
-            + f"The store at {the_store} is not a folder. Sync it to one (`aws s3 sync`), set CHARTBOOK_STORE to "
-            f"that folder, run this, and sync it back.",
+            + f"The store at {the_store} is not a folder, and this command moves a store in a folder.",
             err=True,
         )
         raise SystemExit(1)
