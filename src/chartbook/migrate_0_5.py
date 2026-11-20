@@ -432,6 +432,10 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> set:
             found.by_pins += 1 if by_pin else 0
         documents[snapshot] = (tree, own, document, increment)
     for source, targets in sorted(wanted.items()):
+        if not os.path.lexists(root / source):
+            # Renamed already, and by a plan that may have had another of these places first (a record arrived since,
+            # or the one the others build on had no folder yet): the copies are made from where the file is
+            targets.sort(key=lambda target: not os.path.lexists(root / target[0]))
         # What the rename leaves at the first place, which the copies are made from: the file, by its size, or nothing
         first = _will(root, source, targets[0][0])
         in_place = os.path.lexists(root / source) and os.path.lexists(root / targets[0][0])  # said on its own, with both sizes

@@ -219,6 +219,53 @@ class TestTheOneTheOthersBuildOnDoesNotChangeOnceAMoveHasBegun:
         assert stranded == [] and fresh(root).tidy(dry_run=True) == [] and fresh(root).verify() == []
 
 
+class TestACopyIsMadeFromWhereTheFileIs:
+    """A plan made after a cut may put another place first for a file than the plan that renamed it: the file is not called missing, it is copied from where it is."""
+
+    def _two(self, tmp_path):
+        root = empty_store(tmp_path)
+        x, b = b"x" * 300, b"b" * 600
+        s1 = folder_of("2025-10-01", "a")
+        put(root, "acme+p", s1, "_data/x.parquet", x)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/x.parquet", x, None, None)])
+        s2 = folder_of("2025-11-01", "b")
+        put(root, "acme+p", s2, "_data/b.parquet", b)
+        record(root, "acme/p", "2025-11-01", "b", [("_data/b.parquet", b, None, None)])
+        return root, x, s1, s2
+
+    def test_the_record_of_an_older_snapshot_that_a_sync_brings_after_a_cut(self, tmp_path):
+        root, x, s1, s2 = self._two(tmp_path)
+        before = read_through(root)
+        cut_at(root, lambda step: step.op == "rename")
+        assert (root / "increments" / "acme+p" / s1 / "_data" / "x.parquet").is_file()
+        s0 = record(root, "acme/p", "2025-09-01", "c", [("_data/x.parquet", x, s1, None)])  # it shares the file, and sorts before its holder
+        assert migrate_0_5.plan(root).missing == []
+        done = migrate_0_5.run(root)
+        after = read_through(root)
+        assert done.missing == [] and {key: after[key] for key in before} == before
+        assert after[("acme/p", s0, "_data/x.parquet")] == hashlib.sha256(x).hexdigest() and fresh(root).verify() == []
+
+    def test_a_newer_snapshot_that_arrives_before_the_one_the_others_build_on_has_a_folder(self, tmp_path):
+        """Cut after one rename into increments/, and none yet into snapshots/: the one that arrived is the newest, and is complete."""
+        root, x, s1, s2 = self._two(tmp_path)
+        before = read_through(root)
+        with pytest.raises(Stop):
+            migrate_0_5.run(root, after_step=stop_after(1))
+        store_module._read_records.clear()
+        assert (root / "increments" / "acme+p" / s1 / "_data" / "x.parquet").is_file() and not (root / "snapshots" / "acme+p").exists()
+        c = b"c" * 700
+        s3 = folder_of("2025-12-01", "c")
+        put(root, "acme+p", s3, "_data/c.parquet", c)
+        record(root, "acme/p", "2025-12-01", "c", [("_data/x.parquet", x, s1, None), ("_data/c.parquet", c, None, None)])
+        assert migrate_0_5.plan(root).missing == []
+        done = migrate_0_5.run(root)
+        after = read_through(root)
+        assert done.missing == [] and {key: after[key] for key in before} == before
+        kept = {record.folder.name: record for record in fresh(root).records()}
+        assert not kept[s3].increment and kept[s1].builds_on == s3 and kept[s2].builds_on == s3
+        assert after[("acme/p", s3, "_data/x.parquet")] == hashlib.sha256(x).hexdigest() and fresh(root).verify() == []
+
+
 class TestNothingIsRenamedOntoAFileThatIsThere:
     def test_on_a_moved_store_a_late_object_no_pipeline_owns_goes_aside_with_pipelines_and_the_stores_own_stays(self, moved):
         root, _, _ = moved
