@@ -1383,7 +1383,7 @@ A complete snapshot's folder holds every file of its version, and can be read or
 
 Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and its folder holds every one of them, each in its own place, so the folder can be read, copied or sent as it is. A dataset costs its whole size at each snapshot. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it: `chartbook store gc` removes snapshots, each with its whole folder. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder.
 
-A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it. There a snapshot is listed in the words of 0.5: **standalone** where its folder holds every file of its version, **shared** where it holds only what is new or changed, with how many of its files are in other snapshots' folders.
+A snapshot is listed as **complete** where its folder holds every file of its version, and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 

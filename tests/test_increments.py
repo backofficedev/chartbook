@@ -444,3 +444,49 @@ class TestCopiesKeepTheirForm:
         with pytest.raises(StoreError):
             transfer.move("acme/rates", stores, "there", keep=False, route=False)
         assert _form(store.root) == form  # nothing was removed from where it came from
+
+
+class TestTheRestOfWhatReadsTheStore:
+    """A pin, a check, lineage, the listing of versions and a run take an increment as the snapshot of its pipeline that it is."""
+
+    def test_lineage_the_checks_and_the_listings(self, kept, store, monkeypatch):
+        from chartbook import lineage
+
+        complete, increments, taken, readers = kept
+        for reader in readers:
+            assert lineage.walk(reader, FolderStore(store.root), rehash=True).gaps() == []
+            monkeypatch.chdir(reader)
+            for typed in (["pin", "--check"], ["pin"], ["lineage"]):
+                result = CliRunner().invoke(main, typed)
+                assert result.exit_code == 0, (typed, result.output)
+        listed = CliRunner().invoke(main, ["ls", "versions"])
+        assert listed.exit_code == 0 and all(one.commit[:7] in listed.output for one in taken), listed.output
+        assert CliRunner().invoke(main, ["store", "info"]).exit_code == 0
+
+    def test_a_new_pin_takes_the_newest_whichever_kind_it_is(self, kept, work, store):
+        complete, increments, taken, _ = kept
+        reader = _reader(work / "late")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        assert lock.read_lock(reader).snapshots() == {(taken[-1].commit, taken[-1].made_at)}
+        assert data.load("acme/rates:parts", project_dir=reader).collect().height == 3
+
+    def test_a_run_with_nothing_changed_stands_on_the_newest_and_writes_nothing(self, kept, rates, store):
+        complete, increments, taken, _ = kept
+        before = _files(store.root)
+        report = snapshot.make(rates, store=FolderStore(store.root), made_at="2026-03-01T09:15:00.000000Z")
+        assert not report.made and report.snapshot.made_at == taken[-1].made_at and report.not_whole is None
+        assert _files(store.root) == before  # nothing is written into a recorded snapshot of either kind
+
+    def test_where_the_newest_lacks_a_file_a_run_makes_a_new_complete_snapshot(self, kept, rates, store):
+        """Rule A, unchanged: the one with the hole is left as it is, and the new one is complete, under snapshots/."""
+        complete, increments, taken, _ = kept
+        newest = _folder_of(taken[-1])
+        newest = next(folder for folder in (complete, *increments) if folder.name == newest.name)
+        _lose(newest / "_output" / "curve.html")
+        report = snapshot.make(rates, store=FolderStore(store.root), made_at="2026-03-01T09:15:00.000000Z")
+        assert report.made and report.not_whole[1] == ["_output/curve.html"]
+        made = _folder_of(report.snapshot)
+        assert made.parent == store.root / "snapshots" / "acme+rates" and not (newest / "_output" / "curve.html").exists()
+        fresh = FolderStore(store.root)
+        assert fresh.holes_of(report.snapshot.path) == [] and fresh.verify_snapshot(report.snapshot.path) == []
+        assert not fresh.builds_on(report.snapshot.path) and (made / "_data" / "treasury.parquet").is_file()

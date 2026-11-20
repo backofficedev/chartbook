@@ -116,7 +116,7 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {design}`versioned-cata
 | **writer** | What turns the index into pages for one site tool |
 | **scratch** | `_data/_scratch/` inside a pipeline (or what `[project] scratch` names): throwaway files that are not assets |
 | **complete snapshot** | A snapshot whose folder in the store holds every file of its version. Every snapshot in a store of this version is one, and `chartbook store ls` says so; `chartbook store gc` is how to remove one |
-| **standalone snapshot**, **shared snapshot** | The words of a store that ChartBook 0.5 laid out, and of a bucket, which keep each file once: a standalone snapshot's folder holds every file of its version, and a shared one's only what changed, while other snapshots' folders keep the rest of its files. `chartbook store ls` says which each is there |
+| **complete**, **increment** | How the store keeps a snapshot, met in the store's folders and in `chartbook store ls`, and nowhere else. A complete snapshot's folder, under `snapshots/`, holds every file of its version and can be read or copied as it is. An increment's folder, under `increments/`, holds the files that one complete snapshot of its pipeline does not have; the rest of its files are read from that one's folder, which its `_chartbook/INCREMENT.txt` names. A pin, a read and the catalog take either as the snapshot it is |
 
 Three different things are called "kind", and they do not mix: an **asset kind**, lowercase, in
 a reference (`chart`); a **record kind**, capitalized, in the index (`Chart`, plus the non-asset
