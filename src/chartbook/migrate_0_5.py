@@ -422,12 +422,12 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan, base_there: Optional[t
             if not seen and target != source:
                 # Planned whether the file is there or not: one that arrives before its step is put where its record names it
                 found.steps.append(Step("rename", source, target))
-                if there is not None:
+                if there is not None or moved is not None:
                     found.renamed += 1
-                    found.renamed_bytes += there
+                    found.renamed_bytes += there if there is not None else moved
             elif seen:
                 found.steps.append(Step("copy", seen[0], target, content_hash, size))
-                if (there is not None or moved is not None) and not os.path.lexists(root / target):
+                if there is not None or moved is not None:
                     found.copied += 1
                     found.copied_bytes += there if there is not None else moved
             seen.append(target)
@@ -606,11 +606,14 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
                 f"{' and more' if len(listing) > 5 else ''}. Something there is in use, or keeps arriving: see that "
                 f"nothing else uses the store, and run `chartbook store migrate` again."
             )
-        last = listing
+        first, last = last is None, listing
         # What the whole move comes to is carried in the journal's first line, from one pass and one run to the next
         carried = (started or {}).get("so_far") or {}
-        so_far = {key: carried.get(key, 0) + getattr(found, key) for key in _COUNTS}
-        so_far["set_aside"] = list(carried.get("set_aside", [])) + [list(pair) for pair in found.set_aside]
+        # A plan of a move already under way counts what is done with what is left, as the journal's first line did: the
+        # larger is the whole. A later pass of one run moves only what arrived since, and adds
+        again = started is not None and first
+        so_far = {key: max(carried.get(key, 0), getattr(found, key)) if again else carried.get(key, 0) + getattr(found, key) for key in _COUNTS}
+        so_far["set_aside"] = list(carried.get("set_aside", [])) + [list(pair) for pair in found.set_aside if list(pair) not in carried.get("set_aside", [])]
         so_far["copied_as_is"] = list(carried.get("copied_as_is", []))
         header = {
             "schema": JOURNAL_SCHEMA, "machine": this_machine(), "so_far": so_far,

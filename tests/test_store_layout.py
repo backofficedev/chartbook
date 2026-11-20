@@ -1297,13 +1297,10 @@ class TestAFolderWithBothLayoutsInIt:
         store = FolderStore(root)
         if marker == "chartbook/store/v3":
             return (
-                f"The store at {store} has a store.json that says 'chartbook/store/v3', this version's layout, and a "
-                f"pipelines/ folder that holds snapshots laid out as ChartBook 0.5 laid them out "
-                f"({root / 'pipelines' / 'acme+rates' / of_0_5[0]}). If `chartbook store migrate` moved this store on "
-                f"another machine, a sync may still be bringing the move: wait for it to finish. If a machine that still "
-                f"has ChartBook 0.5 made that snapshot after the move: upgrade ChartBook on that machine, remove that "
-                f"folder from the store, and run its pipeline again there. If neither, this is most likely a store of "
-                f"0.5 that this ChartBook wrote into before its store.json had arrived. {HOW_TO_PART}"
+                f"The store at {store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
+                f"(pipelines/, roots/, origins/, tmp/): a machine that had not been brought the move wrote it, or a move on another machine is "
+                f"still arriving by a sync. It is neither read nor written as it is. If a move may still be arriving, "
+                f"wait for the sync to finish. Then run `chartbook store migrate`, which moves it in."
             )
         return (
             f"The store at {store} has a store.json that says 'chartbook/store/v2', the layout of ChartBook 0.5, and a "
@@ -1349,10 +1346,11 @@ class TestAFolderWithBothLayoutsInIt:
         root, of_0_5, of_this = mixed
         (root / "store.json").write_text(json.dumps({"schema": marker}) + "\n", encoding="utf-8", newline="\n")
         before = _tree(root)
-        both = "a pipelines/ folder that holds" if marker.endswith("v3") else "a snapshots/ folder that holds"
+        # (`store migrate` is the one command that does not refuse it: it is the remedy, tests/test_migrate_0_5.py)
+        both = "at its top what ChartBook 0.5 keeps there (pipelines/" if marker.endswith("v3") else "a snapshots/ folder that holds"
         for arguments in (
-            ["store", "verify"], ["store", "info"], ["store", "ls"], ["store", "gc", "--dry-run"], ["store", "migrate", "--dry-run"],
-            ["store", "migrate"], ["pin", "--project-dir", str(reader)], ["snapshot", "--project-dir", str(rates)],
+            ["store", "verify"], ["store", "info"], ["store", "ls"], ["store", "gc", "--dry-run"],
+            ["pin", "--project-dir", str(reader)], ["snapshot", "--project-dir", str(rates)],
             ["path", "acme/rates:treasury", "--project-dir", str(reader)], ["lineage", "--project-dir", str(reader)],
             ["store", "export", "acme/rates", "--to", str(work / "out")],  # (`restore` here has nothing to restore, and asks the store nothing)
         ):

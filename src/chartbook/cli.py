@@ -4354,7 +4354,7 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         found = migrate_0_5.plan(root)
         migrate_0_5.check(root, found)
         moved = migrate_0_5.marker_of(root) == FOLDER_SCHEMA
-        half = started is not None or (not moved and any(True for tree in ("snapshots", "increments") for _ in (root / tree).glob("*/*/_chartbook/snapshot.json")))
+        half = started is not None or (not moved and any(True for tree in ("snapshots", "increments") for path in (root / tree).glob("*/*") if path.parent.name != migrate_0_5.OLD_MARK))
         if moved and started is None:
             click.echo(
                 f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
@@ -4455,15 +4455,15 @@ def store_migrate(dry_run, yes):
             err=True,
         )
         raise SystemExit(1)
-    if migrate_0_5.to_move(the_store.root):
-        # A store of 0.5, a move to this layout that was cut short, or a moved store with what 0.5 keeps at its top
-        _move_from_0_5(the_store, dry_run, yes)
-        return
     try:
         plan = migrate.plan(the_store.root)
     except StoreError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
+    if not plan.needed and migrate_0_5.to_move(the_store.root):
+        # A store of 0.5, a move to this layout that was cut short, or a moved store with what 0.5 keeps at its top
+        _move_from_0_5(the_store, dry_run, yes)
+        return
     if not plan.needed:
         try:
             # Asked of the store itself: one with two layouts in it is neither, and says so
