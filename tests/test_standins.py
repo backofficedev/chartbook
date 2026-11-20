@@ -428,7 +428,7 @@ class TestWithNoBuildOfYours:
         assert result.exit_code == 1
         # Once for the dependency, as the list of what is not in the store (tests/test_not_in_your_store.py)
         said = result.output.splitlines()
-        assert said[0] == "acme/report cannot be pinned yet: 1 pipeline it reads is not in your store."
+        assert said[0] == f"acme/report cannot be pinned yet: 1 pipeline it reads is not in the store at {student}."
         (line,) = [line for line in said if line.startswith("1. ")]
         assert line.startswith(f"1. acme/rates at {commit}    ") and "(a folder on this machine" in line
         assert not any(line.startswith("  lost") for line in said)

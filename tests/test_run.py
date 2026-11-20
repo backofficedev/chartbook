@@ -1106,11 +1106,13 @@ class TestCommand:
         monkeypatch.chdir(reader)
         import shlex
 
+        from chartbook.store import default_store
+
         result = self._run()
         assert result.exit_code == 1 and commit
         # The list of what is not in the store (tests/test_not_in_your_store.py), in the pin's place
         assert result.output.splitlines()[2:] == [
-            "reader cannot be built yet: 1 pipeline it reads is not in your store.",
+            f"reader cannot be built yet: 1 pipeline it reads is not in the store at {default_store()}.",
             "Build it first. It ends with a snapshot, which is what this one reads.",
             "",
             f"1. upstream    {os.path.join('..', 'upstream')} (a folder on this machine)",

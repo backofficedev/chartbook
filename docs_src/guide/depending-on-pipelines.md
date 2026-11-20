@@ -196,7 +196,7 @@ on the list reads in turn is on it too, before it:
 ```console
 $ chartbook run
 Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
-ftsfr/report cannot be built yet: 2 pipelines it reads are not in your store.
+ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/x/.chartbook/store.
 Build them in this order. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
@@ -210,10 +210,11 @@ Then here again:
 Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
-Each command can be pasted as it is, from any folder. A folder on this machine is one your
-`[dependencies]` names by `path`, or a clone that sits beside your project; a repository is cloned
-beside your project. The whole of it is in the {ref}`reference <not-in-your-store>`. One step of
-it, with the check that fetches nothing:
+Each command can be pasted as it is, from any folder, in the order given. A folder on this
+machine is one your `[dependencies]` names by `path`; a clone you already have beside your project
+is read and built where it is; any other repository is cloned beside your project. Nothing here
+moves your own repository to another commit. The whole of it is in the
+{ref}`reference <not-in-your-store>`. One step of it, with the check that fetches nothing:
 
 ```console
 $ chartbook pin --check

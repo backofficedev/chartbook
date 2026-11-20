@@ -2230,24 +2230,35 @@ def build_it_said(entry: Optional[dict]) -> str:
     commit's and are put back by ``chartbook pin``, and for a pin that
     names no commit.
     """
+    import re
+
+    from chartbook.identity import plain_line, validate_pipeline_id, web_link
+
     location = (entry or {}).get("location")
     location = location if isinstance(location, dict) else {}
     commit = location.get("commit")
-    if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not commit:
+    if location.get("kind") not in ("store", "path") or not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{7,40}", commit):
         return ""
+    # A lockfile is anyone's, and this is shown: a pipeline's name only if it is an ID, an address
+    # only if it is a plain web address, and a path as one line of text
+    pipeline, repository = location.get("pipeline"), web_link(location.get("repository"))
+    try:
+        pipeline = validate_pipeline_id(pipeline) if isinstance(pipeline, str) and pipeline == plain_line(pipeline) else ""
+    except ValueError:
+        pipeline = ""
+    path = plain_line(location.get("path"), 300)
     # Named by its ID, it may be one folder of a repository of several: said, unless the
     # repository is named as the pipeline is, and so is its own
     of = ""
-    pipeline, repository = location.get("pipeline"), location.get("repository")
-    if isinstance(pipeline, str) and pipeline:
-        named = str(repository or "").rstrip("/").rsplit("/", 1)[-1]
+    if pipeline:
+        named = repository.rstrip("/").rsplit("/", 1)[-1]
         named = named[:-4] if named.endswith(".git") else named
         if named != pipeline.rsplit("/", 1)[-1]:
             of = f", in the folder of {pipeline}"
-    if location.get("kind") == "path" and location.get("path"):
-        where = f"in {location['path']}"
-    elif location.get("repository"):
-        where = f"in a clone of {location['repository']}{of}"
+    if location.get("kind") == "path" and path:
+        where = f"in {path}"
+    elif repository:
+        where = f"in a clone of {repository}{of}"
     else:
         where = f"in a clone of its repository{of}"
     return (

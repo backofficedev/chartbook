@@ -1270,7 +1270,7 @@ class TestCommands:
         # committed, so a snapshot is all there is to make
         assert result.output.splitlines()[:7] == [
             "Wrote chartbook.lock.",
-            "acme/user cannot be pinned yet: 1 pipeline it reads is not in your store.",
+            f"acme/user cannot be pinned yet: 1 pipeline it reads is not in the store at {default_store()}.",
             "Build it first. It ends with a snapshot, which is what this one reads.",
             "",
             f"1. acme/maker    {os.path.join('..', 'maker')} (a folder on this machine, built already)",

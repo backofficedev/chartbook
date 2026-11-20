@@ -2654,7 +2654,8 @@ def _echo_pin_report(report, listed=()):
         click.echo(lock.floor_said(floor, manifest_shown, report.lockfile.name, lock.where_to_pin(floor)))
     if report.written:
         click.echo(f"Wrote {shown}.")
-    elif report.lockfile.exists():
+    elif report.lockfile.exists() and not (listed and all(event.dependency in listed for event in report.events)):
+        # With everything on the list of what is not in the store, the list says what there is to say
         click.echo(f"{shown} is unchanged.")
 
     stale = report.count("stale")
@@ -2714,21 +2715,20 @@ def _run_pin(project_dir, dependencies=None, on_refused=None):
         from chartbook import missing
 
         try:
-            listing = missing.after_pin(project_dir, report, echo=lambda line: click.echo(line, err=True))
+            listing = missing.after_pin(project_dir, report, echo=click.echo)
         except missing.NoOrder as e:
             no_order = e
     listed = listing.keys if listing is not None else set()
-    if not listed or report.written or any(event.dependency not in listed for event in report.events):
-        _echo_pin_report(report, listed=listed)
+    # Always: its closing lines say what was written, the manifest's requires_chartbook among it
+    _echo_pin_report(report, listed=listed)
     if report.unrooted:
         click.echo(
             f"The store's note of this lockfile, for `store gc`, could not be written "
             f"({report.unrooted}); `store gc` goes by the note it has."
         )
     if no_order is not None:
+        # Said, and nothing undone: the cycle may be one the entry just added has no part in
         click.echo(click.style("Error: ", fg="red", bold=True) + f"{no_order.root}: {no_order}", err=True)
-        if on_refused is not None:
-            on_refused()  # `chartbook add`: one that leads into a cycle is not added
         raise SystemExit(1)
     if listing is not None:
         for line in missing.said(listing, again="chartbook pin", done="pinned"):
@@ -3741,7 +3741,13 @@ def _run_script(
         if report.not_in_store is not None:
             from chartbook import missing
 
-            for line in missing.said(report.not_in_store):
+            # The command to come back with, as it was typed
+            again = "chartbook run" + "".join(
+                f" {flag}" for flag, given in (
+                    ("--force", force), ("--snapshot", snapshot is True), ("--remake", remake), ("--upstream", upstream),
+                ) if given
+            )
+            for line in missing.said(report.not_in_store, again=again):
                 click.echo(line, err=True)
             if report.reason == runner.NOT_IN_STORE:
                 raise SystemExit(report.exit_code or 1)  # the list has said it

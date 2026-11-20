@@ -101,7 +101,7 @@ The run says all that has to be built, in the order to build it, and stops.
 $ chartbook run
 Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
 Fetching https://github.com/ftsfr/fed_yield_curve, to see what ftsfr/fed_yield_curve reads in turn.
-acme/report cannot be built yet: 3 pipelines it reads are not in your store.
+acme/report cannot be built yet: 3 pipelines it reads are not in the store at /Users/x/.chartbook/store.
 Build them in this order. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
@@ -354,10 +354,25 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   clone inside the folder it was typed in, and its `cd ../rates` held only from one folder. A
   folder is named whole, and a repository is cloned beside the pipeline's own repository. The
   last lines say how to come back: `cd /work/report && chartbook run`.
-- **A clone that sits beside the pipeline is read where it is.** A folder there, named as `git
-  clone` names it or as the pipeline is, that holds that pipeline: its two files are asked of it
-  through git, nothing is fetched, and its line is a folder's. A repository that wants a password
-  cannot be fetched from here at all, and a class has its clones side by side.
+- **A clone you already have is read where it is.** The pipeline's own repository, or a folder
+  beside it named as `git clone` names one, whose `origin` is the address a pin records: the
+  repository's files are read from it at the commit to build, nothing is fetched, and its line
+  says to build there. A repository that wants a password cannot be fetched from here at all, and
+  a class has its clones side by side. *(Found by review: it was first told by the ID of the
+  pipeline in the folder, which took a folder of another history for the clone and missed a
+  pipeline in a folder of its repository.)*
+- **No command moves the pipeline's own repository.** *(Found by review: in a repository of
+  several pipelines the list said `git checkout`, and its last command then built the pipeline
+  itself as it was at that commit.)* What is wanted there at another commit is built in a
+  worktree of that commit, and the reader's checkout stays on its branch.
+- **An address is one only if it is a plain web address,** which is all a snapshot records.
+  *(Found by review: one that began with `--upload-pack=` was refused by the fetch and printed in
+  a `git clone` to paste.)* A pipeline's name is one only if it is an ID. Everything shown is
+  shown without control characters.
+- **A line written for a folder holds once the lines above it are done.** *(Found by review: one
+  pipeline wanted at two commits had its second line written from where the folder was before
+  the first line moved it.)*
+- **The store that was looked in is named,** as it was in every message this takes the place of.
 - **A line names the lines it reads:** `reads 1 and 2 above`, where "reads 2 above" could be
   taken for a count or for a line.
 - **The last line is the other way on:** where a store is shared, nothing has to be built. On a
@@ -366,12 +381,19 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   the list would say to build the commit a pin names.
 - **An ID the store has in other letters is not on the list.** It is a name to put right, and the
   pin says which.
-- **A folder that is built is not built again.** On the commit to build, with every declared file
-  on disk, its line says `built already` and `chartbook snapshot`; so does a pipeline with no
-  `build` script. The words this list takes the place of said "commit, then run `chartbook
-  snapshot`", and a build may take an hour.
-- **With `--upstream` to offer, the list offers it:** where every line is a folder on this
-  machine that was never pinned, `chartbook run --upstream` builds them all, and a line says so.
+- **A folder that is built and was never pinned is not built again.** With nothing uncommitted
+  and every declared file on disk, its line says `built already` and `chartbook snapshot`; so
+  does a pipeline with no `build` script. The words this list takes the place of said "commit,
+  then run `chartbook snapshot`", and a build may take an hour. Never for a pinned one: *(found by
+  review)* its files may be of another build than the pin's, and a snapshot of them would carry
+  the pinned commit's name.
+- **With `--upstream` to offer, the list offers it:** where every line is a `path` entry's folder
+  that was never pinned and has a `build` script, `chartbook run --upstream` builds them all, and
+  a line says so. *(Found by review: it was offered for a clone of a pipeline named by its ID,
+  which `--upstream` does not build.)*
+- **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
+  entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
+  is as the command left it.
 
 ## The catalog knows when it is behind
 

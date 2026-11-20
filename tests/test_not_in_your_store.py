@@ -8,7 +8,9 @@ with what to type; ``pin --check`` and ``run --frozen``, which fetch
 nothing, say what this pipeline lacks and where the list is.
 
 Each test makes its pipelines against one store, as their owner would,
-and then meets them with another that is empty.
+and then meets them with another that is empty. An address a snapshot
+records, ``https://example.org/acme/<name>``, is answered by a folder on
+this disk (git's ``insteadOf``), so nothing here uses the network.
 """
 
 import json
@@ -24,10 +26,15 @@ from click.testing import CliRunner
 
 from chartbook import config, lock, missing, snapshot
 from chartbook.cli import main
-from chartbook.gitcache import GitCache
+from chartbook.gitcache import GitCache, GitError
 from chartbook.store import FolderStore
 from tests.test_lock_by_kind import _git
 
+#: The list's last line: the other way on
+SHARED = "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has {}, or wait for its sync to finish."
+ONE = ["Build it first. It ends with a snapshot, which is what this one reads.", ""]
+SEVERAL = ["Build them in this order. Each ends with a snapshot, which is what the next one reads.", ""]
+NO_ORDER = "Error: acme/report: these pipelines depend on each other, so there is no order to build in."
 
 
 def _build(name: str) -> str:
@@ -35,43 +42,69 @@ def _build(name: str) -> str:
     return f'"{sys.executable}" -c "open(\'out.csv\', \'w\').write(\'a,b\\\\n{name},1\\\\n\'); open(\'build.log\', \'a\').write(\'ran\\\\n\')"'
 
 
+def _table(name: str, reads: dict = None, identified: bool = True, builds: bool = True) -> dict:
+    table = {"project": {"id": f"acme/{name}"} if identified else {}, "dataframes": {"out": {"path": "./out.csv", "docs": "d"}}}
+    if builds:
+        table["scripts"] = {"build": _build(name)}
+    if reads:
+        table["dependencies"] = reads
+    return table
+
+
+def _write(directory: Path, table: dict) -> None:
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
+
+
 @pytest.fixture
 def work(tmp_path):
     return tmp_path.resolve()
 
 
+def _answered_from(work: Path, folder: Path) -> None:
+    """Each address `https://example.org/acme/<name>` is answered by the folder of that name in *folder*."""
+    (work / "gitconfig").write_text(
+        f'[url "{folder.as_posix()}/"]\n\tinsteadOf = https://example.org/acme/\n', encoding="utf-8", newline="\n"
+    )
+
+
 @pytest.fixture
 def theirs(work, monkeypatch):
-    """The store the pipelines are made against: their owner's. Each address a snapshot records is answered by the folder of that name."""
+    """The store the pipelines are made against: their owner's."""
     monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "theirs"))
     monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "cache"))
     monkeypatch.setenv(config.GIT_CACHE_ENV_VAR, str(work / "git-cache"))
-    (work / "gitconfig").write_text(
-        f'[url "{work.as_posix()}/"]\n\tinsteadOf = https://example.org/acme/\n', encoding="utf-8", newline="\n"
-    )
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(work / "gitconfig"))
+    _answered_from(work, work)
     return FolderStore(work / "theirs")
 
 
-def _pipeline(work: Path, name: str, reads: dict = None, remote: bool = True, within: str = "") -> Path:
+def _repository(top: Path, name: str) -> None:
+    (top / ".gitignore").write_text("out.csv\nbuild.log\n", encoding="utf-8", newline="\n")
+    _git(top, "init", "--quiet", "-b", "main")
+    if name:
+        _git(top, "remote", "add", "origin", f"https://example.org/acme/{name}.git")
+    _git(top, "add", "-A")
+    _git(top, "commit", "--quiet", "-m", "The work")
+
+
+def _pipeline(work: Path, name: str, reads: dict = None, remote: bool = True, within: str = "", **how) -> Path:
     """A committed pipeline `acme/<name>` in a repository of its own, that depends on what *reads* says."""
     top = work / name
     directory = top / within if within else top
     directory.mkdir(parents=True)
-    table = {
-        "project": {"id": f"acme/{name}"}, "scripts": {"build": _build(name)},
-        "dataframes": {"out": {"path": "./out.csv", "docs": "d"}},
-    }
-    if reads:
-        table["dependencies"] = reads
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
-    (top / ".gitignore").write_text("out.csv\nbuild.log\n", encoding="utf-8", newline="\n")
-    _git(top, "init", "--quiet", "-b", "main")
-    if remote:
-        _git(top, "remote", "add", "origin", f"https://example.org/acme/{name}.git")
-    _git(top, "add", "-A")
-    _git(top, "commit", "--quiet", "-m", f"The pipeline {name}")
+    _write(directory, _table(name, reads, **how))
+    _repository(top, name if remote else "")
     return directory
+
+
+def _several(work: Path, repository: str, pipelines: dict) -> Path:
+    """One repository that holds several pipelines, each in a folder named as it is; *pipelines* gives what each reads."""
+    top = work / repository
+    for name, reads in pipelines.items():
+        (top / name).mkdir(parents=True)
+        _write(top / name, _table(name, reads))
+    _repository(top, repository)
+    return top
 
 
 def _ready(directory: Path, store, rows: str = "") -> str:
@@ -105,13 +138,26 @@ def _chain(work: Path, theirs) -> dict:
     return commits
 
 
+def _away(work: Path, *names: str) -> None:
+    """These repositories are not on this machine: each is where its address leads, and nowhere a clone would be looked for."""
+    (work / "elsewhere").mkdir(exist_ok=True)
+    for name in names:
+        (work / name).rename(work / "elsewhere" / name)
+    _answered_from(work, work / "elsewhere")
+
+
 def _said(result) -> list[str]:
     return result.output.splitlines()
 
 
-def _q(path: Path) -> str:
-    """A path as a command of the list has it: quoted where a shell needs it."""
-    return shlex.quote(str(path))
+def _numbered(result) -> list[str]:
+    """The lines of the list that name a pipeline."""
+    return [line for line in _said(result) if line[:1].isdigit()]
+
+
+def _q(path) -> str:
+    """A path as a command of the list has it: quoted where this system's shell needs it."""
+    return subprocess.list2cmdline([str(path)]) if os.name == "nt" else shlex.quote(str(path))
 
 
 def _up(name: str) -> str:
@@ -119,31 +165,36 @@ def _up(name: str) -> str:
     return os.path.join("..", name)
 
 
-def _away(work: Path, *names: str) -> None:
-    """These pipelines' folders are not on this machine: each is where its address leads, and nowhere a clone would be put."""
-    (work / "elsewhere").mkdir(exist_ok=True)
-    for name in names:
-        (work / name).rename(work / "elsewhere" / name)
-    (work / "gitconfig").write_text(
-        f'[url "{(work / "elsewhere").as_posix()}/"]\n\tinsteadOf = https://example.org/acme/\n', encoding="utf-8", newline="\n"
-    )
-
-
-#: The list's last line: the other way on
-SHARED = "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has {}, or wait for its sync to finish."
-ONE = [
-    "Build it first. It ends with a snapshot, which is what this one reads.",
-    "",
-]
-SEVERAL = [
-    "Build them in this order. Each ends with a snapshot, which is what the next one reads.",
-    "",
-]
+def _head(work: Path, count: str, done: str = "built", store: str = "mine") -> str:
+    return f"acme/report cannot be {done} yet: {count} not in the store at {work / store}."
 
 
 def _run(work: Path, monkeypatch, *words: str, where: str = "report"):
     monkeypatch.chdir(work / where)
     return CliRunner().invoke(main, list(words))
+
+
+def _follow(work: Path, result, monkeypatch, start: Path = None):
+    """Type each command of a list as it is printed, in a shell, one after the other; the last one's result."""
+    if os.name == "nt":
+        pytest.skip("typed in a POSIX shell here")
+    monkeypatch.setenv("CHARTBOOK_TRUST", "all")
+    shim = work / "bin"
+    shim.mkdir(exist_ok=True)
+    (shim / "chartbook").write_text(
+        f'#!/bin/sh\nexec "{sys.executable}" -c "from chartbook.cli import main; main()" "$@"\n', encoding="utf-8", newline="\n"
+    )
+    (shim / "chartbook").chmod(0o755)
+    environment = {
+        **os.environ, "PATH": f"{shim}{os.pathsep}{os.environ['PATH']}",
+        "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.org",
+    }
+    commands = [line.strip() for line in _said(result) if line.startswith("     ") and not line.startswith("     What ")]
+    assert commands and commands[-1].endswith("&& chartbook run")
+    for command in commands:
+        done = subprocess.run(command, shell=True, cwd=start or work / "report", env=environment, capture_output=True, text=True)
+        assert done.returncode == 0, f"{command}\n{done.stdout}{done.stderr}"
+    return done
 
 
 class TestTheList:
@@ -157,9 +208,8 @@ class TestTheList:
         assert _said(result) == [
             "Fetching https://example.org/acme/mid, to see what acme/mid reads in turn.",
             "Fetching https://example.org/acme/rates, to see what acme/rates reads in turn.",
-            "acme/report cannot be built yet: 2 pipelines it reads are not in your store.",
-            "Build them in this order. Each ends with a snapshot, which is what the next one reads.",
-            "",
+            _head(work, "2 pipelines it reads are"),
+            *SEVERAL,
             f"1. acme/rates at {commits['rates'][:7]}    https://example.org/acme/rates",
             f"     git clone https://example.org/acme/rates {_q(work / 'rates')}",
             f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:7]} && chartbook run --snapshot",
@@ -175,6 +225,14 @@ class TestTheList:
         assert not (work / "report" / "build.log").exists()
         assert (work / "report" / lock.LOCK_FILE).read_bytes() == before
 
+    def test_following_it_ends_in_a_build(self, work, theirs, mine, monkeypatch):
+        """Each line's commands, typed as they are printed, and then the last one: the pipeline builds."""
+        _chain(work, theirs)
+        _away(work, "rates", "mid")
+        mine()
+        done = _follow(work, _run(work, monkeypatch, "run"), monkeypatch)
+        assert "Ran build in 1 pipeline(s)." in done.stdout and (work / "report" / "build.log").exists()
+
     def test_what_two_read_is_one_line(self, work, theirs, mine, monkeypatch):
         commits = {"rates": _ready(_pipeline(work, "rates"), theirs)}
         for name in ("a", "b"):
@@ -182,9 +240,9 @@ class TestTheList:
         _ready(_pipeline(work, "report", {"acme/a": {}, "acme/b": {}}), theirs)
         _away(work, "rates", "a", "b")
         mine()
-        said = [line for line in _said(_run(work, monkeypatch, "run")) if line[:1].isdigit() or line.startswith("acme/report")]
-        assert said == [
-            "acme/report cannot be built yet: 3 pipelines it reads are not in your store.",
+        result = _run(work, monkeypatch, "run")
+        assert _head(work, "3 pipelines it reads are") in _said(result)
+        assert _numbered(result) == [
             f"1. acme/rates at {commits['rates'][:7]}    https://example.org/acme/rates",
             f"2. acme/a at {commits['a'][:7]}    https://example.org/acme/a; reads 1 above",
             f"3. acme/b at {commits['b'][:7]}    https://example.org/acme/b; reads 1 above",
@@ -196,8 +254,34 @@ class TestTheList:
         _ready(_pipeline(work, "report", {"acme/top": {}}), theirs)
         _away(work, "a", "b", "top")
         mine()
-        said = _said(_run(work, monkeypatch, "run"))
-        assert f"3. acme/top at {commits['top'][:7]}    https://example.org/acme/top; reads 1 and 2 above" in said
+        assert _numbered(_run(work, monkeypatch, "run"))[2] == (
+            f"3. acme/top at {commits['top'][:7]}    https://example.org/acme/top; reads 1 and 2 above"
+        )
+
+    def test_one_pipeline_wanted_at_two_commits_is_two_lines_and_one_pipeline(self, work, theirs, mine, monkeypatch):
+        """Found by review: the count was of lines, and a later line of a folder an earlier one had moved was written as if it had not."""
+        base = _pipeline(work, "base")
+        first = _ready(base, theirs)
+        early = _ready(_pipeline(work, "early", {"acme/base": {}}), theirs)
+        _write(base, {**_table("base"), "scripts": {"build": _build("base2")}})  # other rows from here on
+        _git(base, "commit", "--quiet", "-am", "On")
+        second = _ready(base, theirs, rows="base2,1")
+        late = _ready(_pipeline(work, "late", {"acme/base": {}}), theirs)
+        _ready(_pipeline(work, "report", {"acme/early": {}, "acme/late": {}}), theirs)
+        _away(work, "early", "late")  # and base is cloned beside, on its second commit
+        mine()
+        result = _run(work, monkeypatch, "run")
+        assert _head(work, "3 pipelines it reads are") in _said(result)
+        assert [line for line in _said(result) if "acme/base" in line or f"cd {_q(base)}" in line] == [
+            f"1. acme/base at {first[:7]}    {_up('base')} (a clone of https://example.org/acme/base)",
+            f"     cd {_q(base)} && git checkout {first[:7]} && chartbook run --snapshot",
+            # On that commit when the list was made, and no longer once the line above is done
+            f"3. acme/base at {second[:7]}    {_up('base')} (a clone of https://example.org/acme/base)",
+            f"     cd {_q(base)} && git checkout {second[:7]} && chartbook run --snapshot",
+        ]
+        assert early and late
+        done = _follow(work, result, monkeypatch)
+        assert "Ran build in 1 pipeline(s)." in done.stdout
 
     def test_what_the_store_has_a_build_of_is_not_on_it(self, work, theirs, mine, monkeypatch):
         """mid is not there. What mid reads is, as a build of mine of the commit mid pinned: whether it meets mid's pins is for mid's own run to say."""
@@ -206,9 +290,8 @@ class TestTheList:
         store = mine()
         (work / "rates" / "out.csv").write_text("a,b\nrates,2\n", encoding="utf-8", newline="\n")
         snapshot.make(work / "rates", store=store)
-        said = _said(_run(work, monkeypatch, "run"))
-        assert said[1:] == [
-            "acme/report cannot be built yet: 1 pipeline it reads is not in your store.",
+        assert _said(_run(work, monkeypatch, "run"))[1:] == [
+            _head(work, "1 pipeline it reads is"),
             *ONE,
             f"1. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid",
             f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
@@ -219,28 +302,6 @@ class TestTheList:
             SHARED.format("it"),
         ]
 
-    def test_following_it_ends_in_a_build(self, work, theirs, mine, monkeypatch):
-        """Each line's commands, typed as they are printed, and then the last one: the pipeline builds."""
-        _chain(work, theirs)
-        _away(work, "rates", "mid")
-        mine()
-        monkeypatch.setenv("CHARTBOOK_TRUST", "all")
-        shim = work / "bin"
-        shim.mkdir()
-        if os.name == "nt":
-            pytest.skip("the commands are for a POSIX shell")
-        (shim / "chartbook").write_text(
-            f'#!/bin/sh\nexec "{sys.executable}" -c "from chartbook.cli import main; main()" "$@"\n', encoding="utf-8", newline="\n"
-        )
-        (shim / "chartbook").chmod(0o755)
-        environment = {**os.environ, "PATH": f"{shim}{os.pathsep}{os.environ['PATH']}", "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.org"}
-        commands = [line.strip() for line in _said(_run(work, monkeypatch, "run")) if line.startswith("     ")]
-        assert len(commands) == 5 and commands[-1].endswith("&& chartbook run")
-        for command in commands:
-            done = subprocess.run(command, shell=True, cwd=work / "report", env=environment, capture_output=True, text=True)
-            assert done.returncode == 0, f"{command}\n{done.stdout}{done.stderr}"
-        assert "Ran build in 1 pipeline(s)." in done.stdout and (work / "report" / "build.log").exists()
-
     def test_nothing_is_read_or_fetched_where_every_pin_is_there(self, work, theirs, monkeypatch):
         _chain(work, theirs)
         monkeypatch.setattr(missing, "find", lambda *a, **k: pytest.fail("asked for the list"))
@@ -248,6 +309,28 @@ class TestTheList:
         result = _run(work, monkeypatch, "run")
         assert result.exit_code == 0, result.output
         assert _run(work, monkeypatch, "pin").exit_code == 0
+
+    def test_the_command_to_come_back_with_is_the_one_that_was_typed(self, work, theirs, mine, monkeypatch):
+        """Found by review: `chartbook run --snapshot --force` was told to come back with `chartbook run`."""
+        _chain(work, theirs)
+        _away(work, "rates", "mid")
+        mine()
+        said = _said(_run(work, monkeypatch, "run", "--snapshot", "--force", "--remake"))
+        assert f"     cd {_q(work / 'report')} && chartbook run --force --snapshot --remake" in said
+
+    def test_with_several_stores_each_is_named(self, work, theirs, mine, monkeypatch):
+        from chartbook.multi_store import NamedStore, Stores
+
+        _ready(_pipeline(work, "mid"), theirs)
+        report = _pipeline(work, "report", {"acme/mid": {}})
+        _ready(report, theirs)
+        _away(work, "mid")
+        both = Stores([
+            NamedStore("default", str(work / "one"), FolderStore(work / "one"), create=True),
+            NamedStore("team", str(work / "two"), FolderStore(work / "two"), create=True),
+        ])
+        found = missing.find(report, both)
+        assert missing.said(found)[0] == f"acme/report cannot be built yet: 1 pipeline it reads is not in your stores ({work / 'one'}, {work / 'two'})."
 
 
 class TestALine:
@@ -261,7 +344,7 @@ class TestALine:
         assert _said(result) == [
             "acme/report: pinning what it depends on",  # a first lockfile, which lists it with nothing pinned
             "Wrote chartbook.lock.",
-            "acme/report cannot be built yet: 1 pipeline it reads is not in your store.",
+            _head(work, "1 pipeline it reads is", store="theirs"),
             *ONE,
             f"1. acme/rates    {_up('rates')} (a folder on this machine)",
             f"     cd {_q(work / 'rates')} && chartbook run --snapshot",
@@ -272,6 +355,36 @@ class TestALine:
             SHARED.format("it"),
         ]
 
+    def test_of_one_that_is_built_and_only_lacks_its_snapshot(self, work, theirs, monkeypatch):
+        """Never pinned, nothing uncommitted, every declared file on disk: a build that may take an hour is not run again."""
+        rates = _pipeline(work, "rates")
+        (rates / "out.csv").write_text("a,b\nrates,1\n", encoding="utf-8", newline="\n")
+        _pipeline(work, "report", {"acme/rates": {"path": "../rates"}})
+        said = _said(_run(work, monkeypatch, "run"))
+        assert said[5:7] == [
+            f"1. acme/rates    {_up('rates')} (a folder on this machine, built already)",
+            f"     cd {_q(rates)} && chartbook snapshot",
+        ]
+        # With work that is not committed, a snapshot would be refused: the build is what is said, and its refusal says to commit
+        (rates / "chartbook.toml").write_text((rates / "chartbook.toml").read_text(encoding="utf-8") + "\n# more\n", encoding="utf-8", newline="\n")
+        assert _said(_run(work, monkeypatch, "run"))[3:5] == [
+            f"1. acme/rates    {_up('rates')} (a folder on this machine)",
+            f"     cd {_q(rates)} && chartbook run --snapshot",
+        ]
+
+    def test_a_pinned_one_is_never_called_built(self, work, theirs, mine, monkeypatch):
+        """Found by review: on the pinned commit with files on disk it was given `chartbook snapshot`, and its files were of another build."""
+        commit = _ready(_pipeline(work, "mid"), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
+        mine()
+        assert (work / "mid" / "out.csv").is_file()
+        said = _said(_run(work, monkeypatch, "run"))
+        assert said[3:5] == [
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder on this machine)",
+            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",  # nothing to check out: it is on that commit
+        ]
+        assert not any("--upstream" in line for line in said)  # which builds what has no pin, and this has one
+
     def test_of_a_folder_pinned_at_a_commit_it_has_left(self, work, theirs, mine, monkeypatch):
         """Its two files are read at the pinned commit, through git: what it read then is on the list, and its folder is as it was."""
         commits = {"rates": _ready(_pipeline(work, "rates"), theirs)}
@@ -279,23 +392,22 @@ class TestALine:
         commits["mid"] = _ready(mid, theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
         # Its owner has moved on, and reads nothing now
-        table = {"project": {"id": "acme/mid"}, "scripts": {"build": _build("mid")}, "dataframes": {"out": {"path": "./out.csv", "docs": "d"}}}
-        (mid / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
+        _write(mid, _table("mid"))
         _git(mid, "rm", "--quiet", "--cached", lock.LOCK_FILE)
         (mid / lock.LOCK_FILE).unlink()
         _git(mid, "commit", "--quiet", "-am", "Reads nothing now")
         now = _git(mid, "rev-parse", "HEAD")
         _away(work, "rates")
         mine()
-        said = _said(_run(work, monkeypatch, "run"))
-        assert said[1:] == [
-            "acme/report cannot be built yet: 2 pipelines it reads are not in your store.",
+        result = _run(work, monkeypatch, "run")
+        assert _said(result)[1:] == [
+            _head(work, "2 pipelines it reads are"),
             *SEVERAL,
             f"1. acme/rates at {commits['rates'][:7]}    https://example.org/acme/rates",
             f"     git clone https://example.org/acme/rates {_q(work / 'rates')}",
             f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:7]} && chartbook run --snapshot",
             f"2. acme/mid at {commits['mid'][:7]}    {_up('mid')} (a folder on this machine); reads 1 above",
-            f"     cd {_q(work / 'mid')} && git checkout {commits['mid'][:7]} && chartbook run --snapshot",
+            f"     cd {_q(mid)} && git checkout {commits['mid'][:7]} && chartbook run --snapshot",
             "",
             "Then here again:",
             f"     cd {_q(work / 'report')} && chartbook run",
@@ -303,51 +415,64 @@ class TestALine:
         ]
         assert _git(mid, "rev-parse", "HEAD") == now and _git(mid, "status", "--porcelain") == ""
 
-    def test_of_a_folder_that_is_on_the_commit_already(self, work, theirs, mine, monkeypatch):
-        commit = _ready(_pipeline(work, "mid"), theirs)
-        _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
-        mine()
-        said = _said(_run(work, monkeypatch, "run"))
-        # Its files are on disk as well: a snapshot is all it lacks, and a build that may take an hour is not run again
-        assert said[3:5] == [
-            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder on this machine, built already)",
-            f"     cd {_q(work / 'mid')} && chartbook snapshot",
-        ]
-        assert not any("--upstream" in line for line in said)  # which builds what has no pin, and this has one
-        (work / "mid" / "out.csv").unlink()
-        said = _said(_run(work, monkeypatch, "run"))
-        assert said[3:5] == [
-            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder on this machine)",
-            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",  # nothing to check out
-        ]
-
     def test_whose_repository_could_not_be_fetched(self, work, theirs, mine, monkeypatch):
         commits = _chain(work, theirs)
         _away(work, "rates", "mid")
-        (work / "gitconfig").write_text(
-            f'[url "{(work / "nowhere").as_posix()}/"]\n\tinsteadOf = https://example.org/acme/\n', encoding="utf-8", newline="\n"
-        )
+        _answered_from(work, work / "nowhere")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
         assert said[:4] == [
             "Fetching https://example.org/acme/mid, to see what acme/mid reads in turn.",
-            "acme/report cannot be built yet: 1 pipeline it reads is not in your store.",
+            _head(work, "1 pipeline it reads is"),
             *ONE,
         ]
-        assert said[4].startswith(f"1. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid")
+        assert said[4:7] == [
+            f"1. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid",
+            f"     git clone https://example.org/acme/mid {_q(work / 'mid')}",
+            f"     cd {_q(work / 'mid')} && git checkout {commits['mid'][:7]} && chartbook run --snapshot",
+        ]
         assert said[7].startswith("     What it reads in turn is not known: its repository could not be fetched (")
-        assert said[7].endswith("). Its own `chartbook run` says.")
+        # Where it is in its repository is not known either, and the top is only the likeliest place
+        assert said[7].endswith("); if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says.")
+
+    def test_a_fetch_that_receives_nothing_is_given_up(self, work, theirs, mine, monkeypatch):
+        """Found by review: a server that answers nothing held `chartbook pin`, which used no network before, for ever."""
+        _chain(work, theirs)
+        _away(work, "rates", "mid")
+        mine()
+        told = []
+
+        def fetch(self, url):
+            told.append({name: os.environ.get(name) for name in missing.SLOWEST_FETCH})
+            raise GitError("no answer")
+
+        monkeypatch.setattr(GitCache, "fetch", fetch)
+        monkeypatch.delenv("GIT_HTTP_LOW_SPEED_TIME", raising=False)
+        monkeypatch.setenv("GIT_HTTP_LOW_SPEED_LIMIT", "7")  # what the person has said is kept
+        assert _run(work, monkeypatch, "pin").exit_code == 1
+        assert told == [{"GIT_HTTP_LOW_SPEED_LIMIT": "7", "GIT_HTTP_LOW_SPEED_TIME": "30"}]
+        assert "GIT_HTTP_LOW_SPEED_TIME" not in os.environ and os.environ["GIT_HTTP_LOW_SPEED_LIMIT"] == "7"
 
     def test_whose_repository_is_not_recorded(self, work, theirs, mine, monkeypatch):
         """A snapshot made in a repository with no remote records no address: the line has the ID to look for, and never a guess."""
         commit = _ready(_pipeline(work, "mid", remote=False), theirs)
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
-        (work / "mid").rename(work / "mid-is-not-here")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
         assert said[3:5] == [
             f"1. acme/mid at {commit[:7]}    its repository is not recorded, so neither is what it reads in turn",
             f"     In a clone of it: git checkout {commit[:7]} && chartbook run --snapshot",
+        ]
+
+    def test_whose_folder_is_not_on_this_machine(self, work, theirs, mine, monkeypatch):
+        """Found by review: the words this list takes the place of said where it was looked for."""
+        commit = _ready(_pipeline(work, "mid", remote=False), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
+        (work / "mid").rename(work / "gone")
+        mine()
+        assert _numbered(_run(work, monkeypatch, "run")) == [
+            f"1. acme/mid at {commit[:7]}    its folder, ../mid, is not on this machine, and its repository is not recorded, "
+            f"so neither is what it reads in turn"
         ]
 
     def test_of_one_named_by_its_id_that_was_never_pinned(self, work, theirs, monkeypatch):
@@ -366,35 +491,21 @@ class TestALine:
         _pipeline(work, "report", {"acme/mid": {"repository": "https://example.org/acme/mid"}})
         _away(work, "rates", "mid")
         mine()
-        said = [line for line in _said(_run(work, monkeypatch, "run")) if line[:1].isdigit()]
+        said = _numbered(_run(work, monkeypatch, "run"))
         assert said[1] == "2. acme/mid    https://example.org/acme/mid; reads 1 above"
         assert said[0].startswith("1. acme/rates at ")  # as mid's own lockfile pins it
 
-    def test_of_a_clone_that_is_there_already(self, work, theirs, mine, monkeypatch):
-        """Beside the pipeline, where the list would have it cloned: it is read there, and nothing is fetched or cloned."""
-        commits = _chain(work, theirs)
-        mine()
-        monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
-        said = _said(_run(work, monkeypatch, "run"))
-        assert said[3:7] == [
-            f"1. acme/rates at {commits['rates'][:7]}    {_up('rates')} (a folder on this machine, built already)",
-            f"     cd {_q(work / 'rates')} && chartbook snapshot",  # on that commit, with its files
-            f"2. acme/mid at {commits['mid'][:7]}    {_up('mid')} (a folder on this machine, built already); reads 1 above",
-            f"     cd {_q(work / 'mid')} && chartbook snapshot",
-        ]
-        _git(work / "rates", "commit", "--quiet", "--allow-empty", "-m", "On")
-        said = _said(_run(work, monkeypatch, "run"))
-        assert said[4] == f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:7]} && chartbook run --snapshot"
-
-    def test_a_folder_beside_it_of_another_pipeline_is_not_taken_for_its_clone(self, work, theirs, mine, monkeypatch):
-        commit = _ready(_pipeline(work, "mid"), theirs)
-        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+    def test_of_one_whose_address_the_store_knows(self, work, theirs, mine, monkeypatch):
+        """Found by review: an entry at a commit the store lacks was "not recorded", with the address in the store's other snapshots of it."""
+        mid = _pipeline(work, "mid")
+        _ready(mid, theirs)
+        _git(mid, "commit", "--quiet", "--allow-empty", "-m", "On")
+        wanted = _git(mid, "rev-parse", "HEAD")
+        _pipeline(work, "report", {"acme/mid": {"commit": wanted[:10]}})
         _away(work, "mid")
-        _pipeline(work / "another", "mid").rename(work / "mid")
-        (work / "mid" / "chartbook.toml").write_text('[project]\nid = "acme/another"\n', encoding="utf-8", newline="\n")
-        mine()
-        said = _said(_run(work, monkeypatch, "run"))
-        assert f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid" in said
+        result = _run(work, monkeypatch, "run")  # against their store, which has mid at its first commit only
+        assert _numbered(result) == [f"1. acme/mid at {wanted[:7]}    https://example.org/acme/mid"]
+        assert f"     cd {_q(work / 'mid')} && git checkout {wanted[:7]} && chartbook run --snapshot" in _said(result)
 
     def test_of_a_pipeline_in_a_folder_of_its_repository(self, work, theirs, mine, monkeypatch):
         commit = _ready(_pipeline(work, "mid", within="pipelines/mid"), theirs)
@@ -409,24 +520,14 @@ class TestALine:
         ]
 
     def test_of_two_pipelines_in_one_repository(self, work, theirs, mine, monkeypatch):
-        """Fetched once, and each built in its own folder of the one clone."""
-        top = work / "mono"
-        for name in ("a", "b"):
-            (top / name).mkdir(parents=True)
-            (top / name / "chartbook.toml").write_text(
-                tomli_w.dumps({"project": {"id": f"acme/{name}"}, "scripts": {"build": _build(name)}, "dataframes": {"out": {"path": "./out.csv", "docs": "d"}}}),
-                encoding="utf-8", newline="\n",
-            )
-        (top / ".gitignore").write_text("out.csv\nbuild.log\n", encoding="utf-8", newline="\n")
-        _git(top, "init", "--quiet", "-b", "main")
-        _git(top, "remote", "add", "origin", "https://example.org/acme/mono.git")
-        _git(top, "add", "-A")
-        _git(top, "commit", "--quiet", "-m", "Two pipelines")
+        """Fetched once, cloned once, and each built in its own folder of the one clone."""
+        top = _several(work, "mono", {"a": None, "b": None})
         commit = [_ready(top / name, theirs) for name in ("a", "b")][0]
         _ready(_pipeline(work, "report", {"acme/a": {}, "acme/b": {}}), theirs)
         _away(work, "mono")
         mine()
-        said = _said(_run(work, monkeypatch, "run"))
+        result = _run(work, monkeypatch, "run")
+        said = _said(result)
         assert [line for line in said if line.startswith("Fetching ")] == [
             "Fetching https://example.org/acme/mono, to see what acme/a reads in turn."
         ]
@@ -437,21 +538,41 @@ class TestALine:
             f"2. acme/b at {commit[:7]}    https://example.org/acme/mono",
             f"     cd {_q(work / 'mono' / 'b')} && git checkout {commit[:7]} && chartbook run --snapshot",  # cloned by the line before
         ]
+        assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch).stdout
 
-    def test_of_a_pipeline_with_no_build_script(self, work, theirs, mine, monkeypatch):
-        """It commits what it declares: nothing to run, and a snapshot to make."""
-        mid = _pipeline(work, "mid")
-        (mid / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/mid"}, "dataframes": {"out": {"path": "./out.csv", "docs": "d"}}}),
-            encoding="utf-8", newline="\n",
-        )
-        _git(mid, "commit", "--quiet", "-am", "No build script")
+    def test_of_a_pipeline_that_reads_a_folder_of_its_own_repository(self, work, theirs, mine, monkeypatch):
+        """Found by review: beta reads `../alpha`, in the repository beta was read from, and alpha's repository was "not recorded"."""
+        top = _several(work, "mono", {"alpha": None, "beta": {"acme/alpha": {"path": "../alpha"}}})
+        first = _ready(top / "alpha", theirs)
+        second = _ready(top / "beta", theirs)
+        _ready(_pipeline(work, "report", {"acme/beta": {}}), theirs)
+        _away(work, "mono")
+        mine()
+        result = _run(work, monkeypatch, "run")
+        assert _said(result)[4:9] == [
+            f"1. acme/alpha at {first[:7]}    https://example.org/acme/mono",
+            f"     git clone https://example.org/acme/mono {_q(work / 'mono')}",
+            f"     cd {_q(work / 'mono' / 'alpha')} && git checkout {first[:7]} && chartbook run --snapshot",
+            f"2. acme/beta at {second[:7]}    https://example.org/acme/mono; reads 1 above",
+            f"     cd {_q(work / 'mono' / 'beta')} && git checkout {second[:7]} && chartbook run --snapshot",
+        ]
+        assert "Ran build in 1 pipeline(s)." in _follow(work, result, monkeypatch).stdout
+
+    def test_of_a_pipeline_whose_id_is_its_place_in_its_repository(self, work, theirs, mine, monkeypatch):
+        """Found by review: at the top of its repository with no `[project] id`, and another manifest below it, it was "not found"."""
+        mid = _pipeline(work, "mid", identified=False)
+        (mid / "extra").mkdir()
+        _write(mid / "extra", _table("extra"))
+        _git(mid, "add", "-A")
+        _git(mid, "commit", "--quiet", "-m", "Another below it")
         commit = _ready(mid, theirs)
+        assert snapshot.pipeline_in(mid) == "acme/mid"  # from its remote
         _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
         _away(work, "mid")
         mine()
         said = _said(_run(work, monkeypatch, "run"))
-        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:7]} && chartbook snapshot" in said
+        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:7]} && chartbook run --snapshot" in said
+        assert not any("not known" in line for line in said)
 
     def test_of_a_pipeline_among_several_in_its_repository(self, work, theirs, mine, monkeypatch):
         """Its own manifest is the one that gives its ID, and its lockfile the one beside that."""
@@ -470,20 +591,248 @@ class TestALine:
         said = _said(_run(work, monkeypatch, "run"))
         assert f"2. acme/mid at {commit[:7]}    https://example.org/acme/mid; reads 1 above" in said
         assert f"     cd {_q(work / 'mid' / 'pipelines' / 'mid')} && git checkout {commit[:7]} && chartbook run --snapshot" in said
+        # Of very many manifests, so many are read: one past them is not found, and the line says where it may be
+        monkeypatch.setattr(missing, "MOST_MANIFESTS", 0)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert any(
+            line.startswith("     What it reads in turn is not known: no chartbook.toml of acme/mid was found in its repository at ")
+            and "; if it is not at the top of its repository, `cd` to its folder there first" in line for line in said
+        )
 
-    def test_shows_what_a_lockfile_says_as_text_and_quotes_it_for_a_shell(self, work, theirs, mine, monkeypatch):
-        """A lockfile is anyone's: an address in it is never a command, and never moves the cursor."""
+    def test_of_a_pipeline_with_no_build_script(self, work, theirs, mine, monkeypatch):
+        """It commits what it declares: nothing to run, and a snapshot to make."""
+        commit = _ready(_pipeline(work, "mid", builds=False), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        _away(work, "mid")
+        mine()
+        assert f"     cd {_q(work / 'mid')} && git checkout {commit[:7]} && chartbook snapshot" in _said(_run(work, monkeypatch, "run"))
+
+    def test_stops_where_it_is_too_deep_and_says_so(self, work, theirs, mine, monkeypatch):
+        _chain(work, theirs)
+        _away(work, "rates", "mid")
+        mine()
+        monkeypatch.setattr(missing, "DEEPEST", 1)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert any(line.startswith("     What it reads in turn is not known: the list stops here: it is more than 1 pipelines deep") for line in said)
+
+
+class TestACloneOnThisMachine:
+    """A clone of a repository that sits beside the pipeline's own is read where it is, and nothing is fetched."""
+
+    def test_it_is_read_and_nothing_is_fetched_or_cloned(self, work, theirs, mine, monkeypatch):
+        commits = _chain(work, theirs)
+        mine()
+        monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
+        result = _run(work, monkeypatch, "run")
+        assert _said(result)[3:7] == [
+            f"1. acme/rates at {commits['rates'][:7]}    {_up('rates')} (a clone of https://example.org/acme/rates)",
+            f"     cd {_q(work / 'rates')} && chartbook run --snapshot",  # and it is on that commit
+            f"2. acme/mid at {commits['mid'][:7]}    {_up('mid')} (a clone of https://example.org/acme/mid); reads 1 above",
+            f"     cd {_q(work / 'mid')} && chartbook run --snapshot",
+        ]
+        _git(work / "rates", "commit", "--quiet", "--allow-empty", "-m", "On")
+        moved = _run(work, monkeypatch, "run")
+        assert _said(moved)[4] == f"     cd {_q(work / 'rates')} && git checkout {commits['rates'][:7]} && chartbook run --snapshot"
+        assert "Ran build in 1 pipeline(s)." in _follow(work, moved, monkeypatch).stdout
+
+    def test_a_pipeline_in_a_folder_of_it_is_found_there(self, work, theirs, mine, monkeypatch):
+        """Found by review: with the clone beside, the list still fetched, and said to clone into the folder that was there."""
+        commit = _ready(_pipeline(work, "mid", within="pipelines/mid"), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        mine()
+        monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
+        assert _said(_run(work, monkeypatch, "run"))[3:5] == [
+            f"1. acme/mid at {commit[:7]}    {os.path.join('..', 'mid', 'pipelines', 'mid')} (a clone of https://example.org/acme/mid)",
+            f"     cd {_q(work / 'mid' / 'pipelines' / 'mid')} && chartbook run --snapshot",
+        ]
+
+    def test_one_that_lacks_the_commit_is_fetched_there(self, work, theirs, mine, monkeypatch):
+        mid = _pipeline(work, "mid")
+        _git(mid, "commit", "--quiet", "--allow-empty", "-m", "On")
+        commit = _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        # A clone of it from before that commit was made
+        mid.rename(work / "newer")
+        _git(work, "clone", "--quiet", "--single-branch", str(work / "newer"), "mid")
+        _git(mid, "remote", "set-url", "origin", "https://example.org/acme/mid.git")
+        _git(mid, "update-ref", "-d", "refs/remotes/origin/main")
+        _git(mid, "reset", "--quiet", "--hard", "HEAD~1")
+        _git(mid, "reflog", "expire", "--expire=now", "--all")
+        _git(mid, "gc", "--quiet", "--prune=now")
+        mine()
+        said = _said(_run(work, monkeypatch, "run"))
+        assert said[3:6] == [
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a clone of https://example.org/acme/mid)",
+            f"     cd {_q(work / 'mid')} && git fetch && git checkout {commit[:7]} && chartbook run --snapshot",
+            f"     What it reads in turn is not known: its clone, {work / 'mid'}, does not have the commit {commit[:7]} (`git fetch` there); "
+            f"if it is not at the top of its repository, `cd` to its folder there first. Its own `chartbook run` says.",
+        ]
+
+    def test_a_folder_that_is_no_clone_of_it_is_not_taken_for_one(self, work, theirs, mine, monkeypatch):
+        """Found by review: a folder of that name with a pipeline of that ID, in no git or of another history, was read as the clone.
+
+        Its address is kept in the line, and it is cloned beside under a name that is free.
+        """
+        commit = _ready(_pipeline(work, "mid"), theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        _away(work, "mid")
+        (work / "mid").mkdir()
+        _write(work / "mid", _table("mid"))  # the same ID, and no repository at all
+        mine()
+        assert _said(_run(work, monkeypatch, "run"))[4:7] == [
+            f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid",
+            f"     git clone https://example.org/acme/mid {_q(work / 'mid-2')}",
+            f"     cd {_q(work / 'mid-2')} && git checkout {commit[:7]} && chartbook run --snapshot",
+        ]
+        # Nor is a repository of another address
+        _repository(work / "mid", "another")
+        assert _numbered(_run(work, monkeypatch, "run")) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
+
+
+class TestInThePipelinesOwnRepository:
+    """A repository of several pipelines. A checkout there would move the pipeline itself: what is at another commit is built in a worktree."""
+
+    def _made(self, work, theirs, reads: dict) -> tuple[Path, str]:
+        top = _several(work, "mono", {"mid": None, "report": reads})
+        commit = _ready(top / "mid", theirs)
+        _ready(top / "report", theirs)  # its lockfile is a commit later: mid is pinned at the one before
+        return top, commit
+
+    @pytest.mark.parametrize("reads", [{"acme/mid": {"path": "../mid"}}, {"acme/mid": {}}], ids=["by its folder", "by its ID"])
+    def test_it_is_built_in_a_worktree_and_the_pipeline_stays_where_it_is(self, work, theirs, mine, monkeypatch, reads):
+        """Found by review: the list said `git checkout` in the reader's own repository, and its last command then built the pipeline as it was at that commit."""
+        top, commit = self._made(work, theirs, reads)
+        mine()
+        monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
+        monkeypatch.chdir(top / "report")
+        result = CliRunner().invoke(main, ["run"])
+        tree = work / f"mono-at-{commit[:7]}"
+        assert _said(result) == [
+            f"acme/report cannot be built yet: 1 pipeline it reads is not in the store at {work / 'mine'}.",
+            *ONE,
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder of this repository, at another commit)",
+            f"     git -C {_q(top)} worktree add {_q(tree)} {commit[:7]}",
+            f"     cd {_q(tree / 'mid')} && chartbook run --snapshot",
+            "",
+            "Then here again:",
+            f"     cd {_q(top / 'report')} && chartbook run",
+            SHARED.format("it"),
+        ]
+        head = _git(top, "rev-parse", "HEAD")
+        done = _follow(work, result, monkeypatch, start=top / "report")
+        assert "Ran build in 1 pipeline(s)." in done.stdout
+        assert _git(top, "rev-parse", "HEAD") == head and _git(top, "symbolic-ref", "--short", "HEAD") == "main"
+
+    def test_it_is_this_repository_whatever_its_folder_is_called(self, work, theirs, mine, monkeypatch):
+        """Told by its `origin`, and not by a folder named as `git clone` would name it."""
+        top, commit = self._made(work, theirs, {"acme/mid": {}})
+        top.rename(work / "my-checkout")
+        mine()
+        monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
+        monkeypatch.chdir(work / "my-checkout" / "report")
+        said = _said(CliRunner().invoke(main, ["run"]))
+        assert said[3:5] == [
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder of this repository, at another commit)",
+            f"     git -C {_q(work / 'my-checkout')} worktree add {_q(work / f'my-checkout-at-{commit[:7]}')} {commit[:7]}",
+        ]
+
+    def test_one_that_is_on_its_commit_is_built_where_it_is(self, work, theirs, mine, monkeypatch):
+        top = _several(work, "mono", {"mid": None, "report": {"acme/mid": {"path": "../mid"}}})
+        _pipeline(work, "elsewhere-report", {"acme/mid": {"path": "../mono/mid"}})
+        commit = _ready(top / "mid", theirs)
+        _write(top / "report", _table("report", {"acme/mid": {"path": "../mid"}}))
+        lock.pin(top / "report", theirs)  # written, and not committed: the repository is still on mid's commit
+        mine()
+        monkeypatch.chdir(top / "report")
+        assert _said(CliRunner().invoke(main, ["run"]))[3:5] == [
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder on this machine)",
+            f"     cd {_q(top / 'mid')} && chartbook run --snapshot",
+        ]
+
+
+class TestWhoseTextThisIs:
+    """A lockfile, a manifest and a repository's tree are anyone's."""
+
+    def _with(self, work, theirs, change) -> Path:
         _ready(_pipeline(work, "mid"), theirs)
         report = _pipeline(work, "report", {"acme/mid": {}})
         _ready(report, theirs)
         document = json.loads((report / lock.LOCK_FILE).read_text(encoding="utf-8"))
-        document["records"][0]["dependencies"][0]["location"]["repository"] = "https://example.org/acme/x; rm -rf ~ \x1b[2J"
+        change(document["records"][0]["dependencies"][0])
         (report / lock.LOCK_FILE).write_text(json.dumps(document), encoding="utf-8", newline="\n")
         _away(work, "mid")
+        return report
+
+    @pytest.mark.parametrize("written", [
+        "--upload-pack=touch PASTED;:report",  # an option to git, and a command for it to run
+        "https://example.org/acme/x; rm -rf ~ \x1b[2J",
+        "ext::sh -c 'touch PASTED'",
+        "ssh://git@example.org/acme/mid",
+        "/srv/repositories/mid",
+    ])
+    def test_an_address_is_one_only_if_it_is_a_plain_web_address(self, work, theirs, mine, monkeypatch, written):
+        """Found by review: an address that ChartBook's own fetch refused was printed in a `git clone` to paste, which ran a command."""
+        def change(entry):
+            entry["location"]["repository"] = written
+
+        self._with(work, theirs, change)
         mine()
-        said = _run(work, monkeypatch, "run").output
-        assert "\x1b" not in said
-        assert "     git clone 'https://example.org/acme/x; rm -rf ~ [2J' " in said
+        monkeypatch.setattr(GitCache, "fetch", lambda *a, **k: pytest.fail("fetched"))
+        result = _run(work, monkeypatch, "run")
+        assert "git clone" not in result.output and "\x1b" not in result.output and "PASTED" not in result.output
+        assert _numbered(result)[0].endswith("    its repository is not recorded, so neither is what it reads in turn")
+
+    def test_an_address_is_shown_without_what_signs_in(self, work, theirs, mine, monkeypatch):
+        def change(entry):
+            entry["location"]["repository"] = "https://ana:s3cret@example.org/acme/mid"
+
+        self._with(work, theirs, change)
+        mine()
+        result = _run(work, monkeypatch, "run")
+        assert "s3cret" not in result.output and "ana" not in result.output
+        assert f"     git clone https://example.org/acme/mid {_q(work / 'mid')}" in _said(result)
+
+    @pytest.mark.parametrize("written", [
+        "acme/mid" + " " * 120 + "Error: your store is damaged. PASTE-THIS: curl x | sh",
+        "acme/mid\x1b[2J PASTE-THIS",
+        "acme/mid\nError: PASTE-THIS",
+    ])
+    def test_a_pipelines_name_is_one_only_if_it_is_an_id(self, work, theirs, mine, monkeypatch, written):
+        """Found by review: what a lockfile called the pipeline was shown as it was, and could say anything."""
+        def change(entry):
+            entry["pinned_from"] = written
+            entry["location"]["pipeline"] = written
+
+        self._with(work, theirs, change)
+        mine()
+        result = _run(work, monkeypatch, "run")
+        assert "PASTE-THIS" not in result.output and "\x1b" not in result.output
+        assert "cannot be built yet" not in result.output  # the pin says what it has to say of it
+
+    @pytest.mark.skipif(os.name == "nt", reason="a folder cannot be named so on Windows")
+    def test_a_folders_name_is_shown_as_text(self, work, theirs, monkeypatch):
+        """Found by review: the `cd` line gave a folder's name as it is, control characters and all.
+
+        Asked of the lines themselves: what a command prints to something that is no terminal has its colours taken out on the way.
+        """
+        odd = work / "o\x1b[31mdd"
+        odd.mkdir()
+        _write(odd, _table("odd"))
+        _repository(odd, "odd")
+        report = _pipeline(work, "report", {"acme/odd": {"path": "../o\x1b[31mdd"}})
+        said = missing.said(missing.find(report, theirs), here=report)
+        assert "1. acme/odd    ../o[31mdd (a folder on this machine)" in said and not any("\x1b" in line for line in said)
+
+    def test_a_folder_with_a_space_in_its_name_is_one_word_of_the_command(self, work, theirs, monkeypatch):
+        spaced = work / "my rates"
+        spaced.mkdir()
+        _write(spaced, _table("rates"))
+        _repository(spaced, "rates")
+        _pipeline(work, "report", {"acme/rates": {"path": "../my rates"}})
+        result = _run(work, monkeypatch, "run")
+        assert f"     cd {_q(spaced)} && chartbook run --snapshot" in _said(result) and _q(spaced) != str(spaced)
+        done = _follow(work, result, monkeypatch)
+        assert "Ran build in 1 pipeline(s)." in done.stdout
 
 
 class TestWhatIsNotOnIt:
@@ -510,7 +859,7 @@ class TestWhatIsNotOnIt:
         (work / "data").rename(work / "elsewhere" / "data")
         mine()
         result = _run(work, monkeypatch, "run")
-        assert [line for line in _said(result) if line[:1].isdigit()] == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
+        assert _numbered(result) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
         assert "not known" not in result.output  # and nothing is left unsaid of it
 
     def test_one_whose_pinned_files_are_all_in_the_store(self, work, theirs, mine, monkeypatch):
@@ -523,8 +872,7 @@ class TestWhatIsNotOnIt:
         twin = _pipeline(work, "twin")
         (twin / "out.csv").write_text("a,b\nrates,1\n", encoding="utf-8", newline="\n")
         snapshot.make(twin, store=store)
-        said = [line for line in _said(_run(work, monkeypatch, "run")) if line[:1].isdigit()]
-        assert said == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
+        assert _numbered(_run(work, monkeypatch, "run")) == [f"1. acme/mid at {commit[:7]}    https://example.org/acme/mid"]
 
     def test_what_a_pin_takes_or_gets_by_itself(self, work, theirs, monkeypatch):
         """Asked of each dependency by itself: a folder with a snapshot, a revision its repository is asked for, an ID with a host to clone it from."""
@@ -535,7 +883,9 @@ class TestWhatIsNotOnIt:
             "acme/by-rev": {"rev": "main"}, "acme/nowhere": {},
         })
         found = missing.find(report, theirs)
-        assert [(line.pipeline, line.folder) for line in found.wanted] == [("acme/nowhere", None), ("acme/unmade", work / "unmade")]
+        assert [(line.pipeline, line.folder, line.by_path) for line in found.wanted] == [
+            ("acme/nowhere", None, False), ("acme/unmade", work / "unmade", True),
+        ]
         assert found.keys == {"acme/nowhere", "acme/unmade"}
         # Only what it is asked of
         assert [line.pipeline for line in missing.find(report, theirs, only={"acme/unmade"}).wanted] == ["acme/unmade"]
@@ -550,6 +900,28 @@ class TestWhatIsNotOnIt:
         result = _run(work, monkeypatch, "run")
         assert "cannot be built yet" not in result.output and "Did you mean acme/mid?" in result.output
 
+    def test_a_pipeline_that_names_itself(self, work, theirs, monkeypatch):
+        """Said by its pin and by its run: nothing for the list to hold, or to call a cycle of its own finding."""
+        report = _pipeline(work, "report", {"acme/report": {}})
+        assert missing.find(report, theirs).wanted == []
+
+    def test_one_with_nothing_of_it_in_the_lockfile_is(self, work, theirs, mine, monkeypatch):
+        """Its entry is the pin, of a snapshot that is not here: what reads it cannot be built without it."""
+        commit = _ready(_pipeline(work, "rates"), theirs)
+        mid = _pipeline(work, "mid", {"acme/rates": {}})
+        _ready(mid, theirs)
+        document = json.loads((mid / lock.LOCK_FILE).read_text(encoding="utf-8"))
+        document["records"] = [record for record in document["records"] if record.get("kind") == "Pipeline"]
+        document["records"][0]["dependencies"][0].pop("pinned_hash", None)
+        (mid / lock.LOCK_FILE).write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        _git(mid, "commit", "--quiet", "-am", "Pinned by its entry alone")
+        (mid / "out.csv").write_text("a,b\nmid,1\n", encoding="utf-8", newline="\n")
+        snapshot.make(mid, store=theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
+        _away(work, "rates", "mid")
+        mine()
+        assert _numbered(_run(work, monkeypatch, "run"))[0] == f"1. acme/rates at {commit[:7]}    https://example.org/acme/rates"
+
     def test_with_other_things_that_could_not_be_pinned_both_are_said(self, work, theirs, mine, monkeypatch):
         _ready(_pipeline(work, "mid"), theirs)
         _ready(_pipeline(work, "other"), theirs)
@@ -559,25 +931,70 @@ class TestWhatIsNotOnIt:
         (work / "other" / "out.csv").write_text("a,b\nelse,9\n", encoding="utf-8", newline="\n")
         snapshot.make(work / "other", store=store)
         said = _said(_run(work, monkeypatch, "run"))
-        assert "acme/report cannot be built yet: 1 pipeline it reads is not in your store." in said
+        assert _head(work, "1 pipeline it reads is") in said
         assert any(line.startswith("acme/other: ") for line in said) and not any(line.startswith("acme/mid: ") for line in said)
         assert said[-1] == "Error: acme/report: what it depends on could not be pinned. Nothing after it was run."
         pinned = _said(_run(work, monkeypatch, "pin"))
-        assert "acme/report cannot be pinned yet: 1 pipeline it reads is not in your store." in pinned
+        assert _head(work, "1 pipeline it reads is", done="pinned") in pinned
         assert pinned[-1] == "1 other thing(s) could not be pinned."
 
 
+class TestUpstream:
+    """`chartbook run --upstream` is offered where it would build all of the list, and only there."""
+
+    OFFER = "Or `chartbook run --upstream` here, which builds and snapshots {} itself."
+
+    def test_it_is_offered_for_folders_that_were_never_pinned(self, work, theirs, monkeypatch):
+        _pipeline(work, "rates")
+        _pipeline(work, "mid", {"acme/rates": {"path": "../rates"}})
+        _pipeline(work, "report", {"acme/mid": {"path": "../mid"}})
+        result = _run(work, monkeypatch, "run")
+        assert self.OFFER.format("these folders") in _said(result)
+        # And it does: the same run with it builds them, and this one
+        monkeypatch.setenv("CHARTBOOK_TRUST", "all")
+        for name in ("mid", "report"):
+            _git(work / name, "add", "-A")
+            _git(work / name, "commit", "--quiet", "--allow-empty", "-m", "Its lockfile")
+        again = _run(work, monkeypatch, "run", "--upstream")
+        assert again.exit_code == 0, again.output
+
+    def test_not_for_a_clone_of_one_named_by_its_id(self, work, theirs, monkeypatch):
+        """Found by review: it was offered, and `--upstream`, which builds `path` entries, printed the same list again."""
+        _pipeline(work, "mid")
+        _pipeline(work, "report", {"acme/mid": {"repository": "https://example.org/acme/mid"}})
+        result = _run(work, monkeypatch, "run")
+        assert f"1. acme/mid    {_up('mid')} (a clone of https://example.org/acme/mid)" in _said(result)
+        assert "--upstream" not in result.output
+
+    def test_not_where_a_folder_reads_what_it_could_not_build(self, work, theirs, monkeypatch):
+        """Found by review: offered for "these folders", and `--upstream` stopped at the one named by its ID."""
+        _pipeline(work, "mid", {"acme/rates": {}})
+        _pipeline(work, "report", {"acme/mid": {"path": "../mid"}})
+        result = _run(work, monkeypatch, "run")
+        assert len(_numbered(result)) == 2 and "--upstream" not in result.output
+
+    def test_not_for_one_with_no_build_script(self, work, theirs, monkeypatch):
+        _pipeline(work, "rates", builds=False)
+        _pipeline(work, "report", {"acme/rates": {"path": "../rates"}})
+        assert "--upstream" not in _run(work, monkeypatch, "run").output
+
+    def test_an_upstream_that_cannot_be_pinned_is_said_as_before(self, work, theirs, monkeypatch):
+        """The list is for the pipeline that was asked for: an upstream's own pin says what it lacks."""
+        _pipeline(work, "mid", {"acme/rates": {}})
+        _pipeline(work, "report", {"acme/mid": {"path": "../mid"}})
+        monkeypatch.setenv("CHARTBOOK_TRUST", "all")
+        result = _run(work, monkeypatch, "run", "--upstream")
+        assert result.exit_code == 1 and "cannot be built yet" not in result.output
+        assert "has no snapshot of acme/rates" in result.output
+
+
 class TestNoOrder:
-    def test_a_cycle_is_an_error_in_the_words_a_run_has_for_one(self, work, theirs, mine, monkeypatch):
+    def _a_cycle(self, work, theirs) -> Path:
         """mid, which is not in the store, read this pipeline when it was built: there is no order to build the two in."""
-        first = _ready(_pipeline(work, "report"), theirs)
+        _ready(_pipeline(work, "report"), theirs)
         _ready(_pipeline(work, "mid", {"acme/report": {}}), theirs)
         report = work / "report"
-        table = {
-            "project": {"id": "acme/report"}, "scripts": {"build": _build("report")},
-            "dataframes": {"out": {"path": "./out.csv", "docs": "d"}}, "dependencies": {"acme/mid": {}},
-        }
-        (report / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
+        _write(report, _table("report", {"acme/mid": {}}))
         # Its lockfile, as a machine that could not see the cycle wrote it
         entry = json.loads((work / "mid" / lock.LOCK_FILE).read_text(encoding="utf-8"))
         mid = next(taken for taken in snapshot.readable_snapshots(theirs)[0] if taken.pipeline == "acme/mid")
@@ -595,28 +1012,34 @@ class TestNoOrder:
         _git(report, "add", "-A")
         _git(report, "commit", "--quiet", "-m", "Reads mid")
         _away(work, "mid")
+        return report
+
+    def test_a_cycle_is_an_error_in_the_words_a_run_has_for_one(self, work, theirs, mine, monkeypatch):
+        report = self._a_cycle(work, theirs)
         mine()
         result = _run(work, monkeypatch, "run")
-        assert result.exit_code == 1 and first
+        assert result.exit_code == 1
         said = _said(result)
-        assert "Error: acme/report: these pipelines depend on each other, so there is no order to build in." in said
+        assert NO_ORDER in said
         assert f"  acme/report depends on acme/mid: declared in {report / 'chartbook.toml'}" in said
         assert any(line.startswith("  acme/mid depends on acme/report: declared in chartbook.toml of https://example.org/acme/mid at ") for line in said)
         assert "cannot be built yet" not in result.output and not (report / "build.log").exists()
         pinned = _run(work, monkeypatch, "pin")
-        assert pinned.exit_code == 1
-        assert "Error: acme/report: these pipelines depend on each other, so there is no order to build in." in _said(pinned)
+        assert pinned.exit_code == 1 and NO_ORDER in _said(pinned)
 
-    def test_add_does_not_add_what_leads_into_one(self, work, theirs, monkeypatch):
-        """mid has no snapshot, and its folder beside this one says it reads this pipeline: the entry is taken out again."""
-        report = _pipeline(work, "report")
-        _pipeline(work, "mid", {"acme/report": {}})
-        before = (report / "chartbook.toml").read_bytes()
-        result = _run(work, monkeypatch, "add", "acme/mid")
-        assert result.exit_code == 1
-        assert "Error: acme/report: these pipelines depend on each other, so there is no order to build in." in _said(result)
-        assert f"  acme/mid depends on acme/report: declared in {work / 'mid' / 'chartbook.toml'}" in _said(result)
-        assert (report / "chartbook.toml").read_bytes() == before
+    def test_add_says_it_and_undoes_nothing(self, work, theirs, mine, monkeypatch):
+        """Found by review: an entry that had no part in the cycle was taken out of the manifest again, with its pin left in the lockfile."""
+        report = self._a_cycle(work, theirs)
+        _ready(_pipeline(work, "rates"), theirs)
+        store = mine()
+        (work / "rates" / "out.csv").write_text("a,b\nrates,1\n", encoding="utf-8", newline="\n")
+        snapshot.make(work / "rates", store=store)
+        result = _run(work, monkeypatch, "add", "acme/rates")
+        assert result.exit_code == 1 and NO_ORDER in _said(result)
+        assert "acme/rates: 1 pinned" in _said(result)
+        declared = (report / "chartbook.toml").read_text(encoding="utf-8")
+        assert '"acme/rates"' in declared and "was not added" not in result.output
+        assert "acme/rates:out" in lock.read_lock(report).assets
 
 
 class TestTheOtherCommands:
@@ -627,10 +1050,26 @@ class TestTheOtherCommands:
         result = _run(work, monkeypatch, "pin")
         assert result.exit_code == 1
         said = _said(result)
-        assert said[2] == "acme/report cannot be pinned yet: 2 pipelines it reads are not in your store."
+        assert said[2] == _head(work, "2 pipelines it reads are", done="pinned")
         assert said[-3:] == ["Then here again:", f"     cd {_q(work / 'report')} && chartbook pin", SHARED.format("them")]
         assert f"2. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid; reads 1 above" in said
-        assert not any("could not be pinned" in line or line.startswith("acme/mid:") for line in said)
+        assert not any("could not be pinned" in line or line.startswith("acme/mid:") or "is unchanged" in line for line in said)
+
+    def test_pin_still_says_what_it_wrote(self, work, theirs, mine, monkeypatch):
+        """Found by review: with everything on the list the pin's report was left out whole, and with it that `chartbook.toml` had been rewritten."""
+        _ready(_pipeline(work, "mid"), theirs)
+        report = _pipeline(work, "report", {"acme/mid": {}})
+        _ready(report, theirs)
+        table = _table("report", {"acme/mid": {}})
+        table["project"]["requires_chartbook"] = ">=0.3.0"
+        _write(report, table)
+        _git(report, "commit", "--quiet", "-am", "Admits a ChartBook that cannot read this lockfile")
+        _away(work, "mid")
+        mine()
+        result = _run(work, monkeypatch, "pin")
+        assert _head(work, "1 pipeline it reads is", done="pinned") in _said(result)
+        assert "requires_chartbook" in (report / "chartbook.toml").read_text(encoding="utf-8")
+        assert any("requires_chartbook is now" in line and '(it was ">=0.3.0")' in line for line in _said(result))
 
     def test_an_update_does_not(self, work, theirs, mine, monkeypatch):
         """It asks for the newest of each, which is not the commit a pin names: said as before."""
@@ -665,7 +1104,22 @@ class TestTheOtherCommands:
             ("acme/rates", commits["rates"], "https://example.org/acme/rates", []),
             ("acme/mid", commits["mid"], "https://example.org/acme/mid", [1]),
         ]
-        assert listing.keys == {"acme/mid"} and listing.root == "acme/report"
+        assert listing.keys == {"acme/mid"} and listing.root == "acme/report" and listing.stores == [str(work / "mine")]
+
+
+class TestWhereAClonGoes:
+    def test_beside_the_pipelines_own_repository(self, work, theirs):
+        report = _pipeline(work, "report", within="pipelines/report")
+        assert missing._beside(report) == work
+
+    def test_never_above_the_home_folder(self, work, theirs, monkeypatch):
+        """Found by review: with the home folder under git (settings kept there), beside the repository was above home."""
+        home = work / "home"
+        (home / "projects" / "report").mkdir(parents=True)
+        _write(home / "projects" / "report", _table("report"))
+        _repository(home, "")
+        monkeypatch.setattr(Path, "home", lambda: home)
+        assert missing._beside(home / "projects" / "report") == home / "projects"
 
 
 class TestFilesAtACommit:
