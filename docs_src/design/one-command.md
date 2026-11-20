@@ -138,7 +138,7 @@ Build them in this order, with the commands below. Each ends with a snapshot, wh
      chartbook run --snapshot --project-dir /work/rates
 
 Then here again:
-     chartbook run
+     chartbook run --project-dir /work/report
 Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
@@ -286,22 +286,20 @@ other half of step 2 stands: a run looks for what was declared (item 5).
   removed,** and its command carries `--project-dir` where the snapshot was given it. *(Found by
   the review of the code: "commit it" committed the deletion, and the command, typed where the
   person stood, built and snapshotted another pipeline.)*
-- **A folder named by another spelling than the disk's is taken by the disk's name,** by
-  `chartbook snapshot` and by `chartbook run --snapshot`: another letter case, or the other of
-  Unicode's two forms of an accented letter, on a disk that takes either. The name is the one
-  git gives the repository's top and the folder in it, which is what `cd` into the folder
-  gives, and it is taken only where it is the same folder. *(Found by the review of
+- **A folder named in another letter case than the disk's is refused, in words** (`cd` into the
+  folder), by `chartbook snapshot` and by `chartbook run --snapshot`. *(Found by the review of
   the code: pathlib's own words had come back where the repository's folder was the one spelled
   otherwise; and where a folder inside it was, the snapshot recorded that spelling as the
   pipeline's place, and a pipeline that read the folder by its real name pinned an older one
   without a word. That was older than this step, and a run's last line now hands the spelling
-  over. It was first refused in words, "`cd` into the folder". Changed 2026-11-20, when the
-  list of what is not in a store came to name each folder in its command: Windows was found to
-  take such a folder by its real name by itself, and a list's own command should not be
-  refused for the name the list gave it. A name in the other of Unicode's forms had been left
-  as it was typed, and recorded so; it is one rule now.)* A `path` entry spelled in another
-  letter case than its folder's is still stopped at the pin, in pathlib's words; that is
-  older, and left.
+  over.)* *(Found on Windows, 2026-11-20: there the system names a
+  folder as the disk does, whatever was typed, so nothing is refused and the record is right.
+  Taking the disk's name here too, in place of the refusal, was built that day and taken out
+  by its review: the name git gives is not the disk's where a name is in the other of
+  Unicode's forms, and a repository whose work tree is elsewhere came back in pathlib's
+  words.)* Left, and older: `chartbook run --upstream` records an upstream's folder as it was
+  spelled, and a `path` entry spelled in another letter case than its folder's stops the pin in
+  pathlib's words. Both come from where `snapshot.code_of` places a folder.
 - **A git dependency the run builds is not told of snapshots.** *(Found by a mutant no test
   caught.)*
 
@@ -485,7 +483,7 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   folder is named whole, and a repository is cloned beside the pipeline's own repository. The
   last lines say how to come back: `cd /work/report && chartbook run`. *(Changed 2026-11-20,
   below: no command enters a folder now, so there is nowhere to come back from, and the last
-  line is the command as it was typed.)*
+  line is the command that was typed, with the pipeline's folder.)*
 - **A clone you already have is read where it is.** The pipeline's own repository, or a folder
   beside it named as `git clone` names one, whose `origin` is the address a pin records: the
   repository's files are read from it at the commit to build, nothing is fetched, and its line
@@ -552,8 +550,10 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   in: `git -C TOP checkout COMMIT`, then `chartbook run --snapshot --project-dir FOLDER`. The
   same lines are printed on every system, so the tests that type a list's lines in a POSIX shell
   type what a Windows user is given, but for the quotes. Whoever types them stays in their
-  folder, so "Then here again:" is the command as it was typed, with the pipeline's folder only
-  where it was typed of another. On Windows a word is quoted as `cmd.exe`, PowerShell and Git
+  folder. "Then here again:" is the command that was typed, with the pipeline's folder. *(Found
+  by review: it was first given bare where the pipeline was in the folder it was typed in. Typed
+  in a clone that had been stepped into, that built the clone's pipeline.)* On Windows a word is
+  quoted as `cmd.exe`, PowerShell and Git
   Bash all read it: double quotes, around every word that holds a backslash, and a `%` as it is
   (a doubled one is one only in a batch file). *(Found the same day by typing a list's lines on
   Windows 11: every line ran in Windows PowerShell 5.1 and in `cmd.exe`, quoted words among
@@ -565,20 +565,49 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   folder's name. A test reads the source for another use of it. The `cruft link` line of
   `chartbook init` is left: its answers are JSON, which no one spelling gives to `cmd.exe` and
   PowerShell alike.
-  What it costs:
+  What it costs *(the first of these as its review found it, 2026-11-20, by typing whole lists
+  into a shell; the page had said less)*:
   - *A line no longer stops at its first failure.* `git checkout … && chartbook run --snapshot`
-    did not build after a checkout that failed. Two lines pasted together do: the build runs,
-    and builds the commit its folder is on. A checkout refused for uncommitted work is caught by
-    `--snapshot`, which refuses the same work. One refused for a commit the clone lacks is not:
-    the build is made of another commit, its snapshot meets no pin, and the list comes back as
-    it was. The reference says to type the lines one at a time.
+    did not build after a checkout that failed. Lines pasted together do: each runs whatever the
+    one before it did, and the build is of the commit its folder is on, with a snapshot of that
+    commit. A checkout fails for work that is not committed anywhere in the repository (the
+    build looks only at the pipeline's own folder, and goes on), for a `chartbook.lock` that
+    differs (the build passes over the lockfile), and for a commit the clone lacks. What is read
+    through a pin is safe: a pin is met only by the same file or the same rows, so such a
+    snapshot either holds what was pinned or is not read, and the list comes back. A pipeline
+    that was never pinned takes whatever was built, of whatever commit, and its pin's line says
+    which. The reference and the guide say to type the lines one at a time. A build line that
+    carried the commit it is to be of, and refused elsewhere, would close it; that is an option
+    on two commands, and is not built.
+  - *A run at a pinned commit leaves a `chartbook.lock` that blocks the next checkout in the same
+    clone,* where that commit has none and the next one has. Older than this change: the old
+    line stopped there, and the list asked for again then said to build where the clone stood.
+    Seen in a repository of two pipelines wanted at two commits.
   - *One more line for each pipeline that is pinned.*
-  - *No one spelling of a folder with a `$NAME` or a backtick in its name is read alike by
-    `cmd.exe`, PowerShell and Git Bash,* nor of a network folder (`\\server\…`) by `cmd.exe`
-    and Git Bash. The one given is cmd's, and the reference says so.
-  - *A command that names its folder takes the name as the list has it,* where `cd` made it the
-    disk's own. A clone found beside the pipeline under the name its address gives (`rates`, of
-    a folder `Rates`) is such a name: see "A folder named by another spelling", above.
+  - *Each command runs in the environment it is typed in.* After `cd FOLDER`, tools that choose
+    an environment by the folder (`uv run`, pyenv, direnv) chose the upstream's. The reference
+    says to enter the folder where a pipeline has an environment of its own.
+  - *On Windows no spelling keeps a `$`, a backtick, a `!` or a `%NAME%` as text in `cmd.exe`,
+    PowerShell and Git Bash alike.* *(Found by review: an address in a lockfile may hold
+    `$env:TOKEN` or `%TOKEN%`, and the `git clone` line would have sent the token where the
+    address says; a folder of a cloned repository may be named `$(…)`, which PowerShell and Git
+    Bash run.)* A line whose commands would hold one is given no command there, and says so,
+    with what to type by hand in its folder. `%NAME%` counts where NAME is a variable of the
+    machine, or one `cmd.exe` fills in by itself (`%CD%`); `%20` in an address is text. The last
+    line names the person's own folder and is given as it is. A network folder (`\\server\…`)
+    is read otherwise by Git Bash, and the reference says so.
+  - *A clone found beside the pipeline is named as the disk names it.* It is looked for under
+    the name its address gives (`rates`), and a disk that takes either letter case finds
+    `Rates`. *(Found by review: under the address's name the list had pathlib's words in it, a
+    checkout of the commit the clone was on, and nothing of what the pipeline reads in turn.
+    Older than this change, and its command would now have been refused.)*
+  - *Left, older, and found by the same review:* a pipeline that is built already and another
+    wanted at an older commit, in one repository read by `path`, give a list whose every line
+    runs and whose last fails, since the repository is left on the older commit; and a pinned
+    `path` folder that is in no git repository is given a `git checkout` on the line that says
+    so. No test types either.
+  - *Not typed by any test on Windows.* The tests that type a list's lines need a POSIX shell.
+    PowerShell 5.1, `cmd.exe` and Git Bash were typed into by hand, once, on Windows 11.
 - **The list's first words say "with the commands below".** *(Found by review, 2026-11-20:
   "Build it first. It ends with a snapshot" was true while a build ended with one.)*
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new

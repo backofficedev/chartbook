@@ -211,7 +211,7 @@ def _follow(work: Path, result, monkeypatch, start: Path = None):
         "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.org",
     }
     commands = [line.strip() for line in _said(result) if line.startswith("     ") and not line.startswith(("     What ", "     It could not "))]
-    assert commands and commands[-1].split(" --project-dir ")[0] == "chartbook run"
+    assert commands and commands[-1].startswith("chartbook run --project-dir ")
     # One command to a line, and none that enters a folder: what cmd.exe and PowerShell take as a POSIX shell does
     assert not any("&&" in command or ";" in command or command.startswith("cd ") for command in commands), commands
     for command in commands:
@@ -243,7 +243,7 @@ class TestTheList:
             f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
             "",
             "Then here again:",
-            "     chartbook run",
+            f"     chartbook run --project-dir {_q(work / 'report')}",
             SHARED.format("them"),
         ]
         # Nothing was built, and nothing written
@@ -271,20 +271,27 @@ class TestTheList:
         assert all(command.startswith(("git clone ", "git -C ", "chartbook run")) for command in commands), commands
         assert not any(sign in command for command in commands for sign in ("&&", ";", "|", "cd "))
 
-    def test_typed_of_another_folder_its_last_command_names_the_pipelines_folder(self, work, theirs, mine, monkeypatch):
-        """No command of the list leaves the folder it is typed in, so the last one is what was typed: with the pipeline's folder, where that is another."""
+    def test_every_command_can_be_typed_in_any_folder_the_last_among_them(self, work, theirs, mine, monkeypatch):
+        """Found by review: the last line was the bare command, which builds whatever pipeline's folder it is typed in.
+
+        Each command names its folder, so the last does too: typed in a
+        clone that was stepped into, it builds this pipeline and not that one.
+        """
         _chain(work, theirs)
         _away(work, "rates", "mid")
         mine()
-        monkeypatch.chdir(work)
-        result = CliRunner().invoke(main, ["run", "--project-dir", "report"])
+        elsewhere = work / "elsewhere"
+        monkeypatch.chdir(elsewhere)
+        asked = ["--project-dir", os.path.join("..", "report")]
+        # Of `chartbook pin` too, and whatever folder it was typed in
+        pinned = CliRunner().invoke(main, ["pin", *asked])
+        assert pinned.exit_code == 1
+        assert _said(pinned)[-3:-1] == ["Then here again:", f"     chartbook pin --project-dir {_q(work / 'report')}"]
+        result = CliRunner().invoke(main, ["run", *asked])
         assert _said(result)[-3:-1] == ["Then here again:", f"     chartbook run --project-dir {_q(work / 'report')}"]
         # Typed there, each of them, and then the last: the pipeline builds
-        done = _follow(work, result, monkeypatch, start=work)
+        done = _follow(work, result, monkeypatch, start=elsewhere)
         assert "Ran build in 1 pipeline(s)." in done.stdout and (work / "report" / "build.log").exists()
-        # And `chartbook pin` the same way
-        pinned = CliRunner().invoke(main, ["pin", "--project-dir", "report"])
-        assert pinned.exit_code == 0, pinned.output
 
     def test_what_two_read_is_one_line(self, work, theirs, mine, monkeypatch):
         commits = {"rates": _ready(_pipeline(work, "rates"), theirs)}
@@ -404,7 +411,7 @@ class TestTheList:
             f"     chartbook run --snapshot --project-dir {_q(work / 'mid')}",
             "",
             "Then here again:",
-            "     chartbook run",
+            f"     chartbook run --project-dir {_q(work / 'report')}",
             SHARED.format("it"),
         ]
 
@@ -422,7 +429,7 @@ class TestTheList:
         _away(work, "rates", "mid")
         mine()
         said = _said(_run(work, monkeypatch, "run", "--snapshot", "--force", "--remake"))
-        assert said[-3:-1] == ["Then here again:", "     chartbook run --force --snapshot --remake"]
+        assert said[-3:-1] == ["Then here again:", f"     chartbook run --force --snapshot --remake --project-dir {_q(work / 'report')}"]
 
     def test_with_several_stores_each_is_named(self, work, theirs, mine, monkeypatch):
         from chartbook.multi_store import NamedStore, Stores
@@ -456,7 +463,7 @@ class TestALine:
             f"     chartbook run --snapshot --project-dir {_q(work / 'rates')}",
             "",
             "Then here again:",
-            "     chartbook run",
+            f"     chartbook run --project-dir {_q(work / 'report')}",
             "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
             SHARED.format("it"),
         ]
@@ -518,7 +525,7 @@ class TestALine:
             f"     chartbook run --snapshot --project-dir {_q(mid)}",
             "",
             "Then here again:",
-            "     chartbook run",
+            f"     chartbook run --project-dir {_q(work / 'report')}",
             SHARED.format("them"),
         ]
         assert _git(mid, "rev-parse", "HEAD") == now and _git(mid, "status", "--porcelain") == ""
@@ -1131,7 +1138,7 @@ class TestInThePipelinesOwnRepository:
             f"     chartbook run --snapshot --project-dir {_q(tree / 'mid')}",
             "",
             "Then here again:",
-            "     chartbook run",
+            f"     chartbook run --project-dir {_q(top / 'report')}",
             SHARED.format("it"),
         ]
         head = _git(top, "rev-parse", "HEAD")
@@ -1381,35 +1388,155 @@ class TestWhoseTextThisIs:
         assert "Ran build in 1 pipeline(s)." in done.stdout
 
     @pytest.mark.parametrize("within", ["", "pipelines/rates"])
-    def test_a_clone_named_in_another_letter_case_than_its_address_is_built_all_the_same(self, work, theirs, mine, monkeypatch, within):
+    def test_a_clone_named_in_another_letter_case_than_its_address_is_named_as_the_disk_names_it(self, work, theirs, mine, monkeypatch, within):
         """A clone is looked for under the name its address gives, and a disk that takes either letter case finds `RATES` for `rates`.
 
-        `cd` made that the disk's own name, and a command that names its
-        folder does not. So the command takes the folder by the name the
-        disk gives it: the snapshot says where the pipeline is, and its
-        reader finds it.
+        Found by review: under the address's name, where the pipeline is
+        in its repository could not be told. The list had pathlib's words
+        in it (`'…/rates' is not in the subpath of '…/RATES'`), a checkout
+        of the commit the clone was on already, and nothing of what the
+        pipeline reads in turn; and the command it gave named a folder its
+        snapshot would have been refused for.
         """
-        if os.name == "nt":
-            pytest.skip("typed in a POSIX shell here")
         top = work / "RATES"
         directory = top / within if within else top
         directory.mkdir(parents=True)
         if not (work / "rates").is_dir():
             pytest.skip("this disk tells letter cases apart")
-        _write(directory, _table("rates"))
+        base = _ready(_pipeline(work, "base"), theirs)
+        _write(directory, _table("rates", {"acme/base": {}}))
         _repository(top, "rates")
         commit = _ready(directory, theirs, rows="rates,1")  # as its build writes them
         _ready(_pipeline(work, "report", {"acme/rates": {}}), theirs)
+        _away(work, "base")
         store = mine()
         result = _run(work, monkeypatch, "run")
-        named = work.joinpath("rates", *(part for part in within.split("/") if part))  # by its address, and not as the disk has it
-        shown = os.path.relpath(named, work / "report")
-        assert _numbered(result) == [f"1. acme/rates at {commit[:7]}    {shown} (a clone of https://example.org/acme/rates)"]
-        assert f"     chartbook run --snapshot --project-dir {_q(named)}" in _said(result)
+        shown = os.path.relpath(directory, work / "report")
+        assert _said(result)[-10:-4] == [
+            f"1. acme/base at {base[:7]}    https://example.org/acme/base",
+            f"     git clone https://example.org/acme/base {_q(work / 'base')}",
+            f"     git -C {_q(work / 'base')} checkout {base[:12]}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'base')}",
+            f"2. acme/rates at {commit[:7]}    {shown} (a clone of https://example.org/acme/rates); reads 1 above",
+            f"     chartbook run --snapshot --project-dir {_q(directory)}",  # as the disk names it, and on that commit already
+        ]
         done = _follow(work, result, monkeypatch)
         assert "Ran build in 1 pipeline(s)." in done.stdout
         (taken,) = [one for one in snapshot.all_snapshots(store) if one.pipeline == "acme/rates"]
         assert taken.subdirectory == within
+
+    def test_a_clone_told_by_its_id_is_named_as_the_disk_names_it_too(self, work, theirs, monkeypatch):
+        """Nothing records its address: the clone beside is told by its `origin`, and looked for under the last part of the ID."""
+        top = work / "RATES"
+        top.mkdir()
+        if not (work / "rates").is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        _write(top, _table("rates"))
+        _repository(top, "rates")
+        _pipeline(work, "report", {"acme/rates": {}})
+        said = _said(_run(work, monkeypatch, "run"))
+        assert f"1. acme/rates    {_up('RATES')} (a clone of https://example.org/acme/rates)" in said
+        assert f"     chartbook run --snapshot --project-dir {_q(top)}" in said
+
+    def test_a_folder_is_named_as_the_folder_it_is_in_lists_it(self, work):
+        (work / "Rates").mkdir()
+        assert missing._named_by_the_disk(work / "Rates") == work / "Rates"
+        assert missing._named_by_the_disk(work / "none") == work / "none"
+        assert missing._named_by_the_disk(work / "no such folder" / "rates") == work / "no such folder" / "rates"
+        if (work / "rates").is_dir():  # a disk that takes either letter case
+            assert missing._named_by_the_disk(work / "rates") == work / "Rates"
+
+    def test_for_windows_every_sign_a_shell_reads_puts_a_word_in_double_quotes(self):
+        """Found by review: four signs were held by a test, and a rule that left any other bare passed them all."""
+        bare = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:-")
+        for sign in map(chr, range(0x20, 0x7F)):
+            word = f"a{sign}b"
+            typed = word if sign in bare else '"a""b"' if sign == '"' else f'"{word}"'
+            assert missing._quoted(word, windows=True) == typed, sign
+
+
+class TestWhatAShellOnWindowsReadsInQuotes:
+    """Found by review: on Windows a word is in double quotes, and PowerShell, Git Bash and cmd.exe each read something inside them.
+
+    An address in a lockfile is anyone's, and so is a folder's name in a
+    repository that was cloned: `git clone "https://…/$env:TOKEN"` sends
+    the token where the address says, and a folder named `$(…)` is a
+    command. No spelling keeps those as text in all three shells, so
+    such a line is given no command.
+    """
+
+    COMMIT = "c" * 40
+
+    @pytest.mark.parametrize("words, said", [
+        (["https://example.org/acme/$env:GITHUB_TOKEN"], "a `$`"),
+        (["C:\\work\\$(calc)\\mid"], "a `$`"),
+        (["C:\\work\\a`b"], "a backtick"),
+        (["C:\\work\\!rm"], "a `!`"),
+        (["https://example.org/acme/%GITHUB_TOKEN%"], "`%GITHUB_TOKEN%`"),
+        (["https://example.org/acme/%github_token:~0,4%"], "`%github_token%`"),
+        (["https://example.org/acme/%CD%2Frates"], "`%CD%`"),  # cmd.exe's own, set or not
+        (["https://example.org/acme/%20%GITHUB_TOKEN%"], "`%GITHUB_TOKEN%`"),  # the `%` that ended no name begins one
+        (["C:\\work\\rates", "https://example.org/acme/%GITHUB_TOKEN%"], "`%GITHUB_TOKEN%`"),
+        (["https://example.org/acme/My%20Big%20Project"], ""),  # `20Big` is no variable
+        (["https://example.org/acme/100%"], ""),
+        (["C:\\work\\my rates (old) & co", "https://example.org/acme/rates"], ""),
+    ])
+    def test_what_is_read(self, words, said):
+        assert missing._a_windows_shell_reads(words, environment=["Path", "GITHUB_TOKEN"]) == said
+
+    def test_the_variables_are_this_machines(self, monkeypatch):
+        monkeypatch.setenv("CB_TEST_SECRET", "x")
+        monkeypatch.delenv("CB_TEST_NONE", raising=False)
+        assert missing._a_windows_shell_reads(["https://example.org/acme/%cb_test_secret%"]) == "`%cb_test_secret%`"
+        assert missing._a_windows_shell_reads(["https://example.org/acme/%CB_TEST_NONE%"]) == ""
+
+    def _said(self, work: Path, line: missing.Wanted, windows: bool) -> list[str]:
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[line])
+        said = missing.said(listing, here=work / "report", windows=windows)
+        return said[3:said.index("", 4)]
+
+    def test_a_line_with_one_is_given_no_command_on_windows(self, work):
+        line = missing.Wanted("acme/mid", self.COMMIT, "https://example.org/acme/$env:GITHUB_TOKEN")
+        assert self._said(work, line, windows=True) == [
+            "1. acme/mid at ccccccc    https://example.org/acme/$env:GITHUB_TOKEN",
+            "     No command is given for it: one would hold a `$`, which a shell on Windows reads even inside quotes.",
+            f"     By hand, in its folder: `git checkout {self.COMMIT[:12]}`, then `chartbook run --snapshot`",
+        ]
+        # Never pinned, and with no build script: what is to be typed by hand is the snapshot alone
+        folder = missing.Wanted("acme/mid", None, folder=work / "a`b", builds=False)
+        assert self._said(work, folder, windows=True)[1:] == [
+            "     No command is given for it: one would hold a backtick, which a shell on Windows reads even inside quotes.",
+            "     By hand, in its folder: `chartbook snapshot`",
+        ]
+
+    def test_in_a_posix_shell_it_is_text_in_single_quotes_and_the_command_is_given(self, work):
+        line = missing.Wanted("acme/mid", self.COMMIT, "https://example.org/acme/$env:GITHUB_TOKEN")
+        assert self._said(work, line, windows=False)[1:] == [
+            f"     git clone 'https://example.org/acme/$env:GITHUB_TOKEN' {shlex.quote(str(work / 'GITHUB_TOKEN'))}",
+            f"     git -C {shlex.quote(str(work / 'GITHUB_TOKEN'))} checkout {self.COMMIT[:12]}",
+            f"     chartbook run --snapshot --project-dir {shlex.quote(str(work / 'GITHUB_TOKEN'))}",
+        ]
+
+    def test_the_line_after_one_has_its_commands(self, work):
+        """What a line holds is its own: a line is not left without commands for a word of the line above."""
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/odd", None, folder=Path("C:\\work\\$odd")),
+            missing.Wanted("acme/mid", None, folder=Path("C:\\work\\mid")),
+        ])
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert said[4].startswith("     No command is given for it: one would hold a `$`")
+        assert said[6:8] == ["2. acme/mid    C:\\work\\mid (a folder on this machine)", '     chartbook run --snapshot --project-dir "C:\\work\\mid"']
+
+    def test_a_line_with_none_has_its_commands_and_every_folder_in_double_quotes(self, work):
+        """The whole of a line as Windows is given it: a path there has a backslash, which is in double quotes for Git Bash."""
+        line = missing.Wanted("acme/mid", self.COMMIT, folder=Path("C:\\work\\my rates"))
+        listing = missing.Listing("acme/report", Path("C:\\work\\report"), stores=["C:\\store"], wanted=[line])
+        said = missing.said(listing, here=Path("C:\\work\\report"), windows=True)
+        assert said[4:6] == [
+            f'     git -C "C:\\work\\my rates" checkout {self.COMMIT[:12]}',
+            '     chartbook run --snapshot --project-dir "C:\\work\\my rates"',
+        ]
+        assert said[-3:-1] == ["Then here again:", '     chartbook run --project-dir "C:\\work\\report"']
 
 
 class TestEachKindOfLine:
@@ -1421,7 +1548,8 @@ class TestEachKindOfLine:
     def _commands(work: Path, line: missing.Wanted) -> list[str]:
         listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[line])
         said = missing.said(listing, here=work / "report")
-        assert said[3].startswith("1. acme/mid") and said[-3:-1] == ["Then here again:", "     chartbook run"]
+        assert said[3].startswith("1. acme/mid")
+        assert said[-3:-1] == ["Then here again:", f"     chartbook run --project-dir {_q(work / 'report')}"]
         return said[4:said.index("", 4)]
 
     def test_a_clone_that_was_never_pinned_is_built_in_the_folder_it_has_the_pipeline_in(self, work):
@@ -1788,7 +1916,7 @@ class TestTheOtherCommands:
         assert result.exit_code == 1
         said = _said(result)
         assert said[2] == _head(work, "2 pipelines it reads are", done="pinned")
-        assert said[-3:] == ["Then here again:", "     chartbook pin", SHARED.format("them")]
+        assert said[-3:] == ["Then here again:", f"     chartbook pin --project-dir {_q(work / 'report')}", SHARED.format("them")]
         assert f"2. acme/mid at {commits['mid'][:7]}    https://example.org/acme/mid; reads 1 above" in said
         assert not any("could not be pinned" in line or line.startswith("acme/mid:") or "is unchanged" in line for line in said)
 

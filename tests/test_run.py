@@ -1123,7 +1123,7 @@ class TestCommand:
             f"     chartbook run --snapshot --project-dir {typed(work / 'upstream')}",
             "",
             "Then here again:",
-            "     chartbook run",
+            f"     chartbook run --project-dir {typed(reader)}",
             "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
             "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has it, or wait for its sync to finish.",
         ]

@@ -208,13 +208,14 @@ Build them in this order, with the commands below. Each ends with a snapshot, wh
      chartbook run --snapshot --project-dir /work/fed_yield_curve
 
 Then here again:
-     chartbook run
+     chartbook run --project-dir /work/report
 Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
 Each line is one command, the same in every shell (PowerShell and `cmd.exe` among them), and can
-be pasted as it is, in the order given. None enters a folder: you stay where you are, and the last
-line is the command you typed. A folder on this
+be typed as it is, from any folder, in the order given, one at a time. None enters a folder: you
+stay where you are, and the last line is the command you typed, with this pipeline's folder. A
+folder on this
 machine is one your `[dependencies]` names by `path`; a clone you already have beside your project
 is read and built where it is; any other repository is cloned beside your project. Nothing here
 moves your own repository to another commit. The whole of it is in the
