@@ -3841,16 +3841,17 @@ def _offer_to_add(project_dir, report, strict, frozen, added):
 def _in_its_folder(folder) -> str:
     """`` --project-dir FOLDER`` for a pipeline that is not in the folder the command was typed in, to follow a command a message names; else empty.
 
-    Quoted as a shell takes it, so that the command can be pasted.
+    Quoted as this system's shell takes it, as the list of what is not in
+    a store quotes a folder, so that the command can be pasted.
     """
-    import shlex
+    from chartbook.missing import _quoted
 
     try:
         if Path(folder).resolve() == Path.cwd().resolve():
             return ""
     except OSError:
         pass
-    return " --project-dir " + shlex.quote(str(folder))
+    return " --project-dir " + _quoted(folder)
 
 
 def _run_script(

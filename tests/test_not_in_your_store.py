@@ -796,7 +796,7 @@ class TestWhateverCommitACloneWasLeftOn:
             f"     git -C {_q(clone)} checkout {now[:12]} && cd {_q(clone / 'gamma')} && chartbook run --snapshot",
         ]
         done = _follow(work, result, monkeypatch)
-        assert "not snapshotted" in done.stdout or "Ran build in 1 pipeline(s)." in done.stdout
+        assert "Ran build in 1 pipeline(s)." in done.stdout
 
     def test_a_folder_that_is_built_is_not_called_so_once_a_line_above_moves_it(self, work, theirs, mine, monkeypatch):
         top = _several(work, "multi", {"old": None})

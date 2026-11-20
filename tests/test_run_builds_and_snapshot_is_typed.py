@@ -22,7 +22,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import config, lock, run, snapshot
+from chartbook import config, lock, missing, run, snapshot
 from chartbook.cli import main
 from chartbook.store import FolderStore
 from tests.fixtures import name_no_snapshot
@@ -241,17 +241,21 @@ class TestARunMakesNoSnapshot:
         monkeypatch.chdir(work)
         result = _run("--project-dir", str(demo))
         assert result.exit_code == 0, result.output
-        assert _after_the_run(result) == _closing(where=f" --project-dir {demo}")
+        assert _after_the_run(result) == _closing(where=f" --project-dir {missing._quoted(demo)}")
 
     def test_a_folder_whose_name_a_shell_would_split_is_quoted(self, work, store, monkeypatch):
         directory = _committed(_folder(work / "my demo"))
         monkeypatch.chdir(work)
         result = _run("--project-dir", str(directory))
         assert result.exit_code == 0, result.output
-        assert _after_the_run(result) == _closing(where=f" --project-dir '{directory}'")
+        # As this system's shell takes it: `'/work/my demo'`, and `"C:\work\my demo"` at a prompt of cmd.exe
+        quoted = missing._quoted(directory)
+        assert quoted != str(directory) and quoted[0] == quoted[-1] and quoted[0] in "'\""
+        assert _after_the_run(result) == _closing(where=f" --project-dir {quoted}")
 
+    @posix
     def test_the_command_it_names_makes_the_snapshot(self, work, store, monkeypatch):
-        """Typed as the line gives it, from the folder the run was typed in."""
+        """Typed as the line gives it, from the folder the run was typed in. (Split here as a POSIX shell splits it.)"""
         directory = _committed(_folder(work / "my demo"))
         monkeypatch.chdir(work)
         line = _after_the_run(_run("--project-dir", str(directory)))[-1]
@@ -621,6 +625,14 @@ class TestAFirstStoreThatIsOnlyRead:
         assert result.exit_code == 1 and _ran(upstream) == 0 and _ran(demo) == 0
         assert "Error: acme/up cannot have a snapshot: Store 'first' is read-only, and it is the catalog's first" in result.output
         assert '`pipelines = ["acme/up"]` under [stores.second] in catalog.toml. Nothing was built.' in result.output
+
+    def test_a_store_that_is_away_is_left_to_the_snapshot_as_it_was(self, stores, demo, work):
+        """Only a store that may only be read is found before the build: one that is away may be back by its end."""
+        stores(first={"url": str(work / "first")}, second={"url": str(work / "second"), "pipelines": ["acme/demo"]})
+        (work / "second").rmdir()
+        result = _run("--snapshot", "--no-gc-reminder")
+        assert result.exit_code == 1 and "Store 'second' is unreachable" in result.output
+        assert "cannot have a snapshot" not in result.output and _ran(demo) == 1
 
     def test_a_plain_run_is_not_stopped_by_it(self, stores, demo, work):
         """It writes to no store, so a store it could not write is nothing to it."""
