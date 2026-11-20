@@ -1098,7 +1098,7 @@ python -m http.server -d ./docs            # Test locally
 
 ## Catalogs and stores in 0.4.0
 
-A catalog is `catalog.toml`, listing stores rather than working folders. `chartbook catalog migrate` keeps a backup when upgrading the old file. `chartbook catalog build` renders hubs over stored versions. `chartbook docs build` renders a pipeline site. A task runner owns the documentation step of `chartbook run`.
+A catalog is `catalog.toml`, listing stores rather than working folders. `chartbook catalog migrate` keeps a backup when upgrading the old file. `chartbook catalog build` renders hubs over stored versions. `chartbook catalog open` opens that site; at a terminal it first asks `The catalog's site is behind your stores: N snapshots are not in it yet. Build it before opening? [Y/n]` when the stores have snapshots the site does not show, or the site shows snapshots that are gone (worked out then, from the `index.json` beside the site and the stores), or `The catalog's site has not been built yet. …`; off a terminal it opens what there is and says how far behind it is, and with no site exits 1. `chartbook docs build` renders a pipeline site. A task runner owns the documentation step of `chartbook run`.
 
 ```console
 chartbook store add NAME URL

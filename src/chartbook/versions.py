@@ -158,6 +158,149 @@ class Rendered:
     now: bool = False
 
 
+@dataclass(frozen=True)
+class Behind:
+    """How far a catalog's site is behind its stores (:func:`behind`).
+
+    Attributes:
+        built: Whether the catalog has a site at all.
+        missing: How many snapshots its stores have that the site does not show.
+        gone: How many snapshots the site shows that the catalog no longer
+            lists: cleared from its stores, or of a pipeline it has since
+            been told not to show.
+        unknown: Why it cannot be told whether a built site is behind,
+            where it cannot: a store that is not there now, a record that
+            cannot be read, an ID two repositories claim. ``missing`` and
+            ``gone`` then say nothing, and it is not behind as far as
+            anyone can ask: a build now could take pages out of the site
+            for what is only away.
+    """
+
+    built: bool
+    missing: int = 0
+    gone: int = 0
+    unknown: str = ""
+
+    def __bool__(self) -> bool:
+        return not self.built or (not self.unknown and bool(self.missing or self.gone))
+
+    def said(self) -> str:
+        """It in a sentence, for the person about to open the site; empty where the site shows what the stores have, or that cannot be told."""
+        if not self.built:
+            return "The catalog's site has not been built yet."
+        if self.unknown:
+            return ""
+
+        def counted(count: int) -> str:
+            return "1 snapshot" if count == 1 else f"{count} snapshots"
+
+        if self.missing and self.gone:
+            there = "is" if self.missing == 1 else "are"
+            return (
+                f"The catalog's site is behind your stores: {counted(self.missing)} {there} not in it yet, and "
+                f"{self.gone} it shows {'is' if self.gone == 1 else 'are'} no longer in the catalog."
+            )
+        if self.missing:
+            return f"The catalog's site is behind your stores: {counted(self.missing)} {'is' if self.missing == 1 else 'are'} not in it yet."
+        if self.gone:
+            return (
+                f"The catalog's site is behind your stores: {counted(self.gone)} it shows "
+                f"{'is' if self.gone == 1 else 'are'} no longer in the catalog."
+            )
+        return ""
+
+
+def behind(catalog: Path) -> Behind:
+    """How far the site of a catalog is behind its stores, worked out now.
+
+    The snapshots the site was built from, which the ``index.json`` beside
+    it lists, are compared with those in the catalog's stores, as its
+    build would list them. Nothing is kept between a run and this: a mark
+    left by ``chartbook run`` would miss a snapshot that arrived through a
+    synced folder from another machine, and one that ``store gc`` cleared
+    there.
+
+    Where a snapshot the site shows is not in the stores now and that may
+    be for a store that is away, a record that cannot be read, or an ID
+    its build would refuse, it is not called gone: ``unknown`` says why,
+    and nobody is asked to build a site that would then lose its pages.
+
+    The site shows snapshots. Work that is not committed is on a
+    pipeline's own site, and is not looked at here. A snapshot that was
+    not all in the store when the site was built has a page that says so,
+    and is not counted again: `chartbook catalog build` makes its pages
+    once it has all arrived.
+
+    :param catalog: The catalog's ``catalog.toml``.
+    :raises ValueError: If the catalog cannot be read.
+    :raises OSError: If the catalog or a store cannot be read.
+    :raises chartbook.store.StoreError: If a store cannot be read.
+    """
+    import json
+
+    import tomli
+
+    from chartbook import index, snapshot
+    from chartbook.hubs import selected_snapshots
+    from chartbook.multi_store import Stores
+    from chartbook.store import FolderStore
+
+    catalog = Path(catalog)
+    site = catalog.parent / "docs"
+    built = (site / "index.html").is_file()
+    with open(catalog, "rb") as f:
+        raw = tomli.load(f)
+    notes = raw.get("pipelines") if isinstance(raw.get("pipelines"), dict) else {}
+    stores = Stores.configured(catalog)
+    found, unreadable = snapshot.readable_snapshots(stores)
+    # A store that is not there now: one that could not be reached, and a folder that is not on this
+    # machine at this moment (a drive that is away), which reads as a store with nothing in it
+    away = [
+        entry for entry in stores.entries
+        if entry.unavailable or (isinstance(entry.store, FolderStore) and not entry.store.root.is_dir())
+    ]
+    refused = ""
+    now = set()
+    for pipeline in sorted({taken.pipeline for taken in found}):
+        note = notes.get(pipeline) if isinstance(notes.get(pipeline), dict) else {}
+        if note.get("disabled"):
+            continue  # not shown, by the catalog's own word
+        try:
+            chosen = selected_snapshots(found, pipeline, note.get("repository"))
+        except ValueError as error:
+            # Several repositories claim it: its build stops and says so, until the catalog is told which
+            refused = refused or str(error).strip().splitlines()[0].rstrip(".")
+            continue
+        # Each has a commit and a time a page can be named by: a record that has not is not read at all
+        now.update((pipeline, taken.commit, taken.made_at) for taken in chosen)
+    shown = set()
+    if built:
+        try:
+            document = json.loads((site / index.INDEX_FILE).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            document = {}  # a site with no index beside it shows no snapshot that can be told
+        records = document.get("records") if isinstance(document, dict) else None
+        for record in records if isinstance(records, list) else []:
+            if not isinstance(record, dict) or record.get("kind") != "Pipeline" or not isinstance(record.get("id"), str):
+                continue
+            listed = record.get("snapshots")
+            for entry in listed if isinstance(listed, list) else []:
+                if isinstance(entry, dict) and isinstance(entry.get("commit"), str) and isinstance(entry.get("made_at"), str):
+                    shown.add((record["id"], entry["commit"], entry["made_at"]))
+    unknown = ""
+    if built and refused:
+        unknown = refused
+    elif built and shown - now and away:
+        named = ", ".join(str(entry.store) for entry in away)
+        unknown = f"the store at {named} is not there now" if len(away) == 1 else f"stores are not there now ({named})"
+    elif built and shown - now and unreadable:
+        unknown = (
+            "1 snapshot's record in the stores cannot be read now" if len(unreadable) == 1
+            else f"{len(unreadable)} snapshots' records in the stores cannot be read now"
+        )
+    return Behind(built, len(now - shown), len(shown - now), unknown)
+
+
 @functools.lru_cache(maxsize=None)
 def fingerprint() -> str:
     """ChartBook's version and a fingerprint of its code: what a kept site was built with.
