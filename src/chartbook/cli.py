@@ -1387,9 +1387,9 @@ def path_command(ref, kind, project_dir, list_files):
     of the copy that chartbook.lock pins, in the store: not the other
     pipeline's own directory. Run `chartbook pin` first. That copy stays as
     it is until `chartbook pin --update`. Another pipeline's folder or glob of
-    files has no one path, since the store keeps each file once and a
-    snapshot's files may sit in other snapshots' folders: print them with
-    --files.
+    files has no one path, since a store may keep each file once (a bucket
+    does), a snapshot's files then sitting in other snapshots' folders:
+    print them with --files.
 
     With --files, the asset's files are printed instead, one per line: the
     file, a folder's files, or a glob's matches, as

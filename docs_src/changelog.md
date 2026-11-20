@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 A 0.5.2 was prepared on 2026-11-04 and never published; what it held is at the end of this release's entries, under "Earlier in this release". Two names from it that a script or code may hold are gone: `CatalogNotConfiguredError` (a catalog is now made by the first command that needs one) and `chartbook trust --members` (`chartbook trust FOLDER` trusts a folder and every pipeline under it).
 
-**A store needs nothing.** Its layout is the same, and ChartBook 0.5 and this one can share a store: 0.5 lists, pins and reads the snapshots this one makes and builds a catalog over them, and its `store gc` keeps what a lockfile of this one reads (on the machine that has that lockfile it stops, says it cannot read it, and removes nothing). One thing 0.5 gets wrong there: where a snapshot made by this version is of a pipeline that itself pins another which has, beside its dataframes or models, anything a lockfile no longer holds (a chart, a notebook, a note, a plain file), 0.5's `chartbook lineage` reports a gap one level up, and its `snapshot --deep` refuses, since the hash over what is pinned is now over dataframes and models alone. Its reads, its pins, `pin --frozen` and a plain `snapshot` are not affected.
+**A store of 0.5 is read as it is, and no snapshot is made in it.** This version lays a store out anew (below, "the store"), and a store it makes is one ChartBook 0.5 does not read: 0.5 says its layout is a later one, and writes nothing. A store that 0.5 made is read by this version as it stands: `chartbook pin`, `pin --update`, every read, the catalog, `store ls` and `store verify` work in it, the notes of lockfiles are written where 0.5 keeps them, and 0.5's `store gc` keeps what a lockfile of this version reads (on the machine that has that lockfile it stops, says it cannot read it, and removes nothing). What this version does not do there is make a snapshot or remove anything: `chartbook snapshot`, `chartbook run --snapshot` and `chartbook store gc` stop and say so, and a plain `chartbook run` builds and says why it made no snapshot. The command that moves a store of 0.5 to the new layout is the next step of this change, and is not in yet: until it is, step 2 below wants a store this version made.
 
 **A lockfile is written again once, and 0.5 cannot read what this version writes.** The first `chartbook pin`, `pin --update` or `run` after you upgrade writes `chartbook.lock` in its new version, without its charts and notebooks, and says so. No pin moves. ChartBook 0.5, given that lockfile, says only `its schema is 'chartbook/lock/v2', and this version of ChartBook reads 'chartbook/lock/v1'`. So where your `chartbook.toml` says which ChartBook it needs, `chartbook pin` and `chartbook pin --update` raise that line, and 0.5 then says what to install, with the command:
 
@@ -37,6 +37,50 @@ In order:
 5. A CI file, a `dodo.py` or a Makefile that ran `chartbook check` runs `chartbook run --check`, without `--skip-outputs` (below).
 
 A dataframe whose file has the column pandas makes of an index with no name is told of at step 2, and is worth mending there (`to_parquet(index=False)`): with it, no later build has the pinned rows.
+
+### Changed — the store: `snapshots/` and `_chartbook/`, and every snapshot complete (breaking)
+
+The first step of a store a person can read ({design}`snapshots-and-increments`): a folder store this version makes has two names at its top for a person, and each snapshot's folder holds every file of it.
+
+```text
+~/.chartbook/store/
+  snapshots/
+    acme+rates/
+      2026-11-16T091500Z_4f2a91c0e1b2/      a snapshot: every file of it is here
+        _data/treasury.parquet
+        _output/curve.html
+        README.md
+        chartbook.toml
+        _chartbook/index.json
+        _chartbook/snapshot.json             its record
+  _chartbook/                                ChartBook's own notes; nothing here is for a person
+  store.json
+  README.txt
+```
+
+And in a pipeline whose store ChartBook 0.5 made:
+
+```text
+$ chartbook run
+acme/rates: build
+Ran build in 1 pipeline(s).
+acme/rates: not snapshotted: the store at /Users/x/.chartbook/store has the layout of ChartBook 0.5.
+  `chartbook store migrate` moves it. An earlier ChartBook will not read it afterwards.
+
+$ chartbook snapshot
+Error: The store at /Users/x/.chartbook/store has the layout of ChartBook 0.5, which this ChartBook reads and does not write. `chartbook store migrate` moves it to this version's; an earlier ChartBook will not read it afterwards.
+```
+
+- **Every snapshot is complete.** Its folder holds every file of every asset, of its documents and of its index, each at its own path, so it can be read, copied, zipped and sent as it is. Since 0.3.0 a file was kept once in its pipeline's folder, and a later snapshot's folder held only what was new: nothing but its record said where the rest was. Two files of one snapshot with the same bytes are now two files. A snapshot that `chartbook pin` makes from a repository is complete too. The record's format is the same (`chartbook/snapshot/v2`), and each file's `kept_in` names the snapshot's own folder. Increments, which keep a snapshot in less room, are a later step: until then a snapshot of a large pipeline costs its whole size.
+- **Where nothing changed, nothing is copied.** The same commit, the same bytes and the same pins make no new snapshot, as before, and no file is written to find that out: a file an earlier snapshot of the pipeline has is copied only when the new snapshot's record is about to be written.
+- **`snapshots/` where `pipelines/` was, and ChartBook's own notes under `_chartbook/`:** `_chartbook/roots/` (the notes of lockfiles, which the messages of `store gc` name), `_chartbook/origins/`, `_chartbook/tmp/`, and `_chartbook/unowned/` where `pipelines/+unowned/` was. `store.json` stays at the top and says `chartbook/store/v3`. A `README.txt` at the top, written once when the store is made, says what the two folders are; the one in each pipeline's folder says that each folder is a complete snapshot, and that one is removed with `chartbook store gc`.
+- **A store that ChartBook 0.5 made is read as it is, and not written.** Reads through pins, `chartbook pin` and `pin --update`, the catalog, `store ls` (in the words of 0.5, standalone and shared), `store info` and `store verify` work in it, and the notes of lockfiles are written where it keeps them. Making a snapshot in it, putting an object in it and removing from it do not happen. `chartbook snapshot`, `chartbook run --snapshot`, `chartbook store gc`, and a `store move` or `store import` that would write to it or remove from it, stop with the error above, and a plain `chartbook run` builds, exits `0`, and ends with the two lines above. That move is the next step of this change and is not in yet: `chartbook store migrate` still moves a store of 0.2 alone, and says of one of 0.5 that there is nothing to move from 0.2.
+- **A folder with `pipelines/` in it and no `store.json` is not taken for an empty one.** It is read as the store of 0.5 it is, and nothing is written to it: its `store.json` has not arrived, or was removed, and the message says what to do.
+- **`chartbook store gc` removes a snapshot with its whole folder.** No folder stays behind with a `CLEARED.txt` and the files later snapshots kept in it. What only the removed snapshots hold goes with them at once, where before an object stored in the last hour was spared until the next `gc`; an object no pipeline owns, and one a snapshot that stays holds, are spared for an hour as before. What gc says it frees, and the line after a snapshot or a catalog build, count a removed snapshot's own copy of a file that a kept snapshot has too.
+- **`chartbook store ls` says `complete`** of every snapshot, with what its folder holds.
+- **`chartbook store export` writes `FOLDER/snapshots/<pipeline>/`,** each snapshot complete, and `store import` takes that, a store, or one pipeline's folder from one. A folder that 0.5 exported, or a pipeline's folder copied out of a store of 0.5, is still taken in, each snapshot written complete. `store move` copies each snapshot complete and leaves no folder of the pipeline in its source.
+- **A bucket keeps the layout of 0.5 for now** (`s3://…`): each file once, `pipelines/` and `roots/` under its prefix, and `store ls` in the words of 0.5. A folder store of this version copied into a bucket is not that bucket's store until the bucket has this layout too.
+- In Python: `store.FolderStore.check_writable()` raises `store.EarlierLayoutError` (a `StoreError`, with the store in `.store`) for a store of 0.5, and `earlier_layout()` says whether it is one; `Store.check_writable()` does nothing for any other store. `store.FOLDER_SCHEMA` is `chartbook/store/v3`, and `store.SCHEMA` stays `chartbook/store/v2`, the layout of a bucket and of a store of 0.5. `FolderStore.pipelines_path()` and `roots_path()` say where the pipelines' folders and the notes are. `Store.files_left(hash, without)` says where an asset's files would be once the snapshots with those records were removed, and `lock.GcPlan.freed_bytes` is what a plan frees (`size_bytes`, of the objects nothing names, and `copies_bytes`).
 
 ### Changed — one command to know: `chartbook run` looks for what it was to make, and ends with a snapshot
 

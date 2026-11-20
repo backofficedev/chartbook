@@ -54,7 +54,7 @@ disguise.
 |---|---|---|---|---|
 | **manifest** | `chartbook.toml` | What a pipeline *asks*: which assets it declares, where they are, what it depends on, what its scripts are | People | In the repository, committed |
 | **lockfile** | `chartbook.lock` | What was *got*: for each dependency, which snapshot was pinned and the content hash of each of its dataframes and models (and of any other asset its owner marks `lock = true`); for a dataframe, its last date and a hash of its rows by year too, so that a build of your own with the same rows meets the pin | `chartbook pin`, `chartbook pin --update` (and `chartbook run`, for a first pin) | In the repository, committed. No timestamp on purpose: a `git diff` of it means "a pin moved" |
-| **snapshot** | `<store>/pipelines/<pipeline>/<time>_<commit>/_chartbook/snapshot.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline's own index at that commit and the files a writer needs | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
+| **snapshot** | `<store>/snapshots/<pipeline>/<time>_<commit>/_chartbook/snapshot.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline's own index at that commit and the files a writer needs | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
 | **index** | `index.json` beside the site | What a site *shows*: every record of every pipeline the site contains, as built now, with each dependency's pins reported | `chartbook docs build` | Beside the site, so it travels with it |
 
 Three rules follow, and they settle arguments:
@@ -107,7 +107,7 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {design}`versioned-cata
 | **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.files` for files assets, `chartbook.assets` for any kind |
 | **location** | Where an asset physically is: a file, or a table or query in a source |
 | **record** | One entry in the index, a lockfile or a snapshot. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A folder of snapshots, one folder per pipeline: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Each file is kept once, usually in the first snapshot that had it, and read where it is |
+| **store** | A folder of snapshots, one folder per pipeline under `snapshots/`: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Each snapshot's folder is complete: it holds every file of that version, and can be read or copied as it is. ChartBook's own notes are under `_chartbook/`. A store that ChartBook 0.5 laid out (`pipelines/` at the top, each file kept once) is read as it is, and not written |
 | **object** | An asset as the store holds it, named by its content hash: its files, each where the store keeps it, under their own names inside the asset |
 | **dependency** | Another pipeline this one reads from, declared in `[dependencies]`: its ID, and where to find it: the store alone (`"acme/rates" = {}`), a folder (`path`) or a repository (`git`) |
 | **pin** | To freeze which snapshot of a dependency a pipeline reads; also the record of it in the lockfile. `chartbook pin` makes pins and never moves one; `chartbook pin --update` moves them |
@@ -115,8 +115,8 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {design}`versioned-cata
 | **source / backend** | A named database connection in a manifest / the engine behind it. DuckDB is the engine that is built |
 | **writer** | What turns the index into pages for one site tool |
 | **scratch** | `_data/_scratch/` inside a pipeline (or what `[project] scratch` names): throwaway files that are not assets |
-| **standalone snapshot** | A snapshot whose folder in the store holds every file of its version |
-| **shared snapshot** | A snapshot whose folder holds only what changed, while other snapshots' folders keep the rest of its files; the store keeps each file once. `chartbook store ls` says which each is, and `chartbook store gc` is the only safe way to remove one |
+| **complete snapshot** | A snapshot whose folder in the store holds every file of its version. Every snapshot in a store of this version is one, and `chartbook store ls` says so; `chartbook store gc` is how to remove one |
+| **standalone snapshot**, **shared snapshot** | The words of a store that ChartBook 0.5 laid out, and of a bucket, which keep each file once: a standalone snapshot's folder holds every file of its version, and a shared one's only what changed, while other snapshots' folders keep the rest of its files. `chartbook store ls` says which each is there |
 
 Three different things are called "kind", and they do not mix: an **asset kind**, lowercase, in
 a reference (`chart`); a **record kind**, capitalized, in the index (`Chart`, plus the non-asset

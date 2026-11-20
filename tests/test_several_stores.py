@@ -150,7 +150,7 @@ def test_move_leaves_no_files_of_the_pipeline_in_its_source(tmp_path):
     _git(other, "commit", "--quiet", "-m", "Initial")
     (tmp_path / "two").mkdir()
     source, target = FolderStore(tmp_path / "one"), FolderStore(tmp_path / "two")
-    # The second snapshot uses the files the first one's folder keeps
+    # Two snapshots, each with every file of it in its own folder
     first = snapshot.make(folder, source, made_at="2026-01-01T00:00:00Z").snapshot
     (folder / "README.md").write_text("Changed\n")
     _git(folder, "commit", "--quiet", "-am", "Change the README")

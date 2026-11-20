@@ -4210,10 +4210,12 @@ class GcPlan:
         kept_versions: Each version of an asset marked ``keep = true`` that
             a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
             what the marks keep, for the bill.
-        copies_bytes: The size of the files that go with the removed
-            snapshots' folders and are of objects that stay: where each
-            snapshot is complete, a snapshot that stays has its own copy
-            of them. Not in *delete*, which is of objects nothing names.
+        copies_bytes: The size of the files that go with the folders of the
+            snapshots in *snapshots_delete* and are of objects that stay:
+            where each snapshot is complete, a snapshot that stays has its
+            own copy of them. Not in *delete*, which is of objects nothing
+            names; and not of what a record a pin made holds, which goes
+            without a word.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.

@@ -1,15 +1,17 @@
 """A store in an S3 bucket: ``[store] url = "s3://bucket/prefix"``.
 
 Needs boto3 1.35 or newer, which ``pip install chartbook[s3]`` installs.
-The bucket is laid out exactly as a folder store is (:mod:`chartbook.store`),
-under the prefix: ``store.json``; ``pipelines/<pipeline>/<snapshot>/``
-with the pipeline's files at their own paths and
-``_chartbook/snapshot.json``, the record, written last;
+The bucket is laid out exactly as a folder store of ChartBook 0.5 is
+(:data:`chartbook.store.V2_LAYOUT`), under the prefix: ``store.json``;
+``pipelines/<pipeline>/<snapshot>/`` with the pipeline's files at their
+own paths and ``_chartbook/snapshot.json``, the record, written last;
 ``pipelines/+unowned/<hash>/`` for an object put with no pipeline;
-``origins/``, ``roots/`` and ``tmp/``. So ``aws s3 sync`` of a folder
-store into a bucket is this store, and back. A bucket of ChartBook 0.2's
-layout is refused, as a folder of it is, until ``chartbook store
-migrate`` has moved it.
+``origins/``, ``roots/`` and ``tmp/``. So ``aws s3 sync`` of such a folder
+store into a bucket is this store, and back. A folder store this
+ChartBook makes has another layout (``snapshots/``, ``_chartbook/``, every
+snapshot complete), which a bucket does not have yet: nothing here has
+changed for it. A bucket of ChartBook 0.2's layout is refused, as a folder
+of it is, until ``chartbook store migrate`` has moved it.
 
 Readers open files, so what they read is a copy on this machine, in a
 cache folder for the bucket. The records are downloaded into it at their
