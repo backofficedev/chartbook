@@ -383,6 +383,10 @@ class SnapshotReport:
         rows_first_count: And how many dataframes' rows this one is the
             first to record. One whose rows are not hashed is not counted:
             the command says why it has none.
+        not_whole: For a snapshot that was made of the same files, commit
+            and pins as one already in the store, because that one lacks a
+            file of its own (:meth:`chartbook.store.Store.holes_of`): that
+            one, and the files it lacks. It is left as it is.
     """
 
     snapshot: Snapshot
@@ -402,6 +406,7 @@ class SnapshotReport:
     index_column_names: dict = field(default_factory=dict)
     rows_first_said: Optional[Snapshot] = None
     rows_first_count: int = 0
+    not_whole: Optional[tuple] = None
 
 
 def asset_record(
@@ -620,16 +625,18 @@ def not_whole(store: Store, record: dict) -> Optional[str]:
 
 
 @contextlib.contextmanager
-def _staged(staging: Optional[Path], name: str, prefix: str = "chartbook-"):
+def _staged(staging: Optional[Path], name: str, pending=None, prefix: str = "chartbook-"):
     """A folder to stage files for a snapshot in, as its path.
 
     The folder *name* under *staging*, which whoever made *staging* removes
-    once the snapshot is written or let go (:func:`_make_in`): what is
-    staged there is still at hand when the record is written, which is when
-    a store that writes each snapshot whole copies a file an earlier
-    snapshot has, and where it takes the bytes from if that copy has gone
-    or is damaged. With no *staging*, a folder of its own, removed on the
-    way out.
+    once the snapshot is written or let go (:func:`_make_in`). On the way
+    out of the block, every file in it goes but those the snapshot being
+    made still wants at hand
+    (:meth:`chartbook.store.PendingSnapshot.at_hand`): one it has written
+    into its own folder is kept no longer, and one whose copy waits for the
+    record stays, as where the bytes are taken from if the earlier
+    snapshot's copy has gone or is damaged by then. With no *staging*, a
+    folder of its own, removed on the way out.
     """
     import tempfile
 
@@ -640,6 +647,14 @@ def _staged(staging: Optional[Path], name: str, prefix: str = "chartbook-"):
     folder = Path(staging) / name
     folder.mkdir(parents=True, exist_ok=True)
     yield str(folder)
+    wanted = pending.at_hand() if isinstance(pending, PendingSnapshot) else set()
+    for directory, _, files in os.walk(folder):
+        for file in files:
+            if os.path.realpath(os.path.join(directory, file)) not in wanted:
+                try:
+                    os.remove(os.path.join(directory, file))
+                except OSError:
+                    pass  # it goes with the folder, once the snapshot is written or let go
 
 
 def materialize_in_source(
@@ -717,7 +732,7 @@ def materialize_in_source(
             found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep, locked=locked),
                           f"{where}: the DuckDB file is not there"))
             continue
-        with _staged(staging, "tables", prefix="chartbook-tables-") as scratch:
+        with _staged(staging, "tables", store, prefix="chartbook-tables-") as scratch:
             out = Path(scratch) / f"{name}.parquet"
             try:
                 # The file is read on one thread: a parallel aggregate of
@@ -2507,14 +2522,20 @@ def check_store_takes_one(pipeline: str, store: Optional[Store] = None) -> None:
     to find out before the build, as it finds out that work is uncommitted.
 
     :param store: As for :func:`make`.
-    :raises chartbook.store.EarlierLayoutError: Saying so, and which
-        command moves the store.
+    :raises StoreError: What the store says of itself
+        (:meth:`chartbook.store.Store.check_writable`): that it has the
+        layout of 0.5, and which command moves it; or that it has no
+        ``store.json`` and holds what such a store holds. Which stores a
+        snapshot goes to, where that cannot be said now (one that is
+        read-only, or cannot be reached), is left for :func:`make` to say.
     """
     from chartbook.multi_store import Stores
 
     if store is None or isinstance(store, Stores):
-        stores = Stores.configured() if store is None else store
-        targets = stores.for_writing(pipeline, None)
+        try:
+            targets = (Stores.configured() if store is None else store).for_writing(pipeline, None)
+        except (StoreError, OSError):
+            return
     else:
         targets = [store]
     for target in targets:
@@ -2822,13 +2843,22 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         if taken.pipeline == snapshot.pipeline and identity_keys(snapshot) <= identity_keys(taken):
             same = taken
             break
+    # The one this would stand on is asked whether it is whole: its own files, at the sizes its record
+    # says, one question for each (Store.holes_of). One that is not is not stood on, nor written to,
+    # since a snapshot's folder is not changed once its record is written: a new one is made from the
+    # files at hand, as if that one were not there, and the report says which file it lacks
+    not_whole = None
+    if same is not None and same.path is not None:
+        holes = store.holes_of(same.path)
+        if holes:
+            not_whole, same = (same, holes), None
     if same is not None:
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
         # a commit is often tagged after it is built. Or because the store
-        # has lost its index or its documents (its assets were put back
-        # above): an index is made again with the time it is made, so it is
-        # not the same object, and the new snapshot holds both
+        # has lost its index or its documents, where it keeps each file
+        # once (a bucket): an index is made again with the time it is made,
+        # so it is not the same object, and the new snapshot holds both
         # Or the rows of a dataframe, which a snapshot made before rows were hashed does not
         # say, and one made before its entry named its dates says otherwise
         from chartbook import rowhash
@@ -2843,15 +2873,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             part["content_hash"] for part in (same.index, same.documents)
             if part and (not store.has(part["content_hash"]) or store.incomplete(part["content_hash"], part.get("size_bytes")))
         ]
-        # A file put back into this snapshot's own folder, the store having
-        # lost it, is kept only if this snapshot is written. And where each
-        # snapshot holds its own copy of every file, that one may have lost
-        # a file another snapshot still has: what was put above is back in
-        # its folder already, and what is put below (its documents, its
-        # index) is not, so a new one is made, whole, and "no new snapshot"
-        # is never said of one with a hole
-        holes = store.holes_of(same.path) if same.path is not None else []
-        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed and not holes:
+        # A file the store lacked, which is in this snapshot's own folder by
+        # now (`placed`), is kept only if this snapshot is written
+        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(
@@ -2916,6 +2940,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         index_column_names=index_names,
         rows_first_said=rows_first_said,
         rows_first_count=rows_first_count,
+        not_whole=not_whole,
     )
 
 
@@ -3044,7 +3069,7 @@ def _put_index(published: dict, pending: PendingSnapshot, staging: Optional[Path
     """
     from chartbook import index as index_module
 
-    with _staged(staging, "index", prefix="chartbook-index-") as scratch:
+    with _staged(staging, "index", pending, prefix="chartbook-index-") as scratch:
         path = Path(scratch) / INDEX_FILE
         index_module.write_index(published, path)
         stored = pending.put(path, place=f"{OWN_DIR}/{INDEX_FILE}", links=LINKS)
@@ -3267,7 +3292,7 @@ def _put_documents(
     """
     if not paths:
         return None, None
-    with _staged(staging, "documents", prefix="chartbook-documents-") as scratch:
+    with _staged(staging, "documents", pending, prefix="chartbook-documents-") as scratch:
         staged = Path(scratch)
         copied = 0
         for relative in paths:

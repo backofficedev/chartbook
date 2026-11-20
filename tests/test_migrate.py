@@ -22,7 +22,7 @@ from chartbook import hashing, migrate, snapshot
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.refs import AssetRef
-from chartbook.store import EarlierLayoutError, FolderStore, StoreError, holds_v1
+from chartbook.store import FolderStore, StoreError, holds_v1
 
 FIRST, SECOND, OTHER = "a" * 40, "b" * 40, "c" * 40
 
@@ -358,8 +358,8 @@ class TestWhatTheThirdReviewFound:
 
         Moved, it is a store of 0.5, which this ChartBook reads and does not
         write: with its store.json lost it is still that for every purpose.
-        It is read, a write of data says what any store of 0.5 says (not
-        that it is a store of 0.2), a note of a lockfile goes where 0.5 kept
+        It is read, a write of data says that it has no store.json and what was
+        found (not that it is a store of 0.2), a note of a lockfile goes where 0.5 kept
         them, and no store.json of this version's layout is written over it.
         """
         root, hashes = old_store
@@ -369,7 +369,7 @@ class TestWhatTheThirdReviewFound:
         store = FolderStore(root)
         assert not holds_v1(root) and store.earlier_layout()
         assert store.has(hashes["rates"]) and len(snapshot.readable_snapshots(store)[0]) == 3
-        with pytest.raises(EarlierLayoutError, match=r"has the layout of ChartBook 0\.5, which this ChartBook reads and does not write"):
+        with pytest.raises(StoreError, match=r"has no store.json, and holds a pipelines/ folder with snapshots or objects in it"):
             store.put(tmp_path / "new.txt")
         noted = len(list((root / "roots").iterdir()))
         store.add_root(tmp_path / "chartbook.lock", [hashes["rates"]])

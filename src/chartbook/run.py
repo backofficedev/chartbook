@@ -1355,12 +1355,12 @@ def run(
                     )
                     raise RunError(f"{error}{why} Nothing was built.") from None
                 try:
-                    # A store laid out as ChartBook 0.5 laid one out takes no snapshot: said now too
+                    # A store that takes no snapshot (laid out as ChartBook 0.5 laid one out, say) says so now too
                     snapshots.check_store_takes_one(step.id, store)
-                except EarlierLayoutError as error:
+                except StoreError as error:
                     raise RunError(f"{error} Nothing was built.") from None
-                except (StoreError, OSError):
-                    pass  # whatever else is wrong with the store is said where the snapshot is made, as before
+                except OSError:
+                    pass  # a store that cannot be reached is said where the snapshot is made, as before
                 commits_before[step.directory] = code.commit
     # Under WHEN_COMMITTED: asked now, before the build, as --snapshot asks it; a pipeline that
     # cannot have a snapshot is built all the same, and told why at the end

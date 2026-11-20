@@ -4216,6 +4216,12 @@ class GcPlan:
             snapshot that stays has its own copy of them. Not in *delete*,
             which is of objects nothing names; and not of what a record a
             pin made holds, which goes without a word.
+        held_back: The pipelines none of whose snapshots is removed, as one
+            of those that stay has lost a file of its own
+            (:meth:`chartbook.store.Store.holes_left`): by the pipeline's
+            ID, that snapshot's record, the first such file, and how many.
+            Its snapshots that would have gone are in *snapshots_kept*,
+            with :data:`HELD_BACK` for why.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.
@@ -4240,6 +4246,7 @@ class GcPlan:
     recent_files: set = field(default_factory=set)
     unused: list = field(default_factory=list)
     copies: dict = field(default_factory=dict)
+    held_back: dict = field(default_factory=dict)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -4258,9 +4265,9 @@ class GcPlan:
 
     @property
     def freed_bytes(self) -> int:
-        """What carrying out the plan frees: the objects nothing names, and the removed snapshots' own copies of files that objects which stay have too.
+        """What carrying out the plan would free: the objects nothing names, and the removed snapshots' own copies of files that objects which stay have too.
 
-        The one number ``store gc`` says, before it asks and after.
+        What ``store gc`` says before it asks; after, it says what was freed (:class:`GcDone`).
         """
         return self.size_bytes + self.copies_bytes
 
@@ -4449,7 +4456,7 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     plan.kept_versions = snapshots.kept_versions
     _keep_what_only_they_hold(plan, keep)
     _plan_pinned(store, plan, keep, recent_seconds)
-    _keep_what_fills_a_hole(store, plan)
+    _hold_back_where_one_that_stays_has_a_hole(store, plan)
     named_by_snapshots = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept + plan.pinned_kept))
     plan.snapshots = len(named_by_snapshots)
     keep |= named_by_snapshots
@@ -4527,32 +4534,30 @@ def _keep_what_only_they_hold(plan: "GcPlan", keep: set) -> None:
             held |= taken.hashes()
 
 
-#: Why ``store gc`` keeps a snapshot it would otherwise remove, where each snapshot holds its own copy of every file
-FILLS_A_HOLE = "a snapshot that stays has lost a file that this one has whole"
+#: Why ``store gc`` removes no snapshot of a pipeline one of whose snapshots that stay has lost a file of its own
+HELD_BACK = "a snapshot of its pipeline that stays has lost a file"
 
 
-def _keep_what_fills_a_hole(store: Store, plan: "GcPlan") -> None:
-    """Keep a snapshot that has, whole, a file a snapshot which stays names and has lost, where no snapshot which stays has it whole.
+def _hold_back_where_one_that_stays_has_a_hole(store: Store, plan: "GcPlan") -> None:
+    """Remove no snapshot of a pipeline one of whose snapshots that stay lacks a file of its own (:attr:`GcPlan.held_back`).
 
     Where each snapshot holds its own copy of every file, one folder can
     lose a file that another still has (a sync that has not brought it, a
-    file removed by hand). Removing the other would remove the last whole
-    copy of bytes a kept snapshot names, so it stays, and the plan says why,
-    until a run puts the file back or ``store verify`` has been heeded
-    (:meth:`chartbook.store.Store.holds_what_is_lost`). Only sizes are
-    looked at. A store that keeps each file once keeps none for this.
+    file removed by hand), and a read of the one with the hole is handed
+    another's copy. So while a snapshot that stays has a hole, every
+    snapshot of its pipeline stays, and the command says which snapshot and
+    which file. Bytes in another pipeline never count, and a snapshot that
+    is itself to go holds nothing back, whatever it has lost.
     """
     going = [taken.path for taken, _ in plan.snapshots_delete + plan.pinned_delete]
     # Asked of one store, as what is left is (files_left): several read as one are planned as before
-    asked = getattr(type(store), "holds_what_is_lost", None)
-    kept = {str(path) for path in asked(store, going)} if asked is not None and going else set()
-    if not kept:
-        return
+    asked = getattr(type(store), "holes_left", None)
+    plan.held_back = asked(store, going) if asked is not None and going else {}
     for delete, keeping in ((plan.snapshots_delete, plan.snapshots_kept), (plan.pinned_delete, plan.pinned_kept)):
         for taken, why in list(delete):
-            if str(taken.path) in kept:
+            if taken.pipeline in plan.held_back:
                 delete.remove((taken, why))
-                keeping.append((taken, FILLS_A_HOLE))
+                keeping.append((taken, HELD_BACK))
 
 
 def _plan_pinned(store: Store, plan: "GcPlan", keep: set, recent_seconds: float) -> None:
@@ -4626,14 +4631,46 @@ class GcError(LockError):
         )
 
 
+@dataclass
+class GcDone:
+    """What carrying out a plan removed, and what it kept after all (:func:`carry_out_gc`).
+
+    Attributes:
+        snapshots: How many snapshots were removed.
+        objects: How many objects were removed.
+        freed_bytes: The size of what was removed, as the plan had it: the
+            objects, and the removed snapshots' own copies of files that
+            objects which stay have too (:attr:`GcPlan.copies`).
+        kept_after_all: Each snapshot the plan said to remove that the plan
+            made again keeps, with why it keeps it.
+        objects_kept: How many objects the plan said to remove that stay:
+            a lockfile or a snapshot names or uses them now.
+        held_back: :attr:`GcPlan.held_back` of the plan made again.
+    """
+
+    snapshots: int = 0
+    objects: int = 0
+    freed_bytes: int = 0
+    kept_after_all: list = field(default_factory=list)
+    objects_kept: int = 0
+    held_back: dict = field(default_factory=dict)
+
+
 def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
+    """Carry out a plan from :func:`plan_gc`; how many snapshots and how many objects were removed (:func:`carry_out_gc`, which says more)."""
+    done = carry_out_gc(plan, store)
+    return done.snapshots, done.objects
+
+
+def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
     """Carry out a plan from :func:`plan_gc`: remove what it says to remove.
 
     The plan was made before anyone said yes, and a pin may have landed in
-    between and taken something it names. So the plan is made again now,
-    and only what both say may go is removed.
+    between and taken something it names, or a snapshot that stays lost a
+    file. So the plan is made again now, and only what both say may go is
+    removed.
 
-    :returns: How many snapshots and how many objects were removed.
+    :returns: What was removed, and what was kept after all.
     :raises GcError: If something could not be removed (another user's, in
         a store users share), once everything else has been; it says what
         was removed and what was not, and what to do about each.
@@ -4696,10 +4733,10 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
         failures.append(("what no snapshot uses", str(error)))
     # What a snapshot still holds stays: only an object no pipeline owns is removed by its hash
     held = store.held_hashes()
+    objects_kept = 0
     for content_hash, size in plan.delete:
-        if content_hash not in still_unnamed or content_hash in kept_back:
-            continue
-        if content_hash in held:
+        if content_hash not in still_unnamed or content_hash in kept_back or content_hash in held:
+            objects_kept += 1
             continue
         left = [name for name in plan.files.get(content_hash, ()) if name in stuck]
         if left:
@@ -4721,6 +4758,8 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
         if gone:
             removed += 1
             size_bytes += size
+        elif files is not None:
+            objects_kept += 1  # a snapshot being made took one of its files up
     # And the removed snapshots' own copies of what stays, which went with their folders
     size_bytes += sum(size for name, size in plan.copies.items() if name in tidied)
     # Only what both plans forget: a drive plugged back in before the yes brings its lockfile back
@@ -4733,4 +4772,6 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
             failures.append((f"the note of the lockfile {lockfile}", str(error)))
     if failures:
         raise GcError(removed_snapshots, removed, size_bytes, failures)
-    return removed_snapshots, removed
+    why_now = {taken.path: why for taken, why in now.snapshots_kept}
+    kept_after_all = [(taken, why_now[taken.path]) for taken, _ in plan.snapshots_delete if taken.path in why_now]
+    return GcDone(removed_snapshots, removed, size_bytes, kept_after_all, objects_kept, now.held_back)

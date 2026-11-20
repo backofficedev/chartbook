@@ -1232,25 +1232,37 @@ def _note_the_read(lock_path: Path, locked, store) -> None:
     _noted_reads.add(key)
 
 
-def _moment_of(entry: dict) -> Optional[tuple[str, str]]:
-    """The snapshot a dependency's entry in a lockfile pins, by its commit and when it was made; None if it names none."""
+#: For a read that names no snapshot and is still to get the same copy each time: a version of a
+#: model read by its hash is handed the earliest-made snapshot that holds it whole (:meth:`chartbook.store.Store.files`)
+_EARLIEST = (None, None)
+
+
+def _moment_of(entry: dict) -> tuple[Optional[str], Optional[str]]:
+    """The snapshot a dependency's entry in a lockfile pins, as far as it names it: its commit, and when it was made.
+
+    An entry pinned from a snapshot names both. A ``git`` dependency's
+    names its commit alone, and the read is then handed the earliest-made
+    snapshot at that commit that holds the asset whole.
+    """
     location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
     commit, made_at = location.get("commit"), entry.get("snapshot")
-    return (commit, made_at) if isinstance(commit, str) and commit and isinstance(made_at, str) and made_at else None
+    return (commit if isinstance(commit, str) and commit else None, made_at if isinstance(made_at, str) and made_at else None)
 
 
-def _held(store, record: dict, pipeline: Optional[str] = None, snapshot: Optional[tuple[str, str]] = None) -> Location:
+def _held(
+    store, record: dict, pipeline: Optional[str] = None, snapshot: Optional[tuple[Optional[str], Optional[str]]] = None
+) -> Location:
     """Where the store holds an asset, given its record with a content hash.
 
     :param pipeline: The pipeline it was pinned from, whose copy is the one
         read: the same bytes in another pipeline's snapshot may be cleared
         while this one's is kept.
-    :param snapshot: The snapshot it is read from, by its commit and when
-        it was made: where each snapshot has its own copy of every file,
-        that snapshot's is the one read while the store has it whole
-        (:meth:`chartbook.store.Store.files`), so that the path of a pinned
-        file does not move when its owner makes another snapshot of the
-        same bytes.
+    :param snapshot: The snapshot it is read from, as far as the read
+        knows it, its commit and when it was made: where each snapshot has
+        its own copy of every file, the one handed out is chosen by these,
+        and is the same each time (:meth:`chartbook.store.Store.files`), so
+        that the path of a pinned file does not move when its owner makes
+        another snapshot of the same bytes.
     """
     from chartbook import hashing
     from chartbook.snapshot import not_whole
@@ -1448,7 +1460,7 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
             f"made{pointing}, and the store at {store} no longer has its "
             f"bytes.",
         )
-    return _held(store, records[matches[0]])
+    return _held(store, records[matches[0]], dict(versions)[matches[0]].pipeline, _EARLIEST)
 
 
 def _resolve_pinned_version(
@@ -1506,7 +1518,7 @@ def _resolve_pinned_version(
         and (other.get("content_hash") or "").split(":", 1)[-1].startswith(digits)
     ]
     if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"]):
-        return _held(store, by_label[0])
+        return _held(store, by_label[0], snapshot=_EARLIEST)
     entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
     commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")
     if not (commit and made_at):
@@ -1563,7 +1575,7 @@ def _resolve_pinned_version(
             f"Version {pinned.rev} of {without} is named by a snapshot, and its "
             f"bytes are not in the store at {store}.",
         )
-    return _held(store, taken.assets[local], taken.pipeline, (taken.commit, taken.made_at))
+    return _held(store, taken.assets[local], taken.pipeline, _EARLIEST)
 
 
 def _declared_in_source(dependency: PipelineLocation, name: str) -> Optional[str]:

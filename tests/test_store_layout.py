@@ -13,6 +13,7 @@ chart and a README. A store of 0.5 is laid out by hand
 
 import json
 import os
+import shutil
 from pathlib import Path
 
 import polars as pl
@@ -26,7 +27,7 @@ from chartbook.store import EarlierLayoutError, FolderStore, StoreError
 from tests.fixtures import _git
 from tests.store_of_0_5 import cleared_as_0_5, laid_out_as_0_5
 
-FIRST, SECOND = "2026-11-16T09:15:00.000000Z", "2026-11-19T14:02:00.000000Z"
+FIRST, SECOND, THIRD = "2026-11-16T09:15:00.000000Z", "2026-11-19T14:02:00.000000Z", "2026-11-20T10:00:00.000000Z"
 
 posix = pytest.mark.skipif(os.name == "nt", reason="the build script here is POSIX shell")
 
@@ -328,7 +329,15 @@ class TestEverySnapshotIsComplete:
 
 
 class TestThePathOfAPinnedFile:
-    """A read through a pin is handed the pinned snapshot's own copy: `chartbook path` says that copy stays as it is until `chartbook pin --update`."""
+    """The copy a read is handed is the same one each time, whatever snapshots are made after it.
+
+    Of the pipeline's snapshots that hold the asset whole: the one the
+    lockfile names, by its commit and when it was made; else the earliest
+    made at that commit (a ``git`` dependency's entry names its commit
+    alone); else the earliest made (a version of a model read by its hash
+    names neither). So the path changes when the pin moves, and when
+    ``store gc`` removes that snapshot or it loses the file: not otherwise.
+    """
 
     def test_it_stays_where_it_is_while_neither_the_pin_nor_the_bytes_move(self, rates, reader, store):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
@@ -352,6 +361,135 @@ class TestThePathOfAPinnedFile:
         own.unlink()
         assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(second) / "_data" / "treasury.parquet"
         assert data.load("acme/rates:treasury", project_dir=reader).collect().shape == (3, 2)
+        # And that one stays the one read when a third is made: the earliest made of those that have it whole
+        _chart(rates, "and again")
+        snapshot.make(rates, store=FolderStore(store.root), made_at=THIRD)
+        assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(second) / "_data" / "treasury.parquet"
+
+    @pytest.fixture
+    def with_parts(self, rates):
+        """``acme/rates`` with a folder dataset of a file a year beside its table, committed again."""
+        for year, rows in ((2020, [4.0]), (2021, [4.1, 4.2])):
+            (rates / "_data" / "parts" / f"year={year}").mkdir(parents=True)
+            pl.DataFrame({"rate": rows}).write_parquet(rates / "_data" / "parts" / f"year={year}" / "part-0.parquet")
+        manifest = {
+            "project": {"id": "acme/rates"},
+            "dataframes": {
+                "treasury": {"path": "./_data/treasury.parquet", "docs": "d"},
+                "parts": {"path": "./_data/parts", "docs": "d"},
+            },
+            "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "treasury", "docs": "d"}},
+        }
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        _git(rates, "add", "-A")
+        _git(rates, "commit", "--quiet", "-m", "A dataset of a file a year")
+        return rates
+
+    def test_every_way_of_reading_a_pin_gets_the_pinned_snapshots_own_copy(self, with_parts, reader, store):
+        from chartbook import assets
+
+        first = snapshot.make(with_parts, store=store, made_at=FIRST).snapshot
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        _chart(with_parts, "the chart alone is drawn again")
+        second = snapshot.make(with_parts, store=FolderStore(store.root), made_at=SECOND).snapshot
+        assert second.path != first.path
+        own = _folder_of(first)
+        assert data.path("acme/rates:treasury", project_dir=reader) == own / "_data" / "treasury.parquet"
+        assert assets.path("acme/rates:dataframe/treasury", project_dir=reader) == own / "_data" / "treasury.parquet"
+        assert [Path(path) for path in data.files("acme/rates:parts", project_dir=reader)] == [
+            own / "_data" / "parts" / "year=2020" / "part-0.parquet", own / "_data" / "parts" / "year=2021" / "part-0.parquet",
+        ]
+        said = CliRunner().invoke(main, ["path", "acme/rates:treasury", "--project-dir", str(reader)])
+        assert said.output.splitlines() == [str(own / "_data" / "treasury.parquet")]
+        assert data.load("acme/rates:parts", project_dir=reader).collect().shape[0] == 3
+
+    def test_a_dataset_the_pinned_snapshot_has_lost_a_file_of_is_read_whole_from_one_other_folder(self, with_parts, reader, store):
+        first = snapshot.make(with_parts, store=store, made_at=FIRST).snapshot
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        _chart(with_parts, "the chart alone is drawn again")
+        second = snapshot.make(with_parts, store=FolderStore(store.root), made_at=SECOND).snapshot
+        lost = _folder_of(first) / "_data" / "parts" / "year=2021" / "part-0.parquet"
+        lost.chmod(0o644)
+        lost.unlink()
+        assert data.load("acme/rates:parts", project_dir=reader).collect().shape[0] == 3
+        # One folder for the whole asset, not a file from each
+        assert [Path(path) for path in data.files("acme/rates:parts", project_dir=reader)] == [
+            _folder_of(second) / "_data" / "parts" / f"year={year}" / "part-0.parquet" for year in (2020, 2021)
+        ]
+
+    def test_one_pinned_from_a_repository_stays_where_it_is_when_another_project_pins_a_later_commit(self, work, store):
+        """A ``git`` dependency's entry names a commit and no time: the read gets the earliest-made snapshot at that commit."""
+        from chartbook.gitcache import GitCache
+
+        upstream = work / "upstream"
+        (upstream / "data").mkdir(parents=True)
+        (upstream / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/upstream"}, "dataframes": {
+                "steady": {"path": "./data/steady.parquet", "docs": "d"},
+                "moving": {"path": "./data/moving.parquet", "docs": "d"},
+            }}),
+            encoding="utf-8", newline="\n",
+        )
+        pl.DataFrame({"day": [0, 1, 2]}).write_parquet(upstream / "data" / "steady.parquet")
+        pl.DataFrame({"day": [0]}).write_parquet(upstream / "data" / "moving.parquet")
+        _git(upstream, "init", "--quiet", "-b", "main")
+        _git(upstream, "add", "-A")
+        _git(upstream, "commit", "--quiet", "-m", "One")
+        one, two = work / "one", work / "two"
+        for folder in (one, two):
+            folder.mkdir()
+            (folder / "chartbook.toml").write_text(
+                tomli_w.dumps({"project": {"id": f"acme/{folder.name}"}, "dependencies": {"acme/upstream": {"git": "../upstream"}}}),
+                encoding="utf-8", newline="\n",
+            )
+        cache = GitCache(work / "gitcache")
+        assert lock.pin(one, FolderStore(store.root), git_cache=cache).problems == []
+        (entry,) = lock.read_lock(one).dependencies
+        assert entry["location"]["commit"] and "snapshot" not in entry  # a commit, and no snapshot's time
+        before = data.path("acme/upstream:steady", project_dir=one)
+        (made_by_the_pin,) = (store.root / "snapshots" / "acme+upstream").glob("*/_chartbook/snapshot.json")
+        assert Path(before) == made_by_the_pin.parent.parent / "data" / "steady.parquet"
+        # Upstream changes its other table and commits; another project pins that commit. `one` pins nothing again
+        pl.DataFrame({"day": [0, 1]}).write_parquet(upstream / "data" / "moving.parquet")
+        _git(upstream, "add", "-A")
+        _git(upstream, "commit", "--quiet", "-m", "Two")
+        assert lock.pin(two, FolderStore(store.root), git_cache=cache).problems == []
+        assert len(list((store.root / "snapshots" / "acme+upstream").glob("*/_chartbook/snapshot.json"))) == 2
+        assert data.path("acme/upstream:steady", project_dir=one) == before
+
+    def test_a_version_of_a_model_read_by_its_hash_is_in_the_earliest_snapshot_that_holds_it(self, work, store):
+        """`models.path("m@<hash>")`: the path changes only when `store gc` removes that snapshot."""
+        from chartbook import models
+
+        folder = work / "forecast"
+        (folder / "_output").mkdir(parents=True)
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "acme/forecast"},
+                "models": {"m": {"path": "./_output/m.json"}},
+                "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        (folder / ".gitignore").write_text("/_output/\n", encoding="utf-8", newline="\n")
+        (folder / "_output" / "m.json").write_text('{"weights": [1, 2, 3]}\n', encoding="utf-8", newline="\n")
+        (folder / "_output" / "curve.html").write_text("<p>one</p>\n", encoding="utf-8", newline="\n")
+        _git(folder, "init", "--quiet", "-b", "main")
+        _git(folder, "add", "-A")
+        _git(folder, "commit", "--quiet", "-m", "Work")
+        first = snapshot.make(folder, store=store, made_at=FIRST).snapshot
+        version = first.content()["model/m"].split(":", 1)[1][:12]
+        assert models.path(f"m@{version}", project_dir=folder) == _folder_of(first) / "_output" / "m.json"
+        made = [first]
+        for text, made_at in (("two", SECOND), ("three", THIRD)):
+            (folder / "_output" / "curve.html").write_text(f"<p>{text}</p>\n", encoding="utf-8", newline="\n")
+            made.append(snapshot.make(folder, store=FolderStore(store.root), made_at=made_at).snapshot)
+            assert models.path(f"m@{version}", project_dir=folder) == _folder_of(first) / "_output" / "m.json"
+        # Once that snapshot is removed, the earliest of those left
+        fresh = FolderStore(store.root)
+        assert fresh.remove_snapshot(first.path) is True
+        fresh.tidy_pipeline("acme/forecast")
+        assert models.path(f"m@{version}", project_dir=folder) == _folder_of(made[1]) / "_output" / "m.json"
 
     def test_a_store_of_0_5_has_one_place_for_it_whichever_snapshot_is_named(self, rates, store):
         first = snapshot.make(rates, store=store, made_at=FIRST).snapshot
@@ -950,11 +1088,17 @@ class TestAFolderWithPipelinesAndNoMarker:
         assert kept.one.location == cleared / "_data" / "treasury.parquet"
         assert snapshot.readable_snapshots(store)[0] == [second]
 
-    def test_no_data_is_written_to_it_and_it_is_given_no_marker(self, unmarked, work):
-        """What any store of 0.5 says, in the same words: its store.json may arrive at any moment, and says the same."""
+    def test_no_data_is_written_to_it_and_the_message_says_what_was_found_and_the_way_out(self, unmarked, work):
+        """Its own words, which send nobody to `store migrate`: that moves a store that has a store.json."""
         store, second, cleared = unmarked
         before = _tree(store.root)
         (work / "new.bin").write_bytes(b"new")
+        said = (
+            f"The store at {store} has no store.json, and holds a pipelines/ folder with snapshots or objects in it: "
+            f"what a store of ChartBook 0.5 holds, whose store.json may not have arrived yet (a sync that has not "
+            f"finished). Until it has, the folder is read as that store, and no data is written to it or removed from "
+            f"it. If it is no store of ChartBook 0.5 any more, remove pipelines/ from it and try again."
+        )
         for write in (
             lambda: store.begin("acme/rates", "c" * 40, "2026-11-20T00:00:00.000000Z", base=work),
             lambda: store.put(work / "new.bin"),
@@ -962,12 +1106,17 @@ class TestAFolderWithPipelinesAndNoMarker:
             lambda: store.tidy(),
             lambda: store.remove_snapshot(second.path),
         ):
-            with pytest.raises(EarlierLayoutError) as refused:
+            with pytest.raises(StoreError) as refused:
                 write()
-            assert str(refused.value) == refusal(store)
+            assert str(refused.value) == said and not isinstance(refused.value, EarlierLayoutError)
         assert _tree(store.root) == before
         assert not (store.root / "store.json").exists() and not (store.root / "snapshots").exists()
         assert not (store.root / "_chartbook").exists() and not (store.root / "README.txt").exists()
+        # Once its store.json has arrived it says what any store of 0.5 says
+        (store.root / "store.json").write_text('{"schema": "chartbook/store/v2"}\n', encoding="utf-8", newline="\n")
+        with pytest.raises(EarlierLayoutError) as refused:
+            FolderStore(store.root).put(work / "new.bin")
+        assert str(refused.value) == refusal(store)
 
     def test_a_pin_there_writes_the_lockfile_and_its_note_where_0_5_kept_them(self, unmarked, reader):
         store, second, cleared = unmarked
@@ -1001,9 +1150,8 @@ class TestAFolderWithPipelinesAndNoMarker:
         store = FolderStore(arriving)
         assert store.earlier_layout()
         _chart(rates, "the curve on the 20th")
-        with pytest.raises(EarlierLayoutError) as refused:
+        with pytest.raises(StoreError, match=r"has no store.json, and holds a pipelines/ folder with snapshots or objects in it"):
             snapshot.make(rates, store=store)
-        assert str(refused.value) == refusal(store)
         assert _tree(arriving) == [] and not (arriving / "snapshots").exists() and not (arriving / "_chartbook").exists()
 
     def test_one_snapshots_folder_with_nothing_in_it_is_enough(self, work):
@@ -1012,20 +1160,47 @@ class TestAFolderWithPipelinesAndNoMarker:
         (work / "new.bin").write_bytes(b"new")
         store = FolderStore(root)
         assert store.earlier_layout()
-        with pytest.raises(EarlierLayoutError):
+        with pytest.raises(StoreError, match="remove pipelines/ from it and try again"):
             store.put(work / "new.bin")
         assert _tree(root) == []
 
-    def test_a_note_of_a_lockfile_is_enough(self, work):
-        root = work / "noted"
+    def test_a_roots_folder_with_notes_is_enough_and_removing_it_is_the_way_out(self, rates, work, monkeypatch):
+        """What is left once a person has removed pipelines/ and store.json of a store of 0.5 to start again."""
+        root = work / "fresh"
         (root / "roots").mkdir(parents=True)
         (root / "roots" / ("ab" * 16 + ".json")).write_text("{}\n", encoding="utf-8", newline="\n")
-        (work / "new.bin").write_bytes(b"new")
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
         store = FolderStore(root)
         assert store.earlier_layout()
-        with pytest.raises(EarlierLayoutError):
-            store.put(work / "new.bin")
+        with pytest.raises(StoreError) as refused:
+            snapshot.make(rates, store=store, made_at=SECOND)
+        assert str(refused.value) == (
+            f"The store at {store} has no store.json, and holds a roots/ folder with notes in it: what a store of "
+            f"ChartBook 0.5 holds, whose store.json may not have arrived yet (a sync that has not finished). Until it "
+            f"has, the folder is read as that store, and no data is written to it or removed from it. If it is no "
+            f"store of ChartBook 0.5 any more, remove roots/ from it and try again."
+        )
+        assert "migrate" not in str(refused.value)
         assert _tree(root) == [f"roots/{'ab' * 16}.json"]
+        # The command it does not send to says nothing untrue of it either: no layout "of this version already"
+        migrate = CliRunner().invoke(main, ["store", "migrate"])
+        assert migrate.exit_code == 0 and migrate.output.splitlines() == [
+            f"The store at {store} has the layout of ChartBook 0.5: there is nothing to move from 0.2."
+        ]
+        # The way out, as written: what was named is removed, and the snapshot is made
+        (root / "roots" / ("ab" * 16 + ".json")).unlink()
+        (root / "roots").rmdir()
+        taken = snapshot.make(rates, store=FolderStore(root), made_at=SECOND)
+        assert taken.made and json.loads((root / "store.json").read_text(encoding="utf-8")) == {"schema": "chartbook/store/v3"}
+
+    def test_both_are_named_where_both_are_found(self, unmarked, reader, work):
+        store, second, cleared = unmarked
+        assert lock.pin(reader, store).problems == []  # its note goes under roots/
+        (work / "new.bin").write_bytes(b"new")
+        with pytest.raises(StoreError) as refused:
+            FolderStore(store.root).put(work / "new.bin")
+        assert "holds a pipelines/ folder with snapshots or objects in it and a roots/ folder with notes in it:" in str(refused.value)
+        assert str(refused.value).endswith("remove pipelines/ and roots/ from it and try again.")
 
     def test_an_object_no_pipeline_owned_is_enough(self, work):
         root = work / "objects-only"
@@ -1035,9 +1210,8 @@ class TestAFolderWithPipelinesAndNoMarker:
         (work / "new.bin").write_bytes(b"new")
         store = FolderStore(root)
         assert store.earlier_layout() and store.unowned_hashes() == ["sha256:" + "7" * 64]
-        with pytest.raises(EarlierLayoutError) as refused:
+        with pytest.raises(StoreError, match="holds a pipelines/ folder with snapshots or objects in it"):
             store.put(work / "new.bin")
-        assert str(refused.value) == refusal(store)
         assert not (root / "store.json").exists()
 
     def test_a_pipelines_folder_with_no_snapshots_folder_in_it_is_no_store_of_0_5(self, work):
@@ -1075,65 +1249,124 @@ class TestAPinWhoseNoteTheStoreDidNotTake:
         assert (reader / "chartbook.lock").is_file()
 
 
-class TestAStoreMarkedAsThisLayoutThatHoldsSnapshotsOf05:
-    """This version's ``store.json`` over the ``pipelines/`` of a store of 0.5: what a first write that raced a sync left. It is refused, not read as an empty store."""
+#: The end of what a folder with both layouts in it says: how to part the two, the store of 0.5 staying where it is
+HOW_TO_PART = (
+    "It is neither read nor written as it is. To part the two, the store of 0.5 staying here, where every machine "
+    "expects it: move snapshots/ and _chartbook/ out of it into a folder of their own, beside a store.json that holds "
+    '{"schema": "chartbook/store/v3"}, which is then a store of this version\'s layout; and see that the store.json '
+    'here holds {"schema": "chartbook/store/v2"}.'
+)
+
+
+class TestAFolderWithBothLayoutsInIt:
+    """A store of 0.5 that this version wrote into before its ``store.json`` had arrived: ``pipelines/`` and ``snapshots/``, and one ``store.json``.
+
+    Whichever layout the ``store.json`` says, the snapshots of the other
+    would be passed over without a word: so it is refused whole, and the
+    message says how to part the two.
+    """
 
     @pytest.fixture
-    def mixed(self, rates, store):
+    def mixed(self, rates, reader, store, work):
+        """Two snapshots of 0.5 that a pipeline is pinned to, and one of this layout beside them; the folder, and the snapshots' folders' names."""
         snapshot.make(rates, store=store, made_at=FIRST)
         _chart(rates, "the curve on the 19th")
         snapshot.make(rates, store=store, made_at=SECOND)
         old = laid_out_as_0_5(store.root)
-        (old.root / "store.json").write_text('{"schema": "chartbook/store/v3"}\n', encoding="utf-8", newline="\n")
-        return FolderStore(old.root)
+        assert lock.pin(reader, old).problems == []  # its note is under roots/
+        other = FolderStore(work / "written-meanwhile")
+        _chart(rates, "the curve on the 20th")
+        third = snapshot.make(rates, store=other, made_at=THIRD).snapshot
+        shutil.copytree(other.root / "snapshots", old.root / "snapshots")
+        shutil.copytree(other.root / "_chartbook", old.root / "_chartbook")
+        shutil.copy(other.root / "store.json", old.root / "store.json")
+        of_0_5 = sorted(p.name for p in (old.root / "pipelines" / "acme+rates").iterdir() if p.is_dir())
+        return old.root, of_0_5, _folder_of(third).name
 
-    def test_it_is_neither_read_nor_written_and_the_message_names_both(self, mixed, work):
-        before = _tree(mixed.root)
-        first = sorted(p.name for p in (mixed.root / "pipelines" / "acme+rates").iterdir() if p.is_dir())[0]
-        said = (
-            f"The store at {mixed} has a store.json that says 'chartbook/store/v3', this version's layout, and a "
-            f"pipelines/ folder that holds snapshots laid out as ChartBook 0.5 laid them out "
-            f"({mixed.root / 'pipelines' / 'acme+rates' / first}): most likely a store of 0.5 that this ChartBook wrote "
-            f"into before its store.json had arrived. It is neither read nor written as it is, since what is under "
-            f"pipelines/ would be passed over. Move pipelines/ out of it, with roots/ and origins/ if they are there, "
-            f"into a folder of their own, beside a store.json that holds {{\"schema\": \"chartbook/store/v2\"}}: that "
-            f"folder is then the store of 0.5, which this ChartBook reads, and this one a store of this version's layout."
+    @staticmethod
+    def _said(root: Path, of_0_5: list, of_this: str, marker: str) -> str:
+        store = FolderStore(root)
+        if marker == "chartbook/store/v3":
+            return (
+                f"The store at {store} has a store.json that says 'chartbook/store/v3', this version's layout, and a "
+                f"pipelines/ folder that holds snapshots laid out as ChartBook 0.5 laid them out "
+                f"({root / 'pipelines' / 'acme+rates' / of_0_5[0]}): most likely a store of 0.5 that this ChartBook wrote "
+                f"into before its store.json had arrived. {HOW_TO_PART}"
+            )
+        return (
+            f"The store at {store} has a store.json that says 'chartbook/store/v2', the layout of ChartBook 0.5, and a "
+            f"snapshots/ folder that holds snapshots laid out as this version lays them out "
+            f"({root / 'snapshots' / 'acme+rates' / of_this}): most likely a store this ChartBook made here before a "
+            f"store of 0.5, on its way by a sync, arrived with its store.json. {HOW_TO_PART}"
         )
+
+    @pytest.mark.parametrize("marker", ["chartbook/store/v3", "chartbook/store/v2"])
+    def test_it_is_neither_read_nor_written_whichever_layout_its_store_json_says(self, mixed, work, marker):
+        root, of_0_5, of_this = mixed
+        (root / "store.json").write_text(json.dumps({"schema": marker}) + "\n", encoding="utf-8", newline="\n")
+        before = _tree(root)
         (work / "new.bin").write_bytes(b"new")
         for use in (
-            lambda: mixed.records(),
-            lambda: mixed.has("sha256:" + "0" * 64),
-            lambda: FolderStore(mixed.root).verify(),
-            lambda: FolderStore(mixed.root).put(work / "new.bin"),
-            lambda: FolderStore(mixed.root).begin("acme/rates", "c" * 40, "2026-11-20T00:00:00.000000Z", base=work),
-            lambda: FolderStore(mixed.root).add_root(work / "chartbook.lock", []),
-            lambda: lock.plan_gc(FolderStore(mixed.root)),
+            lambda: FolderStore(root).records(),
+            lambda: FolderStore(root).has("sha256:" + "0" * 64),
+            lambda: FolderStore(root).verify(),
+            lambda: FolderStore(root).put(work / "new.bin"),
+            lambda: FolderStore(root).begin("acme/rates", "c" * 40, "2026-11-21T00:00:00.000000Z", base=work),
+            lambda: FolderStore(root).add_root(work / "chartbook.lock", []),
+            lambda: lock.plan_gc(FolderStore(root)),
         ):
             with pytest.raises(StoreError) as refused:
                 use()
-            assert str(refused.value) == said
-        assert _tree(mixed.root) == before
+            assert str(refused.value) == self._said(root, of_0_5, of_this, marker)
+        assert _tree(root) == before
 
-    def test_the_commands_that_look_at_a_store_say_so(self, mixed):
-        """Not `OK (0 object(s))` and not `No snapshots.`"""
-        before = _tree(mixed.root)
-        for arguments in (["store", "verify"], ["store", "ls"], ["store", "gc", "--dry-run"]):
+    def test_a_store_of_this_layout_whose_store_json_says_0_5_is_no_empty_store(self, rates, store):
+        """The mirror with nothing of 0.5 in it but its store.json, which a sync brought first and wrote over this one's."""
+        taken = snapshot.make(rates, store=store, made_at=SECOND).snapshot
+        (store.root / "store.json").write_text('{"schema": "chartbook/store/v2"}\n', encoding="utf-8", newline="\n")
+        with pytest.raises(StoreError, match=r"a snapshots/ folder that holds snapshots laid out as this version lays them out"):
+            FolderStore(store.root).records()
+        for arguments in (["store", "verify"], ["store", "info"], ["store", "ls"]):
             result = CliRunner().invoke(main, arguments)
             assert result.exit_code == 1, (arguments, result.output)
-            assert "a pipelines/ folder that holds snapshots laid out as ChartBook 0.5 laid them out" in result.output, arguments
-        assert _tree(mixed.root) == before
+            assert f"snapshots/acme+rates/{_folder_of(taken).name}".replace("/", os.sep) in result.output, arguments
 
-    def test_parted_as_the_message_says_both_are_stores(self, mixed, work):
-        """The remedy in the message, carried out: the folders of 0.5 in a folder of their own, beside the store.json of 0.5."""
-        parted = work / "of-0-5"
-        parted.mkdir()
-        for name in ("pipelines", "roots", "origins"):
-            if (mixed.root / name).exists():
-                (mixed.root / name).rename(parted / name)
-        (parted / "store.json").write_text('{"schema": "chartbook/store/v2"}\n', encoding="utf-8", newline="\n")
-        old, new = FolderStore(parted), FolderStore(mixed.root)
-        assert old.earlier_layout() and len(snapshot.all_snapshots(old)) == 2 and old.verify() == []
-        assert not new.earlier_layout() and new.records() == [] and new.verify() == []
+    @pytest.mark.parametrize("marker", ["chartbook/store/v3", "chartbook/store/v2"])
+    def test_every_command_says_it_and_none_ends_in_a_traceback(self, mixed, reader, rates, work, marker):
+        """Not `OK (0 object(s))`, not `No snapshots.`, and not "the layout of this version already"."""
+        root, of_0_5, of_this = mixed
+        (root / "store.json").write_text(json.dumps({"schema": marker}) + "\n", encoding="utf-8", newline="\n")
+        before = _tree(root)
+        both = "a pipelines/ folder that holds" if marker.endswith("v3") else "a snapshots/ folder that holds"
+        for arguments in (
+            ["store", "verify"], ["store", "info"], ["store", "ls"], ["store", "gc", "--dry-run"], ["store", "migrate", "--dry-run"],
+            ["store", "migrate"], ["pin", "--project-dir", str(reader)], ["snapshot", "--project-dir", str(rates)],
+            ["path", "acme/rates:treasury", "--project-dir", str(reader)], ["lineage", "--project-dir", str(reader)],
+            ["store", "export", "acme/rates", "--to", str(work / "out")],  # (`restore` here has nothing to restore, and asks the store nothing)
+        ):
+            result = CliRunner().invoke(main, arguments)
+            assert result.exception is None or isinstance(result.exception, SystemExit), (arguments, repr(result.exception))
+            assert both in result.output, (arguments, result.output)
+            assert "of this version already" not in result.output and "OK (" not in result.output
+        assert _tree(root) == before
+
+    @pytest.mark.parametrize("marker", ["chartbook/store/v3", "chartbook/store/v2"])
+    def test_parted_as_the_message_says_both_are_stores_and_the_one_of_0_5_is_where_it_was(self, mixed, reader, work, marker):
+        """The remedy, carried out as written: snapshots/ and _chartbook/ out, beside a store.json of this layout; the store.json here says 0.5."""
+        root, of_0_5, of_this = mixed
+        (root / "store.json").write_text(json.dumps({"schema": marker}) + "\n", encoding="utf-8", newline="\n")
+        moved = work / "of-this-layout"
+        moved.mkdir()
+        for name in ("snapshots", "_chartbook"):
+            shutil.move(str(root / name), str(moved / name))
+        (moved / "store.json").write_text('{"schema": "chartbook/store/v3"}\n', encoding="utf-8", newline="\n")
+        (root / "store.json").write_text('{"schema": "chartbook/store/v2"}\n', encoding="utf-8", newline="\n")
+        earlier, this = FolderStore(root), FolderStore(moved)
+        assert earlier.earlier_layout() and len(snapshot.all_snapshots(earlier)) == 2 and earlier.verify() == []
+        assert not this.earlier_layout() and len(snapshot.all_snapshots(this)) == 1 and this.verify() == []
+        # And the pipeline that was pinned to a snapshot of 0.5 reads it again, its store where it always was
+        assert data.load("acme/rates:treasury", project_dir=reader).collect().shape == (3, 2)
+        assert [root_.lockfile for root_ in earlier.roots()] == [reader / "chartbook.lock"]
 
 
 class TestAPipelineNamedAsACommitIs:

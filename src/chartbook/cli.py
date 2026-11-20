@@ -1385,8 +1385,12 @@ def path_command(ref, kind, project_dir, list_files):
 
     The pipeline must be in [dependencies], and what is printed is the path
     of the copy that chartbook.lock pins, in the store: not the other
-    pipeline's own directory. Run `chartbook pin` first. That copy stays as
-    it is until `chartbook pin --update`. Another pipeline's folder or glob of
+    pipeline's own directory. Run `chartbook pin` first. It is the pinned
+    snapshot's own copy (for a `git` dependency, the copy in the earliest
+    snapshot of the pinned commit), so the path stays the same until
+    `chartbook pin --update` moves the pin; where that snapshot is gone
+    from the store, or has lost the file, another snapshot's copy of the
+    same bytes is printed. Another pipeline's folder or glob of
     files has no one path, since a store may keep each file once (a bucket
     does), a snapshot's files then sitting in other snapshots' folders:
     print them with --files.
@@ -3546,6 +3550,14 @@ def _echo_snapshot(report, upstream=False):
             f"the rows of {count} dataframe{'' if count == 1 else 's'}: this one records them, so that a rebuild can "
             f"meet a pin of {'it' if count == 1 else 'them'}."
         )
+    if getattr(report, "not_whole", None) and report.made:
+        # Made of the same files as one already here, because that one lacks a file of its own in the store
+        holed, files = report.not_whole
+        more = f" and {len(files) - 1} more" if len(files) > 1 else ""
+        click.echo(
+            f"  The same files as the snapshot made {_when(holed.made_at)} ({holed.path.parent.parent.name}), which "
+            f"lacks {_printable(files[0])}{more} in the store: this one is whole, and that one is left as it is."
+        )
     if getattr(report, "rows_said", None):
         # Each dataframe whose file changed, beside the snapshot before this one
         # Named by its commit too: the one before may be of another branch, and its rows are then another's
@@ -3996,7 +4008,7 @@ def store_info(store_name):
                     status += ", unreachable"
                 click.echo(f"Store {entry.name}: {entry.store} ({status})")
                 if entry.reachable:
-                    from chartbook.store import FolderStore, StoreUnreachableError
+                    from chartbook.store import FolderStore, StoreError, StoreUnreachableError
 
                     if isinstance(entry.store, FolderStore):
                         _say_how_long_paths_are(entry.store.root)
@@ -4004,6 +4016,9 @@ def store_info(store_name):
                         found, unreadable = readable_snapshots(entry.store)
                     except (StoreUnreachableError, OSError) as error:
                         click.echo(f"  Unreachable: {error}")
+                        continue
+                    except StoreError as error:  # a layout this version does not read, or two in one folder
+                        click.echo(f"  Not read: {_said(error)}")
                         continue
                     counts = {}
                     for taken in found:
@@ -4072,8 +4087,17 @@ def store_info(store_name):
     click.echo("  where what is read from a remote store is kept on this machine")
     _say_how_long_paths_are(folder)
     if folder is None or folder.exists():
+        from chartbook.store import StoreError
+
         try:
-            clearable = _what_gc_would_clear(store_for_url(url))
+            the_store = store_for_url(url)
+            if folder is not None:
+                # Asked which layout it has: one this version does not read, or two in one folder, is said here too
+                the_store.earlier_layout()
+            clearable = _what_gc_would_clear(the_store)
+        except StoreError as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            raise SystemExit(1)
         except (ValueError, OSError):
             clearable = None
         if clearable:
@@ -4175,7 +4199,13 @@ def store_migrate(dry_run, yes):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     if not plan.needed:
-        if plan.layout == "chartbook/store/v2":
+        try:
+            # Asked of the store itself: one with two layouts in it is neither, and says so
+            earlier = the_store.earlier_layout()
+        except StoreError as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            raise SystemExit(1)
+        if earlier:
             # What this command moves is a store of 0.2. One of 0.3 to 0.5 is read as it is, and is not this version's
             click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: there is nothing to move from 0.2.")
         else:
@@ -4328,8 +4358,8 @@ def store_verify():
     store it takes a while.
 
     In a folder store each snapshot is checked for itself: every file its
-    record names is read in the snapshot's own folder, and one that is
-    missing there or has other bytes is said with the snapshot's name,
+    record names is read in the snapshot's own folder, and every one that
+    is missing there or has other bytes is said with the snapshot's name,
     though another snapshot has the same bytes.
 
     Examples:
@@ -4439,10 +4469,14 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     a kept snapshot was made from is kept too, as far up as it goes, for
     `chartbook lineage` to check. With --aggressive, names keep nothing: a
     snapshot a git tag or branch names, or one holding a labelled model
-    version that no lockfile pins, goes once nothing else keeps it. And a
-    snapshot that would go is kept while it has the only whole copy of a
-    file that a snapshot which stays has lost: `chartbook store verify`
-    says which file, and a run in that pipeline's folder puts it back.
+    version that no lockfile pins, goes once nothing else keeps it.
+
+    While a snapshot that stays lacks a file of its own (a sync that has
+    not brought it, a file removed by hand), no snapshot of its pipeline is
+    removed, since a read of the one with the hole is handed another's
+    copy. gc names the pipeline, the snapshot and the file. Wait for the
+    sync, or see `chartbook store verify`, which lists everything missing;
+    a snapshot that has lost a file for good goes once nothing pins it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
@@ -4488,10 +4522,24 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
-    def carry_out() -> tuple[int, int]:
+    def say_held_back(held_back: dict) -> None:
+        """Say of each pipeline none of whose snapshots is removed which snapshot lacks which file, and what to do."""
+        for pipeline, (record, file, count) in sorted(held_back.items()):
+            more = f" and {count - 1} more" if count > 1 else ""
+            click.echo(
+                f"Nothing of {_printable(pipeline)} is removed: its snapshot {record.parent.parent.name}, which stays, "
+                f"lacks {_printable(file)}{more}."
+            )
+        if held_back:
+            click.echo(
+                "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists "
+                "everything missing. A snapshot that has lost a file for good goes once nothing pins it any more."
+            )
+
+    def carry_out():
         """Remove what the plan says to, and say what could not be removed, if anything could not."""
         try:
-            return lock.run_gc(plan, the_store)
+            return lock.carry_out_gc(plan, the_store)
         except lock.GcError as e:
             # Everything else went: say so, then each thing that stayed and what to do
             if e.removed_snapshots or e.removed:
@@ -4580,6 +4628,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             "(for a note from before notes did, the newest holding each object it "
             "named). --forget-missing lets them go."
         )
+    say_held_back(plan.held_back)
 
     if not plan.delete and not plan.snapshots_delete:
         click.echo("Nothing to remove.")
@@ -4587,8 +4636,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             carry_out()  # forgets the missing, if asked to
         return
 
-    # One size, said before the question and after: what goes, the objects nothing names and, with
-    # a snapshot's folder, its own copies of files that a kept snapshot has too (GcPlan.freed_bytes)
+    # The size of what goes: the objects nothing names and, with a snapshot's folder, its own copies of
+    # files that a kept snapshot has too (GcPlan.freed_bytes); and after the yes, of what went (GcDone)
     freed = _format_bytes(plan.freed_bytes)
     if plan.snapshots_delete:
         objects = f" and {len(plan.delete)} object(s) that nothing names" if plan.delete else ""
@@ -4617,14 +4666,14 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     if not yes and not click.confirm("Remove them?", default=False):
         click.echo("Nothing was removed.")
         return
-    removed_snapshots, removed = carry_out()
-    click.echo(
-        f"Removed {removed_snapshots} snapshot(s) and {removed} object(s), "
-        f"{_format_bytes(plan.freed_bytes)}."
-    )
-    spared = len(plan.snapshots_delete) - removed_snapshots + len(plan.delete) - removed
-    if spared:
-        click.echo(f"{spared} of them were pinned while you were deciding, and kept.")
+    done = carry_out()
+    # What the plan made again at the yes keeps, each with why: pinned meanwhile only where it was
+    for taken, why in done.kept_after_all:
+        click.echo(f"Kept after all: {taken.pipeline} at {taken.commit[:7]}, made {_when(taken.made_at)}: {why}")
+    if done.objects_kept:
+        click.echo(f"Kept after all: {done.objects_kept} object(s), which a lockfile or a snapshot names or uses now")
+    say_held_back({pipeline: held for pipeline, held in done.held_back.items() if pipeline not in plan.held_back})
+    click.echo(f"Removed {done.snapshots} snapshot(s) and {done.objects} object(s), {_format_bytes(done.freed_bytes)}.")
 
 @main.command()
 @click.option(

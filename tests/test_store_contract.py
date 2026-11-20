@@ -327,7 +327,9 @@ class TestWhatTheThirdReviewFound:
         store.tidy()
         assert made.is_dir()
 
-    def test_two_snapshots_putting_back_one_file_both_succeed(self, tmp_path):
+    def test_two_snapshots_begun_over_a_lost_file_each_get_their_own_and_the_recorded_one_is_left(self, tmp_path):
+        """Since 0.3 a file a record names and the store had lost was put back where the record says. A snapshot's
+        folder is not changed once its record is written: it is left as it is, and each new one has its own copy."""
         store = FolderStore(tmp_path.resolve() / "store")
         folder = TestSnapshotFolders._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
         first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
@@ -335,16 +337,19 @@ class TestWhatTheThirdReviewFound:
         first.write(TestSnapshotFolders._record(first, COMMIT, rates=put))
         ((name, _),) = store.files_of(put.content_hash)
         (store.root / name).chmod(0o644)
-        (store.root / name).unlink()  # lost; two snapshots now put it back at once
+        (store.root / name).unlink()  # lost; two snapshots are now begun at once
         a = store.begin("acme/rates", "b" * 40, "2026-10-17T01:02:03.000000Z", base=folder)
         b = store.begin("acme/rates", "c" * 40, "2026-10-18T01:02:03.000000Z", base=folder)
-        a.put(folder / "_data" / "rates.parquet")
-        (store.root / name).chmod(0o644)
-        (store.root / name).unlink()
-        b.put(folder / "_data" / "rates.parquet")
-        assert (store.root / name).read_bytes() == b"rates-1"
-        written = a._write_file(str(folder / "_data" / "rates.parquet"), store.root / name, ("copy",), expect=put.content_hash)
-        assert written[0] == put.content_hash  # the other put it back: no error
+        mine = [pending.put(folder / "_data" / "rates.parquet") for pending in (a, b)]
+        assert a.placed and b.placed and not (store.root / name).exists()
+        for pending, put_again in zip((a, b), mine):
+            pending.write(TestSnapshotFolders._record(pending, pending.commit, rates=put_again))
+            assert (store.pipeline_path("acme/rates") / pending.name / "_data" / "rates.parquet").read_bytes() == b"rates-1"
+        assert not (store.root / name).exists()
+        # A file that is where it is to go already, with the bytes named, is no error: a write tried a second time
+        own = store.pipeline_path("acme/rates") / a.name / "_data" / "rates.parquet"
+        written = a._write_file(str(folder / "_data" / "rates.parquet"), own, ("copy",), expect=put.content_hash)
+        assert written[0] == put.content_hash
 
     def test_a_record_this_machine_cannot_follow_is_said_and_nothing_goes(self, tmp_path):
         import warnings

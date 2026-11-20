@@ -1180,7 +1180,7 @@ class Store(abc.ABC):
     @abc.abstractmethod
     def files(
         self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None,
-        snapshot: Optional[tuple[str, str]] = None,
+        snapshot: Optional[tuple[Optional[str], Optional[str]]] = None,
     ) -> "KeptFiles":
         """The files of the asset with this hash, each by its path inside the asset and where the store keeps it.
 
@@ -1192,13 +1192,17 @@ class Store(abc.ABC):
         :param name: For an asset that is one file, the name it is read by:
             the same bytes may be two assets', each under its own name, and
             kept once.
-        :param snapshot: The snapshot it is read from, by its commit and
-            when it was made, as a lockfile's entry names the one it pins:
-            where each snapshot holds its own copy of every file, that
-            snapshot's copy is the one handed out while it has it whole, so
-            that the path of a pinned file stays where it is while the pin
-            does; another's otherwise. A store that keeps each file once
-            has one place for it, and takes no notice.
+        :param snapshot: The snapshot it is read from, as ``(commit, made
+            at)``, as far as the read knows them: a lockfile's entry names
+            both, a ``git`` dependency's its commit alone, and a version
+            read by its hash neither. Where each snapshot holds its own
+            copy of every file, the copy handed out is then, of the
+            snapshots that hold the asset whole: the one made then at that
+            commit; else the earliest made at that commit; else the
+            earliest made. So the path does not move when a later snapshot
+            of the same bytes is made. With None, the newest holder's. A
+            store that keeps each file once has one place for it, and
+            takes no notice.
         :raises ObjectNotFoundError: If the store has no such asset.
         :raises StoreError: If a file of it is missing, not synced yet, or
             leads out of the store.
@@ -1328,27 +1332,29 @@ class Store(abc.ABC):
         """
         return self.files_of(content_hash)
 
-    def holds_what_is_lost(self, without: Iterable[Path]) -> list[Path]:
-        """Of the snapshots with the records *without*, which ``store gc`` would remove: the ones to keep after all, by their records.
-
-        In a store whose snapshots each hold their own copy of every file,
-        one folder can lose a file that another still has. A snapshot that
-        would go is kept where it has, whole, a file that a snapshot which
-        stays names and has lost, and no snapshot which stays has whole:
-        removing it would remove the last copy of bytes a kept snapshot
-        names. A store that keeps each file once, or cannot tell without
-        reading, keeps none for this.
-        """
-        return []
-
     def holes_of(self, record: Path) -> list[str]:
         """The files that the snapshot with this record names and does not itself have, though another snapshot may have the same bytes; by their paths in the pipeline.
 
-        Only a store whose snapshots each hold their own copy of every file
-        has any: where each file is kept once, what is missing is missing
-        for every snapshot that names it, which :meth:`incomplete` says.
+        Absent, or of another size, where its record says each is: one
+        question of the disk for each file of that one snapshot, and
+        nothing read. Only a store whose snapshots each hold their own copy
+        of every file has any: where each file is kept once, what is
+        missing is missing for every snapshot that names it, which
+        :meth:`incomplete` says.
         """
         return []
+
+    def holes_left(self, without: Iterable[Path]) -> dict[str, tuple[Path, str, int]]:
+        """Of the pipelines that have a snapshot among the records *without*, which ``store gc`` would remove: each one of whose other snapshots has a hole (:meth:`holes_of`).
+
+        By the pipeline's ID: the record of its newest snapshot that would
+        stay and lacks a file of its own, the first such file, and how many
+        there are. ``store gc`` removes no snapshot of such a pipeline: a
+        read of the one with the hole is handed another snapshot's copy of
+        the same asset, and which that is, is not for gc to work out. A
+        store that keeps each file once has none.
+        """
+        return {}
 
     def check_writable(self) -> None:
         """Raise if this is a store this ChartBook reads and does not write with data; nothing otherwise.
@@ -1446,6 +1452,16 @@ class PendingSnapshot(abc.ABC):
     @abc.abstractmethod
     def discard(self) -> None:
         """Let go of a snapshot that is not to be written: what was copied into its folder goes."""
+
+    def at_hand(self) -> set[str]:
+        """The files it was given that are to stay where they are until it is written or let go, by their real paths.
+
+        A folder store copies a file an earlier snapshot has only when the
+        record is written, and takes it from the file it was given where
+        that copy has gone meanwhile. Whoever staged a file for a put may
+        remove it as soon as it is not among these; none, by default.
+        """
+        return set()
 
 
 @dataclass(frozen=True)
@@ -1736,8 +1752,6 @@ class FolderStore(Store):
         self._layout: Optional[Layout] = None
         self._memo: Optional[tuple] = None
         self._reading = 0
-        #: Whether each file asked about is where its record says, within a :meth:`reading` block
-        self._states: dict = {}
 
     def __repr__(self) -> str:
         return f"FolderStore({str(self)!r})"
@@ -1774,9 +1788,28 @@ class FolderStore(Store):
         """Refuse to write data to, or remove anything from, a store laid out as ChartBook 0.5 laid one out.
 
         :raises EarlierLayoutError: Saying so, and which command moves it.
+        :raises StoreError: For a folder with no ``store.json`` that is
+            taken for such a store by what it holds (:func:`of_0_5`),
+            saying what was found and the way out. Nothing moves that one:
+            its ``store.json`` arrives, or what was found is removed.
         """
-        if self.earlier_layout():
+        if self._places().writes:
+            return
+        if self._layout is not None:
             raise EarlierLayoutError(self)
+        found = of_0_5(self.root)
+        if not found:
+            return  # removed since it was asked a moment ago: the way out, taken
+        named = " and ".join(f"{name}/" for name in found)
+        holds = " and ".join(
+            f"a {name}/ folder with {'snapshots or objects' if name == PIPELINES_DIR else 'notes'} in it" for name in found
+        )
+        raise StoreError(
+            f"The store at {self} has no store.json, and holds {holds}: what a store of ChartBook 0.5 holds, whose "
+            f"store.json may not have arrived yet (a sync that has not finished). Until it has, the folder is read "
+            f"as that store, and no data is written to it or removed from it. If it is no store of ChartBook 0.5 "
+            f"any more, remove {named} from it and try again."
+        )
 
     def roots_path(self) -> Path:
         """The folder of the store's notes of lockfiles."""
@@ -1854,7 +1887,6 @@ class FolderStore(Store):
     def _forget(self) -> None:
         """Read the records again next time: this process has just written or removed one."""
         self._memo = None
-        self._states = {}
 
     @contextlib.contextmanager
     def reading(self):
@@ -1865,7 +1897,6 @@ class FolderStore(Store):
         """
         if not self._reading:
             self._memo = None  # what was read before the block may be old by now
-            self._states = {}
         self._reading += 1
         try:
             yield self
@@ -1873,7 +1904,6 @@ class FolderStore(Store):
             self._reading -= 1
             if not self._reading:
                 self._memo = None
-                self._states = {}
 
     def _held(self, content_hash: str, pipeline: Optional[str] = None) -> list[KeptAsset]:
         """Every record's hold of an asset, newest first; *pipeline*'s first."""
@@ -2215,7 +2245,7 @@ class FolderStore(Store):
 
     def files(
         self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None,
-        snapshot: Optional[tuple[str, str]] = None,
+        snapshot: Optional[tuple[Optional[str], Optional[str]]] = None,
     ) -> KeptFiles:
         """The asset with this hash as its files, each where the store keeps it (:meth:`Store.files`).
 
@@ -2228,10 +2258,11 @@ class FolderStore(Store):
         :param name: For an asset that is one file, the name it is read by:
             the same bytes may be two assets', each under its own name, and
             kept once.
-        :param snapshot: The snapshot it is read from, by its commit and
-            when it was made: its own copy is the one handed out, while the
-            store has that snapshot and it has the files whole; the newest
-            holder's otherwise, as with none named.
+        :param snapshot: The snapshot it is read from, as ``(commit, made
+            at)``, either of which may be None: of the pipeline's snapshots
+            that have the files whole, the one made then at that commit is
+            handed out; else the earliest made at that commit; else the
+            earliest made. With None, the newest holder's.
         :raises ObjectNotFoundError: If the store has no such asset.
         :raises StoreError: If a file of it is missing, not synced yet, or
             leads out of the store: a store a team shares holds what anyone
@@ -2240,12 +2271,16 @@ class FolderStore(Store):
         self._check_layout()
         held = _of_shape(self._held(content_hash, pipeline), single=bool(name))
         if snapshot is not None:
-            # The copy of the snapshot the read names first: every snapshot has its own, and the path a
-            # pin is read at does not move to a newer snapshot's while the pin stays where it is
+            # Every snapshot has its own copy. The one the read names first; then the earliest made at
+            # its commit; then the earliest made: none of which a later snapshot of the same bytes is,
+            # so the path a read is handed stays where it is until that snapshot goes
             commit, made_at = snapshot
-            held.sort(key=lambda asset: not (
-                asset.record.commit == commit and asset.record.made_at == made_at
-                and (pipeline is None or asset.record.pipeline == pipeline)
+            held.sort(key=lambda asset: (
+                pipeline is not None and asset.record.pipeline != pipeline,
+                not (commit and made_at and (asset.record.commit, asset.record.made_at) == (commit, made_at)),
+                not (commit and asset.record.commit == commit),
+                asset.record.made_at,
+                asset.record.folder.name,
             ))
         if name:
             # The one under that name first; another's bytes under that name else
@@ -2407,9 +2442,10 @@ class FolderStore(Store):
         arrived, or was removed: no store is made over it, it is read as
         one, its notes of lockfiles go where 0.5 wrote them, and
         :meth:`check_writable` refuses the rest. And one whose ``store.json``
-        says this version's layout while ``pipelines/`` holds snapshots of
-        0.5 is refused whole: what is under ``pipelines/`` would be passed
-        over without a word.
+        says one of the two layouts while it holds snapshots laid out as
+        the other (``pipelines/`` under this version's, ``snapshots/``
+        under 0.5's) is refused whole: those would be passed over without
+        a word.
 
         :param create: If True, a store that does not exist yet is made:
             its ``store.json``, and the note for whoever opens the folder.
@@ -2474,19 +2510,29 @@ class FolderStore(Store):
                 f"version of ChartBook reads {FOLDER_SCHEMA!r}. Use a newer ChartBook, "
                 f"or point CHARTBOOK_STORE at another directory."
             )
-        if layout is V3_LAYOUT:
-            earlier = snapshots_of_0_5(self.root)
-            if earlier is not None:
-                raise StoreError(
-                    f"The store at {self} has a store.json that says {FOLDER_SCHEMA!r}, this version's layout, and a "
-                    f"{PIPELINES_DIR}/ folder that holds snapshots laid out as ChartBook 0.5 laid them out "
-                    f"({self._shown(earlier)}): most likely a store of 0.5 that this ChartBook wrote into before "
-                    f"its store.json had arrived. It is neither read nor written as it is, since what is under "
-                    f"{PIPELINES_DIR}/ would be passed over. Move {PIPELINES_DIR}/ out of it, with {ROOTS_DIR}/ and "
-                    f"{ORIGINS_DIR}/ if they are there, into a folder of their own, beside a store.json that holds "
-                    f"{json.dumps({'schema': SCHEMA})}: that folder is then the store of 0.5, which this ChartBook "
-                    f"reads, and this one a store of this version's layout."
+        # The snapshots of the other layout, which this one's store.json would have passed over without a word
+        other = V2_LAYOUT if layout is V3_LAYOUT else V3_LAYOUT
+        found = _snapshot_folder_in(self.root, other)
+        if found is not None:
+            if layout is V3_LAYOUT:
+                what = (
+                    f"says {FOLDER_SCHEMA!r}, this version's layout, and a {other.pipelines}/ folder that holds snapshots "
+                    f"laid out as ChartBook 0.5 laid them out ({self._shown(found)}): most likely a store of 0.5 that "
+                    f"this ChartBook wrote into before its store.json had arrived"
                 )
+            else:
+                what = (
+                    f"says {SCHEMA!r}, the layout of ChartBook 0.5, and a {other.pipelines}/ folder that holds snapshots "
+                    f"laid out as this version lays them out ({self._shown(found)}): most likely a store this ChartBook "
+                    f"made here before a store of 0.5, on its way by a sync, arrived with its store.json"
+                )
+            raise StoreError(
+                f"The store at {self} has a store.json that {what}. It is neither read nor written as it is. To part "
+                f"the two, the store of 0.5 staying here, where every machine expects it: move "
+                f"{V3_LAYOUT.pipelines}/ and {OWN_DIR}/ out of it into a folder of their own, beside a store.json "
+                f"that holds {json.dumps({'schema': FOLDER_SCHEMA})}, which is then a store of this version's layout; "
+                f"and see that the store.json here holds {json.dumps({'schema': SCHEMA})}."
+            )
         self._layout, self._layout_checked = layout, True
 
     @staticmethod
@@ -2862,93 +2908,35 @@ class FolderStore(Store):
         return {asset.content_hash for record in self.records() if record.readable for asset in record.assets}
 
     def files_of(self, content_hash: str) -> list[tuple[str, int]]:
-        found: dict = {}
-        for asset in self._held(content_hash):
-            for file in asset.files:
-                found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
-        return sorted(found.items())
+        return self.files_left(content_hash)
 
     def files_left(self, content_hash: str, without: Iterable[Path] = ()) -> list[tuple[str, int]]:
-        """The files of an asset that would be left once the snapshots with the records *without* were removed (:meth:`Store.files_left`).
-
-        Each where a record that stays names it, and only where the disk
-        has it at the size that record says: each snapshot's folder holds
-        its own copy, which goes with it, and a copy that is absent, or cut
-        short, is no copy that stays.
-        """
+        """Where the records name an asset's files, but for the records *without* (:meth:`Store.files_left`): each snapshot's folder holds its own copy, which goes with it."""
         gone = {str(path) for path in without}
         found: dict = {}
         for asset in self._held(content_hash):
             if str(asset.record.path) in gone:
                 continue
             for file in asset.files:
-                if self._state_of(file, asset.record.folder.parent) == "whole":
-                    found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
+                found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
 
-    def _state_of(self, file: KeptFile, pipeline_folder: Path) -> str:
-        """:func:`_on_disk_state` of a file, asked of the disk once within a :meth:`reading` block."""
-        if not self._reading:
-            return _on_disk_state(file, pipeline_folder)
-        key = (str(file.location), file.size_bytes)
-        if key not in self._states:
-            self._states[key] = _on_disk_state(file, pipeline_folder)
-        return self._states[key]
+    def holes_of(self, record: Path) -> list[str]:
+        """The files one snapshot's record names that are not where it says, or are there at another size, by their paths in the pipeline (:meth:`Store.holes_of`)."""
+        return _holes(read_kept_record(Path(record)))
 
-    def holds_what_is_lost(self, without: Iterable[Path]) -> list[Path]:
-        """Of the snapshots with the records *without*, which are to be removed: the ones to keep after all, by their records (:meth:`Store.holds_what_is_lost`).
-
-        Each has, whole, a file that a snapshot which stays names and does
-        not have (absent, or of another size), and that no snapshot which
-        stays has whole. The newest first, so that of two with the same
-        bytes the newer is kept. One kept for this stays, so what it has
-        lost in its turn keeps another, until nothing more is kept. Files
-        are told apart by their hash and size, whichever pipeline's they
-        are, and only sizes are looked at.
-        """
+    def holes_left(self, without: Iterable[Path]) -> dict[str, tuple[Path, str, int]]:
+        """Each pipeline with a snapshot among the records *without* one of whose other snapshots has a hole (:meth:`Store.holes_left`)."""
         gone = {str(path) for path in without}
         records = [record for record in self.records() if record.readable]
-        kept: list = []
-        while gone:
-            going = [record for record in records if str(record.path) in gone]
-            # Only bytes a snapshot that would go has can be lost with it
-            theirs = {(file.content_hash, file.size_bytes) for record in going for asset in record.assets for file in asset.files}
-            whole: set = set()
-            lost: set = set()
-            for record in records:
-                if str(record.path) in gone:
-                    continue
-                for asset in record.assets:
-                    for file in asset.files:
-                        key = (file.content_hash, file.size_bytes)
-                        if key in theirs:
-                            (whole if self._state_of(file, record.folder.parent) == "whole" else lost).add(key)
-            lost -= whole
-            more = []
-            for record in sorted(going, key=lambda record: (record.made_at, record.folder.name), reverse=True):
-                if not lost:
-                    break
-                has = {
-                    (file.content_hash, file.size_bytes)
-                    for asset in record.assets for file in asset.files
-                    if (file.content_hash, file.size_bytes) in lost and self._state_of(file, record.folder.parent) == "whole"
-                }
-                if has:
-                    more.append(record.path)
-                    lost -= has
-            if not more:
-                break
-            kept += more
-            gone -= {str(path) for path in more}
-        return kept
-
-    def holes_of(self, record: Path) -> list[str]:
-        """The files one snapshot's record names that are not where it says, or are there at another size, by their paths in the pipeline; empty when it is whole by its sizes."""
-        kept = read_kept_record(Path(record))
-        return sorted({
-            file.path for asset in kept.assets for file in asset.files
-            if _on_disk_state(file, kept.folder.parent) != "whole"
-        })
+        asked = {record.pipeline for record in records if str(record.path) in gone}
+        found: dict = {}
+        for record in records:  # oldest first in each pipeline: the newest with a hole is the one said
+            if record.pipeline in asked and str(record.path) not in gone:
+                holes = _holes(record)
+                if holes:
+                    found[record.pipeline] = (record.path, holes[0], len(holes))
+        return found
 
     def listing(self, content_hash: str, single: bool) -> Optional[tuple[hashing.FileEntry, ...]]:
         held = [asset for asset in self._held(content_hash) if asset.single == single]
@@ -3091,11 +3079,12 @@ class FolderStore(Store):
         its hash.
 
         With no hashes named, every snapshot is checked for itself: each
-        file of each record is read where that record says it is, and a
-        snapshot that has lost one, or holds other bytes, is reported with
-        its folder's name, though another snapshot has the same bytes
-        whole. A file two records name, as a store of ChartBook 0.5 keeps
-        each file once, is read once and said once.
+        file of each record is read where that record says it is, and every
+        file that is missing, or holds other bytes, is reported with its
+        snapshot's folder, though another snapshot has the same bytes
+        whole; a snapshot's files come together. A file two records name,
+        as a store of ChartBook 0.5 keeps each file once, is read once and
+        said once.
 
         With hashes named, whether the store has each of those assets
         intact in some snapshot: what a read of it is handed.
@@ -3138,17 +3127,19 @@ class FolderStore(Store):
                 continue
             for asset in record.assets:
                 held.add(asset.content_hash)
-                wrong = what_is_wrong_where(asset, read)
-                if wrong is None or (asset.content_hash, wrong) in said:
-                    continue  # nothing, or a file two records name, which is said once
-                said.add((asset.content_hash, wrong))
-                # The snapshot's folder the file is in, or is missing from: the record's own, but in a
-                # store of 0.5, where it may be an earlier snapshot's
-                try:
-                    where = record.folder.parent / wrong[0].relative_to(record.folder.parent).parts[0]
-                except (ValueError, IndexError):
-                    where = record.folder
-                problems.append(StoreProblem(asset.content_hash, where, f"{wrong[1]} (the snapshot {where.name})"))
+                for wrong in what_is_wrong_in(asset, read):
+                    if wrong in said:
+                        continue  # a file two records name, which is said once
+                    said.add(wrong)
+                    # The snapshot's folder the file is in, or is missing from: the record's own, but in a
+                    # store of 0.5, where it may be an earlier snapshot's
+                    try:
+                        where = record.folder.parent / wrong[0].relative_to(record.folder.parent).parts[0]
+                    except (ValueError, IndexError):
+                        where = record.folder
+                    problems.append(StoreProblem(asset.content_hash, where, f"{wrong[1]} (the snapshot {where.name})"))
+        # A snapshot's files together, in the order of their paths
+        problems.sort(key=lambda problem: (str(problem.path), problem.message))
         for content_hash in self.unowned_hashes():
             if content_hash in held:
                 continue  # what a snapshot holds is read where its record says
@@ -3156,7 +3147,7 @@ class FolderStore(Store):
             message = what_is_wrong(content_hash, path)
             if message is not None:
                 problems.append(StoreProblem(content_hash, path, message))
-        return sorted(problems, key=lambda problem: (problem.content_hash, str(problem.path)))
+        return problems
 
 
 def _of_shape(held: list, single: bool) -> list:
@@ -3189,39 +3180,40 @@ def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     return None
 
 
-def _on_disk_state(file: KeptFile, pipeline_folder: Path) -> str:
-    """Whether a file a record names is where its record says, by its size alone: ``whole``, ``absent``, or ``other``.
+def _is_whole(file: KeptFile, pipeline_folder: Path) -> bool:
+    """Whether a file a record names is where its record says, at the size it says: one question of the disk, and nothing read.
 
-    ``other`` is a file of another size (a sync that has brought part of
-    it), a link, or one that cannot be asked about. A name a sync wrote in
-    the other of Unicode's forms is the file (:func:`on_disk`). Nothing is read.
+    A name a sync wrote in the other of Unicode's forms is the file
+    (:func:`on_disk`). A link, a file of another size (a sync that has
+    brought part of it) and one that cannot be asked about are not it.
     """
     try:
-        parts = list(file.location.relative_to(pipeline_folder).parts)
-    except ValueError:
-        return "other"
-    location = on_disk(pipeline_folder, parts)
-    if os.path.islink(location):
-        return "other"
-    try:
-        size = os.stat(_any_length(location)).st_size
-    except FileNotFoundError:
-        return "absent"
-    except OSError:
-        return "other"
-    return "whole" if size == file.size_bytes else "other"
+        location = on_disk(pipeline_folder, list(file.location.relative_to(pipeline_folder).parts))
+        return not os.path.islink(location) and os.stat(_any_length(location)).st_size == file.size_bytes
+    except (OSError, ValueError):
+        return False
 
 
-def what_is_wrong_where(asset: KeptAsset, read: Optional[dict] = None) -> Optional[tuple[Path, str]]:
-    """What is wrong with one asset as a snapshot's record holds it, reading every byte: the file, and what to say of it; None if nothing is.
+def _holes(record: KeptRecord) -> list[str]:
+    """The files a snapshot's record names that are not whole where it says (:func:`_is_whole`), by their paths in the pipeline, each asked about once."""
+    whole = {file.location: file for asset in record.assets for file in asset.files}
+    return sorted({file.path for file in whole.values() if not _is_whole(file, record.folder.parent)})
+
+
+def what_is_wrong_in(asset: KeptAsset, read: Optional[dict] = None) -> list[tuple[Path, str]]:
+    """What is wrong with one asset as a snapshot's record holds it, reading every byte: each file that is not what its record says, and what to say of it.
+
+    Where every file is, and they still do not make the asset's hash, the
+    record itself is what is wrong.
 
     :param read: What each file read so far hashed to, by where it is, or
         what reading it raised: a file two records name is read once.
     """
-    entries = []
+    wrong, entries = [], []
     for file in asset.files:
         if os.path.islink(file.location):
-            return file.location, f"{file.path} is a link to {link_target(file.location)}, not a file the store keeps"
+            wrong.append((file.location, f"{file.path} is a link to {link_target(file.location)}, not a file the store keeps"))
+            continue
         key = str(file.location)
         if read is not None and key in read:
             actual = read[key]
@@ -3233,22 +3225,23 @@ def what_is_wrong_where(asset: KeptAsset, read: Optional[dict] = None) -> Option
             if read is not None:
                 read[key] = actual
         if isinstance(actual, FileNotFoundError):
-            return file.location, f"{file.path} is not in the store"
-        if isinstance(actual, OSError):
-            return file.location, f"{file.path} cannot be read: {actual}"
-        if actual != file.content_hash:
-            return file.location, f"{file.path} is no longer what its record says (now {actual})"
+            wrong.append((file.location, f"{file.path} is not in the store"))
+        elif isinstance(actual, OSError):
+            wrong.append((file.location, f"{file.path} cannot be read: {actual}"))
+        elif actual != file.content_hash:
+            wrong.append((file.location, f"{file.path} is no longer what its record says (now {actual})"))
         entries.append(hashing.FileEntry(file.relative, file.size_bytes, file.content_hash))
-    made = entries[0].content_hash if asset.single else hashing.hash_listing(entries).content_hash
-    if made != asset.content_hash:
-        return asset.record.path, f"its record's files make {made}, not its hash: the record is not one a store wrote"
-    return None
+    if not wrong:
+        made = entries[0].content_hash if asset.single else hashing.hash_listing(entries).content_hash
+        if made != asset.content_hash:
+            wrong.append((asset.record.path, f"its record's files make {made}, not its hash: the record is not one a store wrote"))
+    return wrong
 
 
 def what_is_wrong_with(asset: KeptAsset) -> Optional[str]:
-    """What is wrong with one asset as a snapshot's record holds it, reading every byte; None if nothing is."""
-    wrong = what_is_wrong_where(asset)
-    return None if wrong is None else wrong[1]
+    """The first thing wrong with one asset as a snapshot's record holds it, reading every byte; None if nothing is."""
+    wrong = what_is_wrong_in(asset)
+    return wrong[0][1] if wrong else None
 
 
 def handed(asset: KeptAsset) -> KeptFiles:
@@ -3365,15 +3358,17 @@ def holds_v1(root: Path) -> bool:
     return any(next(_files_in(Path(path)), None) is not None for path in commits)
 
 
-def snapshots_of_0_5(root: Path) -> Optional[Path]:
-    """A folder under a store's ``pipelines/`` that is named as a snapshot's is, or as an object no pipeline owns is: the first found, or None.
+def _snapshot_folder_in(root: Path, layout: Layout) -> Optional[Path]:
+    """A folder where a store laid out as *layout* keeps a pipeline's snapshots that is named as a snapshot's is: the first found, or None.
 
-    By the folders alone, a file in them or not: a sync brings a folder
-    before the files in it, and a store of ChartBook 0.5 whose folders have
-    come is one already. Only a store of 0.5 has them there.
+    ``pipelines/<pipeline>/<snapshot>/`` for the layout of ChartBook 0.5,
+    or an object no pipeline owns there (``pipelines/+unowned/<hex>/``);
+    ``snapshots/<pipeline>/<snapshot>/`` for this version's. By the folders
+    alone, a file in them or not: a sync brings a folder before the files
+    in it, and a store whose folders have come is one already.
     """
     try:
-        pipelines = sorted((entry for entry in os.scandir(root / PIPELINES_DIR) if entry.is_dir()), key=lambda entry: entry.name)
+        pipelines = sorted((entry for entry in os.scandir(root / layout.pipelines) if entry.is_dir()), key=lambda entry: entry.name)
     except OSError:
         return None
     for pipeline in pipelines:
@@ -3389,21 +3384,27 @@ def snapshots_of_0_5(root: Path) -> Optional[Path]:
     return None
 
 
-def holds_v2(root: Path) -> bool:
-    """Whether a folder holds what a store of ChartBook 0.5 held: under pipelines/, a snapshot's folder of some pipeline or an object no pipeline owns; or, under roots/, a note of a lockfile.
+def of_0_5(root: Path) -> list[str]:
+    """What a folder holds of a store of ChartBook 0.5, by the folders' names: ``pipelines`` where it has a snapshot's folder of some pipeline or an object no pipeline owns in it, ``roots`` where it has a note of a lockfile in it.
 
-    Asked of a folder with no ``store.json``: one that holds these is no
+    Asked of a folder with no ``store.json``: one that holds either is no
     empty folder to make a store in, but a store of 0.5 whose ``store.json``
-    has not arrived. By the folders alone, a file in them or not
-    (:func:`snapshots_of_0_5`): a sync brings folders before files.
+    has not arrived, until a person removes what is named. By the folders
+    alone, a file in them or not (:func:`_snapshot_folder_in`).
     """
-    if snapshots_of_0_5(root) is not None:
-        return True
+    found = [PIPELINES_DIR] if _snapshot_folder_in(root, V2_LAYOUT) is not None else []
     try:
         # A note, or a sync service's copy of one: either says notes were kept here
-        return any(entry.name.endswith(".json") for entry in os.scandir(root / ROOTS_DIR))
+        if any(entry.name.endswith(".json") for entry in os.scandir(root / ROOTS_DIR)):
+            found.append(ROOTS_DIR)
     except OSError:
-        return False
+        pass
+    return found
+
+
+def holds_v2(root: Path) -> bool:
+    """Whether a folder holds what a store of ChartBook 0.5 held (:func:`of_0_5`)."""
+    return bool(of_0_5(root))
 
 
 def _folded(path: str) -> str:
@@ -3556,6 +3557,10 @@ class _FolderPending(PendingSnapshot):
                 )
         self._later = []
 
+    def at_hand(self) -> set[str]:
+        """The files given whose copy waits for the record (:meth:`PendingSnapshot.at_hand`): the second origin of each."""
+        return {source for _, _, source in self._later}
+
     def _before_record(self) -> None:
         """What is done just before the record is written, once the snapshot's folder is claimed: its files made whole."""
         self._complete()
@@ -3574,9 +3579,9 @@ class _FolderPending(PendingSnapshot):
     def _write_file(self, source: str, target: Path, links: tuple, expect: Optional[str] = None) -> tuple[str, str]:
         """Write one file into the store at *target*, its own bytes, and return its hash and how it was made.
 
-        :param expect: The hash the file must have to go at *target* (a file
-            a record names, put back): bytes that are not it are not written
-            there, and the hash returned says so.
+        :param expect: The hash the file must have to go at *target* (a copy
+            of a file an earlier snapshot has, made when the record is): bytes
+            that are not it are not written there, and the hash returned says so.
         """
         _check_length(target)
         self._inside(target)
@@ -3593,7 +3598,7 @@ class _FolderPending(PendingSnapshot):
                 self._inside(target)
                 if os.path.lexists(target):
                     if expect is not None and _hash_once(target) == content_hash:
-                        return content_hash, kind  # put back by another snapshot at the same time
+                        return content_hash, kind  # there already: a write tried a second time
                     raise StoreError(f"{target} is in the store already, with other bytes than {source}.")
                 try:
                     rename_when_let(temporary, target)
@@ -3635,7 +3640,7 @@ class _FolderPending(PendingSnapshot):
             return {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
         if path in self._here:
             raise StoreError(f"{target} is in the store already, with other bytes than {source}.")
-        kept = self._held_whole(source, content_hash, size, links, used)
+        kept = self._held_whole(content_hash, size)
         if kept is not None:
             entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
             self._here[path] = content_hash
@@ -3647,48 +3652,22 @@ class _FolderPending(PendingSnapshot):
         self._here[path] = written
         return {"path": path, "content_hash": written, "size_bytes": os.stat(target).st_size, "kept_in": self.name}
 
-    def _held_whole(self, source: str, content_hash: str, size: int, links: tuple, used: set) -> Optional[Path]:
+    def _held_whole(self, content_hash: str, size: int) -> Optional[Path]:
         """Where an earlier snapshot of the pipeline keeps a file of these bytes, whole by its size; None if none does.
 
         The newest first: ``store gc`` never removes the newest snapshot of
         a pipeline. Its use is noted before it is looked at, so that ``store
-        gc`` keeps it until this snapshot is written or let go.
-
-        And every recorded snapshot of the pipeline that names these bytes
-        and has lost its own file of them (removed by hand, or lost to a
-        sync) is given it back from *source*, where its record says, so that
-        it is whole again, as the store has done since 0.3: whatever other
-        snapshot has the bytes, since each snapshot's folder holds its own
-        copy and ``store gc`` may remove the other. A file that is there at
-        another size is left as it is (a sync may be bringing it), and so is
-        a hole that cannot be written to: ``store verify`` says both.
+        gc`` keeps it until this snapshot is written or let go. Nothing is
+        written: a snapshot's folder is not changed once its record is
+        written, and one that has lost a file stays as it is.
         """
-        whole: Optional[Path] = None
-        holes = []
         for file in reversed(self._kept_files().get(content_hash, [])):
             if file.size_bytes != size:
                 continue
-            if whole is None:
-                self._note_use(file.location)
-            state = _on_disk_state(file, self.pipeline_path)
-            if state == "whole" and whole is None:
-                whole = file.location
-            elif state == "absent":
-                holes.append(file)
-        for file in holes:
-            folder = self.pipeline_path / file.location.relative_to(self.pipeline_path).parts[0]
-            if not os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE)):
-                continue  # cleared meanwhile: no snapshot any more
-            try:
-                written, kind = self._write_file(source, file.location, links, expect=content_hash)
-            except (OSError, StoreError):
-                continue  # another's folder, say, which this user cannot write: its hole stays, and verify says it
-            if written != content_hash:
-                break  # the bytes changed since they were hashed: new, in this snapshot's own folder
-            used.add(kind)
-            if whole is None:
-                whole = file.location
-        return whole
+            self._note_use(file.location)
+            if _is_whole(file, self.pipeline_path):
+                return file.location
+        return None
 
     def put(self, path: Union[str, Path], place: Optional[str] = None, links: Iterable[str] = ("reflink", "copy")) -> StoredObject:
         if self._written:

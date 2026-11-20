@@ -19,6 +19,17 @@ def copy_snapshot(taken, source, target):
                 return raw
             if logical(held) != logical(taken):
                 raise StoreError(f"Conflicting snapshot in target: {taken.pipeline} at {taken.commit}")
+            # There only if the target's own snapshot of that moment is whole: where each snapshot holds
+            # its own copy of every file, another snapshot's copy of the same bytes does not make it so
+            holes = target.holes_of(held.path)
+            if holes:
+                more = f" and {len(holes) - 1} more" if len(holes) > 1 else ""
+                raise StoreError(
+                    f"The snapshot of {taken.pipeline} made {taken.made_at} is in {target} already, and lacks "
+                    f"{holes[0]}{more} there ({Path(held.path).parent.parent}): nothing was removed from where it "
+                    f"came from. If a sync is still bringing it, wait for the sync to finish and move again; "
+                    f"`chartbook store verify` there lists everything missing."
+                )
             problems = target.verify(taken.hashes())
             if problems:
                 raise StoreError(f"Target snapshot failed verification: {problems[0]}")
