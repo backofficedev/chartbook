@@ -488,20 +488,104 @@ class TestTheWayOutGcNames:
         result = CliRunner().invoke(main, ["store", "gc", "--yes", "--aggressive"])
         assert result.exit_code == 0 and not _folder_of(tagged).exists(), result.output
 
-    @pytest.mark.parametrize("why, way", [
-        ("a lockfile pins it", "once no lockfile pins it"),
-        ("a lockfile that cannot be found pins it", "--forget-missing"),
-        ("a lockfile not read here, another machine's, pins it", "that machine's lockfile"),
-        ("it is the newest of its pipeline", "`chartbook run` in its folder"),
-        ("a label points at a version in it", "--aggressive"),
-        ("it holds a version of embeddings, which is kept (`keep = true` in its chartbook.toml)", "no longer marked `keep = true`"),
-        ("it was made in the last 7 days", "once it is older than that"),
-        ("it says which repository the kept snapshots are of", "once that is no longer so"),
-    ])
-    def test_each_reason_has_its_own(self, why, way):
+    def test_every_reason_the_plan_gives_has_a_way_out_of_its_own(self):
+        """The reasons are taken from the plan's source, so that one added later with no way out fails here."""
+        import inspect
+        import re
+
         from chartbook.cli import _when_it_goes
 
-        assert way in _when_it_goes(why)
+        source = "".join(inspect.getsource(function) for function in (
+            snapshot.plan_removals, snapshot._keep_lineage, snapshot._keep_repositories_whole, snapshot._holding_labelled,
+            lock._plan_gc, lock._keep_what_only_they_hold, lock._plan_pinned,
+        ))
+        found = {lock.HELD_BACK, lock.HELD_BACK_OTHER_BYTES}
+        for pattern in (
+            r'\bwhy = f?"([^"]+)"',
+            r'keep_noted\(root, "([^"]+)"',
+            r'\.append\(\(\w+, f?"([^"]+)"\)\)',
+            r'setdefault\([^,]+, f?"([^"]+)"\)',
+            r'\bkeep\(\S+, "([^"]+)"\)',
+        ):
+            found.update(re.findall(pattern, source))
+        # What a plan says of one that goes is no reason to stay
+        reasons = sorted(re.sub(r"\{[^}]*\}", "7", why) for why in found if not why.startswith(("nothing pins", "no lockfile pins")))
+        ways = {
+            "a lockfile pins it": "once no lockfile pins it",
+            "a lockfile that cannot be found pins it": "--forget-missing",
+            "a lockfile not read here, another machine's, pins it": "that machine's lockfile",
+            "it is the newest of its pipeline": "`chartbook run` in its folder",
+            "it is the newest a branch or tag can pin from": "--aggressive",
+            "a label points at a version in it": "--aggressive",
+            "it holds a version of 7, which is kept (`keep = true` in its chartbook.toml)": "no longer marked `keep = true`",
+            "it was made in the last 7 days": "once it is older than that",
+            "a snapshot that is kept was made from it": "without `--keep-lineage`",
+            "a snapshot that is kept was made from a label pointing at a version in it": "without `--keep-lineage`",
+            "it names its repository's address and first commit together, which joins its snapshots": "ties to their repository",
+            "it names the address of a kept snapshot's first commit": "ties to their repository",
+            "it is the newest that names its repository": "once a newer snapshot of its pipeline names its repository",
+            lock.HELD_BACK: "is whole again, or has gone",
+        }
+        assert set(ways) <= set(reasons) and len(reasons) >= 20, reasons
+        for why, way in ways.items():
+            assert way in _when_it_goes(why), why
+        assert [why for why in reasons if _when_it_goes(why) == _when_it_goes("")] == []
+
+    @pytest.fixture
+    def pinned_and_holed(self, rates, work, store):
+        """Three snapshots of rates: one old enough to go, one a reader pins, which has lost its table for good, and a newer one."""
+        snapshot.make(rates, store=store, made_at=OLDER)
+        _chart(rates, "two")
+        pinned = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
+        reader = _reader(work / "reader", "acme/rates", "../rates")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        _chart(rates, "three")
+        snapshot.make(rates, store=FolderStore(store.root), made_at=OLDISH)
+        _lose(_folder_of(pinned) / "_data" / "treasury.parquet")
+        return pinned, reader
+
+    @staticmethod
+    def _said(result, pinned, why: str, way: str) -> None:
+        assert result.exit_code == 0 and _folder_of(pinned).is_dir(), result.output
+        lines = result.output.splitlines()
+        first = f"Nothing of acme/rates is removed: its snapshot {_folder_of(pinned).name} lacks _data/treasury.parquet, and stays because {why}."
+        assert first in lines and lines[lines.index(first) + 1].endswith(f"If it is lost for good, that snapshot goes {way}."), result.output
+
+    def test_one_a_lockfile_pins_goes_once_the_pin_is_moved(self, pinned_and_holed, store):
+        pinned, reader = pinned_and_holed
+        self._said(
+            CliRunner().invoke(main, ["store", "gc", "--yes"]), pinned, "a lockfile pins it",
+            "once no lockfile pins it: `chartbook pin --update` in the pipeline that does moves its pin to a newer snapshot",
+        )
+        assert lock.update(reader, store=FolderStore(store.root)).problems == []  # the way out, carried out
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0 and not _folder_of(pinned).exists() and "Nothing of" not in result.output, result.output
+
+    def test_one_a_lost_lockfile_pins_goes_with_forget_missing(self, pinned_and_holed, store):
+        import shutil
+
+        pinned, reader = pinned_and_holed
+        shutil.rmtree(reader)
+        self._said(
+            CliRunner().invoke(main, ["store", "gc", "--yes"]), pinned, "a lockfile that cannot be found pins it",
+            "with `chartbook store gc --forget-missing`, which lets go of what a lockfile that cannot be found pinned",
+        )
+        result = CliRunner().invoke(main, ["store", "gc", "--yes", "--forget-missing"])
+        assert result.exit_code == 0 and not _folder_of(pinned).exists(), result.output
+
+    def test_the_newest_goes_once_a_newer_one_is_made(self, rates, store):
+        snapshot.make(rates, store=store, made_at=OLDER)
+        _chart(rates, "two")
+        newest = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
+        _lose(_folder_of(newest) / "_data" / "treasury.parquet")
+        self._said(
+            CliRunner().invoke(main, ["store", "gc", "--yes"]), newest, "it is the newest of its pipeline",
+            "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it",
+        )
+        _table(rates, 4)
+        assert snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).made  # the way out, carried out
+        result = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert result.exit_code == 0 and not _folder_of(newest).exists() and "Nothing of" not in result.output, result.output
 
 
 class TestWhatGcSaysItFreed:
@@ -571,29 +655,66 @@ class TestWhatGcSaysItFreed:
 
 
 class TestStoreImportWhereTheStoresOwnSnapshotLacksAFile:
-    def test_it_is_not_said_to_be_there_and_nothing_is_imported_over_it(self, rates, work, store):
-        taken = snapshot.make(rates, store=store, made_at=NOW).snapshot
+    @pytest.fixture
+    def exported(self, rates, work, store):
+        """The only snapshot of rates, pinned by a reader and exported whole; then its table is lost from the store for good."""
+        taken = snapshot.make(rates, store=store, made_at=OLD).snapshot
+        reader = _reader(work / "reader", "acme/rates", "../rates")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
         out = work / "for-me"
         sharing.export(FolderStore(store.root), "acme/rates", out, None)
+        good = (_folder_of(taken) / "_data" / "treasury.parquet").read_bytes()
         _lose(_folder_of(taken) / "_data" / "treasury.parquet")
+        return taken, reader, out, good
+
+    def test_it_is_not_said_to_be_there_and_nothing_is_imported_over_it(self, exported, store):
+        taken, _, out, _ = exported
         done = sharing.import_snapshots(FolderStore(store.root), out)
         assert done.there == [] and done.copied == []
         ((what, why),) = done.refused
-        assert what == f"acme/rates at {taken.commit[:7]}, made {NOW}"
+        assert what == f"acme/rates at {taken.commit[:7]}, made {OLD}"
         assert why == (
             f"the store has it already, in {_folder_of(taken).name}, and not whole: _data/treasury.parquet is not in the "
-            f"store. Nothing was imported over it. If a sync is still bringing it, wait for the sync to finish; a "
-            f"snapshot that has lost a file for good goes with `chartbook store gc` once nothing keeps it, and can be "
-            f"imported then"
+            f"store. Nothing was imported over it. If a sync is still bringing the file, import again when it has. If the "
+            f"file is lost, remove that snapshot's folder, {_folder_of(taken)}, and import again: what is imported holds "
+            f"it whole"
         )
         assert not (_folder_of(taken) / "_data" / "treasury.parquet").exists()
         result = CliRunner().invoke(main, ["store", "import", str(out)])
-        assert result.exit_code == 1 and "and not whole: _data/treasury.parquet is not in the store" in result.output
+        assert result.exit_code == 1 and f"Refused: {what}: {why}" in result.output.replace("\n", "")
+
+    def test_the_way_out_it_names_can_be_carried_out(self, exported, store, monkeypatch):
+        """`store gc` never removes the newest snapshot of a pipeline: the folder is removed as a person would, and the import brings it whole."""
+        import shutil
+
+        taken, reader, out, good = exported
+        for typed in (["store", "gc", "--yes"], ["store", "gc", "--yes", "--aggressive", "--keep-days", "0", "--forget-missing"]):
+            assert CliRunner().invoke(main, typed).exit_code == 0 and _folder_of(taken).is_dir()  # no gc lets go of it
+
+        def writable(function, path, _):
+            os.chmod(path, stat.S_IWRITE | stat.S_IREAD)  # what a store keeps is read-only
+            function(path)
+
+        shutil.rmtree(_folder_of(taken), onerror=writable)
+        store_module._found_whole.clear()
+        done = sharing.import_snapshots(FolderStore(store.root), out)
+        assert done.refused == [] and done.copied == [("acme/rates", taken.commit, OLD)]
+        # And the store is as it was before the file was lost: every snapshot whole, the pin read, nothing for gc to say
+        assert FolderStore(store.root).verify() == []
+        handed = Path(data.path("acme/rates:treasury", project_dir=reader))
+        assert handed == _folder_of(taken) / "_data" / "treasury.parquet" and handed.read_bytes() == good
+        monkeypatch.chdir(reader)
+        for typed in (["pin", "--check"], ["store", "verify"], ["store", "gc", "--dry-run"]):
+            result = CliRunner().invoke(main, typed)
+            assert result.exit_code == 0 and "Nothing of" not in result.output, (typed, result.output)
 
 
 class TestAFolderWithBothLayoutsAndNoStoreJson:
-    def test_it_is_refused_as_any_folder_with_both_is(self, rates, store):
+    def test_it_is_refused_as_any_folder_with_both_is(self, rates, work, store, monkeypatch):
         taken = snapshot.make(rates, store=store, made_at=NOW).snapshot
+        reader = _reader(work / "reader", "acme/rates", "../rates")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        monkeypatch.chdir(reader)
         (store.root / "store.json").unlink()
         of_0_5 = store.root / "pipelines" / "acme+other" / "2026-11-16T091500Z_aaaaaaaaaaaa"
         of_0_5.mkdir(parents=True)
@@ -607,10 +728,23 @@ class TestAFolderWithBothLayoutsAndNoStoreJson:
             f'own, beside a store.json that holds {{"schema": "chartbook/store/v3"}}, which is then a store of this '
             f'version\'s layout; and see that the store.json here holds {{"schema": "chartbook/store/v2"}}.'
         )
-        for arguments in (["store", "verify"], ["store", "ls"], ["store", "info"], ["store", "gc", "--dry-run"], ["ls", "versions"]):
+        for arguments in (["store", "verify"], ["store", "ls"], ["store", "info"], ["store", "gc", "--dry-run"]):
             result = CliRunner().invoke(main, arguments)
             assert result.exception is None or isinstance(result.exception, SystemExit), (arguments, repr(result.exception))
             assert result.exit_code == 1 and "holds snapshots of both layouts" in result.output, (arguments, result.output)
+        # Every listing of `chartbook ls`, as click lists them, so that one added later is covered: none ends in a
+        # traceback, and each that reads the store says the plain error and exits 1
+        listings = [["ls"], ["ls", "--json"]] + [["ls", name] for name in sorted(main.commands["ls"].commands)]
+        assert {"pipelines", "dataframes", "charts", "stores", "versions"} <= {arguments[-1] for arguments in listings}
+        said = []
+        for arguments in listings:
+            result = CliRunner().invoke(main, arguments)
+            assert result.exception is None or isinstance(result.exception, SystemExit), (arguments, repr(result.exception))
+            assert result.exit_code in (0, 1), (arguments, result.output)
+            if result.exit_code:
+                assert "Error: " in result.output and "holds snapshots of both layouts" in result.output, (arguments, result.output)
+                said.append(arguments[-1])
+        assert {"ls", "--json", "pipelines", "dataframes", "charts", "versions"} <= set(said), said
 
 
 class TestAStoreThatIsRefusedAmongSeveral:

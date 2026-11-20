@@ -122,6 +122,19 @@ class _Install(_Group):
     renamed = {"skill": "claude-skill"}
 
 
+class _Ls(_Group):
+    """`chartbook ls` and each of its listings: a store that is not read is said plainly, with exit 1, by whichever of them meets it."""
+
+    def invoke(self, ctx):
+        from chartbook.store import StoreError
+
+        try:
+            return super().invoke(ctx)
+        except StoreError as error:  # a store this version does not read, or one with two layouts in it
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+            raise SystemExit(1)
+
+
 @click.group(cls=_Main)
 @click.version_option(version=__version__)
 @click.pass_context
@@ -1708,7 +1721,7 @@ def _json_option(command):
     return click.option("--json", "as_json", is_flag=True, help="Print the listing as JSON, for a script or an agent")(command)
 
 
-@main.group(invoke_without_command=True)
+@main.group(cls=_Ls, invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 @_json_option
 @click.pass_context
@@ -4523,6 +4536,14 @@ def _note_path(the_store, name: str) -> str:
 
 def _when_it_goes(why: str) -> str:
     """When a snapshot that `store gc` keeps for *why* goes, in the words of the plan's own reasons: the way out for one that has lost a file for good."""
+    if "was made from" in why:
+        return "once the snapshot that was made from it goes, or with a `chartbook store gc` without `--keep-lineage`"
+    if "newest that names its repository" in why:
+        return "once a newer snapshot of its pipeline names its repository (one made in a clone that has its remote)"
+    if "repository's address" in why or "address of a kept" in why:
+        return "once the kept snapshots it ties to their repository have gone"
+    if "that stays has" in why:
+        return "once the snapshot that holds its pipeline back is whole again, or has gone"
     if "cannot be found" in why:
         return "with `chartbook store gc --forget-missing`, which lets go of what a lockfile that cannot be found pinned"
     if "another machine" in why or "not read here" in why:
@@ -5416,15 +5437,10 @@ def ls_versions(ctx, as_json):
     """List every snapshot, newest first, with its store."""
     from chartbook.multi_store import Stores
     from chartbook.snapshot import readable_snapshots
-    from chartbook.store import StoreError
     if ctx.obj.get("catalog") is None:
         _catalog_or_make_one()
     stores = Stores.configured(ctx.obj.get("catalog"))
-    try:
-        found, unreadable = readable_snapshots(stores)
-    except StoreError as error:  # a store this version does not read, or one with two layouts in it
-        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
-        raise SystemExit(1)
+    found, unreadable = readable_snapshots(stores)  # a store that is not read is said by the group (_Ls)
     if as_json or ctx.obj.get("json"):
         _echo_json([
             {"pipeline": taken.pipeline, "commit": taken.commit, "made_at": taken.made_at, "store": stores.name_of(taken.path)}

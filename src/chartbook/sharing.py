@@ -124,9 +124,9 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
                 more = f" (and {len(wrong) - 1} more of its files)" if len(wrong) > 1 else ""
                 done.refused.append((what, (
                     f"the store has it already, in {here.folder.name}, and not whole: {wrong[0].message}{more}. Nothing "
-                    f"was imported over it. If a sync is still bringing it, wait for the sync to finish; a snapshot "
-                    f"that has lost a file for good goes with `chartbook store gc` once nothing keeps it, and can be "
-                    f"imported then"
+                    f"was imported over it. If a sync is still bringing the file, import again when it has. If the "
+                    f"file is lost, remove that snapshot's folder, {here.folder}, and import again: what is "
+                    f"imported holds it whole"
                 )))
             else:
                 done.there.append(moment)
