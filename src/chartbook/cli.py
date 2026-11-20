@@ -3914,14 +3914,18 @@ def _kept_said(kept) -> tuple:
     ``("complete", "5 files, 23.0 MB", "")``, or ``("as an increment", "2
     of 5 files, 409.6 KB", " The rest is in the snapshot made 2026-11-16
     09:15 UTC.")``. A count of files is of the files the record lists.
+    Where the record of what an increment builds on could not be read for
+    its time, no blank date is printed: "The rest is in the snapshot it
+    builds on."
     """
     if kept is None:
         return "", "", ""
     files = "1 file" if kept.files == 1 else f"{kept.files} files"
     if kept.increment:
+        rest = f"made {_when(kept.rest_made_at)}" if kept.rest_made_at else "it builds on"
         return (
             "as an increment", f"{kept.own_files} of {files}, {_format_bytes(kept.own_bytes)}",
-            f" The rest is in the snapshot made {_when(kept.rest_made_at)}.",
+            f" The rest is in the snapshot {rest}.",
         )
     added_up = " The increments since the last complete one had added up to its size." if kept.added_up else ""
     return "complete", f"{files}, {_format_bytes(kept.size_bytes)}", added_up
@@ -4878,7 +4882,9 @@ def store_verify():
     In a folder store each snapshot is checked for itself: every file its
     record names is read in the snapshot's own folder, and every one that
     is missing there or has other bytes is said with the snapshot's name,
-    though another snapshot has the same bytes.
+    though another snapshot has the same bytes. A file that snapshots kept
+    as increments keep in the complete snapshot they build on is said
+    once, with that snapshot's name and how many of them keep it there.
 
     Examples:
         chartbook store verify
@@ -4949,13 +4955,13 @@ def _when_it_goes(why: str) -> str:
     if "lockfile" in why:
         return "once no lockfile pins it: `chartbook pin --update` in the pipeline that does moves its pin to a newer snapshot"
     if "newest of its pipeline" in why:
-        return "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it"
+        return "once a newer snapshot of its pipeline is made (`chartbook snapshot` in its folder) and nothing else keeps it"
     if "branch or tag" in why or "label points" in why:
         return "once a newer snapshot takes its place for that name, or with `chartbook store gc --aggressive`, which lets names keep nothing"
     if "keep = true" in why:
         return (
             "once the mark `keep = true` is taken out of its pipeline's chartbook.toml, that is committed, and a "
-            "snapshot is made since (`chartbook run` in its folder)"
+            "snapshot is made since (`chartbook snapshot` in its folder)"
         )
     if "days" in why:
         return "once it is older than that"
@@ -5012,7 +5018,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     that pipeline's chartbook.toml, or as its newest snapshot recorded), if
     it is the newest holding a version of an asset marked `keep = true`
     (every version of such an asset is kept, --aggressive or not, and the
-    command says what the marks keep), or
+    command says what the marks keep), if an increment that stays builds
+    on it (a snapshot the store keeps in less room, the rest of whose
+    files are in this one's folder), or
     if it was made in the last 7 days (--keep-days). Otherwise it may be
     removed, and what only it named goes with it. A store keeps what work
     needs now, and lets old lineage go: with --keep-lineage, every snapshot
@@ -5024,8 +5032,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     While a snapshot that stays lacks a file of its own (a sync that has
     not brought it, a file removed by hand), no snapshot of its pipeline is
     removed, since a read of the one with the hole is handed another's
-    copy. gc names the pipeline, the snapshot and the file. Wait for the
-    sync, or see `chartbook store verify`, which lists everything missing.
+    copy. gc names the pipeline, the snapshot whose folder the file is
+    missing from, as `chartbook store verify` does, and the file. Wait for
+    the sync, or see `chartbook store verify`, which lists everything missing.
     gc says why that snapshot stays, and so when one that has lost a file
     for good goes: once a newer one is made, once no lockfile pins it, or
     with the option that lets go of what keeps it.

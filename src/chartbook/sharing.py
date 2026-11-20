@@ -99,7 +99,7 @@ def _pipeline_folders(source: Path) -> list[Path]:
 
 
 def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[str], None] = lambda line: None) -> Copied:
-    """Copy snapshots, each by its record, into a store: oldest first, each complete, every byte checked.
+    """Copy snapshots, each by its record, into a store: each complete one, oldest first, then the increments on it, which keep their form and their count; every byte checked.
 
     A snapshot the store has already (its pipeline, commit and time) is not
     copied again. One whose file is not what its record says, or whose
@@ -165,7 +165,9 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
         try:
             on = _builds_on_there(record, into, whole)  # it keeps its form on a complete one found whole in this run
             counted = done.size_bytes
-            pending = into.begin(record.pipeline, record.commit, record.made_at, **({"builds_on": on} if on is not None else {}))
+            # An increment that keeps its form keeps its count: the next snapshot here counts on from it
+            as_it_was = {"builds_on": on, "increments_bytes": record.increments_bytes or None} if on is not None else {}
+            pending = into.begin(record.pipeline, record.commit, record.made_at, **as_it_was)
             why = _copy_parts(document, record, pending, done)
             if why is None:
                 try:

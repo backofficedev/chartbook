@@ -376,7 +376,8 @@ class _Moving(_FolderPending):
     moves a store to: each file kept once in its pipeline's folder, where
     the first snapshot that had it keeps it, so that a file is moved and
     nothing is copied for a later snapshot of the same pipeline. A folder
-    store writes every snapshot complete (:class:`chartbook.store._FolderPending`);
+    store writes a snapshot complete, or as an increment on one complete
+    snapshot of its pipeline (:class:`chartbook.store._FolderPending`);
     what follows is the writer of 0.5, kept here for this move alone.
     """
 

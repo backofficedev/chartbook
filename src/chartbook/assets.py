@@ -215,9 +215,9 @@ def path(
     (``chartbook pin``), and is for reading: never write to it.
 
     **Another pipeline's folder or glob of files has no one path.** A
-    store may keep each file once (a bucket does, and a store that
-    ChartBook 0.5 laid out), so a snapshot's files may sit in other
-    snapshots' folders. Asking raises
+    store may keep each file once (a bucket does, a store that ChartBook
+    0.5 laid out, and a snapshot kept as an increment), so a snapshot's
+    files may sit in other snapshots' folders. Asking raises
     :class:`~chartbook.errors.NoSinglePathError`, whatever the folders
     happen to hold today, so that a call that works does not stop working
     when the upstream takes another snapshot. :func:`files` lists the
@@ -312,7 +312,9 @@ def files(
     others operating systems write by themselves. Of another pipeline's
     asset they are the files of the pinned copy, as its record lists them,
     each where the store keeps it: a store may keep each file once (a
-    bucket does, and a store that ChartBook 0.5 laid out), so they may
+    bucket does, a store that ChartBook 0.5 laid out, and a snapshot kept
+    as an increment, which keeps an unchanged file in the complete
+    snapshot it builds on, under the name it has there), so they may
     sit in several snapshots' folders, and this is the call to read
     them by (polars and DuckDB take a list of files; so does a ``dodo.py``
     for its ``file_dep``). They are sorted by their path inside the asset,

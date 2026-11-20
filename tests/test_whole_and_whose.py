@@ -544,7 +544,7 @@ class TestTheWayOutGcNames:
             "a lockfile pins it": "once no lockfile pins it",
             "a lockfile that cannot be found pins it": "--forget-missing",
             "a lockfile not read here, another machine's, pins it": "that machine's lockfile",
-            "it is the newest of its pipeline": "`chartbook run` in its folder",
+            "it is the newest of its pipeline": "`chartbook snapshot` in its folder",
             "it is the newest a branch or tag can pin from": "--aggressive",
             "a label points at a version in it": "--aggressive",
             "it holds a version of 7, which is kept (`keep = true` in its chartbook.toml)": "the mark `keep = true` is taken out of",
@@ -627,7 +627,7 @@ class TestTheWayOutGcNames:
             CliRunner().invoke(main, ["store", "gc", "--yes"]), holed,
             "it holds a version of treasury, which is kept (`keep = true` in its chartbook.toml)",
             "once the mark `keep = true` is taken out of its pipeline's chartbook.toml, that is committed, and a snapshot "
-            "is made since (`chartbook run` in its folder)",
+            "is made since (`chartbook snapshot` in its folder)",
         )
         del raw["dataframes"]["treasury"]["keep"]
         (rates / "chartbook.toml").write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
@@ -644,7 +644,7 @@ class TestTheWayOutGcNames:
         _lose(_folder_of(newest) / "_data" / "treasury.parquet")
         self._said(
             CliRunner().invoke(main, ["store", "gc", "--yes"]), newest, "it is the newest of its pipeline",
-            "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it",
+            "once a newer snapshot of its pipeline is made (`chartbook snapshot` in its folder) and nothing else keeps it",
         )
         _table(rates, 4)
         assert snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).made  # the way out, carried out
@@ -924,7 +924,7 @@ class TestGcReadsTheCopyAReadIsLeftWith:
             f"it is the newest of its pipeline.",
             "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything "
             "missing. If it is lost for good, that snapshot goes once a newer snapshot of its pipeline is made "
-            "(`chartbook run` in its folder) and nothing else keeps it.",
+            "(`chartbook snapshot` in its folder) and nothing else keeps it.",
         ]
         for typed in (["store", "gc", "--dry-run"], ["store", "gc", "--yes"]):
             result = CliRunner().invoke(main, typed)

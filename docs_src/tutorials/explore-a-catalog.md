@@ -160,7 +160,7 @@ tutorial/rate_outlook: build
 .  docs
 tutorial/rate_outlook at a11b7b7: 3 asset(s) in the store
   model/spread_ar1: new version 741ac0897fa6
-Snapshot made: 9 files, 412.6 KB.
+Snapshot made: 8 files, 187.4 KB.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 Stores: default
 Ran build in 1 pipeline(s).

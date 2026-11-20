@@ -167,7 +167,8 @@ class TestTheTreeOfANewStore:
         assert _folders(store.root / "_chartbook") == ["origins", "roots", "tmp", "unowned"]
         assert _folders(store.root / "snapshots") == ["acme+rates"]
 
-    def test_the_readme_at_the_top_says_what_the_two_folders_are_and_is_written_once(self, rates, store):
+    def test_the_readme_at_the_top_names_every_folder_a_person_finds_there_and_is_written_once(self, rates, store):
+        """`increments/` is at the top of the store once a second snapshot is made, and the README there, which is for whoever opens the folder, says what it is."""
         snapshot.make(rates, store=store, made_at=FIRST)
         note = store.root / "README.txt"
         text = note.read_text(encoding="utf-8")
@@ -175,12 +176,21 @@ class TestTheTreeOfANewStore:
             "This folder is a ChartBook store: the snapshots of pipelines, kept for other pipelines to read."
         )
         assert "\nsnapshots/   One folder for each pipeline" in text and "\n_chartbook/  ChartBook's own notes." in text
+        assert "\nincrements/  Snapshots kept in less room" in text and "_chartbook/INCREMENT.txt in each says\n" in text
+        # Complete is said of a folder under snapshots/, and of no other
+        assert "Each snapshot's folder here is complete" in text and "A folder here is not the whole snapshot by itself." in text
         assert text.splitlines()[-1] == "Remove a snapshot with `chartbook store gc`, not by hand."
-        assert "increment" not in text
         note.write_text(text + "A note of my own.\n", encoding="utf-8", newline="\n")
         _table(rates, 4)
-        snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND)
+        assert snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND).kept.increment
         assert note.read_text(encoding="utf-8").endswith("A note of my own.\n")  # nothing in the store is rewritten
+        # Every name at the top of the store is in it
+        at_the_top = sorted(path.name for path in store.root.iterdir())
+        assert at_the_top == ["README.txt", "_chartbook", "increments", "snapshots", "store.json"]
+        assert all(name in text for name in ("snapshots/", "increments/", "_chartbook/", "store.json"))
+        # And the two notes beside it read rightly with it: one in each pipeline's folder, under each of the two
+        assert (store.root / "snapshots" / "acme+rates" / "README.txt").read_text(encoding="utf-8") == store_module.PIPELINE_README
+        assert (store.root / "increments" / "acme+rates" / "README.txt").read_text(encoding="utf-8") == store_module.INCREMENTS_README
 
     def test_the_readme_of_a_pipelines_folder_says_each_folder_is_complete(self, rates, store):
         snapshot.make(rates, store=store, made_at=FIRST)
@@ -381,11 +391,13 @@ class TestThePathOfAPinnedFile:
         own.unlink()
         assert data.path("acme/rates:treasury", project_dir=reader) == _folder_of(second) / "_data" / "treasury.parquet"
         assert data.load("acme/rates:treasury", project_dir=reader).collect().shape == (3, 2)
-        # Where the pinned one has lost it, the newest of the pipeline that has it whole: the one `store gc` keeps,
-        # read where that one keeps the table
+        # Where the pinned one has lost it, the newest of the pipeline that has it whole: the one `store gc` keeps.
+        # Complete, so that the newest has a copy of its own to be handed: an increment's would be the second one's file again
         _chart(rates, "and again")
-        third = snapshot.make(rates, store=FolderStore(store.root), made_at=THIRD).snapshot
-        assert data.path("acme/rates:treasury", project_dir=reader) == _where(store, third, "treasury", "treasury.parquet")
+        third = snapshot.make(rates, store=FolderStore(store.root), made_at=THIRD, complete=True).snapshot
+        its_own = _folder_of(third) / "_data" / "treasury.parquet"
+        assert its_own.is_file() and its_own != _folder_of(second) / "_data" / "treasury.parquet"
+        assert data.path("acme/rates:treasury", project_dir=reader) == its_own == _where(store, third, "treasury", "treasury.parquet")
 
     @pytest.fixture
     def with_parts(self, rates):

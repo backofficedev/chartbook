@@ -89,8 +89,8 @@ its price was a store nobody could read.
 
 `chartbook snapshot`, beside `chartbook run`: a run builds, and a snapshot puts what was built in
 the store for other pipelines. *Decided 2026-11-20.* The list of commands is {doc}`one-command`'s.
-A person who never opens the store meets the word "increment" only in what `chartbook snapshot`
-says when it has made one.
+A person who never opens the store meets the word "increment" in what `chartbook snapshot` says
+when it has made one, and in a reason `chartbook store gc` gives for keeping a snapshot.
 
 ## What you see
 
@@ -103,7 +103,7 @@ is in {doc}`one-command`.
 
 ```text
 $ chartbook snapshot
-acme/rates at 4f2a91c: 3 asset(s) in the store
+acme/rates at 4f2a91c: 2 asset(s) in the store
 Snapshot made: 5 files, 23.0 MB.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
@@ -113,7 +113,7 @@ the table is the same file.
 
 ```text
 $ chartbook snapshot
-acme/rates at 9b1e22d: 3 asset(s) in the store
+acme/rates at 9b1e22d: 2 asset(s) in the store
 Snapshot made, kept as an increment: 2 of 5 files, 409.6 KB. The rest is in the snapshot made 2026-11-16 09:15 UTC.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
@@ -122,7 +122,7 @@ A pipeline that depends on this one gets it with `chartbook pin --update`.
 
 ```text
 $ chartbook snapshot
-acme/rates at c07d3e1: 3 asset(s) in the store
+acme/rates at c07d3e1: 2 asset(s) in the store
 Snapshot made: 5 files, 23.0 MB. The increments since the last complete one had added up to its size.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
@@ -145,9 +145,9 @@ is.
 
 ```text
 $ chartbook snapshot --complete
-acme/rates at 9b1e22d: 3 asset(s) in the store
+acme/rates at 9b1e22d: 2 asset(s) in the store
 Snapshot made: 5 files, 23.0 MB.
-  ~/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4
+  /Users/x/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4
 ```
 
 **5a. A script does both at once.** `chartbook run --snapshot` builds and then makes a snapshot,
@@ -286,7 +286,19 @@ this one, add up to the size of a complete one. Then it is a complete one.**
   increment's is that of the files in its own folder.
 - **The count is kept in the records,** each increment's saying the total up to and with itself,
   beside what it builds on. *Proposed by Claude, 2026-11-19.* It is a count of what was copied,
-  so removing an increment does not take from it.
+  so removing an increment does not take from it. **It is the largest that any increment on that
+  complete snapshot carries,** whatever the dates of the two. *Found by review, 2026-11-20:* read
+  from the newest increment made after the complete one, it stopped at an increment a clock had
+  dated ahead, passed over those of a clock that was behind, and went back where a machine that
+  had not been brought the others' wrote one that counted from less. A copy to another store that
+  keeps an increment's form keeps its count.
+- **Said to have added up only where this one alone is less than the whole.** One where every
+  file differs is complete because the increment would be the whole of it, and its line is the
+  first snapshot's, whatever the increments before it came to. *Found by review, 2026-11-20.*
+- **Where a file of its own would not fit under `increments/`, it is complete.** On Windows
+  without long paths, `increments` is one letter longer than `snapshots`, and a file that fits in
+  a complete snapshot by one character does not fit in an increment. *Found by review,
+  2026-11-20.*
 - **A table in one file that gains a day makes an increment nearly the size of the whole,** since
   the documents beside it did not change, and the one after it a complete one. So such a pipeline
   alternates, and copies what a complete snapshot every time would.
@@ -340,7 +352,10 @@ what its record says of the build). Nothing is renamed.
   a catalog shows. The maintainer teaches it, and it does not change.
 - **Complete** and **increment** say how the store keeps a snapshot. They are met in the store's
   folders, in `chartbook store ls`, in what `chartbook snapshot` and `chartbook store migrate`
-  say, and in the option `--complete`; nowhere else.
+  say, in the option `--complete`, in the help of `chartbook store export` and `chartbook store
+  import`, in a reason `chartbook store gc` gives for keeping a snapshot, and in what `chartbook
+  store verify` says of a file that increments keep in a complete snapshot. They are never in a
+  lockfile, a pin, a read or the catalog.
 - **Standalone** and **shared**, the words of 0.5.0, go: they named the same two things less
   plainly, and a shared snapshot's files could be anywhere.
 - No new word for "a snapshot of either kind" (*version* was proposed and taken back: it would
@@ -603,6 +618,19 @@ broke it three times.)*
 - **A snapshot's folder is not changed once its record is written.** As before. That is why
   `chartbook snapshot --complete` writes a new complete snapshot where the newest is an
   increment, and does not complete that one in its place.
+- **An increment's record is written only while the record of what it builds on is there.**
+  *Found by review, 2026-11-20.* Looked for before the increment has a folder, where a snapshot
+  that has gone, or has lost a file this one would keep there, leaves this one written complete,
+  every file of it being at hand; and once more when its files are in its folder, where there is
+  no writing it complete any more: the command stops, leaves nothing of the new snapshot, and
+  says to make it again. No new note, and nothing changed in `store gc`.
+- **An increment takes the files of the snapshot it builds on by that one's record and their
+  sizes on disk.** *Decided 2026-11-20, after review.* A snapshot with a file missing, or at
+  another size, is not built on. A copy damaged at the same size is named, not replaced: that is
+  the trust a pin, a read and `No new snapshot` already give the store, and the one 0.5 gave it
+  for every snapshot, and reading the whole of a snapshot to build on it would cost what the
+  increment saves. `chartbook store verify` finds such a copy, and `chartbook snapshot --complete`
+  writes every file again from bytes it has checked.
 - **Only `chartbook store gc` removes,** as before.
 - **`chartbook store migrate` moves every file once.** As the move from 0.2 did.
 

@@ -455,7 +455,8 @@ class Kept:
             snapshot up to and with this one.
         added_up: For a complete one that :func:`to_be_kept` decided:
             whether it is complete because the increments since the last
-            complete one, with this one, had added up to its size.
+            complete one, with this one, had added up to its size. Not so
+            for one that alone is the whole of it, every file differing.
         folder: Its folder in the store, once it is written.
     """
 
@@ -2635,9 +2636,11 @@ def _to_build_on(store: Store, taken: Snapshot, now: Optional[datetime] = None) 
     (:attr:`chartbook.store.KeptRecord.complete`): one of a pipeline's
     folder that ChartBook 0.5 laid out, copied into the store by hand,
     keeps files in earlier folders and is not built on. The
-    bytes are those the newest increment on it, made after it, carries in
-    its record: 0 where there is none, or where it carries none (one that
-    ``chartbook store migrate`` or a copy from another store wrote).
+    bytes are the largest count that any increment on it carries in its
+    record, whatever the dates of the two (a machine whose clock is ahead
+    or behind makes increments too, and one that had not been brought
+    another's writes one that counts from less): 0 where there is none,
+    or where none carries one (those ``chartbook store migrate`` wrote).
     """
     records = [
         record for record in store.records()
@@ -2654,8 +2657,9 @@ def _to_build_on(store: Store, taken: Snapshot, now: Optional[datetime] = None) 
             continue
         if not identity_keys(taken) <= identity_keys(complete) or made_in_the_future(complete, now) or store.holes_of(record.path):
             continue
-        since = [other for other in records if other.increment and other.builds_on == record.folder.name and when(other) > when(record)]
-        return record, (max(since, key=when).increments_bytes if since else 0)
+        return record, max(
+            (other.increments_bytes for other in records if other.increment and other.builds_on == record.folder.name), default=0
+        )
     return None
 
 
@@ -2694,7 +2698,8 @@ def to_be_kept(store: Store, taken: Snapshot, complete: bool = False, now: Optio
     has = {(file.content_hash, file.size_bytes) for asset in on.assets for file in asset.files}
     own = [size for content_hash, size, _ in files.values() if (content_hash, size) not in has]
     if since + sum(own) >= size:
-        return dataclasses.replace(whole, added_up=since > 0)
+        # Said to have added up only where this one alone is less than the whole: one where every file differs is complete for that
+        return dataclasses.replace(whole, added_up=since > 0 and sum(own) < size)
     return Kept(len(files), size, on.folder.name, on.made_at, len(own), sum(own), since + sum(own))
 
 

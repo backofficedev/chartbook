@@ -316,7 +316,10 @@ class TestDamaged:
         fresh = FolderStore(store.root)
         for folder in (complete, *increments):  # a hole of each snapshot that keeps the table there
             assert fresh.holes_of(folder / "_chartbook" / "snapshot.json") == ["_data/treasury.parquet"]
-        assert [problem.message for problem in fresh.verify()] == [f"_data/treasury.parquet is not in the store (the snapshot {complete.name})"]
+        # Said once, with the snapshot whose folder it is missing from, and how many snapshots kept as increments keep it there
+        assert [problem.message for problem in fresh.verify()] == [
+            f"_data/treasury.parquet is not in the store (the snapshot {complete.name}), and 2 snapshots kept as increments on it keep it there"
+        ]
         for reader in readers:
             with pytest.raises(AssetNotPinnedError) as refused:
                 data.path("acme/rates:treasury", project_dir=reader)
@@ -357,7 +360,8 @@ class TestDamaged:
             (problem,) = fresh.verify_snapshot(folder / "_chartbook" / "snapshot.json")
             assert problem.message.startswith("_data/treasury.parquet is no longer what its record says")
         (said,) = [problem.message for problem in fresh.verify()]
-        assert said.startswith("_data/treasury.parquet is no longer what its record says") and said.endswith(f"(the snapshot {complete.name})")
+        assert said.startswith("_data/treasury.parquet is no longer what its record says")
+        assert said.endswith(f"(the snapshot {complete.name}), and 2 snapshots kept as increments on it keep it there")
 
 
 def _form(root: Path) -> list:

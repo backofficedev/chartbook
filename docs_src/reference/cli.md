@@ -279,8 +279,9 @@ $ chartbook path fed_yield_curve:chart/curve_today
 
 The path is into the store, in the folder of the snapshot that keeps the file, under its own
 name. An asset of several files, a folder or a glob, has no one path: a store need not keep its
-files in one folder (a bucket, and a store that ChartBook 0.5 laid out, keep each file once, so a
-snapshot's files may sit in other snapshots' folders). Asking exits `1` and says
+files in one folder (a bucket, and a store that ChartBook 0.5 laid out, keep each file once, and a
+snapshot kept as an increment keeps an unchanged file in the complete snapshot it builds on, so a
+snapshot's files may sit in other snapshots' folders, a file under the name it has there). Asking exits `1` and says
 so, whatever the folders happen to hold today; `--files` prints the files, each where the store
 keeps it, and `data.load` reads them. Nothing is gathered into this machine's cache.
 
@@ -1433,6 +1434,12 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
+A file that snapshots kept as increments keep in the complete snapshot they build on is read once and said once, with that snapshot's name, since its folder is the one the file is in or missing from, and with how many of them keep it there:
+
+```text
+sha256:4b1f9a0c…: _data/treasury.parquet is not in the store (the snapshot 2026-11-16T091500Z_4f2a91c0e1b2), and 2 snapshots kept as increments on it keep it there
+```
+
 Nothing puts a file back into a snapshot: its folder is not changed once its record is written. A read of it is handed the copy in the newest snapshot of its pipeline that holds the asset whole (never another pipeline's copy, whatever its bytes), and `store gc` removes no snapshot of that pipeline while a snapshot that stays lacks a file. A `chartbook run` that would otherwise say `No new snapshot` of the one with the hole stands on the newest whole snapshot of the same files, and only where none is whole makes a new one and says which file the other lacks. A run that writes to several stores stands on a snapshot only where each of them that has it has it whole, and otherwise makes a new one, whole in each, naming the store and the file the other lacks. `store move`, `store import` and a snapshot sent to several stores read and hash a store's own snapshot of the same moment before they take it to be there: one that is not whole is named with its store and its file, nothing is written over it, and nothing is removed from where it came from.
 
 **Why an object can change.** The store never moves or copies a file if it can avoid it. It tries four ways to hold one, cheapest first:
@@ -1472,15 +1479,16 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest holding a version of an asset marked `keep = true` (with `--aggressive` too) | Every version `acme/docs` ever built of `embeddings`, the output of a paid API run ({doc}`../guide/keeping-costly-outputs`). The command says what the marks keep: `Kept for \`keep = true\`: 3 version(s) of acme/docs:embeddings, 4.2 GB, in 3 snapshot(s)` |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
-| A snapshot of its pipeline that stays has lost a file | Each snapshot's folder holds its own copy of every file, and the newest snapshot of `rates` lacks its `treasury.parquet` (a sync that has not brought it, a file removed by hand). No snapshot of `rates` is removed meanwhile: a read of the one with the hole is handed the copy in another snapshot of `rates` |
+| An increment that stays builds on it | Monday's complete snapshot of `rates`, while Tuesday's stays for a reason of its own: the store keeps Tuesday's as an increment, its folder holding only the files that differ, and the rest of its files are in Monday's folder |
+| A snapshot of its pipeline that stays has lost a file | The newest snapshot of `rates` lacks its `treasury.parquet` (a sync that has not brought it, a file removed by hand). No snapshot of `rates` is removed meanwhile: a read of the one with the hole is handed the copy in another snapshot of `rates` |
 
-Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, and the ones a tag or a label names.
+Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, the ones a tag or a label names, and the complete snapshots that increments among them build on.
 
-Where a snapshot that stays lacks a file of its own, `gc` says which, why that snapshot stays, and what to do:
+Where a snapshot that stays lacks a file of its own, `gc` says which, why that snapshot stays, and what to do. The snapshot it names is the one whose folder the file is missing from, as `store verify` names it (where a complete snapshot has lost a file that increments keep in it, the complete one):
 
 ```text
 Nothing of acme/rates is removed: its snapshot 2026-11-19T140200Z_4f2a91c0e1b2 lacks _data/treasury.parquet, and stays because it is the newest of its pipeline.
-  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. If it is lost for good, that snapshot goes once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it.
+  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. If it is lost for good, that snapshot goes once a newer snapshot of its pipeline is made (`chartbook snapshot` in its folder) and nothing else keeps it.
 ```
 
 A snapshot that is itself to be removed holds nothing back, whatever it has lost, and the same bytes in another pipeline never count.

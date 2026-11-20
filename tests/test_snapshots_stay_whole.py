@@ -44,7 +44,7 @@ OLDER, OLD, NOW, LATER, LAST = (
     "2026-11-19T15:02:00.000000Z", "2026-11-19T16:02:00.000000Z",
 )
 #: When a snapshot gc keeps as the newest of its pipeline goes, and one a lockfile pins: the way out gc names for each
-NEWEST = "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it"
+NEWEST = "once a newer snapshot of its pipeline is made (`chartbook snapshot` in its folder) and nothing else keeps it"
 PINNED = "once no lockfile pins it: `chartbook pin --update` in the pipeline that does moves its pin to a newer snapshot"
 
 
@@ -176,13 +176,18 @@ def _whole(taken, own: bool = False) -> None:
     That is the snapshot's own folder, or, for one kept as an increment,
     the complete snapshot it builds on.
 
-    :param own: See that every one of them is in its own folder: a complete snapshot.
+    :param own: See that every one of them is in its own folder, at its
+        own path, as its record says: a complete snapshot.
     """
     store_module._read_records.clear()
     record = store_module.read_kept_record(Path(taken.path))
     document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
     parts = [*document["records"], document["index"], document["documents"]]
     listed = sorted(entry["path"] for part in parts for entry in part["stored"]["files"])
+    if own:
+        for part in parts:
+            for entry in part["stored"]["files"]:
+                assert entry["kept_in"] == record.folder.name and "kept_as" not in entry, f"{entry['path']} in {record.folder.name}"
     files = [file for asset in record.assets for file in asset.files]
     assert listed and record.whole and sorted(file.path for file in files) == listed
     for file in files:
@@ -232,13 +237,24 @@ class TestAnEarlierCopyThatIsDamaged:
     def test_the_next_snapshot_is_made_with_the_documents_as_the_pipeline_has_them(self, rates, store):
         """A document is put from a folder staged for the snapshot, which is still there when the record is written."""
         self._damaged(rates, store)
+        # Complete: the complete form is what copies every file again and checks each copy by its hash as it is written
         second = _complete(rates, store, NOW)
         assert second.made
         assert (_folder_of(second.snapshot) / "README.md").read_bytes() == b"# Rates\n"
         _whole(second.snapshot, own=True)
 
     def test_an_increment_takes_the_file_where_the_one_it_builds_on_has_it_at_its_size(self, rates, store):
-        """Left to the store, the next one is an increment, and a file of the right size in the snapshot it builds on is not read to make it: `store verify` is what reads, and names the file once for each snapshot that keeps it there."""
+        """Left to the store, the next one is an increment, and a file of the right size in the snapshot it builds on is not read to make it: `store verify` is what reads, and names the file once for each snapshot that keeps it there.
+
+        An increment takes the files of the snapshot it builds on by that
+        one's record and their sizes on disk. That is the trust a pin, a
+        read and `No new snapshot` already give the store, and reading the
+        whole of that snapshot to make an increment would cost what the
+        increment saves. A copy damaged at the same size is found by
+        `chartbook store verify`, and `chartbook snapshot --complete`
+        writes every file again from bytes it has checked (the tests on
+        either side of this one).
+        """
         first = self._damaged(rates, store)
         second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
         assert second.made and second.kept.increment and second.kept.builds_on == _folder_of(first).name
@@ -280,6 +296,7 @@ class TestAnEarlierCopyThatIsDamaged:
         (folder / "README.md").write_text("# Warehouse\n", encoding="utf-8", newline="\n")
         _git(folder, "add", "-A")
         _git(folder, "commit", "--quiet", "-m", "A README")
+        # Complete: the complete form is what copies every file again and checks each copy by its hash as it is written
         second = _complete(folder, store, NOW)
         assert second.made
         assert (_folder_of(second.snapshot) / "_chartbook" / "tables" / written.name).read_bytes() == was
@@ -357,7 +374,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
         _lose(_folder_of(first) / "README.md")
         again = snapshot.make(rates, store=FolderStore(store.root), made_at=LATER)
         assert again.made and again.not_whole == (first, ["README.md"], None)
-        _whole(again.snapshot)
+        _whole(again.snapshot, own=True)  # nothing is built on one with a hole: every file of it is its own
         assert not (_folder_of(first) / "README.md").exists()
 
     def test_a_file_of_another_size_in_the_newest_is_reason_enough_and_is_left(self, rates, store):
@@ -368,7 +385,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
         again = snapshot.make(rates, store=FolderStore(store.root), made_at=LATER)
         assert again.made and again.not_whole == (first, ["_data/treasury.parquet"], None)
         assert short.read_bytes() == b"other"
-        _whole(again.snapshot)
+        _whole(again.snapshot, own=True)  # nothing is built on one with a hole: every file of it is its own
 
     def test_a_hole_in_an_older_snapshot_is_left_and_costs_no_copy(self, rates, store, monkeypatch):
         """The run stands on the newest, which is whole: nothing is copied to find out, run after run."""

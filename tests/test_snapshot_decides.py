@@ -10,8 +10,10 @@ increment builds on exactly one complete snapshot.
 """
 
 import dataclasses
+import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 from pathlib import Path
@@ -102,34 +104,71 @@ def _recorded(root: Path) -> dict:
 # A pipeline of exact sizes, written with the store's own writer as `snapshot.make` uses it
 
 
-def _sized(store: FolderStore, scratch: Path, versions: list, number: int, complete: bool = False, made_by: str = "snapshot"):
-    """Write one snapshot of acme/sized: a file of UNIT bytes for each of *versions*, file i at the version given.
+def _of_files(
+    store: FolderStore, scratch: Path, files: list, number: int, complete: bool = False, made_by: str = "snapshot",
+    made_at: str = None, now=None,
+):
+    """Write one snapshot of acme/sized of *files*, each ``(asset name, place in the pipeline, bytes)``.
 
     As :func:`chartbook.snapshot.make` writes one once every file of it is
     put: the store is asked how it is to keep it
     (:func:`chartbook.snapshot.to_be_kept`), told, and the record is
-    written. Nothing else is in it, so its size is exact.
+    written; one that is not written is let go. Nothing else is in it, so
+    its size is exact.
 
+    :param made_at: Its time, where it is not that of its *number*.
+    :param now: What the clock of the machine that makes it says, where it is not right.
     :returns: How the store keeps it, as its record says.
     """
     owner = made_by == "snapshot"
-    pending = store.begin("acme/sized", COMMIT, _at(number), made_by=made_by, **({"undecided": True} if owner else {}))
-    assets, held = {}, {}
-    scratch.mkdir(exist_ok=True)
-    for file, version in enumerate(versions):
-        local = AssetRef(kind="dataframe", name=f"f{file:03d}")
-        source = scratch / f"{local.name}.bin"
-        source.write_bytes(f"{file:03d}{version:05d}".encode())
-        put = pending.put(source, place=f"data/{local.name}.bin")
-        assets[str(local)] = snapshot.asset_record(local.in_pipeline("acme/sized"), "acme/sized", f"./data/{local.name}.bin", put, True)
-        held[str(local)] = put.stored
-    taken = snapshot.Snapshot("acme/sized", COMMIT, "", _at(number), assets, stored={"records": held})
-    if owner:
-        decided = snapshot.to_be_kept(store, taken, complete)
-        if decided.increment:
-            pending.keep_as_increment(decided.builds_on, decided.increments_bytes)
-    path = pending.write({**taken.to_document(), **({} if owner else {"made_by": made_by})})
+    made_at = made_at or _at(number)
+    pending = store.begin("acme/sized", COMMIT, made_at, made_by=made_by, **({"undecided": True} if owner else {}))
+    try:
+        assets, held = {}, {}
+        scratch.mkdir(exist_ok=True)
+        for name, place, content in files:
+            local = AssetRef(kind="dataframe", name=name)
+            source = scratch / f"{name}.bin"
+            source.write_bytes(content)
+            put = pending.put(source, place=place)
+            assets[str(local)] = snapshot.asset_record(local.in_pipeline("acme/sized"), "acme/sized", f"./{place}", put, True)
+            held[str(local)] = put.stored
+        taken = snapshot.Snapshot("acme/sized", COMMIT, "", made_at, assets, stored={"records": held})
+        if owner:
+            decided = snapshot.to_be_kept(store, taken, complete, now)
+            if decided.increment:
+                pending.keep_as_increment(decided.builds_on, decided.increments_bytes)
+        path = pending.write({**taken.to_document(), **({} if owner else {"made_by": made_by})})
+    except BaseException:
+        pending.discard()
+        raise
     return snapshot.as_kept(FolderStore(store.root), dataclasses.replace(taken, path=path))
+
+
+def _sized(store: FolderStore, scratch: Path, versions: list, number: int, **how):
+    """Write one snapshot of acme/sized: a file of UNIT bytes for each of *versions*, file i at the version given (:func:`_of_files`)."""
+    files = [(f"f{file:03d}", f"data/f{file:03d}.bin", f"{file:03d}{version:05d}".encode()) for file, version in enumerate(versions)]
+    return _of_files(store, scratch, files, number, **how)
+
+
+def _same_30(k: int) -> list:
+    """A pipeline of a hundred files of which the same thirty change at each snapshot: its versions at the k-th."""
+    return [k] * 30 + [0] * 70
+
+
+def _left_in_tmp(root: Path) -> list:
+    """What is where the store keeps what is being written."""
+    tmp = root / "_chartbook" / "tmp"
+    return sorted(path.name for path in tmp.iterdir()) if tmp.is_dir() else []
+
+
+def _unrecorded_folders(root: Path) -> list:
+    """Every snapshot's folder under snapshots/ and increments/ that has no record."""
+    return [
+        folder.relative_to(root).as_posix()
+        for tree in ("snapshots", "increments") for folder in sorted((root / tree).glob("*/*"))
+        if folder.is_dir() and store_module.is_snapshot_folder(folder.name) and not (folder / "_chartbook" / "snapshot.json").is_file()
+    ]
 
 
 def _series(store, scratch, changes, count: int) -> list:
@@ -202,6 +241,26 @@ class TestTheRuleByItsNumbers:
         assert not again.increment and again.added_up  # 60 and 60 more
         asked = snapshot.to_be_kept(FolderStore(store.root), taken, complete=True)
         assert not asked.increment and not asked.added_up
+
+    def test_one_where_every_file_differs_is_not_said_to_have_added_up(self, store, work):
+        """A complete snapshot, one tiny increment, and then every file is another: it is complete because the increment would be the whole of it, and the decision does not say the increments had added up to its size."""
+        files = work / "files"
+        _sized(store, files, [0] * 100, 0)
+        small = _sized(store, files, [1] + [0] * 99, 1)
+        assert small.increment and small.increments_bytes == UNIT
+
+        def listed(versions: list, number: int):
+            """A snapshot of those files, as its record lists them: written to a store of its own, and asked of this one."""
+            elsewhere = FolderStore(work / f"elsewhere-{number}")
+            _sized(elsewhere, files, versions, number)
+            return snapshot.read(_records(elsewhere.root)[0].path)
+
+        every = snapshot.to_be_kept(FolderStore(store.root), listed([5] * 100, 2))
+        assert not every.increment and every.own_bytes == every.size_bytes == 100 * UNIT
+        assert not every.added_up  # 8 bytes of increments had not added up to 800: every file differs
+        # One file short of every file: less than the whole by itself, and with the increment before it, the whole
+        nearly = snapshot.to_be_kept(FolderStore(store.root), listed([5] * 99 + [0], 3))
+        assert not nearly.increment and nearly.added_up
 
     def test_a_snapshot_with_no_file_is_complete(self, store, work):
         _sized(store, work / "files", [0] * 3, 0)
@@ -362,7 +421,71 @@ class TestWhatIsBuiltOn:
 
 
 class TestTheCount:
-    """What the increments have added up to is kept in the records: each increment's says the total up to and with itself."""
+    """What the increments have added up to is kept in the records: each increment's says the total up to and with itself, and the count is the largest any increment on that complete snapshot carries."""
+
+    def test_an_increment_dated_ahead_does_not_stop_the_count(self, store, work):
+        """One machine's clock was ahead when it made an increment. Every later increment on that complete snapshot still adds to the count: 30 (the one dated ahead), 60, 90, and the next is complete, as the page's table has it."""
+        files = work / "files"
+        first = _sized(store, files, _same_30(0), 0)
+        ahead = _sized(store, files, _same_30(1), 1, made_at="2027-06-01T00:00:00.000000Z")  # a clock that was ahead
+        assert ahead.increment and ahead.builds_on == first.folder.name and ahead.increments_bytes == 30 * UNIT
+        kept = [_sized(store, files, _same_30(k), k) for k in range(2, 5)]
+        assert [(one.increment, one.increments_bytes // UNIT) for one in kept] == [(True, 60), (True, 90), (False, 0)]
+
+    def test_it_does_not_go_back_where_the_newest_increment_carries_a_smaller_one(self, store, work):
+        """Two machines share the store. One had not been brought the other's increments, and wrote one that counts from zero; it is the newest. The next counts on from the largest count on that complete snapshot: what the records say was copied."""
+        files = work / "files"
+        first = _sized(store, files, _same_30(0), 0)
+        one, two = (_sized(store, files, _same_30(k), k) for k in (1, 2))
+        assert (one.increments_bytes, two.increments_bytes) == (30 * UNIT, 60 * UNIT)
+        aside = work / "aside"
+        aside.mkdir()
+        for kept in (one, two):
+            os.rename(kept.folder, aside / kept.folder.name)
+        three = _sized(FolderStore(store.root), files, _same_30(3), 3)  # the other machine's, written with neither in sight
+        assert three.increment and three.builds_on == first.folder.name and three.increments_bytes == 30 * UNIT
+        for kept in (one, two):
+            os.rename(aside / kept.folder.name, kept.folder)  # the sync brings both
+        assert [record.increments_bytes // UNIT for record in _records(store.root) if record.increment] == [30, 60, 30]
+        four = _sized(FolderStore(store.root), files, _same_30(4), 4)
+        assert four.increment and four.increments_bytes == 90 * UNIT  # 60, the largest there, and 30 more
+        assert not _sized(FolderStore(store.root), files, _same_30(5), 5).increment
+
+    def test_an_increment_made_by_a_clock_that_is_behind_is_counted_too(self, store, work):
+        """The complete snapshot was made by a machine whose clock is right; another, nine minutes behind (within the ten a snapshot may be dated ahead and still be built on), makes the increments. Each is dated before the snapshot it builds on, and each adds to the count."""
+        from datetime import datetime, timezone
+
+        files = work / "files"
+        first = _sized(store, files, _same_30(0), 20)  # made at 00:20
+        kept = [
+            _sized(store, files, _same_30(k), 10 + k, now=datetime(2026, 1, 1, 0, 10 + k, tzinfo=timezone.utc))  # dated 00:11 to 00:14
+            for k in range(1, 5)
+        ]
+        assert all(one.builds_on == first.folder.name and one.folder.name < first.folder.name for one in kept[:3])
+        assert [(one.increment, one.increments_bytes // UNIT) for one in kept] == [(True, 30), (True, 60), (True, 90), (False, 0)]
+
+    @pytest.mark.parametrize("by", ["store move", "store import"])
+    def test_increments_copied_to_another_store_keep_what_they_had_added_up_to(self, store, work, by):
+        """A pipeline keeps its form in the other store, each complete snapshot and then the increments on it, and each increment's record its count: the next snapshot there counts on from it."""
+        from chartbook.sharing import copy_snapshots
+        from chartbook.transfer import copy_snapshot
+
+        files = work / "files"
+        kept = [_sized(store, files, _same_30(k), k) for k in range(4)]
+        assert [one.increments_bytes // UNIT for one in kept] == [0, 30, 60, 90]
+        other = FolderStore(work / "other")
+        if by == "store move":
+            whole: set = set()
+            for record in sorted(_records(store.root), key=lambda record: record.increment):
+                copy_snapshot(snapshot.read(record.path), FolderStore(store.root), other, whole=whole)
+        else:
+            assert copy_snapshots(_records(store.root), other).refused == []
+        assert [(record.increment, record.increments_bytes // UNIT) for record in _records(other.root)] == [
+            (False, 0), (True, 30), (True, 60), (True, 90),
+        ]
+        # Where it came from the next one is complete, 90 and 30 more; and so it is where it was copied to
+        assert not _sized(FolderStore(store.root), files, _same_30(4), 4).increment
+        assert not _sized(FolderStore(other.root), files, _same_30(4), 4).increment
 
     def test_it_is_in_the_record_where_the_store_says_how_it_keeps_the_snapshot(self, store, work):
         files = work / "files"
@@ -387,7 +510,7 @@ class TestTheCount:
 
         assert less_stored(json.loads(Path(there).read_text(encoding="utf-8"))) == less_stored(_document(records[second.folder.name]))
 
-    def test_it_survives_the_removal_of_an_older_increment_and_is_read_from_the_newest(self, store, work):
+    def test_it_survives_the_removal_of_an_older_increment(self, store, work):
         files = work / "files"
         versions = [0] * 100
         first = _sized(store, files, versions, 0)
@@ -767,6 +890,161 @@ class TestThePromise:
         assert snapshot.make(rates, store=FolderStore(store.root), made_at=_at(1)).kept.increment
         assert seen == [["INCREMENT.txt", "index.json"]]
 
+    def test_a_gc_that_takes_what_it_builds_on_just_before_it_looks_there_leaves_it_complete(self, rates, store, monkeypatch):
+        """`store gc` removes the snapshot it was to build on after the writer has seen that one's record, and before it has looked at that one's files. Every file is then its own, and it is written complete, under snapshots/: never an increment on a snapshot that has gone."""
+        first, second, third = _healed(rates, store.root)
+        _chart(rates, "four")
+        real = store_module._FolderPending._settle
+
+        def settling(self):
+            _gc(self.store.root)
+            return real(self)
+
+        monkeypatch.setattr(store_module._FolderPending, "_settle", settling)
+        fourth = snapshot.make(rates, store=FolderStore(store.root), made_at=_at(3))
+        (record,) = [one for one in _records(store.root) if one.made_at == _at(3)]
+        assert not second.kept.folder.exists()  # the gc removed the one it was to build on, whole
+        assert fourth.made and not fourth.kept.increment and not record.increment
+        assert record.folder.parent.parent.name == "snapshots" and len(_own(record)) == 5 and "stored" not in _document(record)
+        assert FolderStore(store.root).verify_snapshot(record.path) == []
+        assert _unrecorded_folders(store.root) == [] and _left_in_tmp(store.root) == []
+
+    def test_a_gc_that_takes_what_it_builds_on_as_its_files_come_in_stops_it(self, rates, store, monkeypatch):
+        """`store gc` removes the snapshot it builds on once the increment has looked at what that one has, as its own files come into its folder. An increment's record is written only while the record of what it builds on is there: this one is not written, nothing of it is left, and made again it is whole."""
+        first, second, third = _healed(rates, store.root)
+        _chart(rates, "four")
+        real = store_module._FolderPending._complete
+
+        def completing(self):
+            if self.builds_on is not None:
+                _gc(self.store.root)
+            return real(self)
+
+        with monkeypatch.context() as patched:
+            patched.setattr(store_module._FolderPending, "_complete", completing)
+            with pytest.raises(store_module.StoreError) as stopped:
+                snapshot.make(rates, store=FolderStore(store.root), made_at=_at(3))
+        assert not isinstance(stopped.value, store_module.BuiltOnGoneError)  # nothing of it is at hand to write it complete from
+        assert second.kept.folder.name in str(stopped.value) and str(stopped.value).endswith(
+            ", which this one builds on, went from the store as this snapshot was being written. Make the snapshot again."
+        )
+        # The gc took its record, and left the files this one had noted it was using for a later gc to clear
+        assert not (second.kept.folder / "_chartbook" / "snapshot.json").exists()
+        # Nothing of the new one is left: no record, no folder of its own, nothing where the store keeps what is being written
+        assert [record.made_at for record in _records(store.root)] == [_at(0), _at(2)]
+        assert _unrecorded_folders(store.root) == [second.kept.folder.relative_to(store.root).as_posix()]
+        assert _left_in_tmp(store.root) == []
+        # Made again, it is decided on what is there now
+        again = snapshot.make(rates, store=FolderStore(store.root), made_at=_at(4))
+        (record,) = [one for one in _records(store.root) if one.made_at == _at(4)]
+        assert again.made and FolderStore(store.root).verify_snapshot(record.path) == []
+        on = FolderStore(store.root).builds_on(record.path)
+        assert on is None or on.is_file()
+        assert FolderStore(store.root).verify() == []
+
+    def test_interrupted_just_after_a_file_is_written_aside_it_leaves_nothing_there(self, rates, store, monkeypatch):
+        """Ctrl-C lands between the moment a file's copy is written aside and the moment whoever asked for it has it. A file written aside is on the snapshot's list before anything else is done with it, so letting the snapshot go removes it."""
+        snapshot.make(rates, store=FolderStore(store.root), made_at=_at(0))
+        _chart(rates, "two")
+        real = store_module._FolderPending._written_aside
+        written = []
+
+        def interrupted(self, *args, **kwargs):
+            written.append(real(self, *args, **kwargs)[0])
+            raise KeyboardInterrupt
+
+        with monkeypatch.context() as patched:
+            patched.setattr(store_module._FolderPending, "_written_aside", interrupted)
+            with pytest.raises(KeyboardInterrupt):
+                snapshot.make(rates, store=FolderStore(store.root), made_at=_at(1))
+        assert len(written) == 1 and not written[0].exists()
+        assert _left_in_tmp(store.root) == [] and _unrecorded_folders(store.root) == [] and len(_records(store.root)) == 1
+
+
+def _gc(root: Path):
+    """Plan a `store gc` of a store and carry it out, sparing nothing for being new; what it did."""
+    plan = lock.plan_gc(FolderStore(root), recent_seconds=0)
+    return lock.carry_out_gc(plan, FolderStore(root))
+
+
+def _healed(rates: Path, root: Path) -> tuple:
+    """A store in which the snapshot the next one builds on is one `store gc` may remove; its three snapshots.
+
+    A complete snapshot; a second complete one that had not been brought
+    whole when the third was made, so that the third is an increment on
+    the first; and then the second is whole after all. The next snapshot
+    builds on the second, which is neither the newest nor built on yet.
+    """
+    first = snapshot.make(rates, store=FolderStore(root), made_at=_at(0))
+    _chart(rates, "two")
+    second = snapshot.make(rates, store=FolderStore(root), made_at=_at(1), complete=True)
+    table = second.kept.folder / "_data" / "treasury.parquet"
+    aside = root.parent / "not-synced-yet.parquet"
+    os.rename(table, aside)
+    store_module._found_whole.clear()
+    _chart(rates, "three")
+    third = snapshot.make(rates, store=FolderStore(root), made_at=_at(2))
+    assert third.kept.increment and third.kept.builds_on == first.kept.folder.name
+    os.rename(aside, table)  # the sync brings it
+    store_module._found_whole.clear()
+    store_module._read_records.clear()
+    return first, second, third
+
+
+#: A file that is most of a pipeline of exact sizes, so that a small change beside it is an increment
+BIG = b"B" * 100
+
+
+class TestAFileThatFitsUnderSnapshotsByOneCharacter:
+    """On Windows without long paths. ``increments`` is one letter longer than ``snapshots``: a file that fits in a complete snapshot by one character does not fit in an increment, and the snapshot is kept complete."""
+
+    def _at_the_limit(self, store, monkeypatch, pipeline: str, place: str) -> None:
+        name = store_module.snapshot_folder_name(_at(0), COMMIT)  # every snapshot's folder name is this long
+        under_snapshots = store.root / "snapshots" / pipeline / name / place
+        monkeypatch.setattr(store_module, "_ON_WINDOWS", True)
+        monkeypatch.setattr(store_module, "long_paths_enabled", lambda: False)
+        monkeypatch.setattr(store_module, "WINDOWS_PATH_LIMIT", len(str(under_snapshots)) + 1)  # it fits, by one
+        monkeypatch.setattr(store_module, "WINDOWS_FOLDER_LIMIT", len(str(under_snapshots)) + 100)
+
+    def test_the_snapshot_is_made_all_the_same_complete(self, store, work, monkeypatch):
+        """The pipeline's snapshots fit, and were made yesterday. Today the long-named file changed, little else did, and the rule says increment: the snapshot is made, complete."""
+        files = work / "files"
+        place = "data/" + "f" * 40 + ".bin"
+        self._at_the_limit(store, monkeypatch, "acme+sized", place)
+        first = _of_files(store, files, [("a", place, b"a" * 10), ("big", "data/big.bin", BIG)], 0)
+        assert not first.increment
+        # As long as the long-named file is the same, an increment names it where it is: nothing of that name is written
+        second = _of_files(store, files, [("a", place, b"a" * 10), ("big", "data/big.bin", BIG), ("n", "n.bin", b"n")], 1)
+        assert second.increment and [sorted(_own(one)) for one in _records(store.root) if one.made_at == _at(1)] == [["n.bin"]]
+        third = _of_files(store, files, [("a", place, b"b" * 10), ("big", "data/big.bin", BIG), ("n", "n.bin", b"n")], 2)
+        (record,) = [one for one in _records(store.root) if one.made_at == _at(2)]
+        # By the rule it is an increment, 1 and 10 of 111; it is complete because its own file does not fit under increments/
+        assert snapshot.to_be_kept(FolderStore(store.root), snapshot.read(record.path)).increment
+        assert not third.increment and record.folder.parent.parent.name == "snapshots" and "stored" not in _document(record)
+        assert (record.folder / place).read_bytes() == b"b" * 10 and len(_own(record)) == 3
+        assert FolderStore(store.root).verify() == [] and _unrecorded_folders(store.root) == [] and _left_in_tmp(store.root) == []
+
+    def test_chartbook_snapshot_of_a_pipeline_whose_chart_fits_by_one_character(self, rates, store, monkeypatch):
+        """As a person meets it: `chartbook snapshot` worked yesterday, the chart was drawn again, and today it works too."""
+        long_name = "_output/" + "c" * 44 + ".html"
+        manifest = {**MANIFEST, "charts": {"curve": {"path": f"./{long_name}", "dataframe": "treasury", "docs": "d"}}}
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (rates / "_output" / "curve.html").unlink()
+        _table(rates, 5000)  # the table is most of it
+        (rates / long_name).write_text("<p>one</p>\n", encoding="utf-8", newline="\n")
+        _commit(rates, "A chart with a long name")
+        self._at_the_limit(store, monkeypatch, "acme+rates", long_name)
+        first = _snapshot()
+        assert first.exit_code == 0 and "Snapshot made: 5 files" in first.output, first.output
+        # The chart is drawn again, and the table is the same file
+        (rates / long_name).write_text("<p>two</p>\n", encoding="utf-8", newline="\n")
+        second = _snapshot()
+        assert second.exit_code == 0, second.output
+        newest = max(_records(store.root), key=lambda record: record.made_at)
+        assert len(_records(store.root)) == 2 and not newest.increment
+        assert _made(second) == [f"Snapshot made: 5 files, {_format_bytes(sum(_own(newest).values()))}.", PIN_LINE]
+        assert FolderStore(store.root).verify() == [] and _unrecorded_folders(store.root) == [] and _left_in_tmp(store.root) == []
+
 
 @pytest.fixture
 def two(work, rates):
@@ -906,6 +1184,22 @@ class TestWhatAPersonSees:
             PIN_LINE,
         ]
 
+    def test_one_where_every_file_differs_is_not_said_to_have_added_up(self, rates, store):
+        """The page: "One where every file differs is complete: the increment would be the whole of it." After one small increment, such a snapshot's line is scenario 1's, not scenario 3's."""
+        assert _snapshot().exit_code == 0
+        # A word more in the README, committed: a small increment
+        (rates / "README.md").write_text("# acme/rates\n\nA word more.\n", encoding="utf-8", newline="\n")
+        _commit(rates, "a word")
+        small = _snapshot()
+        assert _made(small)[0].startswith("Snapshot made, kept as an increment: 2 of 5 files, "), small.output
+        # And then every file is another: the table, the chart, both documents (and the index, as always)
+        _everything_differs(rates, "again")
+        result = _snapshot()
+        newest = max(_records(store.root), key=lambda record: record.made_at)
+        base = min(_records(store.root), key=lambda record: record.made_at)
+        assert not newest.increment and not set(_listed(newest).values()) & set(_listed(base).values())  # nothing of it is in the one before
+        assert _made(result) == [f"Snapshot made: 5 files, {_format_bytes(sum(_own(newest).values()))}.", PIN_LINE]
+
     def test_asked_for_complete_it_says_where_the_folder_is(self, rates, store):
         commit = _git(rates, "rev-parse", "HEAD")
         result = _snapshot("--complete")
@@ -973,6 +1267,14 @@ class TestWhatAPersonSees:
             "as an increment", "0 of 3 files, 0 bytes", " The rest is in the snapshot made 2026-01-01 00:00 UTC.",
         )
 
+    def test_no_blank_date_is_printed_where_the_time_of_what_it_builds_on_is_not_known(self):
+        """The record of what an increment builds on could not be read for its time (it went as the line was being said): the line says so much, and no "made  UTC"."""
+        from chartbook.cli import _kept_said
+
+        assert _kept_said(snapshot.Kept(3, 4096, "2026-01-01T000000Z_aaaaaaaaaaaa", "", 1, 1024, 1024)) == (
+            "as an increment", "1 of 3 files, 1.0 KB", " The rest is in the snapshot it builds on.",
+        )
+
 
 class TestWhoeverDependsOnItSeesNoDifference:
     def test_a_pin_and_a_read_of_one_kept_as_an_increment(self, rates, work, store):
@@ -990,3 +1292,307 @@ class TestWhoeverDependsOnItSeesNoDifference:
         assert lock.read_lock(reader).snapshots() == {(second.snapshot.commit, _at(1))}
         assert data.load("acme/rates:treasury", project_dir=reader).collect().height == 3
         assert lock.verify(reader, FolderStore(store.root), note=False).problems == []
+
+
+# A pipeline most of which never changes, so that its later snapshots are increments on its first
+
+
+def _history() -> pl.DataFrame:
+    """A table that is large beside everything else, and never the same value twice, so that it does not compress away."""
+    values = [int(hashlib.sha256(str(i).encode()).hexdigest()[:12], 16) / 7.0 for i in range(20000)]
+    return pl.DataFrame({"n": list(range(20000)), "v": values})
+
+
+STEADY = {
+    "project": {"id": "acme/rates"},
+    "dataframes": {"history": {"path": "./_data/history.parquet", "docs": "d"}},
+    "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "history", "docs": "d"}},
+    "files": {"raw": {"path": "./_data/raw"}},
+}
+
+
+@pytest.fixture
+def steady(work, store, monkeypatch):
+    """``acme/rates`` with a large table that never changes, a small chart, and a files asset of two files; built and committed. Commands are typed in its folder."""
+    folder = work / "rates"
+    (folder / "_data" / "raw").mkdir(parents=True)
+    (folder / "_output").mkdir()
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(STEADY), encoding="utf-8", newline="\n")
+    (folder / "README.md").write_text("# acme/rates\n", encoding="utf-8", newline="\n")
+    (folder / ".gitignore").write_text("/_data/\n/_output/\n/chartbook.lock\n", encoding="utf-8", newline="\n")
+    _history().write_parquet(folder / "_data" / "history.parquet")
+    (folder / "_data" / "raw" / "a.txt").write_bytes(b"alpha\n")
+    (folder / "_data" / "raw" / "b.txt").write_bytes(b"beta 1\n")
+    _drawn(folder, 0)
+    _commit(folder)
+    monkeypatch.chdir(folder)
+    return folder
+
+
+def _drawn(folder: Path, number: int) -> None:
+    """The small chart, drawn again."""
+    (folder / "_output" / "curve.html").write_text(f"<p>curve {number}</p>\n", encoding="utf-8", newline="\n")
+
+
+def _a_reader(folder: Path) -> Path:
+    """A pipeline beside ``rates`` that depends on it by its folder."""
+    folder.mkdir()
+    (folder / "chartbook.toml").write_text(
+        tomli_w.dumps({"project": {"id": f"acme/{folder.name}"}, "dependencies": {"acme/rates": {"path": "../rates"}}}),
+        encoding="utf-8", newline="\n",
+    )
+    return folder
+
+
+def _three(steady: Path, store, reader: Path = None) -> list:
+    """Three snapshots, the chart drawn again for each, which the store keeps as a complete one and two increments on it; their reports. *reader* pins the second."""
+    made = []
+    for number in range(3):
+        _drawn(steady, number)
+        made.append(snapshot.make(steady, store=FolderStore(store.root), made_at=_at(number)))
+        if number == 1 and reader is not None:
+            assert lock.pin(reader, FolderStore(store.root)).problems == []
+    assert [report.kept.increment for report in made] == [False, True, True]
+    assert {report.kept.builds_on for report in made[1:]} == {made[0].kept.folder.name}
+    return made
+
+
+def _help(*command: str) -> str:
+    """A command's help, as one line of words."""
+    return " ".join(CliRunner().invoke(main, [*command, "--help"], prog_name="chartbook").output.split())
+
+
+class TestACompleteSnapshotThatLostAFileIncrementsKeepInIt:
+    """A complete snapshot loses a file (a sync that has not brought it, a file removed by hand) that two snapshots kept as increments keep in its folder: all three lack it, and each command names the snapshot whose folder it is missing from."""
+
+    def test_store_verify_says_it_once_with_how_many_increments_keep_it_there(self, steady, store):
+        """`store verify` reads a file two records name once and says it once, with the snapshot in whose folder it is, or is missing from. How many snapshots lack it with that one is said in the same line."""
+        made = _three(steady, store)
+        base = made[0].kept.folder
+        _lose(base / "_data" / "history.parquet")
+        fresh = FolderStore(store.root)
+        assert [bool(fresh.holes_of(report.snapshot.path)) for report in made] == [True, True, True]  # the complete one, and both increments on it
+        said = CliRunner().invoke(main, ["store", "verify"])
+        assert said.exit_code == 1
+        (line,) = [line for line in said.output.splitlines() if "_data/history.parquet" in line]
+        assert line.endswith(
+            f"_data/history.parquet is not in the store (the snapshot {base.name}), and 2 snapshots kept as increments on it keep it there"
+        )
+        assert "is said once, with that snapshot's name and how many of them keep it there" in _help("store", "verify")
+        # With one increment on it, one is said
+        assert fresh.remove_snapshot(made[2].snapshot.path)
+        (problem,) = FolderStore(store.root).verify()
+        assert problem.message == (
+            f"_data/history.parquet is not in the store (the snapshot {base.name}), and 1 snapshot kept as an increment on it keeps it there"
+        )
+
+    def test_store_gc_names_the_snapshot_whose_folder_the_file_is_missing_from(self, steady, store):
+        """As `store verify` has it: the complete one, where the file was, and not an increment, in whose folder the file never was and which "goes once a newer snapshot of its pipeline is made". The way out is the complete one's."""
+        made = _three(steady, store)
+        base = made[0].kept.folder
+        _lose(base / "_data" / "history.parquet")
+        (problem,) = FolderStore(store.root).verify()
+        assert problem.message.startswith(f"_data/history.parquet is not in the store (the snapshot {base.name})")
+        said = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert said.exit_code == 0, said.output
+        lines = said.output.splitlines()
+        at = lines.index(
+            f"Nothing of acme/rates is removed: its snapshot {base.name} lacks _data/history.parquet, and stays because "
+            f"an increment that stays builds on it."
+        )
+        assert lines[at + 1] == (
+            "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything missing. "
+            "If it is lost for good, that snapshot goes once the increments that build on it have gone, each for its own "
+            "reason (`chartbook store gc --dry-run` says which stay, and why)."
+        )
+
+    def test_where_an_increment_lacks_a_file_of_its_own_too_the_newest_such_is_said(self, steady, store):
+        """A snapshot that lacks a file of its own folder is the one said, the newest of them; one that lacks only what another's folder is to hold is said where no such is."""
+        made = _three(steady, store)
+        _lose(made[0].kept.folder / "_data" / "history.parquet")
+        _lose(made[1].kept.folder / "_output" / "curve.html")
+        held = FolderStore(store.root).holes_left([made[2].snapshot.path])
+        assert held == {"acme/rates": (Path(made[1].snapshot.path), "_output/curve.html", 1)}
+        # And with the complete one gone from the store, an increment's hole in it is the one there is to say
+        shutil.rmtree(made[0].kept.folder, onerror=_writable)
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        (made[1].kept.folder / "_output" / "curve.html").write_text("<p>curve 1</p>\n", encoding="utf-8", newline="\n")
+        held = FolderStore(store.root).holes_left([made[1].snapshot.path])
+        assert held["acme/rates"][0] == Path(made[2].snapshot.path) and "_data/history.parquet" in FolderStore(store.root).holes_of(made[2].snapshot.path)
+
+    def test_pin_names_pin_update_only_where_the_newest_snapshot_is_whole(self, steady, work, store):
+        """A reader of an increment whose complete snapshot lost a file was told "`chartbook pin --update` moves to the newest one"; the newest is an increment on the same snapshot, and lacks the file too. The way is named once a snapshot that is whole is there to move to."""
+        reader = _a_reader(work / "reader")
+        made = _three(steady, store, reader)
+        good = (steady / "_data" / "history.parquet").read_bytes()
+        _lose(made[0].kept.folder / "_data" / "history.parquet")
+        pin = lambda *arguments: CliRunner().invoke(main, ["pin", *arguments, "--project-dir", str(reader)])  # noqa: E731
+        told = pin()
+        assert told.exit_code == 1 and "acme/rates:history" in told.output
+        assert "chartbook pin --update` moves to the newest one" not in told.output
+        assert pin("--update").exit_code == 1  # and nothing moves: the newest lacks it too
+        # Its owner builds the table anew and makes a snapshot: nothing is built on one with a hole, so it is complete, and whole
+        _history().head(19000).write_parquet(steady / "_data" / "history.parquet")
+        again = _snapshot()
+        assert again.exit_code == 0, again.output
+        newest = max(_records(store.root), key=lambda record: record.made_at)
+        assert not newest.increment and FolderStore(store.root).holes_of(newest.path) == []
+        told = pin()  # the pinned bytes are still lost, and now there is a whole one to move to
+        assert told.exit_code == 1 and "Otherwise a snapshot puts it there: `chartbook pin --update` moves to the newest one" in told.output
+        moved = pin("--update")
+        assert moved.exit_code == 0, moved.output
+        assert data.path("acme/rates:history", project_dir=reader).read_bytes() == (steady / "_data" / "history.parquet").read_bytes() != good
+
+
+class TestWhereTheStoresCopyIsDamagedAtTheSameSize:
+    """The complete snapshot's copy of a file has other bytes at the same size (a sync cut short, a disk's fault), and the pipeline's own file is good."""
+
+    @pytest.mark.parametrize("complete", [True, False], ids=["asked for complete", "kept as the store chooses"])
+    def test_complete_writes_every_file_again_and_an_increment_takes_it_on_the_records_word(self, steady, work, store, complete):
+        """`chartbook snapshot --complete` writes every file again from bytes it has checked: the store's copy fails its hash, and the file at hand is taken. Left to the store the snapshot is an increment, which takes the files of the snapshot it builds on by that one's record and their sizes on disk: the damaged copy is named, not replaced, and `chartbook store verify` finds it.
+
+        That is the trust a pin, a read and `No new snapshot` already give
+        the store, and what ChartBook 0.5 gave it for every snapshot;
+        reading the whole of what it builds on to make an increment would
+        cost what the increment saves.
+        """
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        good = (steady / "_data" / "history.parquet").read_bytes()
+        theirs = first.kept.folder / "_data" / "history.parquet"
+        os.chmod(theirs, stat.S_IWRITE | stat.S_IREAD)
+        theirs.write_bytes(bytes(len(good)))
+        store_module._found_whole.clear()
+        _drawn(steady, 1)
+        made = _snapshot(*(["--complete"] if complete else []))
+        assert made.exit_code == 0 and "Snapshot made" in made.output, made.output
+        newest = max(_records(store.root), key=lambda record: record.made_at)
+        assert newest.increment is not complete
+        fresh = FolderStore(store.root)
+        reader = _a_reader(work / "reader")
+        if complete:
+            # It holds what its record says, and whoever pins it reads the pipeline's bytes
+            assert fresh.verify_snapshot(newest.path) == []
+            assert lock.pin(reader, fresh).problems == []
+            assert data.path("acme/rates:history", project_dir=reader).read_bytes() == good
+        else:
+            assert fresh.holes_of(newest.path) == []  # by its size, nothing is missing
+            (problem,) = fresh.verify_snapshot(newest.path)
+            assert problem.message.startswith("_data/history.parquet is no longer what its record says")
+            said = CliRunner().invoke(main, ["store", "verify"])
+            assert said.exit_code == 1
+            (line,) = [line for line in said.output.splitlines() if "_data/history.parquet" in line]
+            assert line.endswith(f"(the snapshot {first.kept.folder.name}), and 1 snapshot kept as an increment on it keeps it there")
+            assert theirs.read_bytes() == bytes(len(good))  # and nothing was written into the one it builds on
+
+
+REPOSITORY = Path(__file__).resolve().parent.parent
+
+
+def _page(*parts: str) -> str:
+    return REPOSITORY.joinpath(*parts).read_text(encoding="utf-8")
+
+
+class TestWhatThePagesSay:
+    """Where the pages, the help and the assistant files speak of how a snapshot is kept, what they say is so."""
+
+    def test_the_reason_gc_gives_for_what_an_increment_builds_on_is_among_those_its_help_lists(self, steady, store):
+        """`store gc` says "an increment that stays builds on it", which from now on it says of most stores: its help lists it with every other reason, before "Otherwise it may be removed"."""
+        snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        _drawn(steady, 1)
+        assert snapshot.make(steady, store=FolderStore(store.root), made_at=_at(1)).kept.increment
+        dry = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "0", "--aggressive"])
+        assert dry.exit_code == 0 and "1 because an increment that stays builds on it" in dry.output, dry.output
+        said = _help("store", "gc")
+        assert "if an increment that stays builds on it" in said
+        assert said.index("if an increment that stays builds on it") < said.index("Otherwise it may be removed")
+
+    def test_the_references_table_of_reasons_lists_it(self):
+        reference = _page("docs_src", "reference", "cli.md")
+        section = reference[reference.index("### store gc"):]
+        table = section[section.index("**Which snapshots are kept.**"):section.index("Everything else may be removed.")]
+        assert "| A lockfile pins it |" in table  # the table of reasons
+        assert "| An increment that stays builds on it |" in table
+        # And what a nightly snapshot leaves says so too
+        closing = section[section.index("Everything else may be removed."):].splitlines()[0]
+        assert "the complete snapshots that increments among them build on" in closing
+
+    def test_the_words_are_met_where_the_vocabulary_says_and_never_in_a_pin_or_a_read(self, steady, work, store):
+        """Complete and increment are words of the store: the vocabulary and the design's "Words" say where they are met, and that a lockfile, a pin, a read and the catalog never say them."""
+        met = (
+            "met in the store's folders, in `chartbook store ls`, in what `chartbook snapshot` and `chartbook store migrate` say, "
+            "in the option `--complete`, in the help of `chartbook store export` and `chartbook store import`, in a reason "
+            "`chartbook store gc` gives for keeping a snapshot, and in what `chartbook store verify` says of a file that "
+            "increments keep in a complete snapshot"
+        )
+        never = "They are never in a lockfile, a pin, a read or the catalog"
+        for page in (_page("docs_src", "guide", "vocabulary.md"), " ".join(_page("docs_src", "design", "snapshots-and-increments.md").split())):
+            assert met in page and never in page and "nowhere else" not in page
+        # Each command named there says the word, in its help or in what it prints
+        for command in (("snapshot",), ("store", "ls"), ("store", "migrate"), ("store", "export"), ("store", "import"), ("store", "gc"), ("store", "verify")):
+            assert re.search(r"\bincrements?\b", _help(*command)), command
+        # And no command that pins, reads or shows a catalog does (a build that is "incremental" is another word)
+        for command in (("pin",), ("path",), ("add",), ("lineage",), ("catalog", "build"), ("docs", "build")):
+            assert not re.search(r"\bincrements?\b", _help(*command)), command
+        # A lockfile that pins one kept as an increment says nothing of how it is kept
+        reader = _a_reader(work / "reader")
+        _three(steady, store, reader)
+        pinned = (reader / lock.LOCK_FILE).read_text(encoding="utf-8")
+        assert "acme/rates" in pinned and not re.search(r"increment|builds_on|kept_in|kept_as|stored", pinned)
+
+    def test_complete_says_where_the_folder_is_by_its_whole_path_as_the_pages_have_it(self, steady, work, monkeypatch):
+        """Scenario 5 of the design page, and the changelog: the folder is printed whole, also where it is under the person's home."""
+        monkeypatch.setenv("HOME", str(work))
+        monkeypatch.setenv("USERPROFILE", str(work))
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / ".chartbook" / "store"))
+        asked = _snapshot("--complete")
+        assert asked.exit_code == 0, asked.output
+        (record,) = _records(work / ".chartbook" / "store")
+        lines = asked.output.splitlines()
+        at = lines.index(f"  {work / '.chartbook' / 'store' / 'snapshots' / 'acme+rates' / record.folder.name}")
+        assert lines[at - 1].startswith("Snapshot made: ") and not any("~" in line for line in lines[:at + 1])
+        printed = "  /Users/x/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z_9b1e22d7a0c4\n"
+        assert printed in _page("docs_src", "design", "snapshots-and-increments.md") and printed in _page("docs_src", "changelog.md")
+        assert "  ~/.chartbook/store/snapshots/acme+rates/2026-11-20T101500Z" not in _page("docs_src", "design", "snapshots-and-increments.md")
+
+    def test_a_store_of_0_5_is_listed_in_the_same_two_words_as_the_assistant_files_say(self, steady, store):
+        """`store ls` says complete or increment of every snapshot, in every store: the words of 0.5.0, standalone and shared, are gone, and no page for an assistant gives them for a store that 0.5 laid out."""
+        from tests.store_of_0_5 import laid_out_as_0_5
+
+        for page in (("llms.txt",), ("llm", "llms.txt"), ("llm", "llms-full.txt"), ("src", "chartbook", "skills", "SKILL.md")):
+            said = " ".join(_page(*page).split())
+            assert "listed in the same two words" in said, page
+            assert "standalone or shared" not in said, page
+        snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        _drawn(steady, 1)
+        assert snapshot.make(steady, store=FolderStore(store.root), made_at=_at(1)).kept.increment
+        laid_out_as_0_5(store.root)
+        listed = CliRunner().invoke(main, ["store", "ls"])
+        assert listed.exit_code == 0, listed.output
+        kinds = [line.split()[5] for line in listed.output.splitlines() if line.startswith("  2026-")]  # after its folder, its time and its commit
+        assert sorted(kinds) == ["complete", "increment"] and not re.search(r"standalone|shared", listed.output)
+
+    def test_a_file_an_increment_keeps_in_the_complete_one_may_be_handed_out_under_the_name_it_has_there(self, steady, work, store):
+        """`assets.files`, `assets.path`, `data.files`, `data.path` and `models.path` say where an asset's files may sit: in other snapshots' folders, or under another's name, in a bucket, in a store that ChartBook 0.5 laid out, and for a snapshot kept as an increment.
+
+        The upstream renames one file of a files asset between two
+        snapshots, its bytes the same. Complete, the second snapshot would
+        have it under its new name; as an increment it keeps it where the
+        complete one has it, and the file handed out is that one, `a.txt`.
+        """
+        from chartbook import assets, models
+
+        for function in (assets.files, assets.path, data.files, data.path, models.path):
+            said = " ".join(function.__doc__.split())
+            assert "store may keep each file once (a bucket does, a store that ChartBook 0.5 laid out, and a snapshot kept as an increment" in said, function
+        first = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(0))
+        (steady / "_data" / "raw" / "a.txt").rename(steady / "_data" / "raw" / "c.txt")
+        (steady / "_data" / "raw" / "b.txt").write_bytes(b"beta 2\n")
+        second = snapshot.make(steady, store=FolderStore(store.root), made_at=_at(1))
+        assert second.kept.increment
+        reader = _a_reader(work / "reader")
+        assert lock.pin(reader, FolderStore(store.root)).problems == []
+        listed = assets.files("acme/rates:file/raw", project_dir=reader)  # in the order of their paths in the asset: b.txt, c.txt
+        assert [path.read_bytes() for path in listed] == [b"beta 2\n", b"alpha\n"]
+        assert listed[0] == second.kept.folder / "_data" / "raw" / "b.txt"
+        assert listed[1] == first.kept.folder / "_data" / "raw" / "a.txt"  # c.txt, under the name the complete one has it by

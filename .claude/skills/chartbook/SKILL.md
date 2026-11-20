@@ -76,7 +76,7 @@ chartbook run --frozen      # Pin nothing, fetch nothing, write nothing but the 
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
 chartbook run --remake      # Build even though a `keep = true` asset is missing while the store has a version of it. Without it, `run` and `build` STOP before the build script and say `chartbook restore` or `--remake`. To remake one on purpose: delete the file, then --remake
-chartbook store ls [ID]     # Every snapshot in the store, each complete (its folder, under snapshots/, holds every file of its version, and can be read or copied as it is) or an increment (its folder, under increments/, holds the files that the complete one it builds on does not have), with what its folder holds. Remove snapshots with `store gc`, never by hand. A store that ChartBook 0.5 laid out (pipelines/ at the top, each file kept once) is read as it is and not written: there a snapshot is listed as standalone or shared
+chartbook store ls [ID]     # Every snapshot in the store, each complete (its folder, under snapshots/, holds every file of its version, and can be read or copied as it is) or an increment (its folder, under increments/, holds the files that the complete one it builds on does not have), with what its folder holds. Remove snapshots with `store gc`, never by hand. A store that ChartBook 0.5 laid out (pipelines/ at the top, each file kept once) is read as it is and not written, and is listed in the same two words: there a snapshot that keeps files in another's folder is an increment
 chartbook store info        # Which store this machine uses and what set it (CHARTBOOK_STORE, your settings, the organization's, or the default); check it on each machine that shares a store (a synced folder, a shared disk)
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, `[store] url` in settings, or CHARTBOOK_STORE; a folder: a store in a bucket is not available in 0.6.0); exit 1 if an object changed
 chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags). Every version of a `keep = true` asset is kept, --aggressive too, and gc prints the bill per asset
@@ -265,7 +265,7 @@ files = data.files("news_headlines:articles")                 # a Hive folder or
 chart = assets.path("fed_yield_curve:chart/curve_today")      # any kind of asset
 mine = data.load("my_data")                                   # this pipeline's own, live
 # Another pipeline's dataset of several files has NO one path: a store may keep each file once
-# (a bucket, a store ChartBook 0.5 laid out), its files in several snapshots' folders. data.path() raises
+# (a bucket, a store ChartBook 0.5 laid out, a snapshot kept as an increment), its files in several snapshots' folders. data.path() raises
 # NoSinglePathError; data.load()/data.sql() read the files where they are, data.files() lists
 # them (for a dodo.py file_dep). A model that is a folder: `with assets.gathered(ref) as folder:`.
 # ChartBook NEVER selects columns or rows. "my_data#col" is an address for
