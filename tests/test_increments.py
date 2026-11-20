@@ -254,3 +254,98 @@ class TestStoreLs:
             "in that one's folder (in a store that ChartBook 0.5 laid out, in other snapshots' folders), which "
             "`chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.",
         ]
+
+
+class TestForAPersonWhoOpensTheFolders:
+    def test_each_pipelines_folder_says_what_it_holds(self, kept, store):
+        complete, increments, _, _ = kept
+        under_snapshots = (complete.parent / "README.txt").read_text(encoding="utf-8")
+        assert "one complete snapshot" in under_snapshots and "a snapshot\nthat an increment builds on" in under_snapshots
+        under_increments = (increments[0].parent / "README.txt").read_text(encoding="utf-8")
+        assert under_increments == store_module.INCREMENTS_README and "_chartbook/INCREMENT.txt says which one" in under_increments
+
+
+class TestTheSameSnapshotInBothFolders:
+    def test_the_complete_one_is_the_snapshot_and_verify_names_the_other(self, unpinned, work, store):
+        import shutil
+
+        shutil.copytree(store.root, work / "copy")  # the same store, with every snapshot complete
+        complete, increments = with_increments(store.root, "oldest")["acme+rates"]
+        doubled = increments[0]
+        shutil.copytree(work / "copy" / "snapshots" / "acme+rates" / doubled.name, complete.parent / doubled.name)
+        store_module._read_records.clear()
+        fresh = FolderStore(store.root)
+        assert [(record.folder.parent.parent.name, record.folder.name) for record in fresh.records()] == sorted(
+            [("snapshots", complete.name), ("snapshots", doubled.name), ("increments", increments[1].name)], key=lambda pair: pair[1]
+        )
+        assert [problem.message for problem in fresh.verify()] == [
+            f"increments/acme+rates/{doubled.name} is of a snapshot that snapshots/acme+rates/ keeps complete: the "
+            f"complete one is the snapshot, and this folder is not read"
+        ]
+        result = CliRunner().invoke(main, ["store", "verify"])
+        assert result.exit_code == 1 and f"increments/acme+rates/{doubled.name} is of a snapshot that" in result.output
+
+
+class TestDamaged:
+    """What a person sees, where an increment has lost a file in one of its two folders."""
+
+    def test_a_file_missing_from_its_own_folder(self, kept, store):
+        complete, increments, taken, readers = kept
+        holed = increments[0]
+        (index,) = [i for i, one in enumerate(taken) if _folder_of(one).name == holed.name]
+        _lose(holed / "_output" / "curve.html")
+        fresh = FolderStore(store.root)
+        assert fresh.holes_of(holed / "_chartbook" / "snapshot.json") == ["_output/curve.html"]
+        assert [problem.message for problem in fresh.verify()] == [f"_output/curve.html is not in the store (the snapshot {holed.name})"]
+        # The rest of it is still read, from both folders
+        assert Path(data.path("acme/rates:treasury", project_dir=readers[index])).is_file()
+        assert data.load("acme/rates:parts", project_dir=readers[index]).collect().height == index + 1
+
+    def test_a_file_missing_from_the_one_it_builds_on(self, kept, store):
+        complete, increments, taken, readers = kept
+        _lose(complete / "_data" / "treasury.parquet")
+        fresh = FolderStore(store.root)
+        for folder in (complete, *increments):  # a hole of each snapshot that keeps the table there
+            assert fresh.holes_of(folder / "_chartbook" / "snapshot.json") == ["_data/treasury.parquet"]
+        assert [problem.message for problem in fresh.verify()] == [f"_data/treasury.parquet is not in the store (the snapshot {complete.name})"]
+        for reader in readers:
+            with pytest.raises(AssetNotPinnedError) as refused:
+                data.path("acme/rates:treasury", project_dir=reader)
+            assert "does not have it" in str(refused.value) or "not fully synced" in str(refused.value)
+
+    def test_the_one_it_builds_on_gone(self, kept, store):
+        import shutil
+
+        complete, increments, taken, readers = kept
+
+        def writable(function, path, _):
+            os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+            function(path)
+
+        shutil.rmtree(complete, onerror=writable)
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        fresh = FolderStore(store.root)
+        assert [record.folder for record in fresh.records()] == sorted(increments)
+        for folder in increments:
+            holes = fresh.holes_of(folder / "_chartbook" / "snapshot.json")
+            assert "_data/treasury.parquet" in holes and "_output/curve.html" not in holes  # what it kept there; its own is here
+        (index,) = [i for i, one in enumerate(taken) if _folder_of(one).name == increments[0].name]
+        with pytest.raises(AssetNotPinnedError):
+            data.path("acme/rates:treasury", project_dir=readers[index])
+        result = CliRunner().invoke(main, ["store", "verify"])
+        assert result.exit_code == 1 and "_data/treasury.parquet is not in the store (the snapshot " in result.output
+
+    def test_a_file_there_at_its_size_with_other_bytes(self, kept, store):
+        complete, increments, taken, readers = kept
+        damaged = complete / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))
+        store_module._found_whole.clear()
+        fresh = FolderStore(store.root)
+        assert all(fresh.holes_of(folder / "_chartbook" / "snapshot.json") == [] for folder in (complete, *increments))  # no size tells
+        for folder in (complete, *increments):  # and each snapshot that keeps it there is found by reading it
+            (problem,) = fresh.verify_snapshot(folder / "_chartbook" / "snapshot.json")
+            assert problem.message.startswith("_data/treasury.parquet is no longer what its record says")
+        (said,) = [problem.message for problem in fresh.verify()]
+        assert said.startswith("_data/treasury.parquet is no longer what its record says") and said.endswith(f"(the snapshot {complete.name})")

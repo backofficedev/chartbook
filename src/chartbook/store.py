@@ -216,7 +216,20 @@ Each folder here is one complete snapshot, named by when it was made and the com
 at. It holds every file of that version in its own place, and _chartbook/snapshot.json, the
 record that lists each file with its hash. A snapshot's folder can be read or copied as it is.
 
-Remove one with `chartbook store gc`, not by hand: gc keeps what a lockfile pins.
+Remove one with `chartbook store gc`, not by hand: gc keeps what a lockfile pins, and a snapshot
+that an increment builds on (increments/, beside snapshots/, keeps the files such a one has and
+this folder's snapshot does not; the rest of its files are read from here).
+"""
+
+#: What the note in a pipeline's folder under ``increments/`` says.
+INCREMENTS_README = """This folder holds snapshots of one pipeline that ChartBook keeps as increments.
+
+Each folder here is one snapshot, named by when it was made and the commit it was made at. It
+holds only the files that one complete snapshot of the pipeline, under snapshots/, does not
+have: _chartbook/INCREMENT.txt says which one, and _chartbook/snapshot.json lists every file of
+the version with the folder that keeps it. A folder here is not the whole snapshot by itself.
+
+Remove one with `chartbook store gc`, not by hand.
 """
 
 #: What the note in a pipeline's folder says in a store of ChartBook 0.5, which ``store migrate`` still writes from a store of 0.2.
@@ -589,7 +602,7 @@ class StoreProblem:
 
     def format(self) -> str:
         """Render as ``hash: message``, one line."""
-        return f"{self.content_hash}: {self.message}"
+        return f"{self.content_hash}: {self.message}" if self.content_hash else self.message
 
 
 def _split_hash(content_hash: str) -> tuple[str, str]:
@@ -3330,15 +3343,29 @@ class FolderStore(Store):
                     if wrong in said:
                         continue  # a file two records name, which is said once
                     said.add(wrong)
-                    # The snapshot's folder the file is in, or is missing from: the record's own, but in a
-                    # store of 0.5, where it may be an earlier snapshot's
-                    try:
-                        where = record.folder.parent / wrong[0].relative_to(record.folder.parent).parts[0]
-                    except (ValueError, IndexError):
-                        where = record.folder
+                    # The snapshot's folder the file is in, or is missing from: the record's own; for an
+                    # increment, perhaps the one it builds on; in a store of 0.5, perhaps an earlier snapshot's
+                    where = record.folder
+                    for tree in _trees_beside(record.folder.parent.parent):
+                        of_pipeline = tree / record.folder.parent.name
+                        try:
+                            where = of_pipeline / wrong[0].relative_to(of_pipeline).parts[0]
+                            break
+                        except (ValueError, IndexError):
+                            continue
                     problems.append(StoreProblem(asset.content_hash, where, f"{wrong[1]} (the snapshot {where.name})"))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
+        # The same snapshot in both folders: the complete one is the snapshot, and the other is named
+        increments = self.increments_path()
+        if increments is not None and increments.is_dir():
+            for name in sorted(os.listdir(increments)):
+                for record in self.doubled_in(self.pipelines_path() / name):
+                    problems.append(StoreProblem(
+                        "", record.folder,
+                        f"{INCREMENTS_DIR}/{name}/{record.folder.name} is of a snapshot that {V3_LAYOUT.pipelines}/{name}/ "
+                        f"keeps complete: the complete one is the snapshot, and this folder is not read",
+                    ))
         for content_hash in self.unowned_hashes():
             if content_hash in held:
                 continue  # what a snapshot holds is read where its record says

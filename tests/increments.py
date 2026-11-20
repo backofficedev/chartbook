@@ -85,6 +85,7 @@ def as_increment(root: Path, pipeline_folder: str, snapshot: str, builds_on: str
     )
     target = root / "increments" / pipeline_folder / snapshot
     target.parent.mkdir(parents=True, exist_ok=True)
+    store_module.write_readme(target.parent, store_module.INCREMENTS_README)  # for a person who finds the folder
     source.rename(target)
     store_module._read_records.clear()
     store_module._found_whole.clear()

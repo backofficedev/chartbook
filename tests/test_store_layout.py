@@ -177,8 +177,13 @@ class TestTheTreeOfANewStore:
         text = (store.root / "snapshots" / "acme+rates" / "README.txt").read_text(encoding="utf-8")
         assert "Each folder here is one complete snapshot" in text
         assert "A snapshot's folder can be read or copied as it is." in text
-        assert text.splitlines()[-1] == "Remove one with `chartbook store gc`, not by hand: gc keeps what a lockfile pins."
-        assert "shared" not in text and "standalone" not in text and "increment" not in text
+        # Not by hand: gc keeps what a lockfile pins, and a snapshot that an increment builds on
+        assert text.splitlines()[-3:] == [
+            "Remove one with `chartbook store gc`, not by hand: gc keeps what a lockfile pins, and a snapshot",
+            "that an increment builds on (increments/, beside snapshots/, keeps the files such a one has and",
+            "this folder's snapshot does not; the rest of its files are read from here).",
+        ]
+        assert "shared" not in text and "standalone" not in text
 
 
 class TestEverySnapshotIsComplete:
