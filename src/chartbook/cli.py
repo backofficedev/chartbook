@@ -3488,6 +3488,9 @@ def _held_against_its_build(project_dir, here: str, deep: bool, store_names, com
         if snapshots.uncommitted(project_dir) or not built.built_files(project_dir):
             return False  # not committed, or nothing built at all: the snapshot names each thing
         pipeline = snapshots.pipeline_in(project_dir)
+    except (snapshots.SnapshotError, OSError, ValueError):
+        return False  # no pipeline there, no repository, a manifest that is no TOML: the snapshot says so
+    try:
         return built.check(project_dir, pipeline)
     except built.NotHeld as refusal:
         typed = "".join([
@@ -3498,8 +3501,6 @@ def _held_against_its_build(project_dir, here: str, deep: bool, store_names, com
         for line in rest:
             click.echo(line, err=True)
         raise SystemExit(1) from None
-    except (snapshots.SnapshotError, OSError, ValueError):
-        return False
 
 
 def _refuse_a_folder_spelled_otherwise(project_dir, again: str) -> None:

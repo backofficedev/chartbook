@@ -1727,6 +1727,12 @@ def run(
                     command, step.directory, script, foreign=step.source == "git",
                     undeclared=refused if building and step.source == "asked" else None,
                 )
+            except RunError:
+                # Refused as its script was to be started (a share with no drive letter, a line cmd cannot
+                # read): nothing was built, and the note is as it was
+                if noted is not None:
+                    built.never_started(noted)
+                raise
             finally:
                 if frozen:
                     if old_frozen is None:

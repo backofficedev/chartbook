@@ -1160,9 +1160,13 @@ def said(
         # One with no build script commits what it declares, and one that is built has its files: a
         # snapshot is all there is to make, and a build that may take an hour is not run again
         make = "chartbook run --snapshot" if line.builds and not built else "chartbook snapshot"
-        if not line.builds and line.folder is not None and not _would_be_held(line.folder, line.pipeline):
+        if (
+            not line.builds and line.folder is not None and (not pinned or line.on_commit)
+            and not _would_be_held(line.folder, line.pipeline)
+        ):
             # Nothing builds it, and what it declares is not all committed: its files are taken as they
-            # are, which is typed (chartbook.built). A snapshot without that would be refused
+            # are, which is typed (chartbook.built). A snapshot without that would be refused. Asked of
+            # the folder as it stands, so not of one that a line is to check out to another commit first
             make = "chartbook snapshot --as-is"
         unknown = line.unknown
         in_own = listing.top is not None and line.top is not None and _same(line.top, listing.top)

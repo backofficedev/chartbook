@@ -293,6 +293,110 @@ class TestNoBuildToHoldItAgainst:
         assert later.kept and _note(demo)["state"] == "built"
 
 
+class TestWhatTheReviewOfTheCodeFound:
+    def test_scripts_that_cannot_be_read_do_not_let_a_snapshot_through(self, work, store, monkeypatch):
+        """The check stepped aside for a manifest it could not read, and the snapshot was then made, of files no run had built, with no `--as-is`."""
+        table = {**DEMO, "scripts": {"my build": "echo a,b > out.csv"}}
+        directory = _folder(work / "p", table)
+        _change(directory / "out.csv", "a,b\n")
+        _committed(directory)
+        monkeypatch.chdir(directory)
+        assert _run().exit_code != 0
+        result = _snapshot()
+        assert result.exit_code == 1 and _snapshots(store) == []
+        said = result.output.splitlines()
+        assert said[0].startswith("Error: acme/demo: whether a run built its files cannot be told: ") and "my build" in said[0]
+        assert said[1] == "  Put that right, and `chartbook run`. Or, " + AS_IS.format("")
+        assert _snapshot("--as-is").exit_code == 0
+
+    def test_a_note_whose_folder_is_only_away_is_kept_and_so_is_another_machines(self, demo, store, work, monkeypatch):
+        """A drive that is unplugged, a share that is not connected: the folder is away, and its files are as the build left them."""
+        parent = work / "drive"
+        other = _committed(_folder(parent / "other", {**DEMO, "project": {"id": "acme/other"}}))
+        monkeypatch.chdir(other)
+        assert _run().exit_code == 0
+        kept = built.note_path(other)
+        theirs = kept.with_name("0" * 32 + ".json")
+        theirs.write_text(json.dumps({**_note(other), "machine": "node-2", "folder": "/scratch/node-2/proj"}), encoding="utf-8")
+        monkeypatch.chdir(demo)
+        parent.rename(work / "unplugged")
+        assert _run().exit_code == 0
+        assert kept.exists() and theirs.exists()
+        (work / "unplugged").rename(parent)
+        monkeypatch.chdir(other)
+        assert _snapshot().exit_code == 0
+
+    def test_a_run_refused_as_its_script_is_started_leaves_the_note_as_it_was(self, demo, store, monkeypatch):
+        """On Windows a share with no drive letter is refused there: nothing was built, and the words after it were "its last build here failed"."""
+        from chartbook import run
+
+        def refuse(*arguments, **options):
+            raise run.RunError("the script was not run")
+
+        assert _run().exit_code == 0
+        note = _note(demo)
+        with monkeypatch.context() as patched:
+            patched.setattr(run, "execute", refuse)
+            assert _run().exit_code != 0
+        assert _note(demo) == note and _snapshot().exit_code == 0
+        # And where there was none before, there is none after
+        built.note_path(demo).unlink()
+        with monkeypatch.context() as patched:
+            patched.setattr(run, "execute", refuse)
+            assert _run().exit_code != 0
+        assert not built.note_path(demo).exists()
+
+    def test_one_folder_built_under_two_spellings_has_one_note(self, demo, store, work):
+        other = work / "DEMO"
+        if not other.is_dir():
+            pytest.skip("this disk tells letter cases apart")
+        assert _run().exit_code == 0
+        assert _run("--project-dir", str(other)).exit_code == 0
+        assert len(list(built.folder().glob("*.json"))) == 1
+        assert _snapshot().exit_code == 0
+
+    def test_a_file_outside_the_folder_is_the_snapshots_to_speak_of(self, work, store, monkeypatch):
+        """It was said to be "not committed", which it was; `--as-is` then failed for the true reason."""
+        table = {key: value for key, value in DEMO.items() if key != "scripts"}
+        table["dataframes"] = {"out": {"path": "../shared/x.csv", "docs": "d"}}
+        (work / "mono" / "shared").mkdir(parents=True)
+        _change(work / "mono" / "shared" / "x.csv", "a,b\n")
+        directory = _folder(work / "mono" / "p", table)
+        _committed(work / "mono")
+        monkeypatch.chdir(directory)
+        result = _snapshot()
+        assert "declares files that are not committed" not in result.output
+        assert result.output == _snapshot("--as-is").output
+
+    def test_a_note_that_does_not_say_whose_it_is_is_no_note(self, demo, store):
+        assert _run().exit_code == 0
+        note = _note(demo)
+        for key in ("pipeline", "machine", "state", "folder", "token"):
+            built.note_path(demo).write_text(json.dumps({k: v for k, v in note.items() if k != key}), encoding="utf-8")
+            assert built.read(demo) is None, key
+            assert "has not been built by `chartbook run` here, so there is nothing" in _snapshot().output
+        built.note_path(demo).write_text("{ half a no", encoding="utf-8")
+        assert built.read(demo) is None
+
+    def test_the_list_says_as_is_only_of_a_folder_as_it_stands(self, work, store):
+        """The choice was made at the commit the folder was on, for a line that checks another out first."""
+        from chartbook import missing
+
+        table = {key: value for key, value in DEMO.items() if key != "scripts"}
+        directory = _committed(_folder(work / "mid", {**table, "project": {"id": "acme/mid"}}))
+        _change(directory / "out.csv", "a,b\n")  # declared, and not committed
+
+        def command(**how) -> str:
+            line = missing.Wanted("acme/mid", folder=directory, top=directory, builds=False, **how)
+            listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[line])
+            return missing.said(listing, here=work / "report")[-5].strip()
+
+        typed = missing._quoted(directory)
+        assert command(commit=None) == f"chartbook snapshot --as-is --project-dir {typed}"
+        assert command(commit="c" * 40, on_commit=True) == f"chartbook snapshot --as-is --project-dir {typed}"
+        assert command(commit="c" * 40, on_commit=False) == f"chartbook snapshot --project-dir {typed}"
+
+
 class TestTakingTheFilesAsTheyAre:
     def test_as_is_makes_it_and_its_record_does_not_say_chartbook_ran_the_build(self, demo, store):
         _change(demo / "out.csv", "a,b\n")

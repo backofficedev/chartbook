@@ -64,12 +64,14 @@ class NotHeld(Exception):
             another pipeline or another machine), ``began`` (the last
             build did not end well, or is running), ``differ`` (the files
             are not the build's), ``not_committed`` (it has no ``build``
-            script, and declares files that are not committed).
+            script, and declares files that are not committed),
+            ``unreadable`` (what the manifest says of its scripts cannot
+            be read, so whether anything builds it cannot be told).
         source: The source files that differ from what it was built
             from, each as it is said (``load.py``, ``notes.md (new)``).
         outputs: The built files that differ from what the build left.
         detail: For ``began``, when the build began; for ``another``,
-            whose note it is.
+            whose note it is; for ``unreadable``, what is wrong.
     """
 
     def __init__(self, why: str, source: tuple = (), outputs: tuple = (), detail: str = ""):
@@ -96,6 +98,8 @@ class Building:
             its hash, size and time of last change.
         kept: Whether the note could be written. A cache that cannot be
             written keeps none, and the build runs all the same.
+        before: The note that was there before this build began, to put
+            back where its script is never started.
     """
 
     directory: Path
@@ -105,6 +109,7 @@ class Building:
     hashed_at: int
     source: dict = field(default_factory=dict)
     kept: bool = True
+    before: Optional[dict] = None
 
 
 def folder() -> Path:
@@ -246,7 +251,11 @@ def _read(path: Path) -> Optional[dict]:
             note = json.load(file)
     except (OSError, ValueError):
         return None
-    return note if isinstance(note, dict) and note.get("schema") == SCHEMA else None
+    if not isinstance(note, dict) or note.get("schema") != SCHEMA:
+        return None
+    # One that does not say whose it is, or in which state, is no note: a file somebody cut short
+    said = all(isinstance(note.get(key), str) and note[key] for key in ("state", "token", "folder", "pipeline"))
+    return note if said and isinstance(note.get("machine"), str) else None
 
 
 def _write(path: Path, note: dict) -> None:
@@ -263,23 +272,42 @@ def _write(path: Path, note: dict) -> None:
             os.unlink(beside)
         except OSError:
             pass
-    _forget_what_is_gone(path)
+    _forget_what_is_gone(path, note.get("folder"))
 
 
-def _forget_what_is_gone(but: Path) -> None:
-    """Remove each note whose pipeline folder is no longer there: a project that was deleted or moved has no use for one."""
+def _forget_what_is_gone(but: Path, folder: Optional[str]) -> None:
+    """Remove the notes that have no use any more: of a folder of this machine's that is gone, and of this very folder under another name.
+
+    A folder is gone where the folder it was in is there and it is not:
+    one on a drive that is unplugged, or a share that is not connected, is
+    only away, and its note is kept. A note another machine left is that
+    machine's to forget (one home may serve several). And where one folder
+    was built under two spellings (``demo`` and ``DEMO``, on a disk that
+    takes either), the note of the other spelling is an older build of
+    this folder, which a snapshot must not be held against.
+    """
     try:
         others = [entry for entry in os.scandir(but.parent) if entry.name.endswith(".json") and entry.name != but.name]
     except OSError:
         return
+    machine = _machine()
     for entry in others:
         note = _read(Path(entry.path))
-        if note is None or not isinstance(note.get("folder"), str) or os.path.isdir(note["folder"]):
+        if note is None:
             continue
         try:
-            os.unlink(entry.path)
+            same = folder is not None and os.path.samefile(note["folder"], folder)
         except OSError:
-            pass
+            same = False
+        gone = (
+            note["machine"] == machine and not os.path.lexists(note["folder"])
+            and os.path.isdir(os.path.dirname(note["folder"]) or os.sep)
+        )
+        if same or gone:
+            try:
+                os.unlink(entry.path)
+            except OSError:
+                pass
 
 
 def read(directory: Union[str, Path]) -> Optional[dict]:
@@ -321,6 +349,7 @@ def began(directory: Union[str, Path], pipeline: str) -> Optional[Building]:
         return None
     building = Building(
         directory, pipeline, uuid.uuid4().hex, moment.strftime("%Y-%m-%dT%H:%M:%SZ"), int(moment.timestamp()),
+        before=earlier or None,
     )
     for name, path in sorted(source.items()):
         try:
@@ -332,6 +361,26 @@ def began(directory: Union[str, Path], pipeline: str) -> Optional[Building]:
     except OSError:
         building.kept = False
     return building
+
+
+def never_started(building: Building) -> None:
+    """Put the note back as it was before a build that began and whose script was never started: a run that is refused as it starts its script has built nothing.
+
+    Only where the note is still this run's "a build began".
+    """
+    if not building.kept:
+        return
+    path = note_path(building.directory)
+    on_disk = _read(path) or {}
+    if on_disk.get("state") != "building" or on_disk.get("token") != building.token:
+        return
+    try:
+        if building.before is not None:
+            _write(path, building.before)
+        else:
+            os.unlink(path)
+    except OSError:
+        pass
 
 
 def _note(building: Building, state: str, **more) -> dict:
@@ -446,9 +495,15 @@ def check(directory: Union[str, Path], pipeline: str) -> bool:
     from chartbook.run import _read_manifest
 
     directory = Path(os.path.abspath(directory))
-    if BUILD_SCRIPT not in read_scripts(_read_manifest(directory)):
+    try:
+        scripts = read_scripts(_read_manifest(directory))
+    except ValueError as error:
+        # Whether anything builds it cannot be told: not a reason to take its files unasked
+        raise NotHeld("unreadable", detail=(str(error).strip().splitlines() or [""])[0].rstrip(".")) from None
+    if BUILD_SCRIPT not in scripts:
         tracked = _tracked(directory)
-        loose = sorted(name for name in built_files(directory) if name not in tracked)
+        # A file outside the pipeline's folder is not asked of here: the snapshot says of it what is to be said
+        loose = sorted(name for name in built_files(directory) if name not in tracked and not name.startswith("../"))
         if loose:
             raise NotHeld("not_committed", outputs=loose)
         return False
@@ -497,6 +552,11 @@ def said(refusal: NotHeld, pipeline: str, here: str = "", with_options: str = ""
     """
     as_is = f"to take what is on disk as it is: `chartbook snapshot {AS_IS}{with_options}{here}`."
     again = f"Build again: `chartbook run{here}`"
+    if refusal.why == "unreadable":
+        return [
+            f"{pipeline}: whether a run built its files cannot be told: {refusal.detail}.",
+            f"  Put that right, and `chartbook run{here}`. Or, {as_is}",
+        ]
     if refusal.why == "not_committed":
         return [
             f"{pipeline} has no `build` script, and declares files that are not committed: {_named(refusal.outputs)}.",
