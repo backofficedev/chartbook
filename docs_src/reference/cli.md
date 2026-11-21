@@ -1452,7 +1452,7 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
+The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
 
 A file that snapshots kept as increments keep in the complete snapshot they build on is one place in the store: it is read once and said once, under the name it has in that folder whatever name each increment has for it, with that snapshot's name, and with how many of them keep it there:
 

@@ -848,6 +848,28 @@ class TestAStoreOf05IsReadAsItIs:
         assert verify.exit_code == 0, verify.output
         assert verify.output.splitlines() == [f"{old}: OK ({len(second.hashes())} object(s))"]
 
+    def test_store_verify_counts_a_file_missing_from_a_folder_that_has_no_record(self, of_0_5):
+        """Found by review: a store of 0.5 keeps each file once, often in the folder of a snapshot its `store gc` has cleared since. A file missing from such a folder had its line, "(the snapshot <the cleared folder>)", and the count ahead of the lines left it out, since the folder has no record.
+
+        The first line counts every line of a file below it, each under
+        the folder the file is missing from: here the cleared one, whose
+        pipeline its folder says."""
+        old, second, cleared = of_0_5
+        lost = cleared / "_data" / "treasury.parquet"
+        lost.chmod(0o644)
+        lost.unlink()
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert [line for line in listed if ", lacks " in line] == [line for line in listed if line.split()[:1] == [_folder_of(second).name]]
+        verify = CliRunner().invoke(main, ["store", "verify"])
+        assert verify.exit_code == 1 and verify.output.splitlines()[:4] == [
+            "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {cleared.name}  1 file(s)",
+            f"{second.content()['treasury']}: _data/treasury.parquet is not in the store (the snapshot {cleared.name})",
+            "",
+        ]
+
     def test_a_pipeline_pins_from_it_and_reads_through_the_pin(self, of_0_5, reader):
         old, second, cleared = of_0_5
         before = _tree(old.root)

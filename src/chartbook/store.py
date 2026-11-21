@@ -616,11 +616,17 @@ class StoreProblem:
         content_hash: The object's name.
         path: Its directory in the store.
         message: What is wrong with it.
+        of_snapshot: Whether it is of a file of a snapshot, said with the
+            snapshot's name: ``path`` is then the snapshot's folder the
+            file is in, or is missing from. That folder may have no record
+            now (one cleared in a store of ChartBook 0.5, a complete
+            snapshot that has gone and that increments still name).
     """
 
     content_hash: str
     path: Path
     message: str
+    of_snapshot: bool = False
 
     def format(self) -> str:
         """Render as ``hash: message``, one line."""
@@ -3471,6 +3477,7 @@ class FolderStore(Store):
                 problems.append(StoreProblem(
                     content_hash, record.folder,
                     f"its record does not say where {content_hash[:19]}… is (the snapshot {record.folder.name})",
+                    of_snapshot=True,
                 ))
             for asset in record.assets:
                 held.add(asset.content_hash)
@@ -3503,7 +3510,7 @@ class FolderStore(Store):
                 f", and {count} snapshots kept as increments on it keep it there" if count > 1
                 else ", and 1 snapshot kept as an increment on it keeps it there"
             )
-            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}"))
+            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}", of_snapshot=True))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
         # The same snapshot in both folders: the complete one is the snapshot, and the other is named
