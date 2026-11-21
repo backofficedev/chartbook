@@ -537,7 +537,9 @@ What building it settled:
   not the commit it is at nor whether it is the pipeline's own, and once git trusted it they
   ran. In a repository that holds both, the checkout left the pipeline's own repository on no
   branch, and it was built from the old commit's files with nothing said. So no command is
-  made blind: the list made after the trust command is made with what git says.)*
+  made blind: the list made after the trust command is made with what git says. And a line
+  that reads such a line is given no command either, since its build would end with what is
+  not in the store.)*
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It

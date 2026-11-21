@@ -1189,7 +1189,7 @@ def said(
         # below do not end with a snapshot: they end with this list made again, with what git then says
         (
             "Git does not trust a repository below, and reads nothing of it, so how to build what is in it is not known "
-            "yet. Type the commands below, one at a time: the last one then says the rest."
+            "yet. Do as the lines below say, one at a time: the last command then says the rest."
         ) if any(line.not_trusted for line in wanted)
         else "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads." if one
         else "Build them in this order, with the commands below, one at a time. Each ends with a snapshot, which is what the next one reads.",
@@ -1226,10 +1226,13 @@ def said(
 
     #: The command that makes git trust a repository, by the line that gave it: it is typed once
     trusted: dict[str, int] = {}
+    #: The lines that cannot be built yet: in a repository git does not trust, or reading such a line
+    waiting: set[int] = set()
     for number, line in enumerate(wanted, 1):
         held.clear()
         told = ""
         before = (dict(cloned), dict(worktrees))
+        moved_before = set(moved)
         pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
         at = f" at {line.commit[:7]}" if pinned else ""
         # In a command, enough of a commit that a large repository has no two of it: of the commit it was read
@@ -1261,6 +1264,7 @@ def said(
             # command that makes git trust it, and no other; the list made after it is made with what git says
             where = f"{_plain(_from(line.folder, here))} (a folder on this machine)"
             unknown = ""
+            waiting.add(number)
             if line.trust and line.trust not in trusted:
                 trusted[line.trust] = number
                 commands = [line.trust]
@@ -1346,6 +1350,20 @@ def said(
             ) + ", so neither is what it reads in turn"
             commands = [f"In a clone of it: {'`git checkout ' + commit + '`, then ' if pinned else ''}`{make}`"]
             unknown = ""
+        if not line.not_trusted and not line.absent and any(above in waiting for above in line.reads):
+            # It reads a line that cannot be built yet, so its own build would be refused for what is not in
+            # the store: found by typing a list in its order, where the second line's command ended 1. No
+            # command for it either, and nothing of it counted as made or moved; the list made after the
+            # trust command gives it its own
+            waiting.add(number)
+            commands, unknown = [], ""
+            told = "It waits for what it reads above. How to build it is said after that, by the last command here."
+            held.clear()
+            for kept, was in zip((cloned, worktrees), before):
+                kept.clear()
+                kept.update(was)
+            moved.clear()
+            moved.update(moved_before)
         read = _a_windows_shell_reads(held) if windows else ""
         if read:
             # No spelling of it is text in every shell there, and a pasted line is run as it is read. What to

@@ -176,5 +176,7 @@ Found by reviews and by the first runs on Windows, and left for a later version:
   build in a checkout whose path has a space.
 - In a network folder that git does not trust, a clone that is beside the pipeline is not taken
   for one, and the list of what is not in your store says to clone it again under another name.
+  A worktree the list has made is such a folder too: its own build says the command that makes
+  git trust it, and a list made again before that is typed names another worktree.
 - `chartbook init` from a source checkout of ChartBook that is on a network share names the
   checkout's own path in its `safe.directory` command, and not the form git writes for a share.

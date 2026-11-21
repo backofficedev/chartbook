@@ -2290,8 +2290,10 @@ class TestAFolderGitWillNotRead:
     #: And the list's second line then
     NOT_WHOLE = (
         "Git does not trust a repository below, and reads nothing of it, so how to build what is in it is not known yet. "
-        "Type the commands below, one at a time: the last one then says the rest."
+        "Do as the lines below say, one at a time: the last command then says the rest."
     )
+    #: What a line says that reads one that cannot be built yet
+    WAITS = "     It waits for what it reads above. How to build it is said after that, by the last command here."
 
     def test_its_line_is_the_command_that_makes_git_trust_it_and_no_other(self, work, mid, monkeypatch):
         """Found on Windows, on a share, by typing the list's lines in their order: the list says "one at a
@@ -2351,8 +2353,69 @@ class TestAFolderGitWillNotRead:
         )
         assert sum("safe.directory" in line for line in said) == 1
 
+    def test_a_line_that_reads_one_that_waits_is_given_no_command_either(self, work, theirs, mine, monkeypatch):
+        """Found by the second review, by typing a list in its order with git's own refusal: `report` reads
+        `x`, which reads `y`, and git reads nothing of `y`'s repository. `x` was given its build, which
+        ended 1 for what is not in the store, under a line that says to do as the lines say."""
+        y = _pipeline(work, "y")
+        _ready(y, theirs)
+        x = _pipeline(work, "x", {"acme/y": {"path": "../y"}})
+        _ready(x, theirs)
+        _ready(_pipeline(work, "report", {"acme/x": {"path": "../x"}}), theirs)
+        mine()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=y.as_posix()), under=y)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert said[1] == self.NOT_WHOLE
+        assert said[3:8] == [
+            f"1. acme/y at {_git_as_it_was(y)[:7]}    {_up('y')} (a folder on this machine)",
+            f"     git config --global --add safe.directory {missing._quoted(y.as_posix(), batch=False)}",
+            self.TOLD,
+            f"2. acme/x at {_git_as_it_was(x)[:7]}    {_up('x')} (a folder on this machine); reads 1 above",
+            self.WAITS,
+        ], said
+        assert not any("--snapshot" in line or "checkout" in line for line in said), said
+
+    def test_what_a_line_that_waits_would_have_made_or_moved_is_not_counted(self, work):
+        """A clone it would have made is made by the next line that needs it, and a repository it would have moved is where it was."""
+        trust = "git config --global --add safe.directory /srv/y"
+        commit = "c" * 40
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/y", commit, folder=work / "y", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/a", commit, "https://example.org/acme/mono", subdirectory="a", placed=True, reads=[1]),
+            missing.Wanted("acme/b", commit, "https://example.org/acme/mono", subdirectory="b", placed=True),
+            missing.Wanted("acme/c", commit, "https://example.org/acme/mono", subdirectory="c", placed=True, reads=[2]),
+        ])
+        said = missing.said(listing, here=work / "report")
+        mono = _q(work / "mono")
+        assert said[6:13] == [
+            "2. acme/a at ccccccc    https://example.org/acme/mono; reads 1 above",
+            self.WAITS,
+            "3. acme/b at ccccccc    https://example.org/acme/mono",
+            f"     git clone https://example.org/acme/mono {mono}",  # the clone the line above did not make
+            f"     git -C {mono} checkout {'c' * 12}",
+            f"     chartbook run --snapshot --project-dir {_q(work / 'mono' / 'b')}",
+            "4. acme/c at ccccccc    https://example.org/acme/mono; reads 2 above",
+        ], said
+        assert said[13] == self.WAITS  # it reads one that waits, which reads the one git does not trust
+
+    def test_the_command_is_named_by_the_line_that_gave_it_wherever_that_is(self, work):
+        """A line git trusts, and then two folders of one repository it does not."""
+        trust = "git config --global --add safe.directory /srv/mono"
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/first", "c" * 40, folder=work / "first", top=work / "first", on_commit=True),
+            missing.Wanted("acme/a", "c" * 40, folder=work / "mono" / "a", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/b", "c" * 40, folder=work / "mono" / "b", not_trusted="git does not trust …", trust=trust),
+        ])
+        said = missing.said(listing, here=work / "report")
+        assert said[1] == self.NOT_WHOLE  # though the first line is of a repository git reads
+        assert said[5:8] == [
+            f"2. acme/a at ccccccc    {_up(os.path.join('mono', 'a'))} (a folder on this machine)", f"     {trust}", self.TOLD,
+        ], said
+        assert said[9].startswith("     It is in the repository that the command of line 2 makes git trust. ")
+
     def test_one_that_was_never_pinned_is_told_the_same(self, work):
-        """Found by the review: it got the command and no word of why. Reached only further down a list; the one a pipeline reads itself is refused by its pin."""
+        """A line made by hand: the walk leaves out a folder that was never pinned and that git will not
+        read, and its reader's pin is what says the sentence."""
         trust = "git config --global --add safe.directory /srv/mid"
         listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
             missing.Wanted("acme/mid", None, folder=work / "mid", not_trusted="git does not trust …", trust=trust),
