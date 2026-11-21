@@ -12,21 +12,25 @@ from tests.fixtures import (
 
 
 def pytest_configure(config):
-    """On Windows with long paths off, make each test's folder in a short one of this run's own.
+    """On Windows, make each test's folder in a short one of this run's own.
 
     pytest's own, ``%TEMP%\\pytest-of-<user>\\pytest-<n>\\``, takes 64
     characters before a test's name, and a catalog's version pages under
     it go past the 260 Windows takes: a test then fails for where it ran.
-    A run given ``--basetemp`` keeps it.
+    A run given ``--basetemp`` keeps it, and so does a worker of a run on
+    several cores, which is handed its folder by the run that started it.
+    What the folder is, and why also where long paths are on:
+    :func:`tests.fixtures.short_base_folder`.
     """
     import os
-    import tempfile
 
-    from chartbook.store import long_paths_enabled
+    from tests.fixtures import short_base_folder
 
-    if os.name != "nt" or config.option.basetemp or long_paths_enabled():
+    if config.option.basetemp:
         return
-    config.option.basetemp = tempfile.mkdtemp(prefix="cbt-")
+    folder = short_base_folder(os.name == "nt", bool(getattr(config.option, "numprocesses", None)))
+    if folder is not None:
+        config.option.basetemp = folder
 
 
 @pytest.fixture(scope="session", autouse=True)

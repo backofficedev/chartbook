@@ -412,7 +412,9 @@ def task_test():
     test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
     junit_path = TEST_RESULTS_DIR / "junit.xml"
     return {
-        "actions": [_run_tests(f"{sys.executable} -m hatch test -v", junit_path)],
+        # On every processor, as the matrix below runs each of its environments: in one process the
+        # suite is an hour or two of tests
+        "actions": [_run_tests(f"{sys.executable} -m hatch test --parallel -v", junit_path)],
         "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,
