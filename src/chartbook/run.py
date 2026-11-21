@@ -54,7 +54,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Iterable, Optional, Union
 
 from chartbook import lock
 from chartbook import snapshot as snapshots
@@ -1076,6 +1076,20 @@ def _undeclared_reads(notes: str) -> list[dict]:
 
 def _execute(script: str, directory: Path, environment: dict) -> int:
     if os.name == "nt":
+        named = directory
+        try:
+            directory = _as_cmd_takes_it(directory)
+        except RunError as error:
+            raise RunError(f"{error} The script was not run.") from None
+        above = os.fspath(named).replace("/", "\\").rstrip("\\").rsplit("\\", 1)[0]
+        if directory is not named and environment.get("GIT_CEILING_DIRECTORIES", "").replace("/", "\\").rstrip("\\") == above:
+            # Git in the script stands on the letter: the folder it is to look no further up than, by that name
+            # too. Only where that folder is this one's own, as it is set for a git dependency's copy: one the
+            # person set for themselves is theirs, and is left as it is
+            environment = {
+                **environment,
+                "GIT_CEILING_DIRECTORIES": environment["GIT_CEILING_DIRECTORIES"] + os.pathsep + directory.rstrip("\\").rsplit("\\", 1)[0],
+            }
         if "\n" not in script.strip():
             return subprocess.run(
                 script, shell=True, cwd=directory, env=environment
@@ -1102,6 +1116,130 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
     return subprocess.run(
         [shell, "-e", "-c", script], cwd=directory, env=environment
     ).returncode
+
+
+def _as_cmd_takes_it(directory: Union[str, Path]) -> Union[str, Path]:
+    """A folder as ``cmd.exe`` can stand in it: one that is a share (``\\\\server\\…``), by a drive letter the share is connected under.
+
+    ``cmd.exe`` runs a script on Windows, and takes no share as its
+    current folder. Started in one, it says "UNC paths are not
+    supported", goes to ``C:\\Windows``, runs the script there, and ends
+    with whatever the script ends with: a build that is one line of shell
+    ran in the Windows folder, and the run said it had built. A folder on
+    a drive letter that is a share is such a folder too, since a folder
+    is followed to where it really is, and ``Z:\\work`` really is
+    ``\\\\server\\home\\work``: a home folder on a network is met so, by
+    someone who never typed a ``\\\\``.
+
+    So the script is run from the letter, found among the drive letters
+    that are connected to a share. Where the share has none, nothing is
+    run, and the way on is said.
+
+    :raises RunError: For a share that no drive letter is connected to.
+        Its words end with the way on: whoever raises it on says what was
+        not done.
+    """
+    text = os.fspath(directory)
+    if text[:4] in ("\\\\?\\", "\\\\.\\") and text[4:8].upper() != "UNC\\":
+        # The long spelling of a folder on a drive, which is that folder; and whatever else is spelled so
+        # (a device, a volume) is no share, and is left as it was given
+        return text[4:] if text[5:7] == ":\\" else directory
+    if not text.replace("/", "\\").startswith("\\\\"):
+        return directory  # as it was given: nothing of it is changed
+    lettered = _by_its_drive_letter(text, _connected_drives())
+    if lettered is None:
+        from chartbook.missing import _quoted
+
+        share = "\\".join(_share_parts(text)[:4])
+        raise RunError(
+            f"{text} is a network folder with no drive letter, and cmd.exe, which runs a script on Windows, takes "
+            f"no such folder as its own: it would have run the script in C:\\Windows. Connect the share to a drive "
+            f"letter (`net use Q: {_quoted(share, windows=True)}`, with a letter that is free), and run this again."
+        )
+    return lettered
+
+
+def _share_parts(text: str) -> list[str]:
+    """A share's path in parts, as ``\\\\server\\share\\folder`` has them: two empty ones, the server, the share, and the rest."""
+    text = text.replace("/", "\\")
+    if text.upper().startswith("\\\\?\\UNC\\"):
+        text = "\\\\" + text[8:]  # the long spelling of the same share
+    return text.rstrip("\\").split("\\")
+
+
+def _by_its_drive_letter(text: str, connected: Iterable[tuple[str, str]]) -> Optional[str]:
+    """A folder of a share by a drive letter connected to that share, or to a folder of it above this one; None where there is none.
+
+    :param connected: Each letter with a share it is connected to, as
+        Windows names it: ``[("Z:", "\\\\server\\home")]``. A letter
+        may be there under more than one name of its share.
+    """
+    parts = _share_parts(text)
+    found = None
+    for letter, remote in connected:
+        under = _share_parts(remote)
+        if len(under) < 4:
+            continue  # no share: a server alone, or nothing
+        if len(under) > len(parts) or [part.lower() for part in parts[:len(under)]] != [part.lower() for part in under]:
+            continue
+        if found is None or len(under) > found[0]:  # the letter nearest the folder: the shortest path, and a share's own letter
+            found = (len(under), "\\".join([letter.rstrip("\\"), *parts[len(under):]]))
+    if found is None:
+        return None
+    return found[1] if "\\" in found[1] else found[1] + "\\"  # `Z:` alone is wherever one last stood on it
+
+
+def _connected_drives() -> list[tuple[str, str]]:
+    """The drive letters that are connected to a share, each with its share; none on another system.
+
+    A letter is given under each name its share has here: the one Windows
+    says it was connected as, and the one its own folder is followed to,
+    which is how a pipeline's folder on it was named. They differ where a
+    share is reached through a name that stands for several servers.
+    """
+    import string
+
+    found: list[tuple[str, str]] = []
+    try:
+        import ctypes
+
+        ask = ctypes.WinDLL("mpr").WNetGetConnectionW
+    except (AttributeError, ImportError, OSError):
+        return found
+    for letter in string.ascii_uppercase:
+        try:
+            size = ctypes.c_ulong(1024)
+            share = ctypes.create_unicode_buffer(size.value)
+            if ask(f"{letter}:", share, ctypes.byref(size)) != 0 or not share.value:
+                continue
+            found.append((f"{letter}:", share.value))
+            followed = os.path.realpath(f"{letter}:\\")
+            if followed.startswith("\\\\") and followed.rstrip("\\").lower() != share.value.rstrip("\\").lower():
+                found.append((f"{letter}:", followed))
+        except (OSError, ValueError):
+            continue
+    return found
+
+
+def _no_script_in_a_share_without_a_letter(steps: Iterable, script: str, windows: Optional[bool] = None) -> None:
+    """Stop a run on Windows, before anything is built, where a pipeline that was asked for is in a share that no drive letter is connected to.
+
+    Its script could not be run (:func:`_as_cmd_takes_it`), and that is
+    known now: not after an hour of building what it depends on. Only of
+    a pipeline that was asked for and has the script: what it depends on
+    may not be built at all (an upstream that has its snapshot, a git
+    dependency that is built), and is refused when its script is reached,
+    if it is.
+    """
+    if not (os.name == "nt" if windows is None else windows):
+        return
+    for step in steps:
+        if step.source != "asked" or step.directory is None or script not in step.scripts:
+            continue
+        try:
+            _as_cmd_takes_it(step.directory)
+        except RunError as error:
+            raise RunError(f"{step.id}: {error} Nothing was built.") from None
 
 
 def _batch_encoding() -> str:
@@ -1292,6 +1430,7 @@ def run(
     if not any(script in step.scripts for step in steps if step.source == "asked"):
         raise RunError(f"No pipeline here has a script named {script!r}.")
     _require_trust_to_run(steps, script, here)
+    _no_script_in_a_share_without_a_letter(steps, script)
     if snapshot and not building:
         raise RunError(
             f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "
