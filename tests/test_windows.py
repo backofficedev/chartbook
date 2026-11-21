@@ -139,7 +139,7 @@ class TestAScriptInAShare:
     REFUSED = (
         "{folder} is a network folder with no drive letter, and cmd.exe, which runs a script on Windows, takes no such "
         "folder as its own: it would have run the script in C:\\Windows. Connect the share to a drive letter "
-        "(`net use Q: {share}`, with a letter that is free), and run this again."
+        "(`net use Q: {share}`, with a letter that is free; in Git Bash, with the share in single quotes), and run this again."
     )
 
     def test_a_share_with_no_letter_is_said_and_nothing_runs(self, monkeypatch):

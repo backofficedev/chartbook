@@ -217,6 +217,9 @@ class TestARepositoryGitDoesNotTrust:
             f"`git config --global --add safe.directory {_quoted(trusted, batch=False)}`, and then this again"
         )
         assert "is not in a git repository" not in str(refused.value)
+        # The command is also had apart from the sentence, and is the one in it
+        assert refused.value.command == f"git config --global --add safe.directory {_quoted(trusted, batch=False)}"
+        assert f"run `{refused.value.command}`, and then this again" in str(refused.value)
 
     @staticmethod
     def _as_on_windows(monkeypatch) -> None:
@@ -224,7 +227,10 @@ class TestARepositoryGitDoesNotTrust:
         from chartbook import missing
 
         real = missing._quoted
-        monkeypatch.setattr(missing, "_quoted", lambda text, windows=None, batch=True: real(text, windows=True, batch=batch))
+        monkeypatch.setattr(
+            missing, "_quoted",
+            lambda text, windows=None, batch=True, backslashes=False: real(text, windows=True, batch=batch, backslashes=backslashes),
+        )
 
     def test_on_windows_a_shares_folder_is_in_the_command(self, work, monkeypatch):
         """Found by the review of what prints this sentence: the word git writes for a share begins
@@ -232,12 +238,15 @@ class TestARepositoryGitDoesNotTrust:
         The word is handed to git, a program: typed on Windows 11, 2026-11-20, it is text in double
         quotes in cmd.exe, Windows PowerShell and Git Bash."""
         self._as_on_windows(monkeypatch)
-        said = snapshot._not_trusted_by_git(work / "rates", ON_A_SHARE)
+        refusal = snapshot._not_trusted_by_git(work / "rates", ON_A_SHARE)
+        said = str(refusal)
         assert said.endswith(
             'To have git trust it, run `git config --global --add safe.directory "%(prefix)///server/share/work/rates"`, '
             "and then this again"
         )
         assert "ITS-NAME" not in said
+        # And the command apart from the sentence, for what gives it as a line of its own
+        assert refusal.command == 'git config --global --add safe.directory "%(prefix)///server/share/work/rates"'
 
     @pytest.mark.parametrize("folder", ["//server/share/%CD%/rates", "//server/share/a`b/rates", "//server/share/$(calc)/rates"])
     def test_on_windows_a_folder_no_shell_takes_as_text_gets_no_command_of_ours(self, work, monkeypatch, folder):
@@ -250,8 +259,9 @@ class TestARepositoryGitDoesNotTrust:
             "To add an exception for this directory, call:\n\n"
             f"\tgit config --global --add safe.directory {shlex.quote('%(prefix)/' + folder)}"
         )
-        said = snapshot._not_trusted_by_git(work / "rates", words)
-        assert said == (
+        refusal = snapshot._not_trusted_by_git(work / "rates", words)
+        assert refusal.command == ""  # none of ours to give
+        assert str(refusal) == (
             f"git does not trust the repository that {work / 'rates'} is in ({folder}): another user owns it, or it is "
             "on a network share, and git reads no such repository until it is told to. To have git trust it, run the "
             "`git config --global --add safe.directory` command that `git status` prints in that folder (in PowerShell or "

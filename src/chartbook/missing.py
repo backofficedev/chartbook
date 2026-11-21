@@ -130,6 +130,13 @@ class Wanted:
             on this machine: what ``chartbook run --upstream`` builds.
         reads: The lines above it that it reads, by their numbers from 1.
         unknown: Why what it reads in turn is not known, where it is not.
+        not_trusted: For a folder in a repository git does not trust: what
+            the folder's own commands say of it, whole. Git reads nothing
+            of such a repository, so neither the commit it is at nor
+            whether it is the pipeline's own is known, and its line is
+            given no command that would act on it.
+        trust: And the command that makes git trust it, which is all its
+            line is given. Empty where there is none to give.
     """
 
     pipeline: str
@@ -152,6 +159,8 @@ class Wanted:
     by_path: bool = False
     reads: list[int] = field(default_factory=list)
     unknown: str = ""
+    not_trusted: str = ""
+    trust: str = ""
 
 
 @dataclass
@@ -463,9 +472,13 @@ class _Walk:
             code = snapshot.code_of(folder)
         except snapshot.NotInARepository:
             code, why_not = None, f"{folder} is not in a git repository"  # the list's own words: what a snapshot is does not belong in a line of it
+        except snapshot.RepositoryNotTrusted as error:
+            # Git reads nothing of it until it is told to: its line is the command that tells it, and the
+            # sentence where there is none to give (:func:`said`)
+            code, wanted.trust = None, error.command
+            why_not = wanted.not_trusted = _plain((str(error).strip().splitlines() or [""])[0].rstrip("."), most=4096)
         except snapshot.SnapshotError as error:
-            # Said as the folder's own commands say it, and whole: git that does not trust the repository
-            # (the sentence ends with the command that makes it), git that could not be run, a repository
+            # Said as the folder's own commands say it, and whole: git that could not be run, a repository
             # with no commit yet. Each was "is not in a git repository" here, of a folder that is in one
             code, why_not = None, _plain((str(error).strip().splitlines() or [""])[0].rstrip("."), most=4096)
         wanted.top = code.top if code is not None else None
@@ -886,7 +899,7 @@ def _plain(text: str, most: int = 300) -> str:
     return kept if len(kept) <= most else kept[: most - 1] + "…"
 
 
-def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool = True) -> str:
+def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool = True, backslashes: bool = False) -> str:
     """A word of a command, as this system's shells take it: quoted where it has to be, and never with a control character.
 
     :param windows: Whether for Windows, where the word is one that
@@ -897,10 +910,21 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool 
         then reads the word once more, and more of it
         (:func:`_a_windows_shell_reads`). False for a word handed to
         ``git``, which is a program wherever it is installed.
+    :param backslashes: Whether a network path on Windows keeps its
+        backslashes (``\\\\server\\share``), as ``net use`` wants it. Otherwise
+        it is written with forward slashes, which git, ChartBook and all
+        three shells take.
     """
     text = _plain(str(text), most=4096)
     if not (os.name == "nt" if windows is None else windows):
         return shlex.quote(text)
+    # A network path: Git Bash reads the two backslashes it begins with as one, in double quotes too, and the
+    # folder is then another (`"\\server\share\x"` reached git as `\server\share\x`; found by typing the list's
+    # lines there, 2026-11-20). Written with forward slashes it is the same folder to git and to ChartBook in
+    # cmd.exe, Windows PowerShell and Git Bash (typed there too), and is always in quotes. Not a device's
+    # path (`\\?\`, `\\.\`), which Windows reads as it is written
+    share = not backslashes and _is_a_network_path(text)
+    text = _as_written(text, backslashes)
     # cmd.exe: inside double quotes `&`, `|`, `<`, `>`, `^` and spaces are text. A `%` stays
     # as it is: doubled it is one only in a batch file, and these lines are pasted at a prompt, where `%20` in an
     # address must stay `%20`. (A `%NAME%` that names a variable is filled in there, in quotes or out, and
@@ -910,16 +934,33 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool 
     # Git Bash, which comes with git there, reads a `\` outside quotes as an escape (`C:\work\rates` reaches
     # the command as `C:workrates`; found by typing it, 2026-11-20), and inside double quotes as itself before
     # anything a path has. So a word with a backslash is in double quotes, a path among them. (Not right there:
-    # a `$NAME` or a backtick, as in PowerShell, and the `\\` a network path begins with.) What no spelling
+    # a `$NAME` or a backtick, as in PowerShell; and the `\\` a network path begins with, which is why one
+    # is written with forward slashes, above.) What no spelling
     # makes text in all three, the list gives no command for: `_a_windows_shell_reads`. And no other message
     # is to hold it either, whoever writes it: the word is then this one, which runs nothing and says why
     if _a_windows_shell_reads([text], batch=batch):
         return NOT_TEXT
-    if re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
+    if not share and re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
         return text
     # A backslash that would come before the closing quote would be read with it, as a quote that is text:
     # doubled, it is one backslash (`"C:\\"`, of a drive's own folder)
     return '"' + text + "\\" * (len(text) - len(text.rstrip("\\"))) + '"'
+
+
+def _is_a_network_path(text: str) -> bool:
+    """Whether a word is a network path as Windows writes one: two backslashes and a server's name, and not a device's path (``\\\\?\\``, ``\\\\.\\``)."""
+    return re.match(r"\\\\[^\\?.]", text) is not None
+
+
+def _as_written(text: str, backslashes: bool = False) -> str:
+    """A word as a command for Windows has it, before its quotes: a network path with forward slashes, and anything else as it is.
+
+    What a shell would read in a word is asked of this
+    (:func:`_a_windows_shell_reads`), since this is what is pasted: a
+    share's folder named ``$`` is ``/$/`` there, which is text, where
+    ``\\$`` is not.
+    """
+    return text.replace("\\", "/") if not backslashes and _is_a_network_path(text) else text
 
 
 def typed(words: Iterable[Union[str, Path]], windows: Optional[bool] = None) -> str:
@@ -1090,6 +1131,25 @@ def _worktree_at(tree: Path, commit: str) -> bool:
         return False
 
 
+def _waits_for_trust(folder: Path) -> Optional[str]:
+    """For a folder that is the top of a checkout git does not trust: the command that makes git trust it, empty where there is none to give. None for any other folder.
+
+    The top of a checkout has a ``.git`` in it. Without that, git's refusal
+    is of a repository further up, and the folder is a leftover in it
+    (found by review: a plain folder of the name, in a repository git did
+    not trust, was taken for the worktree).
+    """
+    try:
+        if not folder.is_dir() or not os.path.lexists(folder / ".git"):
+            return None
+        snapshot.code_of(folder)
+    except snapshot.RepositoryNotTrusted as error:
+        return error.command
+    except (snapshot.SnapshotError, OSError):
+        return None
+    return None
+
+
 def said(
     listing: Listing, again: str = "chartbook run", done: str = "built", here: Optional[Union[str, Path]] = None,
     windows: Optional[bool] = None,
@@ -1119,15 +1179,15 @@ def said(
         system it runs on, by default.
     """
     windows = os.name == "nt" if windows is None else windows
-    #: The words of the line being made, as they are before they are quoted
+    #: The words of the line being made, as a command for Windows has them before they are quoted
     held: list[str] = []
 
     def word(text: Union[str, Path]) -> str:
-        held.append(str(text))
+        held.append(_as_written(str(text)))
         return _quoted(text, windows)
 
     def named(folder: Union[str, Path]) -> str:
-        held.append(str(folder))
+        held.append(_as_written(str(folder)))
         return _in(folder, windows)
 
     wanted = listing.wanted
@@ -1144,7 +1204,13 @@ def said(
         ),
         # "With the commands below": a build by itself ends with no snapshot, and these do. "One at a time": a
         # line is one command, and typed together each runs whatever the one before it did
-        "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads." if one
+        # And where git reads nothing of a repository, what builds its pipelines is not known, and the lines
+        # below do not end with a snapshot: they end with this list made again, with what git then says
+        (
+            "Git does not trust a repository below, and reads nothing of it, so how to build what is in it is not known "
+            "yet. Do as the lines below say, one at a time: the last command then says the rest."
+        ) if any(line.not_trusted for line in wanted)
+        else "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads." if one
         else "Build them in this order, with the commands below, one at a time. Each ends with a snapshot, which is what the next one reads.",
         "",
     ]
@@ -1152,6 +1218,10 @@ def said(
     cloned: dict = {}
     worktrees: dict = {}
     moved: set = set()
+    #: And for a worktree that is there and that git does not trust yet, by its commit: the command that makes it
+    untrusted: dict = {}
+    #: What the line being made is to say under its commands, of a command that is not its build
+    noted: list[str] = []
 
     def at_its_commit(top: Path, folder: Path, commit: str, make: str) -> list[str]:
         """Check a repository out and build in a folder of it: from its top, since the folder may not be there until the checkout."""
@@ -1166,6 +1236,19 @@ def said(
             # passed by, for the next name that is free
             names = _clone_folders(beside, f"{_clone_name(listing.top.name)}-at-{commit}")
             there = next((tree for tree in names if _worktree_at(tree, commit)), None)
+            if there is None:
+                # One that an earlier list made, where git trusts no folder until it is told to (on Windows, any
+                # on a network share): git reads nothing of it, so it was not found, and each list made another
+                # (found on Windows by typing a list to its end, three times). It is taken by its name, which
+                # only this list gives, and its line begins with the command that makes git trust it. Whether
+                # it is on that commit is not known until then: its build's snapshot is labelled with the
+                # commit it is on, and the list made after it looks again
+                for tree in names:
+                    trust = _waits_for_trust(tree)
+                    if trust is not None:
+                        there, untrusted[commit] = tree, trust
+                        break
+            # (One that git reads at that commit comes first, whichever name it has: no trust is asked for it.)
             add = there is None
             worktrees[commit] = there or next((tree for tree in names if not os.path.lexists(tree)), names[-1])
         tree = worktrees[commit]
@@ -1173,13 +1256,26 @@ def said(
         commands = [make + named(tree / within if within else tree)]
         if add:
             commands.insert(0, f"git -C {word(listing.top)} worktree add {word(tree)} {commit}")
+        elif untrusted.get(commit):
+            commands.insert(0, untrusted.pop(commit))  # once, on the first line that builds in it
+            noted.append(
+                "Its first command makes git trust the worktree that an earlier list said to add, which git reads "
+                "nothing of until then."
+            )
         if fetch:
             commands.insert(0, fetch)
         return commands
 
+    #: The command that makes git trust a repository, by the line that gave it: it is typed once
+    trusted: dict[str, int] = {}
+    #: The lines that cannot be built yet: in a repository git does not trust, or reading such a line
+    waiting: set[int] = set()
     for number, line in enumerate(wanted, 1):
         held.clear()
+        noted.clear()
+        told = ""
         before = (dict(cloned), dict(worktrees))
+        moved_before = set(moved)
         pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
         at = f" at {line.commit[:7]}" if pinned else ""
         # In a command, enough of a commit that a large repository has no two of it: of the commit it was read
@@ -1204,6 +1300,30 @@ def said(
             # Its repository was read, and has no pipeline of this ID: nothing there to build
             where = f"{_plain(line.repository)}, which holds no pipeline of that ID" + (f" at {line.read_at[:7]}" if line.read_at else "")
             commands = []
+        elif line.folder is not None and line.not_trusted:
+            # Git reads nothing of its repository: not the commit it is at, nor whether it is the pipeline's
+            # own. A checkout made blind was refused by git while it did not trust the repository, and ran
+            # once it did: in the pipeline's own repository, which no command is to move. So the line is the
+            # command that makes git trust it, and no other; the list made after it is made with what git says
+            where = f"{_plain(_from(line.folder, here))} (a folder on this machine)"
+            unknown = ""
+            waiting.add(number)
+            if line.trust and line.trust not in trusted:
+                trusted[line.trust] = number
+                commands = [line.trust]
+                told = (
+                    "Git does not trust the repository it is in, and reads nothing of it until the command above "
+                    "has been typed. How to build it is said after that, by the last command here."
+                )
+            elif line.trust:
+                commands = []
+                told = (
+                    f"It is in the repository that the command of line {trusted[line.trust]} makes git trust. How to "
+                    f"build it is said after that, by the last command here."
+                )
+            else:
+                commands = []
+                told = f"How to build it is not known: {line.not_trusted}."
         elif line.folder is not None:
             shown = _plain(_from(line.folder, here))
             if pinned and in_own and not line.on_commit:
@@ -1273,6 +1393,20 @@ def said(
             ) + ", so neither is what it reads in turn"
             commands = [f"In a clone of it: {'`git checkout ' + commit + '`, then ' if pinned else ''}`{make}`"]
             unknown = ""
+        if not line.not_trusted and not line.absent and any(above in waiting for above in line.reads):
+            # It reads a line that cannot be built yet, so its own build would be refused for what is not in
+            # the store: found by typing a list in its order, where the second line's command ended 1. No
+            # command for it either, and nothing of it counted as made or moved; the list made after the
+            # trust command gives it its own
+            waiting.add(number)
+            commands, unknown = [], ""
+            told = "It waits for what it reads above. How to build it is said after that, by the last command here."
+            held.clear()
+            for kept, was in zip((cloned, worktrees), before):
+                kept.clear()
+                kept.update(was)
+            moved.clear()
+            moved.update(moved_before)
         read = _a_windows_shell_reads(held) if windows else ""
         if read:
             # No spelling of it is text in every shell there, and a pasted line is run as it is read. What to
@@ -1292,11 +1426,16 @@ def said(
         lines += [f"     {command}" for command in commands]
         if line.absent:
             lines.append("     It could not be found there, so no command is given for it.")
-        elif unknown:
+            continue
+        if told:
+            lines.append(f"     {told}")
+        elif noted and not read:
+            lines.append(f"     {noted[0]}")
+        if unknown:
             lines.append(f"     What it reads in turn is not known: {unknown}. Its own `chartbook run` says.")
     # With its folder, as every command above has its own: typed wherever those were, it builds this pipeline.
     # The pipeline's folder may be one of somebody's repository too, named as they named it
-    own = _a_windows_shell_reads([listing.directory]) if windows else ""
+    own = _a_windows_shell_reads([_as_written(str(listing.directory))]) if windows else ""
     lines += ["", "Then here again:", (
         f"     In this pipeline's folder, which no command can name (it holds {own}): `{again}`" if own
         else f"     {again}{_in(listing.directory, windows)}"

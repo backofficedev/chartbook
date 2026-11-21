@@ -527,7 +527,24 @@ What building it settled:
   command that makes a snapshot, which would be refused there twice: for git's trust, and then
   for the note. *(The second by the review: the line was said, and the command after it.)* The
   snapshot says the same. In a folder that is in no repository the run says nothing of a note:
-  there is no snapshot to hold against one.
+  there is no snapshot to hold against one. In the list of what is not in a store, the line of
+  a folder in such a repository is that command and no other, given once for a repository,
+  and the list's second line says the list is not whole yet. *(Found on Windows by typing the
+  list's lines in their order: the list says "one at a time", git refused the first of them,
+  and the command that would have let it run was at the end of the line's third, inside a
+  sentence that began with something else. And by the review of putting that command first
+  and leaving the others under it: they had been made with nothing read of the repository,
+  not the commit it is at nor whether it is the pipeline's own, and once git trusted it they
+  ran. In a repository that holds both, the checkout left the pipeline's own repository on no
+  branch, and it was built from the old commit's files with nothing said. So no command is
+  made blind: the list made after the trust command is made with what git says. And a line
+  that reads such a line is given no command either, since its build would end with what is
+  not in the store.)* A worktree the list said to add is itself a folder git does not trust
+  there, until it is told to: its build says so, and the list made again takes the worktree by
+  its name, with the command that makes git trust it before its build. *(Found on Windows by
+  typing a list to its end, three times: git read nothing of the worktree, so each list named
+  another, and three were left.)* And `net use`, which no one spelling gives to all three
+  shells, is said with what Git Bash wants.
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It
@@ -741,7 +758,9 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   itself as it was at that commit.)* What is wanted there at another commit is built in a
   worktree of that commit, and the reader's checkout stays on its branch. A worktree of that
   name is used only where git says it is one, on that commit. *(Found by the third pass: a
-  leftover folder of the name was taken for it.)*
+  leftover folder of the name was taken for it.)* But for a checkout git does not trust yet,
+  which git says nothing of: that one is taken by its name, with the command that makes git
+  trust it first (below, of a network share).
 - **An address is one only if it is a plain web address,** which is all a snapshot records.
   *(Found by review: one that began with `--upload-pack=` was refused by the fetch and printed in
   a `git clone` to paste.)* A pipeline's name is one only if it is an ID. Everything shown is
@@ -862,7 +881,8 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     snapshot` for files of the commit it had been on)*. The last line is read the same way.
     A `$` at the end of a longer name, before a slash or the end of the word, is text to both
     shells (`\\server\home$\…`, the one common `$` in a Windows path); a folder named `$`
-    alone is not, since Git Bash takes the backslash before it and the `$` for one sign. A `%`
+    alone is not, since Git Bash takes the backslash before it and the `$` for one sign (on a
+    drive: a network path is written with forward slashes, below, and there it is text). A `%`
     is text only where it begins the two digits a
     web address writes a sign with (`%20`), and where no name between two of them is a variable
     of this machine or one `cmd.exe` fills in by itself (`%CD%`). What that leaves: a variable
@@ -877,8 +897,12 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     The function that quotes never writes such a word, whatever message asks it to:
     `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. So a run's
     closing line, `chartbook restore` and the rest hold no such word either, and say less well
-    why. A network folder (`\\server\…`) is read otherwise by Git Bash, and the reference says
-    so.
+    why. A network folder (`\\server\…`) was read otherwise by Git Bash, and the reference said
+    so. *(Typed on Windows later, 2026-11-20, with the list's own lines for a folder on a
+    share: none of its three commands ran in Git Bash, which reads the two backslashes as one
+    in double quotes too. With forward slashes, `"//server/share/…"`, git and ChartBook take
+    the same folder in all three shells, so a network folder is written so, but for
+    `net use`, which wants its own.)*
   - *A clone found beside the pipeline is named as the disk names it.* It is looked for under
     the name its address gives (`rates`), and a disk that takes either letter case finds
     `Rates`. *(Found by review: under the address's name the list had pathlib's words in it, a
