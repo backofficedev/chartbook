@@ -5528,15 +5528,26 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         )
     say_held_back(plan.held_back, plan.snapshots_kept + plan.pinned_kept, plan.not_intact)
 
-    if not plan.delete and not plan.snapshots_delete and not plan.pinned_delete:
+    if not plan.delete and not plan.snapshots_delete and not plan.pinned_delete and not plan.unused:
         click.echo("Nothing to remove.")
         if not dry_run:
             carry_out()  # forgets the missing, if asked to
         return
 
     # The size of what goes: the objects nothing names and, with a snapshot's folder, its own copies of
-    # files that a kept snapshot has too (GcPlan.freed_bytes); and after the yes, of what went (GcDone)
+    # files that a kept snapshot has too, and what no snapshot uses (GcPlan.freed_bytes); and after the
+    # yes, of what went (GcDone)
     freed = _format_bytes(plan.freed_bytes)
+
+    def say_unused(*, among: bool) -> None:
+        """On a dry run, name the files no snapshot uses, which a real gc removes with the store's tidy."""
+        if not (dry_run and plan.unused):
+            return
+        if among:
+            click.echo(f"  and {len(plan.unused)} file(s) no snapshot uses  {_format_bytes(plan.unused_bytes)}")
+        for name, size in plan.unused:
+            click.echo(f"  {name}  {_format_bytes(size)}")
+
     if plan.snapshots_delete or plan.pinned_delete:
         # A snapshot a pin made from a repository goes as any does, its whole folder: said, and asked about
         counted = [f"{len(plan.snapshots_delete)} snapshot(s)"] if plan.snapshots_delete else []
@@ -5558,14 +5569,23 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
                     f"  and the removed snapshots' own copies of files a kept snapshot has too  "
                     f"{_format_bytes(plan.copies_bytes)}"
                 )
-    elif dry_run:
-        click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names:")
-        for content_hash, size in plan.delete:
-            click.echo(f"  {content_hash}  {_format_bytes(size)}")
-        if plan.copies_bytes:
-            click.echo(f"  and the copies of files a kept snapshot has too, in the folders that go  {_format_bytes(plan.copies_bytes)}")
-    else:
-        click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names.")
+        say_unused(among=True)
+    elif plan.delete:
+        if dry_run:
+            click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names:")
+            for content_hash, size in plan.delete:
+                click.echo(f"  {content_hash}  {_format_bytes(size)}")
+            if plan.copies_bytes:
+                click.echo(f"  and the copies of files a kept snapshot has too, in the folders that go  {_format_bytes(plan.copies_bytes)}")
+            say_unused(among=True)
+        else:
+            click.echo(f"Would remove {len(plan.delete)} object(s), {freed}, that nothing names.")
+    elif plan.unused:
+        if dry_run:
+            click.echo(f"Would remove {len(plan.unused)} file(s) no snapshot uses, {freed}:")
+            say_unused(among=False)
+        else:
+            click.echo(f"Would remove {len(plan.unused)} file(s) no snapshot uses, {freed}.")
     if dry_run:
         return
     if not yes and not click.confirm("Remove them?", default=False):

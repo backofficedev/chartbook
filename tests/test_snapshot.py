@@ -1197,6 +1197,37 @@ class TestClearingOldSnapshots:
         assert not first.path.parent.parent.exists() and not second.path.parent.parent.exists()  # no folder left behind
         assert snapshot.all_snapshots(default_store()) == [third]
 
+    def test_dry_run_says_the_stray_files_a_real_gc_removes(self, maker, monkeypatch):
+        """A sync service's copy beside a kept snapshot: dry-run used to say nothing, and the real gc removed it."""
+        import time
+        import types
+
+        kept = snapshot.make(maker).snapshot
+        stray = Path(kept.path).parent.parent / "README (1).md"
+        stray.write_text("copy", encoding="utf-8", newline="\n")
+        # An hour on: the sweep asks mtime and ctime, and creating the file sets ctime to now
+        later = time.time() + store_module.PENDING_SECONDS + 1
+        clock = types.SimpleNamespace(**{name: getattr(time, name) for name in dir(time) if not name.startswith("_")})
+        clock.time = lambda: later
+        monkeypatch.setattr(store_module, "time", clock)
+        store = default_store()
+        name = stray.relative_to(store.root).as_posix()
+        plan = lock.plan_gc(store, keep_days=100000)
+        assert plan.unused == [(name, stray.stat().st_size)]
+        assert plan.freed_bytes == plan.unused_bytes == stray.stat().st_size
+        dry = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])
+        assert dry.exit_code == 0, dry.output
+        assert dry.output.splitlines()[-2:] == [
+            f"Would remove 1 file(s) no snapshot uses, {_format_bytes(plan.unused_bytes)}:",
+            f"  {name}  {_format_bytes(stray.stat().st_size)}",
+        ]
+        assert stray.is_file()
+        done = CliRunner().invoke(main, ["store", "gc", "--yes", "--keep-days", "100000"])
+        assert done.exit_code == 0, done.output
+        assert f"Would remove 1 file(s) no snapshot uses, {_format_bytes(plan.unused_bytes)}." in done.output
+        assert done.output.splitlines()[-1] == f"Removed 0 snapshot(s) and 0 object(s), {_format_bytes(plan.unused_bytes)}."
+        assert not stray.exists() and kept.path.exists()
+
     def test_what_no_snapshot_and_no_lockfile_names_is_cleared(self, maker, work):
         snapshot.make(maker)
         store = default_store()
