@@ -24,9 +24,9 @@ reads and makes, and a second run with nothing changed runs nothing:
 - what is not a file and still decides what a build does is compared with
   what it was after the task last ran (`unchanged`): the commit, the store
   and the snapshots in it, and the lockfiles that say what a pipeline reads;
-- a build by `chartbook run` is up to date only while the snapshot that
-  follows would be made of it (`built_by_a_run`): the run's note of the
-  build, which the snapshot is held against, is kept in ChartBook's cache
+- a build by `chartbook run` is up to date only while the folder is what
+  that run built (`built_by_a_run`): the run's note of the build, which
+  the snapshot that follows is held against, is kept in ChartBook's cache
   and not in the folder.
 
 The project's own dodo.py runs this whole build as one task, and takes what
@@ -139,7 +139,7 @@ PINNED = unchanged("lockfiles", lockfiles)
 
 
 def built_by_a_run(pipeline_dir):
-    """An uptodate check: whether a snapshot of a pipeline's folder would be made, as `chartbook run` last left it.
+    """An uptodate check: whether a pipeline's folder is what `chartbook run` last built there, so that a snapshot would not stop for that.
 
     `chartbook run` leaves a note of each build, in ChartBook's cache on
     this machine and not in the folder, and `chartbook snapshot` holds the
@@ -151,7 +151,9 @@ def built_by_a_run(pipeline_dir):
     hand; one the pipeline's own doit rebuilt, typed in its folder). So
     `chartbook run` is typed again there, as a person does before a
     snapshot: the pipeline's own doit rebuilds what it finds out of date,
-    which may be nothing, and the run leaves its note.
+    which may be nothing, and the run leaves its note. Whatever else
+    stops a snapshot (work that is not committed, a pin that is missing)
+    is not asked here, and is the snapshot's to say.
     """
 
     def check(task, values):
@@ -170,23 +172,30 @@ def say_what_is_taken_as_it_is(pipeline_dir):
     by hand or by another tool, and not written anew by this one, is in
     the snapshot that follows, which says nothing of it: typed alone,
     that snapshot would have stopped and named the file. It is named
-    here instead.
+    here instead, where the last run's note is there to tell it by: with
+    no note, one of another machine, or one of a build that did not end,
+    nothing says how a file was left, and nothing is said.
+
+    It only says. Whatever goes wrong in the asking is the run's to say,
+    which is typed next.
     """
     from chartbook import built
 
     try:
         built.check(pipeline_dir, built.pipeline_of(pipeline_dir))
     except built.NotHeld as refusal:
-        if refusal.why == "differ" and refusal.outputs:
-            named = ", ".join(refusal.outputs[:10])
-            more = f", and {len(refusal.outputs) - 10} more" if len(refusal.outputs) > 10 else ""
+        # One that is gone cannot be taken as it is: the build writes it, or the run says it is not there
+        changed = [name for name in refusal.outputs if not name.endswith(" (gone)")] if refusal.why == "differ" else []
+        if changed:
+            named = ", ".join(changed[:10])
+            more = f", and {len(changed) - 10} more" if len(changed) > 10 else ""
             print(
                 f"{pipeline_dir.name}: not as the last `chartbook run` left them: {named}{more}. "
                 f"This run takes as it is each one its build does not write anew.",
                 flush=True,
             )
-    except (OSError, ValueError):
-        pass  # a chartbook.toml that cannot be read: the run says what is wrong with it
+    except Exception:  # noqa: BLE001 - it only says, and never stops a build
+        pass
 
 
 def context():

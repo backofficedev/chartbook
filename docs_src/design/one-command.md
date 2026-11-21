@@ -506,12 +506,12 @@ What building it settled:
   well." So `yield_curve` and `rate_forecast` are built with `chartbook run` and their snapshots
   take no option, and `fred_charts` is still built by its own doit and taken with `--as-is`
   (`docs_src/examples.md`). doit sees the built files and knows nothing of the note, so a build
-  by `chartbook run` is typed again there wherever the snapshot after it would stop, as a
-  person types `chartbook run` before a snapshot. *(Found by the review, twice.)* Typed again
+  by `chartbook run` is typed again there wherever the folder is not what the last run built,
+  as a person types `chartbook run` before a snapshot. *(Found by the review, twice.)* Typed again
   over a built file that was written over by hand, the build finds nothing to do, the run
   notes the file as it now is, and the snapshot is made of it with nothing said: the cost
   written above, that the build's own account is taken. So the examples' doit names such
-  files before it types the run. Leaving them for the snapshot to stop at was tried and taken
+  files before it types the run, where the last run's note is there to tell them by. Leaving them for the snapshot to stop at was tried and taken
   out: it stopped `doit` after ordinary work with an example's own doit, it did nothing where
   source had changed too, which is the usual state before a snapshot, and after `--as-is` typed
   by hand `doit` stopped at the same step for good. And the notes for upgrading from 0.5 sent

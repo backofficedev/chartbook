@@ -79,24 +79,41 @@ class TestTheExamplesShowBothWays:
         examples = _examples()
         assert {folder.name for folder in examples.PIPELINE_DIRS} == {*self.BY_A_RUN, "fred_charts"}
 
-    def test_a_build_by_a_run_is_up_to_date_only_while_its_snapshot_would_be_made(self, demo, store):
+    def test_a_build_by_a_run_is_up_to_date_only_while_the_folder_is_what_the_run_built(self, demo, store):
         """doit sees the built files and knows nothing of the note: with the files all there it would call
         the build up to date, and the snapshot after it would stop. There `chartbook run` is typed again,
-        as a person types it before a snapshot."""
+        as a person types it before a snapshot. Everything is committed at each step, so that each
+        snapshot here stops, or is made, for the note alone."""
         up_to_date = _examples().built_by_a_run(demo)
-        assert up_to_date(None, {}) is False  # no run has built it
+
+        def stops_for(words: str) -> bool:
+            result = _snapshot()
+            return result.exit_code == 1 and words in result.output
+
+        assert up_to_date(None, {}) is False  # no run has built it, and nothing is built
         assert _run().exit_code == 0
         assert up_to_date(None, {}) is True and _snapshot().exit_code == 0
         _change(demo / "load.py", "x = 1\n")  # source the build did not run on
-        assert up_to_date(None, {}) is False and _snapshot().exit_code == 1
-        assert _run().exit_code == 0 and up_to_date(None, {}) is True
+        _committed(demo)
+        assert up_to_date(None, {}) is False and stops_for("these differ from what it was built from: load.py (new)")
+        assert _run().exit_code == 0 and up_to_date(None, {}) is True and _snapshot().exit_code == 0
         _change(demo / "out.csv", "a,b\n1,2\n3,4\n")  # a built file written over
-        assert up_to_date(None, {}) is False and _snapshot().exit_code == 1
-        assert _run().exit_code == 0 and up_to_date(None, {}) is True
+        assert up_to_date(None, {}) is False and stops_for("these differ from what its build left: out.csv")
+        assert _run().exit_code == 0 and up_to_date(None, {}) is True and _snapshot().exit_code == 0
         built.note_path(demo).unlink()  # a cache that was cleared
-        assert up_to_date(None, {}) is False
+        assert up_to_date(None, {}) is False and stops_for("has not been built by `chartbook run` here")
         _change(demo / "chartbook.toml", "[project\n")  # and what cannot be read is the run's to say
         assert up_to_date(None, {}) is False
+
+    def test_work_that_is_not_committed_is_the_snapshots_to_say_and_not_the_checks(self, demo, store):
+        """The check asks whether the folder is what the last run built, and no more: a run over work
+        that is not committed leaves the build up to date, and the snapshot stops for the commit."""
+        up_to_date = _examples().built_by_a_run(demo)
+        _change(demo / "load.py", "x = 1\n")
+        assert _run().exit_code == 0
+        assert up_to_date(None, {}) is True
+        result = _snapshot()
+        assert result.exit_code == 1 and "differ" not in result.output and "has not been built" not in result.output
 
     def test_after_as_is_typed_by_hand_the_build_is_typed_again_and_not_the_refusal(self, demo, store):
         """Found by the second review: with a built file left for the snapshot to stop at, the way the
@@ -134,6 +151,34 @@ class TestTheExamplesShowBothWays:
         assert said() == ""  # the run says what is wrong with it
         (demo / "chartbook.toml").unlink()
         assert said() == ""  # and that there is none
+
+    def test_a_built_file_that_is_gone_is_not_said_to_be_taken(self, demo, store, capsys):
+        """Found by the third review: "out.csv (gone) … takes as it is". The build writes it, or the run says it is not there."""
+        say = _examples().say_what_is_taken_as_it_is
+        assert _run().exit_code == 0
+        capsys.readouterr()
+        (demo / "out.csv").unlink()
+        say(demo)
+        assert capsys.readouterr().out == ""
+
+    def test_where_no_finished_note_is_there_nothing_says_how_a_file_was_left(self, demo, store, capsys):
+        """A note of a build that did not end, or of another machine: a built file written over is not told from one the build left."""
+        say = _examples().say_what_is_taken_as_it_is
+        assert _run().exit_code == 0
+        note = _note(demo)
+        for unfinished in ({**note, "state": "building"}, {**note, "machine": "another"}):
+            built.note_path(demo).write_text(json.dumps(unfinished), encoding="utf-8", newline="\n")
+            _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+            capsys.readouterr()
+            say(demo)
+            assert capsys.readouterr().out == ""
+
+    def test_the_line_never_stops_a_build(self, demo, monkeypatch, capsys):
+        def fail(directory, pipeline):
+            raise RuntimeError("whatever goes wrong in the asking")
+
+        monkeypatch.setattr(built, "check", fail)
+        assert _examples().say_what_is_taken_as_it_is(demo) is None and capsys.readouterr().out == ""
 
     def test_more_than_ten_are_counted(self, demo, monkeypatch, capsys):
         def refuse(directory, pipeline):
