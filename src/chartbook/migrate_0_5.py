@@ -130,6 +130,7 @@ from chartbook.store import (
     V3_LAYOUT,
     StoreError,
     _not_followed,
+    _remove_file,
     is_snapshot_folder,
     on_disk,
     pipeline_folder,
@@ -1273,11 +1274,17 @@ def _temporary_of(root: Path, target: Path) -> Path:
 
 
 def _remove_own(temporary: Path) -> None:
-    """Remove a file in the move's own folder, where there is one: read-only as a copy cut short left it, or not."""
+    """Remove a file in the move's own folder, where there is one, with the store's own remover (:func:`chartbook.store._remove_file`).
+
+    Its mode is touched only where the removal is refused without it (a
+    read-only file, on Windows). Another user's leftover, in a store that
+    users share, is this user's to unlink where the folder may be
+    written, and not to change: changing its mode first stopped the move
+    at the same step every time. And a second name of a file outside the
+    store goes, and that file is as it was.
+    """
     if os.path.lexists(temporary):
-        if not temporary.is_symlink():
-            os.chmod(temporary, 0o644)
-        temporary.unlink()
+        _remove_file(temporary)
 
 
 def _own_temporary(root: Path, target: Path) -> Path:
