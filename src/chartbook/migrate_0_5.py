@@ -763,9 +763,15 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
     if base is not None:
         for key, path, place in named_by(base):
             target = target_of(base, V3_LAYOUT.pipelines, path)
-            # The base has a file only where it will be there at its size, from where its record says or from where
-            # another's does: an increment keeps its own good copy otherwise
-            if will(place, target) == key[1] or source_of(key, place, target) != place:
+            # The base has a file only where it will be there at its size: an increment keeps its own good copy
+            # otherwise. By rename or by copy alike, so that the first of two files of the same bytes in its record is
+            # the same one before a copy is made and after: where nothing is where the file goes and it is not where
+            # its record says, it is taken from where another's record says, or copied from a snapshot that keeps
+            # the bytes in its own folder (`held`), though that one's record names this very place
+            whole = will(place, target) == key[1]
+            if not whole and not look(target)[0]:
+                whole = key in held or source_of(key, place, target) != place
+            if whole:
                 base_has.setdefault(key, path)
     spare.clear()  # the places of what an increment keeps for itself are `own` from here on
     # Each file a snapshot keeps in its own folder: the complete one's first, then the increments', then those of what a pin made

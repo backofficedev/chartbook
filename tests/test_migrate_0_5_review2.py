@@ -585,6 +585,27 @@ class TestAStoreThatLooksHalfMovedAndHasNoJournal:
 class TestStoppedWhereFilesWereAlreadyInTheNewTrees:
     """P7. In a store a sync has part brought from a move made elsewhere, a move stopped and run again ended in another tree than an uninterrupted one, both whole (6 of 150 drawn stores)."""
 
+    def test_stopped_after_a_copy_an_increment_names_the_same_file_of_the_one_it_builds_on(self, work):
+        """The newest snapshot names the same bytes twice (``k.parquet``, ``kb.parquet``), and neither file is at its old place (an upload that never finished). A pin's snapshot names them too, and its file is in the new tree already.
+
+        The newest is given a copy of each from the pin's. An older
+        snapshot then names the bytes in the newest: which of the two
+        files its record said depended on where the move was stopped. It
+        is the first in the newest one's record that the move makes
+        whole, by rename or by copy alike.
+        """
+        root = empty_store(work)
+        c0 = folder_of("2025-09-01", "h")
+        older = record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", K, c0, None)])
+        newest = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, c0, None), ("_data/kb.parquet", K, None, None)])
+        pin = record(root, "acme/p", "2025-11-15", "c", [("_data/k.parquet", K, c0, None)], made_by="pin")
+        put(root, "acme+p", pin, "_data/k.parquet", K, tree="snapshots")
+        differ = _stopped_after_each_step(root, work)
+        assert differ == [], f"{len(differ)} of the moves that were stopped ended in another tree; the first: {differ[0]}"
+        _clear()
+        migrate_0_5.run(root)
+        assert reads_after(root)[("acme+p", older, "_data/k.parquet")] == (sha(K), f"snapshots/acme+p/{newest}/_data/k.parquet")
+
     def test_stopped_after_a_rename_a_file_that_was_to_go_aside_is_not_taken_instead(self, work):
         """A pin's snapshot has its file at its old place and in the new tree already, so the one at the old place goes aside, and is said. The newest snapshot names the same bytes twice, at its own place.
 
@@ -627,7 +648,7 @@ SEEDS = _seeds((0, 1, 2, 3, 4, 5, 6, 7))
 #: The seeds of 0 to 149 whose stores, with files brought of a move made elsewhere, ended in another tree when stopped,
 #: one of each kind: one file more or fewer was aside (16), and the record of an increment named another of two files
 #: of the same bytes (136). The small cases of each are in ``TestStoppedWhereFilesWereAlreadyInTheNewTrees``
-FOUND = (16,)
+FOUND = (16, 136)
 
 
 def _worse(before: dict, reads: dict, placed: dict) -> tuple:
