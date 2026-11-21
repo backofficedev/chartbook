@@ -1171,19 +1171,23 @@ def record_name(subdirectory: str) -> str:
     return name
 
 
-#: How many snapshots read are remembered at a time: the few records one command reads again and again.
-#: A snapshot read holds an entry for every file of it (a table of 127,000 files, as many), so a process that
-#: reads every record of a store (a catalog built, a ``store gc`` planned) is not to hold them all until it ends.
-READ_KEPT = 8
+#: How many files the snapshots remembered may list in all. A snapshot read holds an entry for every file its
+#: record lists, and records differ by four orders of magnitude (one real record lists 127,676 files and
+#: another 9), so what a process holds goes by the files listed and not by the number of records: about a
+#: hundred megabytes at this bound, by a measure of 188 MB for 400,000. A process that reads every record of
+#: a store (a catalog built, a ``store gc`` planned) holds no more than that until it ends, and a pipeline's
+#: whole history stays remembered through one command, where it comes to less.
+READ_KEPT_FILES = 250_000
 
-#: The snapshots read last, :data:`READ_KEPT` at most, each by its record's file with the time and size the file
-#: had then: a record is never rewritten, so one read is enough while it is remembered. The least recently read
-#: goes first, and a record that is removed is forgotten (:func:`forget`).
+#: The snapshots read and remembered, the least recently read first, each by its record's file with the time
+#: and size the file had then and the number of files it lists: a record is never rewritten, so one read is
+#: enough while it is remembered. Together they list :data:`READ_KEPT_FILES` at most, but for one that lists
+#: more alone. A record that is removed is forgotten (:func:`forget`).
 _read_snapshots: collections.OrderedDict = collections.OrderedDict()
 
 
 def read(path: Union[str, Path]) -> Snapshot:
-    """Read one snapshot record; one of the few read last is not read again while its file is unchanged.
+    """Read one snapshot record; one that is remembered is not read again while its file is unchanged.
 
     A record lists every file of its snapshot, and one command asks for
     the same record many times over (each snapshot of the pipeline's
@@ -1192,10 +1196,12 @@ def read(path: Union[str, Path]) -> Snapshot:
     long as the file has the time and the size it had. A record that
     cannot be read is not remembered: a sync may yet bring the rest of it.
 
-    **What is remembered is small:** the :data:`READ_KEPT` snapshots read
-    last, the least recently read going first. A pipeline with more
-    snapshots than that has each record opened again at each pass over its
-    history.
+    **What is remembered is bounded by what the records hold,** not by
+    how many there are: the snapshots remembered list
+    :data:`READ_KEPT_FILES` files at most in all (:func:`_how_many_listed`),
+    and the least recently read goes first. One record that lists more
+    than that is remembered alone, since it is the one being read again
+    and again; the next record read puts it out.
 
     What is handed out is the one snapshot, to every caller: its records
     are not to be changed in place.
@@ -1214,10 +1220,24 @@ def read(path: Union[str, Path]) -> Snapshot:
     _read_snapshots.pop(key, None)  # gone, or no longer the file that was read
     taken = _read(path)
     if stamp is not None:
-        _read_snapshots[key] = (stamp, taken)
-        while len(_read_snapshots) > READ_KEPT:
-            _read_snapshots.popitem(last=False)
+        _read_snapshots[key] = (stamp, taken, _how_many_listed(taken))
+        # Counted afresh each time one is read from the disk, which costs far more: nothing else keeps the sum
+        listed = sum(files for _, _, files in _read_snapshots.values())
+        while listed > READ_KEPT_FILES and len(_read_snapshots) > 1:
+            listed -= _read_snapshots.popitem(last=False)[1][2]
     return taken
+
+
+def _how_many_listed(taken: Snapshot) -> int:
+    """How many files a snapshot's record says the store keeps for it: those of each asset, of its index and of its documents; one, for a record that lists none.
+
+    What a snapshot read holds in memory goes by this: an entry for each
+    file, with its path, its hash, its size and where it is kept.
+    """
+    stored = taken.stored if isinstance(taken.stored, dict) else {}
+    records = stored.get("records")
+    held = [*(records.values() if isinstance(records, dict) else ()), stored.get("index"), stored.get("documents")]
+    return max(1, sum(len(one["files"]) for one in held if isinstance(one, dict) and isinstance(one.get("files"), list)))
 
 
 def forget(path: Union[str, Path]) -> None:

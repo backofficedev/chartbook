@@ -942,14 +942,28 @@ data in mind.
     about each file of every snapshot in the store. The line says nothing of what a sweep finds,
     and is planned without one.
   - Each record of the pipeline was opened and parsed ten times over. It is read once by the
-    store and once as a snapshot, for a pipeline with up to seven snapshots in the store. What
-    is remembered of snapshots read is the eight read last *(found by review, 2026-11-21: every
-    one read was held until the process ended, each with an entry for every file of its
-    snapshot)*. **What this costs:** past eight, each pass over the pipeline's history opens
-    its records again, and a snapshot makes four passes. Counted, the records opened as
-    snapshots by one `chartbook snapshot`: 5 with 4 snapshots there, 18 with 8, 50 with 12, 82
-    with 20, where the store's own reader opens 21. Not yet decided: fewer passes, or a bound by
-    what the records hold in place of their number.
+    store and once as a snapshot. What is remembered of snapshots read is bounded by what the
+    records hold, and not by how many there are: the snapshots remembered list 250,000 files at
+    most in all (about a hundred megabytes), the least recently read going first, and one record
+    that lists more is remembered alone. *(Found by review, 2026-11-21: every snapshot read was
+    held until the process ended, each with an entry for every file of its snapshot, so a
+    process that read every record of a store held them all. One real record lists 127,676
+    files and another 9, which is why the bound is not a number of records: eight records,
+    tried first, had one `chartbook snapshot` open records 82 times for a pipeline with 20
+    snapshots.)* Counted for a table of 2,000 files, the records one `chartbook snapshot` opens
+    as snapshots:
+
+    | Snapshots of the pipeline in the store | Records opened as snapshots | Files the remembered ones list |
+    |---|---|---|
+    | 4 | 5 | 10,035 |
+    | 8 | 9 | 18,081 |
+    | 12 | 13 | 26,143 |
+    | 20 | 21 | 42,315 |
+
+    Each once: those there, and the one it makes. **What this leaves:** a pipeline whose records
+    list more than 250,000 files between them (two snapshots of a table of 127,676 files) has
+    the ones that do not fit opened again at each pass over its history, of which a snapshot
+    makes four. Fewer passes would end that, and is not built.
 
   The second look could take what the first was told, and be no question at all. It stays: it
   is what finds a file lost between the two.

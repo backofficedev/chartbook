@@ -1180,64 +1180,107 @@ class TestARecordIsReadOnce:
         assert snapshot.read(taken.path).content() == taken.content()
 
 
-class TestWhatReadRemembersIsSmall:
+class TestWhatReadRemembersIsBoundedByWhatTheRecordsHold:
     """`snapshot.read` kept every snapshot it had read until the process ended, each with an entry for every file of its snapshot: a process that reads every record of a store (a catalog built, a `store gc` planned) held them all (found by review, 2026-11-21).
 
-    It keeps the few one command reads again and again: the eight read
-    last, the least recently read going first. And a record its store
-    removes is forgotten, as the store's own reader forgets it.
+    What it remembers is bounded by the files the records list, and not by
+    how many records there are: one real record lists 127,676 files and
+    another 9. The snapshots remembered list 250,000 files at most in all
+    (about a hundred megabytes), the least recently read going first, and
+    one that lists more than that is remembered alone. A bound of eight
+    records, tried first, lost the saving exactly where a pipeline has a
+    history: with 20 snapshots in the store, one `chartbook snapshot`
+    opened records 82 times. And a record its store removes is forgotten,
+    as the store's own reader forgets it.
     """
 
+    BOUND = 20
+
     @pytest.fixture
-    def records(self, tmp_path, store) -> list:
-        """Ten complete snapshots of one pipeline, by their records, with nothing remembered of them."""
+    def records(self, tmp_path, store, monkeypatch) -> list:
+        """Ten complete snapshots of one pipeline that list one file each, by their records; nothing is remembered of them, and the bound is twenty files."""
         from chartbook import snapshot
 
-        assert snapshot.READ_KEPT == 8
+        assert snapshot.READ_KEPT_FILES == 250_000
+        monkeypatch.setattr(snapshot, "READ_KEPT_FILES", self.BOUND)
         scratch = tmp_path / "files"
         made = [_sized(FolderStore(store.root), scratch, {"a": bytes([65 + number]) * 10}, number, complete=True) for number in range(10)]
         snapshot._read_snapshots.clear()
         return made
+
+    def _of(self, tmp_path, store, files: int, number: int) -> Path:
+        """One more complete snapshot of the pipeline, which lists *files* files, with nothing remembered; its record."""
+        from chartbook import snapshot
+
+        content = {f"f{part:02d}": bytes([97 + number]) * (part + 1) for part in range(files)}
+        record = _sized(FolderStore(store.root), tmp_path / "files", content, number, complete=True)
+        snapshot._read_snapshots.clear()
+        return record
 
     def _remembered(self) -> list:
         from chartbook import snapshot
 
         return [Path(record).parent.parent.name for record in snapshot._read_snapshots]
 
-    def test_the_ninth_record_read_pushes_the_first_out(self, records):
+    def _listed(self) -> int:
         from chartbook import snapshot
 
-        read = [snapshot.read(record) for record in records[:8]]
-        assert self._remembered() == [record.parent.parent.name for record in records[:8]]
-        assert all(snapshot.read(record) is taken for record, taken in zip(reversed(records[:8]), reversed(read)))
-        snapshot._read_snapshots.clear()
-        for record in records[:9]:
+        return sum(files for _, _, files in snapshot._read_snapshots.values())
+
+    def test_a_record_weighs_the_files_it_lists(self, tmp_path, store):
+        """Those of each asset, of its index and of its documents: every file in its folder but the record."""
+        from chartbook import snapshot
+
+        project = _pipeline(tmp_path.resolve() / "project", 12)
+        made = snapshot.make(project, store=store, made_at=LONG_AGO.format(0))
+        kept = _files_of(made.kept.folder) - {"_chartbook/snapshot.json"}
+        assert len([name for name in kept if "/parts/" in name]) == 12
+        assert snapshot._how_many_listed(snapshot.read(made.snapshot.path)) == len(kept)
+        assert snapshot._how_many_listed(snapshot.Snapshot("acme/sized", COMMIT, "", LONG_AGO.format(0))) == 1  # one that lists none
+
+    def test_many_small_records_all_stay(self, records):
+        from chartbook import snapshot
+
+        read = [snapshot.read(record) for record in records]
+        assert self._remembered() == [record.parent.parent.name for record in records] and self._listed() == 10
+        for _ in range(3):  # each pass over the history is handed what the first read
+            assert all(snapshot.read(record) is taken for record, taken in zip(records, read))
+
+    def test_a_large_one_pushes_out_the_least_recently_read(self, records, tmp_path, store):
+        from chartbook import snapshot
+
+        large = self._of(tmp_path, store, 15, 10)
+        read = [snapshot.read(record) for record in records]
+        assert snapshot.read(records[0]) is read[0]  # read again: the least recently read is now the second
+        taken = snapshot.read(large)
+        # Fifteen files, where ten were listed and the bound is twenty: the five least recently read went
+        assert self._remembered() == [record.parent.parent.name for record in [*records[6:], records[0], large]]
+        assert self._listed() == self.BOUND
+        assert snapshot.read(large) is taken and snapshot.read(records[0]) is read[0] and snapshot.read(records[9]) is read[9]
+        again = snapshot.read(records[1])  # one that went is read again, as it is now
+        assert again is not read[1] and again.made_at == LONG_AGO.format(1) and self._listed() <= self.BOUND
+
+    def test_one_record_over_the_bound_is_remembered_alone(self, records, tmp_path, store):
+        from chartbook import snapshot
+
+        huge = self._of(tmp_path, store, self.BOUND + 5, 10)
+        for record in records:
             snapshot.read(record)
-        assert self._remembered() == [record.parent.parent.name for record in records[1:9]]
-        again = snapshot.read(records[0])  # read again, as it is now, and the second goes for it
-        assert again.made_at == LONG_AGO.format(0)
-        assert self._remembered() == [record.parent.parent.name for record in [*records[2:9], records[0]]]
+        taken = snapshot.read(huge)
+        assert self._remembered() == [huge.parent.parent.name] and self._listed() == self.BOUND + 5
+        assert snapshot.read(huge) is taken and snapshot.read(huge) is taken  # it is the one being read again and again
+        snapshot.read(records[0])
+        assert self._remembered() == [records[0].parent.parent.name]  # and the next record read puts it out
 
-    def test_one_read_again_is_not_the_next_to_go(self, records):
+    def test_however_many_records_a_process_reads_it_holds_no_more(self, records, tmp_path, store):
         from chartbook import snapshot
 
-        first = snapshot.read(records[0])
-        for record in records[1:8]:
-            snapshot.read(record)
-        assert snapshot.read(records[0]) is first  # the least recently read is now the second
-        snapshot.read(records[8])
-        assert records[1].parent.parent.name not in self._remembered()
-        assert snapshot.read(records[0]) is first and len(self._remembered()) == 8
-
-    def test_however_many_records_a_process_reads_it_holds_eight(self, records):
-        from chartbook import snapshot
-
+        more = [self._of(tmp_path, store, 6, number) for number in range(10, 16)]
         for _ in range(3):
-            for record in records:
+            for record in [*records, *more]:
                 snapshot.read(record)
-                assert len(snapshot._read_snapshots) <= 8
-        assert len(snapshot._read_snapshots) == 8
-        assert snapshot.all_snapshots(FolderStore(records[0].parents[4])) and len(snapshot._read_snapshots) == 8
+                assert self._listed() <= self.BOUND
+        assert snapshot.all_snapshots(FolderStore(records[0].parents[4])) and self._listed() <= self.BOUND
 
     def test_a_record_the_store_removes_is_forgotten(self, tmp_path, store):
         from chartbook import snapshot
