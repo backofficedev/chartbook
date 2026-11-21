@@ -1404,6 +1404,19 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 
 Every snapshot is a whole version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and says of each which folder keeps it. A snapshot is listed as **complete** where its folder holds every file of its version, each in its own place, so that the folder can be read, copied or sent as it is; and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. Which of the two `chartbook snapshot` makes, it decides by itself and says ({ref}`chartbook snapshot <snapshot-complete-or-increment>`); `chartbook snapshot --complete` makes a complete one. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it, and an increment may keep its files there: `chartbook store gc` removes snapshots, an increment with its own folder, and a complete one once no increment that stays builds on it. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
 
+The size on a line is the one the snapshot's record gives for its folder. **A snapshot that lacks files its record names** (not in the store, or not at their size: a sync that has not finished, a folder emptied by hand) says how many of how many, in the same words whether it is complete or an increment, and one line below the listing names the command that says which:
+
+```console
+$ chartbook store ls acme/news_headlines
+acme/news_headlines (2 snapshot(s))
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here, lacks 38 of its 44 file(s)
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6, lacks 38 of its 44 file(s)
+A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
+What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.
+```
+
+It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
+
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
 ### store verify
@@ -1424,15 +1437,19 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and every one that is missing there, or has other bytes, is said with the snapshot's name, a snapshot's files together, though another snapshot has the same bytes:
+In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and every one that is missing there, or has other bytes, is said with the snapshot's name, a snapshot's files together, though another snapshot has the same bytes. What those lines add up to comes first, since on a store that has lost many files they run to thousands: how many files of how many snapshots, and one line for each snapshot that has something wrong, with its pipeline, its folder's name and how many files, a pipeline's snapshots together and oldest first:
 
 ```console
 $ chartbook store verify
+2 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:
+  acme/parted  2026-11-19T140200Z_4f2a91c0e1b2  2 file(s)
 sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
 sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
 
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
+
+A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
 
 A file that snapshots kept as increments keep in the complete snapshot they build on is one place in the store: it is read once and said once, under the name it has in that folder whatever name each increment has for it, with that snapshot's name, and with how many of them keep it there:
 

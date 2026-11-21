@@ -4153,6 +4153,10 @@ def store_ls(pipeline, store_name):
     are in that one's folder. A snapshot is removed with `chartbook store
     gc`, never by hand.
 
+    The size is the one a snapshot's record gives. Where files its record
+    names are not in the store, or not at their size, its line says how
+    many of how many it lacks, and `chartbook store verify` names each.
+
     A store that ChartBook 0.5 laid out keeps each file once:
     there an increment's other files may be in several snapshots' folders.
 
@@ -4170,7 +4174,7 @@ def store_ls(pipeline, store_name):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     shown = unreachable = unread = 0
-    said_complete = said_shared = False
+    said_complete = said_shared = said_lacking = False
     for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
@@ -4225,6 +4229,12 @@ def store_ls(pipeline, store_name):
             note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
+            # The size is its record's. What its record names and is not where it says, by sizes as every
+            # ordinary question of the store is asked, is said in the same words of either kind
+            lacking = _files_it_lacks(the_store, record)
+            if lacking:
+                note += f", lacks {lacking[0]:,} of its {lacking[1]:,} file(s)"
+                said_lacking = True
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
             click.echo(f"  {record.folder.name}  {made}  {record.commit[:7]}  {kind:<10} {_format_bytes(here)} here{note}")
             shown += 1
@@ -4245,6 +4255,30 @@ def store_ls(pipeline, store_name):
     if said_complete or said_shared:
         # One line: the store's README says how snapshots are removed
         click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
+    if said_lacking:
+        click.echo("What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.")
+
+
+def _files_it_lacks(the_store, record):
+    """For `store ls`: how many files a snapshot's record names that are not where it says, and how many it names in all; None where it lacks none.
+
+    By sizes, with nothing read (:meth:`chartbook.store.Store.holes_of`),
+    of a complete snapshot and of an increment alike: an increment's
+    files are in two folders, and one missing from either is one it lacks.
+    A store that cannot say (another kind, or a record it cannot follow
+    now) says nothing here, and `store verify` is what checks a store.
+    """
+    from chartbook.store import StoreError
+
+    holes_of = getattr(the_store, "holes_of", None)
+    try:
+        holes = list(holes_of(record.path)) if callable(holes_of) else []
+    except (OSError, ValueError, StoreError):
+        return None
+    if not holes:
+        return None
+    named = {file.path for asset in record.assets for file in asset.files} | set(holes)
+    return len(holes), len(named)
 
 
 def _stores_to_list(store_name):
@@ -4865,6 +4899,10 @@ def store_verify():
     once, under the name it has there, with that snapshot's name and how
     many of them keep it there.
 
+    Ahead of the lines for each file comes what they add up to: how many
+    files of how many snapshots, and one line for each such snapshot,
+    with its pipeline, its folder's name and how many files.
+
     Examples:
         chartbook store verify
         CHARTBOOK_STORE=/shared/store chartbook store verify
@@ -4879,6 +4917,10 @@ def store_verify():
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
+    # A count for each snapshot first: the lines for each file run to thousands where a store has lost many,
+    # and what they add up to was only to be had by counting them
+    for line in _wrong_by_snapshot(the_store, problems):
+        click.echo(line)
     for problem in problems:
         click.echo(problem.format())
     if problems:
@@ -4891,6 +4933,43 @@ def store_verify():
         )
         raise SystemExit(1)
     click.echo(f"{the_store}: OK ({total} object(s))")
+
+
+def _wrong_by_snapshot(the_store, problems) -> list:
+    """For `store verify`: how many files are wrong in how many snapshots, and one line for each such snapshot, to print ahead of the lines for each file.
+
+    A problem is of the snapshot in whose folder its file is, or is
+    missing from (:attr:`chartbook.store.StoreProblem.path`), which for a
+    file that increments keep in the complete snapshot they build on is
+    that one. Each snapshot's line has its pipeline, its folder's name and
+    how many of its files are wrong, a pipeline's snapshots together,
+    oldest first. What is wrong outside any snapshot the store lists (an
+    object no pipeline owns, a folder that is not read) has its own line
+    below and none here; with nothing wrong in any snapshot, or in a store
+    that lists no snapshots, there is nothing to say.
+    """
+    from chartbook.store import StoreError
+
+    records = getattr(the_store, "records", None)
+    if not problems or not callable(records):
+        return []
+    try:
+        snapshots = {record.folder: record for record in records() if record.readable}
+    except (OSError, ValueError, StoreError):
+        return []
+    counts: dict = {}
+    for problem in problems:
+        if problem.path in snapshots:
+            counts[problem.path] = counts.get(problem.path, 0) + 1
+    if not counts:
+        return []
+    lines = [
+        f"{sum(counts.values()):,} file(s) of {len(counts):,} snapshot(s) are missing or are not what their records say. "
+        f"By snapshot, and then each file:"
+    ]
+    for folder in sorted(counts, key=lambda folder: (snapshots[folder].pipeline, snapshots[folder].made_at, folder.name)):
+        lines.append(f"  {_printable(snapshots[folder].pipeline)}  {folder.name}  {counts[folder]:,} file(s)")
+    return lines
 
 
 def _printable(text) -> str:

@@ -264,6 +264,57 @@ class TestStoreLs:
             "A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.",
         ]
 
+    #: What follows the listing where a snapshot lacks a file, once
+    VERIFY_NAMES_EACH = "What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one."
+
+    @staticmethod
+    def _names(folder: Path) -> int:
+        """How many files a snapshot's record names, in whichever folder each is."""
+        from tests.increments import _parts
+
+        document = json.loads((folder / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+        return len({entry["path"] for part in _parts(document) for entry in part["stored"]["files"]})
+
+    def test_a_snapshot_that_lacks_a_file_of_its_own_says_how_many_of_how_many(self, kept, store):
+        """Found on a real store: `complete   2.7 GB here`, of a snapshot whose folder had 8 of its 9,267 files. The size is its record's."""
+        complete, increments, taken, _ = kept
+        before = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        holed = increments[0]
+        _lose(holed / "_output" / "curve.html")
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0, result.output
+        lines = result.output.splitlines()
+        (was,) = [line for line in before if line.split()[:1] == [holed.name]]
+        assert f"{was}, lacks 1 of its {self._names(holed)} file(s)" in lines
+        # Every other line is as it was, and the command that names each file is named once, below the listing
+        assert [line for line in lines if line not in before] == [f"{was}, lacks 1 of its {self._names(holed)} file(s)", self.VERIFY_NAMES_EACH]
+        assert lines[-1] == self.VERIFY_NAMES_EACH and len(lines) == len(before) + 1
+
+    def test_a_complete_one_and_an_increment_on_it_say_it_in_the_same_words(self, kept, store):
+        """A file missing from the complete snapshot's folder is one each increment that keeps it there lacks too."""
+        complete, increments, taken, _ = kept
+        before = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        _lose(complete / "_data" / "treasury.parquet")
+        lines = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        for folder in (complete, *increments):
+            (was,) = [line for line in before if line.split()[:1] == [folder.name]]
+            (now,) = [line for line in lines if line.split()[:1] == [folder.name]]
+            assert now == f"{was}, lacks 1 of its {self._names(folder)} file(s)"
+        assert lines.count(self.VERIFY_NAMES_EACH) == 1 and lines[-1] == self.VERIFY_NAMES_EACH
+
+    def test_it_is_asked_by_sizes_and_a_file_with_other_bytes_at_its_size_is_store_verifys_to_find(self, kept, store):
+        complete, increments, taken, _ = kept
+        before = CliRunner().invoke(main, ["store", "ls"]).output
+        damaged = complete / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))
+        store_module._found_whole.clear()
+        assert CliRunner().invoke(main, ["store", "ls"]).output == before and "lacks" not in before
+        # Shorter than its record says, as a sync that has brought part of it leaves it: not there at its size
+        damaged.write_bytes(b"half")
+        lines = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert len([line for line in lines if line.endswith(" file(s)") and ", lacks 1 of its " in line]) == 3 and lines[-1] == self.VERIFY_NAMES_EACH
+
 
 class TestForAPersonWhoOpensTheFolders:
     def test_each_pipelines_folder_says_what_it_holds(self, kept, store):
@@ -320,6 +371,13 @@ class TestDamaged:
         assert [problem.message for problem in fresh.verify()] == [
             f"_data/treasury.parquet is not in the store (the snapshot {complete.name}), and 2 snapshots kept as increments on it keep it there"
         ]
+        # And counted once, ahead of that line, for the snapshot whose folder it is missing from
+        said = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
+        assert said[:2] == [
+            "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {complete.name}  1 file(s)",
+        ]
+        assert said[2].endswith(", and 2 snapshots kept as increments on it keep it there") and said[3] == ""
         for reader in readers:
             with pytest.raises(AssetNotPinnedError) as refused:
                 data.path("acme/rates:treasury", project_dir=reader)
