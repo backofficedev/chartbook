@@ -17,6 +17,8 @@ A 0.5.2 was prepared on 2026-11-04 and never published; what it held is at the e
 
 **On a synced folder the move takes longer.** Measured on Google Drive for desktop on Windows, it took 40 to 55 ms a file, against 3 ms on a local disk: minutes for a store of a few thousand files, and up to an hour for one of 50,000 to 75,000. If it stops, type the command again, and it goes on where it stopped.
 
+**Where the move would copy much, remove old snapshots first, with ChartBook 0.5.** `chartbook store migrate --dry-run` says what the store takes now and what it will take: older snapshots that share files with each other that the newest lacks are each given their own copy, and in a synced folder every copied byte is uploaded again. A snapshot that is removed first is not copied, and this version removes nothing from a store of 0.5. So that is done with `chartbook store gc` of ChartBook 0.5, from an environment that still has it (`uvx --from 'chartbook==0.5.1' chartbook store gc --dry-run`), on a machine whose lockfiles this version has not written again yet (0.5 stops at a lockfile it cannot read, and removes nothing); and then the store is moved.
+
 **A lockfile is written again once, and 0.5 cannot read what this version writes.** The first `chartbook pin`, `pin --update` or `run` after you upgrade writes `chartbook.lock` in its new version, without its charts and notebooks, and says so. No pin moves. ChartBook 0.5, given that lockfile, says only `its schema is 'chartbook/lock/v2', and this version of ChartBook reads 'chartbook/lock/v1'`. So where your `chartbook.toml` says which ChartBook it needs, `chartbook pin` and `chartbook pin --update` raise that line, and 0.5 then says what to install, with the command:
 
 ```text

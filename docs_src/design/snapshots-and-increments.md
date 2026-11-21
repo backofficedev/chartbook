@@ -173,12 +173,19 @@ does not write. `chartbook store migrate` moves it to this version's; an earlier
 not read it afterwards.
 
 $ chartbook store migrate
-~/.chartbook/store: 3 pipelines, 5 snapshots
-  3 become complete snapshots and 2 become increments on them
-  2 folders that only held files for later snapshots go, once their files are moved
-  nothing is copied: every file is moved
-Proceed? [y/N]: y
-Moved. The store has the layout of ChartBook 0.6.
+The store at /Users/x/.chartbook/store has the layout of ChartBook 0.5: 3 pipeline(s), 5 snapshot(s).
+  3 snapshot(s) become complete (0 of them made by a pin), 2 become increments on the newest of their pipeline.
+  214 file(s), 23.4 MB, are moved inside the store by rename: nothing is copied or uploaded again for these.
+  0 file(s), 0 bytes, are copied: each is in two folders that must each hold it.
+  What is left of pipelines/ goes aside whole, under _chartbook/left-by-0.5/: its old records and notes, and 2 file(s) that no record names. Nothing is removed.
+Move it? [y/N]: y
+The store at /Users/x/.chartbook/store has this version's layout: 3 pipeline(s), 5 snapshot(s).
+  3 snapshot(s) became complete (0 of them made by a pin), 2 became increments on the newest of their pipeline.
+  214 file(s), 23.4 MB, were moved inside the store by rename: nothing is copied or uploaded again for these.
+  0 file(s), 0 bytes, were copied: each is in two folders that must each hold it.
+  What is left of pipelines/ went aside whole, under _chartbook/left-by-0.5/: its old records and notes, and 2 file(s) that no record names. Nothing is removed.
+The old folder, with its records, is kept at _chartbook/left-by-0.5/pipelines: it may be removed once the move has been checked.
+In a synced folder, let the sync finish before another machine uses the store.
 ```
 
 ## The layout
@@ -762,10 +769,12 @@ held. What they showed, and the rule each thing gave:
   that a snapshot removed before the move is not copied**; and **missing files are said first,
   by snapshot,** with the one thing to ask before saying yes, whether a sync is still bringing
   them.
-- **On Windows, in a folder that Google Drive for desktop syncs,** a rename was at times refused
-  for a moment ("Access is denied") while something else held the file, and the move stopped
-  part way. So: **a rename that Windows refuses is tried again for two seconds** before the
-  move stops and says so. The move took 40 to 55 ms a file there, against 3 ms on a local disk.
+- **On Windows** a rename was at times refused for a moment ("Access is denied") while a virus
+  scanner or the indexer held a file just written, and the move stopped part way. That was
+  seen in the test suite's own folders, and not in some 2,200 renames in a folder that Google
+  Drive for desktop syncs. So: **a rename that Windows refuses is tried again for two seconds**
+  before the move stops and says so. In the synced folder the move took 40 to 55 ms a file,
+  against 3 ms on a local disk.
 
 A reviewer then attacked the changed mover at its edges, and these were added: every try of a
 rename looks first, so that it never lands on a file that came to be there meanwhile; a link at
