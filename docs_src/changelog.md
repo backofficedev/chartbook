@@ -151,6 +151,7 @@ Error: acme/rates: these differ from what it was built from: load_rates.py.
 - **The note** is of each source file's bytes (a plain hash; a source file is one git tracks or would add) and of `chartbook.lock`, as they were when the run's script was about to start, and of the size and time of every file the build declares. It is kept with ChartBook's own things, `~/.chartbook/cache/built/`, and nothing is written in the project or in `.git`.
 - **What it costs:** any change after a build is a difference, a word in the README among them (a second `chartbook run` takes a moment where the build has nothing to do); and `chartbook run` rebuilds what your build tool finds out of date and no more.
 - `chartbook run --snapshot` is as it was, and is held against the note of its own build. The list of what is not in your store calls a folder `built already` only where its snapshot would be made.
+- **The repository's examples show both ways** ({doc}`examples`): `yield_curve` and `rate_forecast` are built with `chartbook run` and their snapshots take no option; `fred_charts` is built by its own `doit` and taken with `--as-is`. So `doit` in `examples/` needs the examples trusted first: `chartbook trust .` there, once.
 - In Python: `chartbook.built` (`began`, `finished`, `check`, `NotHeld`); `run.what_a_build_writes()` lists what a build is to write with its files.
 
 ### Changed — `chartbook run` builds, and looks for what it was to make; `chartbook snapshot` is typed

@@ -142,11 +142,14 @@ def built_by_a_run(pipeline_dir):
 
     `chartbook run` leaves a note of each build, in ChartBook's cache on
     this machine and not in the folder, and `chartbook snapshot` holds the
-    folder against it. With the built files all there and the note gone (a
-    cache that was cleared; files copied in from another machine) doit
-    would call the build up to date, and the snapshot after it would be
-    refused. So the build is run again: the pipeline's own doit finds
-    nothing to do, and the run leaves its note.
+    folder against it. doit knows nothing of that note: with the built
+    files all there it calls the build up to date, and the snapshot after
+    it would be refused where the note is gone (a cache that was cleared;
+    files copied in from another machine) or is of other files (a run by
+    hand at another commit; a built file written over). So the build is
+    run again there, which is what the refusal would say to do: the
+    pipeline's own doit rebuilds what it finds out of date, which may be
+    nothing, and the run leaves its note.
     """
 
     def check(task, values):
@@ -232,8 +235,7 @@ def task_snapshot_yield_curve():
         # declare, and chartbook would make no new snapshot either.
         #
         # No option: `chartbook run` built these files, above, and the
-        # snapshot is held against the note that run left. A file changed
-        # since, by hand or by another tool, stops it, naming the file.
+        # snapshot is held against the note that run left.
         "actions": [f"chartbook snapshot --project-dir {YIELD_CURVE_DIR}"],
         "file_dep": [*git_files(YIELD_CURVE_DIR), *made_by(YIELD_CURVE_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],

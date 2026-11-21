@@ -43,6 +43,67 @@ def _change(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
+def _examples():
+    """The examples' own dodo, loaded as the project's dodo loads it."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("examples_dodo", Path(__file__).parents[1] / "examples" / "dodo.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestTheExamplesShowBothWays:
+    """The maintainer, 2026-11-20, on building the examples with `chartbook run`: "Yes, but also show an
+    'as is' example as well." """
+
+    BY_A_RUN = ("yield_curve", "rate_forecast")
+
+    def test_two_are_built_by_a_run_and_their_snapshots_take_no_option(self):
+        examples = _examples()
+        for name in self.BY_A_RUN:
+            folder = examples.BASE_DIR / name
+            assert getattr(examples, f"task_build_{name}")()["actions"] == [f"chartbook run --project-dir {folder}"]
+            assert getattr(examples, f"task_snapshot_{name}")()["actions"] == [f"chartbook snapshot --project-dir {folder}"]
+
+    def test_one_is_built_some_other_way_and_taken_as_it_is(self):
+        examples = _examples()
+        folder = examples.BASE_DIR / "fred_charts"
+        assert examples.task_build_fred_charts()["actions"] == [f"doit -f {folder / 'dodo.py'}"]
+        assert examples.task_snapshot_fred_charts()["actions"] == [f"chartbook snapshot --as-is --project-dir {folder}"]
+
+    def test_every_example_is_one_way_or_the_other(self):
+        examples = _examples()
+        assert {folder.name for folder in examples.PIPELINE_DIRS} == {*self.BY_A_RUN, "fred_charts"}
+
+    def test_a_build_by_a_run_is_up_to_date_only_while_its_snapshot_would_be_made(self, demo, store):
+        """doit sees the built files and knows nothing of the note: with the files all there and the note
+        gone, or of other files, it would call the build up to date and the snapshot after it would be
+        refused."""
+        up_to_date = _examples().built_by_a_run(demo)
+        assert up_to_date(None, {}) is False  # no run has built it
+        assert _run().exit_code == 0
+        assert up_to_date(None, {}) is True and _snapshot().exit_code == 0
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")  # written over by hand: the snapshot would stop
+        assert up_to_date(None, {}) is False and _snapshot().exit_code == 1
+        assert _run().exit_code == 0 and up_to_date(None, {}) is True
+        built.note_path(demo).unlink()  # a cache that was cleared
+        assert up_to_date(None, {}) is False
+
+    def test_each_build_by_a_run_asks_whether_its_own_folder_would_be_held(self, monkeypatch):
+        from types import SimpleNamespace
+
+        examples = _examples()
+        asked = []
+        monkeypatch.setattr(built, "would_hold", lambda directory, pipeline: asked.append((directory, pipeline)) or True)
+        for name in self.BY_A_RUN:
+            for check in getattr(examples, f"task_build_{name}")()["uptodate"]:
+                check(SimpleNamespace(value_savers=[]), {})
+        assert asked == [(examples.BASE_DIR / name, f"backofficedev/{name}") for name in self.BY_A_RUN]
+        # And the one that no run builds asks for no note
+        assert not examples.task_build_fred_charts().get("uptodate")
+
+
 class TestTheUsualWay:
     def test_run_commit_snapshot_is_made_and_nothing_more_is_said(self, demo, store):
         """Work that is not committed, a run, a commit of that same work, a snapshot: the commit is of what the build ran on."""

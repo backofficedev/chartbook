@@ -14,8 +14,11 @@ The `_data`, `_output`, and built `docs/` artifacts are generated rather than co
 ```console
 git clone https://github.com/backofficedev/chartbook
 cd chartbook/examples
+chartbook trust .
 doit
 ```
+
+`chartbook trust .` says the examples are yours to run. Two of them are built with `chartbook run`, which runs a pipeline's build script only in a folder you have trusted ({ref}`chartbook trust <chartbook-trust>`). Without it, `doit` stops at `yield_curve` and says which command trusts it.
 
 Individual pipelines have their own inputs (`fred_charts` and `yield_curve` pull from FRED), so the `chartbook.toml` files are also worth reading on their own as complete, real-world manifests.
 
@@ -23,6 +26,37 @@ Individual pipelines have their own inputs (`fred_charts` and `yield_curve` pull
 
 A snapshot needs everything in the pipeline's folder to be committed, so if you edit `examples/yield_curve`, commit before running `doit` in `examples/`.
 
-Each example names its build command, `[scripts] build = "doit"`. The same three steps by hand: `chartbook run` in `examples/yield_curve` builds that pipeline, `chartbook snapshot` there declares the build ready, and `chartbook run` in `examples/rate_forecast` pins it and builds `rate_forecast`. That last command does not build `yield_curve`: a folder you depend on is its owner's to build.
+## Two ways to a snapshot
+
+`examples/dodo.py` shows both ways of declaring a build ready.
+
+**Built by `chartbook run`: `yield_curve` and `rate_forecast`.** Each names its build command, `[scripts] build = "doit"`, and `examples/dodo.py` types what you would type by hand:
+
+```console
+chartbook run --project-dir yield_curve         # runs its build script, and leaves a note of the build
+chartbook snapshot --project-dir yield_curve    # held against that note
+chartbook run --project-dir rate_forecast       # pins yield_curve's snapshot, and builds rate_forecast
+chartbook snapshot --project-dir rate_forecast
+```
+
+The second `chartbook run` does not build `yield_curve`: a folder you depend on is its owner's to build. And a snapshot typed with no option is {ref}`held against what the run built <snapshot-held-against-a-run>`: where a file was changed after the build, it stops and names the file.
+
+**Built some other way, and taken as it is: `fred_charts`.** `examples/dodo.py` builds this one with the pipeline's own `doit`, as a job elsewhere or a Makefile would. No `chartbook run` built its files, so there is nothing to hold them against, and its snapshot is typed with `--as-is`:
+
+```console
+doit -f fred_charts/dodo.py
+chartbook snapshot --as-is --project-dir fred_charts
+```
+
+Without the option, that snapshot stops and gives both ways on:
+
+```text
+$ cd fred_charts
+$ chartbook snapshot
+Error: backofficedev/fred_charts has not been built by `chartbook run` here, so there is nothing to hold its files against.
+  Build it: `chartbook run` (a build with nothing left to do takes a moment). Or, to take what is on disk as it is: `chartbook snapshot --as-is`.
+```
+
+`--as-is` is for files you know are right and that ChartBook did not see built. Where `chartbook run` can build the pipeline, build it that way and type no option.
 
 The scaffold produced by `chartbook init` is itself a smaller worked example — see the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template).

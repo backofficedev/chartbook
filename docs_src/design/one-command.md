@@ -500,9 +500,14 @@ What building it settled:
   `--as-is`:** fifty-four of them, in seventeen files.
 - **This repository's own examples, and the upgrade notes, were scripts that snapshot.** *(Found
   by the first full build on the branch.)* `examples/dodo.py` builds each example with that
-  example's doit and then typed `chartbook snapshot`: it types `--as-is` now, and says why.
+  example's doit and then typed `chartbook snapshot`: it typed `--as-is`, and said why.
   It could build with `chartbook run` instead, which needs the examples trusted on the machine
-  that runs it: the maintainer's to choose. And the notes for upgrading from 0.5 sent every
+  that runs it. The maintainer chose, on 2026-11-20: "Yes, but also show an 'as is' example as
+  well." So `yield_curve` and `rate_forecast` are built with `chartbook run` and their snapshots
+  take no option, and `fred_charts` is still built by its own doit and taken with `--as-is`
+  (`docs_src/examples.md`). A build by `chartbook run` is up to date there only while its snapshot
+  would be made, since doit sees the built files and knows nothing of the note. And the notes
+  for upgrading from 0.5 sent every
   pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
   `--as-is`.
 - **In a repository git does not trust, a run leaves no note and says nothing of it,** since it
