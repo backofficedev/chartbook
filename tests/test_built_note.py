@@ -43,6 +43,191 @@ def _change(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
+def _examples():
+    """The examples' own dodo, loaded as the project's dodo loads it."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("examples_dodo", Path(__file__).parents[1] / "examples" / "dodo.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestTheExamplesShowBothWays:
+    """The maintainer, 2026-11-20, on building the examples with `chartbook run`: "Yes, but also show an
+    'as is' example as well." """
+
+    BY_A_RUN = ("yield_curve", "rate_forecast")
+
+    def test_two_are_built_by_a_run_and_their_snapshots_take_no_option(self):
+        examples = _examples()
+        for name in self.BY_A_RUN:
+            folder = examples.BASE_DIR / name
+            assert getattr(examples, f"task_build_{name}")()["actions"] == [
+                (examples.say_what_is_taken_as_it_is, [folder]),
+                f"chartbook run --project-dir {folder}",
+            ]
+            assert getattr(examples, f"task_snapshot_{name}")()["actions"] == [f"chartbook snapshot --project-dir {folder}"]
+
+    def test_one_is_built_some_other_way_and_taken_as_it_is(self):
+        examples = _examples()
+        folder = examples.BASE_DIR / "fred_charts"
+        assert examples.task_build_fred_charts()["actions"] == [f"doit -f {folder / 'dodo.py'}"]
+        assert examples.task_snapshot_fred_charts()["actions"] == [f"chartbook snapshot --as-is --project-dir {folder}"]
+
+    def test_every_example_is_one_way_or_the_other(self):
+        examples = _examples()
+        assert {folder.name for folder in examples.PIPELINE_DIRS} == {*self.BY_A_RUN, "fred_charts"}
+
+    def test_a_build_by_a_run_is_up_to_date_only_while_the_folder_is_what_the_run_built(self, demo, store):
+        """doit sees the built files and knows nothing of the note: with the files all there it would call
+        the build up to date, and the snapshot after it would stop. There `chartbook run` is typed again,
+        as a person types it before a snapshot. Everything is committed at each step, so that each
+        snapshot here stops, or is made, for the note alone."""
+        up_to_date = _examples().built_by_a_run(demo)
+
+        def stops_for(words: str) -> bool:
+            result = _snapshot()
+            return result.exit_code == 1 and words in result.output
+
+        assert up_to_date(None, {}) is False  # no run has built it, and nothing is built
+        assert _run().exit_code == 0
+        assert up_to_date(None, {}) is True and _snapshot().exit_code == 0
+        _change(demo / "load.py", "x = 1\n")  # source the build did not run on
+        _committed(demo)
+        assert up_to_date(None, {}) is False and stops_for("these differ from what it was built from: load.py (new)")
+        assert _run().exit_code == 0 and up_to_date(None, {}) is True and _snapshot().exit_code == 0
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")  # a built file written over
+        assert up_to_date(None, {}) is False and stops_for("these differ from what its build left: out.csv")
+        assert _run().exit_code == 0 and up_to_date(None, {}) is True and _snapshot().exit_code == 0
+        built.note_path(demo).unlink()  # a cache that was cleared
+        assert up_to_date(None, {}) is False and stops_for("has not been built by `chartbook run` here")
+        _change(demo / "chartbook.toml", "[project\n")  # and what cannot be read is the run's to say
+        assert up_to_date(None, {}) is False
+
+    def test_work_that_is_not_committed_is_the_snapshots_to_say_and_not_the_checks(self, demo, store):
+        """The check asks whether the folder is what the last run built, and no more: a run over work
+        that is not committed leaves the build up to date, and the snapshot stops for the commit."""
+        up_to_date = _examples().built_by_a_run(demo)
+        _change(demo / "load.py", "x = 1\n")
+        assert _run().exit_code == 0
+        assert up_to_date(None, {}) is True
+        result = _snapshot()
+        assert result.exit_code == 1 and "differ" not in result.output and "has not been built" not in result.output
+
+    def test_after_as_is_typed_by_hand_the_build_is_typed_again_and_not_the_refusal(self, demo, store):
+        """Found by the second review: with a built file left for the snapshot to stop at, the way the
+        refusal itself prints, `--as-is`, made the snapshot, and `doit` then stopped at the same step
+        for good."""
+        up_to_date = _examples().built_by_a_run(demo)
+        assert _run().exit_code == 0
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+        assert _snapshot("--as-is").exit_code == 0
+        assert up_to_date(None, {}) is False  # so the run is typed, and the snapshot after it is made
+        assert _run().exit_code == 0 and _snapshot().exit_code == 0
+
+    def test_the_built_files_a_run_finds_changed_are_named_before_it_is_typed(self, demo, store, capsys):
+        """Found by the review, twice: typed again over a built file written over by hand, the build
+        finds nothing to do, the run notes the file as it now is, and the snapshot is made of it with
+        nothing said. Typed alone, that snapshot would have stopped and named it."""
+        say = _examples().say_what_is_taken_as_it_is
+
+        def said() -> str:
+            assert say(demo) is None  # doit takes None for an action that went well
+            return capsys.readouterr().out
+
+        assert said() == ""  # no run has built it: nothing was left to differ from
+        assert _run().exit_code == 0
+        capsys.readouterr()
+        assert said() == ""  # as the run left it
+        _change(demo / "load.py", "x = 1\n")
+        assert said() == ""  # source alone: the build is what answers that
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+        assert said() == (
+            "demo: not as the last `chartbook run` left them: out.csv. This run takes as it is each one its "
+            "build does not write anew.\n"
+        )
+        _change(demo / "chartbook.toml", "[project\n")
+        assert said() == ""  # the run says what is wrong with it
+        (demo / "chartbook.toml").unlink()
+        assert said() == ""  # and that there is none
+
+    def test_a_built_file_that_is_gone_is_not_said_to_be_taken(self, demo, store, capsys):
+        """Found by the third review: "out.csv (gone) … takes as it is". The build writes it, or the run says it is not there."""
+        say = _examples().say_what_is_taken_as_it_is
+        assert _run().exit_code == 0
+        capsys.readouterr()
+        (demo / "out.csv").unlink()
+        say(demo)
+        assert capsys.readouterr().out == ""
+
+    def test_where_no_finished_note_is_there_nothing_says_how_a_file_was_left(self, demo, store, capsys):
+        """A note of a build that did not end, or of another machine: a built file written over is not told from one the build left."""
+        say = _examples().say_what_is_taken_as_it_is
+        assert _run().exit_code == 0
+        note = _note(demo)
+        for unfinished in ({**note, "state": "building"}, {**note, "machine": "another"}):
+            built.note_path(demo).write_text(json.dumps(unfinished), encoding="utf-8", newline="\n")
+            _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+            capsys.readouterr()
+            say(demo)
+            assert capsys.readouterr().out == ""
+
+    def test_the_line_never_stops_a_build(self, demo, monkeypatch, capsys):
+        def fail(directory, pipeline):
+            raise RuntimeError("whatever goes wrong in the asking")
+
+        monkeypatch.setattr(built, "check", fail)
+        assert _examples().say_what_is_taken_as_it_is(demo) is None and capsys.readouterr().out == ""
+
+    def test_more_than_ten_are_counted(self, demo, monkeypatch, capsys):
+        def refuse(directory, pipeline):
+            raise built.NotHeld("differ", outputs=[f"out{n}.csv" for n in range(12)])
+
+        monkeypatch.setattr(built, "check", refuse)
+        _examples().say_what_is_taken_as_it_is(demo)
+        assert capsys.readouterr().out.startswith(
+            "demo: not as the last `chartbook run` left them: out0.csv, out1.csv, out2.csv, out3.csv, out4.csv, out5.csv, "
+            "out6.csv, out7.csv, out8.csv, out9.csv, and 2 more. This run"
+        )
+
+    def test_files_that_are_not_committed_are_not_said_to_be_a_runs(self, demo, monkeypatch, capsys):
+        """A pipeline with no `build` script is refused for what it declares and has not committed: no run left those."""
+        def refuse(directory, pipeline):
+            raise built.NotHeld("not_committed", outputs=["out.csv"])
+
+        monkeypatch.setattr(built, "check", refuse)
+        _examples().say_what_is_taken_as_it_is(demo)
+        assert capsys.readouterr().out == ""
+
+    def test_each_build_by_a_run_asks_of_its_own_folder_and_pipeline(self, monkeypatch):
+        from types import SimpleNamespace
+
+        examples = _examples()
+        asked = []
+        monkeypatch.setattr(built, "would_hold", lambda directory, pipeline: asked.append((directory, pipeline)) or True)
+        for name in self.BY_A_RUN:
+            for check in getattr(examples, f"task_build_{name}")()["uptodate"]:
+                check(SimpleNamespace(value_savers=[]), {})
+        assert asked == [(examples.BASE_DIR / name, f"backofficedev/{name}") for name in self.BY_A_RUN]
+        # And the one that no run builds asks for no note
+        assert not examples.task_build_fred_charts().get("uptodate")
+
+    def test_the_project_is_not_asked_for_a_note(self, monkeypatch):
+        """The project's own dodo runs the examples' build as one task, up to date by `context()`. With
+        the commit, the store and the lockfiles as they were, no snapshot is to be made, so a note that
+        is gone needs nothing: asked there, a cleared cache would run the whole of the examples for two
+        builds with nothing to do."""
+        examples = _examples()
+        assert [id(check) for check in examples.context()] == [id(examples.AT_COMMIT), id(examples.IN_STORE), id(examples.PINNED)]
+
+    def test_each_snapshot_follows_its_own_build_and_a_moved_pin_builds_again(self):
+        examples = _examples()
+        for folder in examples.PIPELINE_DIRS:
+            assert getattr(examples, f"task_snapshot_{folder.name}")()["task_dep"] == [f"build_{folder.name}"]
+        assert any(check is examples.PINNED for check in examples.task_build_rate_forecast()["uptodate"])
+
+
 class TestTheUsualWay:
     def test_run_commit_snapshot_is_made_and_nothing_more_is_said(self, demo, store):
         """Work that is not committed, a run, a commit of that same work, a snapshot: the commit is of what the build ran on."""

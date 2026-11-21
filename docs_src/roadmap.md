@@ -106,7 +106,11 @@ PIPELINE --to NAME --keep`. A snapshot is not "published" by being made: it is i
 nobody else's.
 
 **`chartbook run --clean`:** build this commit in a clean copy, as someone who depends on it
-would, to be sure a snapshot came from the commit alone.
+would, to be sure a snapshot came from the commit alone. Until then a run takes its build tool's
+word for what is out of date: a built file changed by hand since the last run, and not rebuilt by
+the next, is noted as it is, and the snapshot holds it with nothing said. A smaller step is a line
+from `chartbook run` that names such files, as the examples' own `doit` prints one before it types
+the run; it would also name every file a build tool rebuilt between two runs.
 
 **Pinning a Delta table by its version.** Delta tables keep a history of versions, so a pin could
 name a version, `VERSION AS OF 42`, rather than copy the rows out of the warehouse. This is built,
@@ -164,3 +168,9 @@ Found by reviews and by the first runs on Windows, and left for a later version:
   folder (`\\server\…`), where the letter was typed.
 - A pipeline that another one depends on, in a network folder with no drive letter, is refused
   when its build is reached, and not before the run starts.
+- `doit` in `examples/`, typed a second time with nothing changed, types two of its three
+  `chartbook snapshot` commands again, and they make nothing: each is asked again when any
+  snapshot was made in the store since, and another example's was. `uv run doit` at the top of
+  the repository runs nothing the second time.
+- The `dodo.py` in `examples/` hands its commands their folders unquoted, so the examples do not
+  build in a checkout whose path has a space.
