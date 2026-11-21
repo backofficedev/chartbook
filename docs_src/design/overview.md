@@ -2132,8 +2132,9 @@ panel; its dependencies' pins are in the pipeline manifest section already.
 The contributing guide ({doc}`../contributing`) has setup and style. These are the things that
 are easy to miss:
 
-- **Run tests with `hatch test`**, not `pytest` directly. `hatch test --all` runs six
-  environments (Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13), and all six must pass.
+- **Run the matrix with `hatch test --all --parallel`** (`uv run doit test_all`): six
+  environments (Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13), and all six must pass. One
+  environment, quickly: `uv run pytest -q -n 8`.
 - **Build the docs with `hatch run docs:build`.** One warning is expected, about a plotly MIME
   type in `gallery.ipynb`. Any other warning is yours.
 - **A new module needs a line in `docs_src/reference/api.md`**, or the docs build warns.
