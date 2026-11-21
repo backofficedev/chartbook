@@ -1,6 +1,20 @@
 name: Tests
 
-on: [push, pull_request]
+# Every job here runs on a standard GitHub-hosted runner (ubuntu-latest, windows-latest), which costs
+# nothing for a public repository. A larger runner (a label with a core count or "large" in it) is
+# billed even for a public one: do not use one.
+#
+# A pull request is tested once (by its pull_request event), main on every push to it, and a run can be
+# started by hand. A newer push to a pull request cancels the run of the one before it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
