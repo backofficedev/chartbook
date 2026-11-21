@@ -366,7 +366,7 @@ $ chartbook run
 $ (a fix in load_rates.py) && git commit -am "Fix the day count"
 $ chartbook snapshot
 Error: acme/rates: these differ from what it was built from: load_rates.py.
-  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-is`.
 ```
 
 **3. A file was changed after the build,** by hand or by a tool run by hand.
@@ -376,7 +376,7 @@ $ chartbook run
 $ doit pull_rates
 $ git commit -am "…" && chartbook snapshot
 Error: acme/rates: these differ from what its build left: _data/rates.parquet.
-  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-is`.
 ```
 
 Where both differ, both are said, what it was built from first. A file is named with what
@@ -388,19 +388,19 @@ then how many more.
 ```text
 $ chartbook snapshot
 Error: acme/rates has not been built by `chartbook run` here, so there is nothing to hold its files against.
-  Build it: `chartbook run` (a build with nothing left to do takes a moment). Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+  Build it: `chartbook run` (a build with nothing left to do takes a moment). Or, to take what is on disk as it is: `chartbook snapshot --as-is`.
 ```
 
 ```text
 $ chartbook snapshot
-Error: acme/rates: its last build here did not finish, or is still running (it began 2026-11-20 21:14 UTC).
-  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+Error: acme/rates: its last build here failed, was stopped, or is still running (it began 2026-11-20 21:14 UTC).
+  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-is`.
 ```
 
 **5. Taking the files as they are is typed, and no longer assumed.**
 
 ```text
-$ chartbook snapshot --as-built
+$ chartbook snapshot --as-is
 acme/rates at 4f2a91c: 2 asset(s) in the store
 Snapshot made: 5 files, 23.0 MB.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
@@ -409,8 +409,8 @@ A pipeline that depends on this one gets it with `chartbook pin --update`.
 **6. A pipeline with no `build` script has nothing to be held against, and is not asked.** It
 commits what it declares, so its commit is the whole of it. *(Found by the review of the design:
 it was told to `chartbook run`, which says it has no such script, and every snapshot of it would
-have been `--as-built`.)* Where it declares a file that is not committed, that is said, with
-`--as-built`.
+have been `--as-is`.)* Where it declares a file that is not committed, that is said, with
+`--as-is`.
 
 What is settled:
 
@@ -431,12 +431,17 @@ What is settled:
   same bytes.
 - **A source file's size and time are kept beside its hash,** and it is hashed again only where
   they differ, as git does for its own index. *(From the review: a large file kept in git was
-  hashed at every run and every snapshot.)*
+  hashed at every run and every snapshot.)* With git's own exception: a file whose time of last
+  change is not earlier than the moment its hash was taken is hashed again, whatever its size
+  and time say. *(From the review's second pass: one digit changed in a parameter, saved in the
+  second the run hashed the file, keeps its size and its time.)*
 - **Files that no run built are refused too** *(the maintainer's choice)*. The check is strict,
   with a plain message, as every check here is.
-- **`chartbook snapshot --as-built` is the way past** *(the maintainer's choice of the name; the
-  session building the store's side has since said it can be read as "exactly as the run built
-  it", the opposite of what it does, and offered `--as-is`: put to the maintainer)*. Its record
+- **`chartbook snapshot --as-is` is the way past.** *(The maintainer first agreed to Claude's
+  `--as-built`. The session building the store's side said that it can be read as "exactly as
+  the run built it", the opposite of what it does, and offered `--as-is`, which cannot. The
+  maintainer, to that session, which passed it on: "I like your comment about as is. I think
+  that's good logic.")* Its record
   does not say that ChartBook ran the build, as a typed snapshot's never did. The other options
   that were typed (`--project-dir`, `--store`, `--deep`) are in the line that offers it.
 - **Where the check passes, the record says that ChartBook ran the build,** as the record of
@@ -459,16 +464,16 @@ What is settled:
 - **A note is in one of two states.** When a build's script is started, the note before it is
   replaced by one that says a build began, and when. When the build has ended and every declared
   file was found, that one is replaced by the finished note, if it is still this run's. So a
-  build that fails, is stopped, or is overtaken by another leaves "a build began", and the
-  refusal says so (scenario 4). A run that stops before its script (a pin, trust, a file that
+  build that fails, is stopped, ends without writing everything it declares, or is overtaken by
+  another leaves "a build began", and the refusal says so (scenario 4). A run that stops before its script (a pin, trust, a file that
   is kept and missing) leaves the note as it was. *(From the review: "gone when a build starts"
   was a removal, and the words after a failed build were then "has not been built", which is
   false.)* A snapshot after a run that failed was made of the rest, with what was missing
-  listed; it is now refused, or made with `--as-built`.
+  listed; it is now refused, or made with `--as-is`.
 - **Every build leaves a note, of each pipeline it builds:** the one asked for, and each one
   `--upstream` builds first, each hashed after its own pin and immediately before its own
   script. Not a git dependency, whose snapshot is the pin's. `--frozen` builds, and leaves one
-  too: it writes nothing to the project or the store, and this is neither. A script other than
+  too: it writes nothing to the project, and this note is in the cache. A script other than
   `build` (`lab`, `test`) builds nothing a snapshot holds, and leaves the note alone, also when
   a build runs it.
 - **`chartbook run --snapshot` writes the note and holds its snapshot against it in the one
@@ -486,7 +491,7 @@ What it costs:
 
 - **Any change after the build is refused, a word in the README among them.** With a build that
   rebuilds only what is out of date, `chartbook run` again takes a moment and writes a new note.
-  With one that builds everything each time, it is the whole build again, or `--as-built`,
+  With one that builds everything each time, it is the whole build again, or `--as-is`,
   whose record then does not say that ChartBook ran the build, though it did. *(From the
   review.)*
 - **The build's own account is taken, and the refusal sends people to it.** "Build again:
@@ -499,7 +504,7 @@ What it costs:
   rightly leaves most of its outputs alone would then be marked at every run.)*
 - **A build that rewrites a tracked file it does not declare is refused every time:** a notebook
   run in place, a README written by the build. The message names the files. Declare them, keep
-  them out of version control, or type `--as-built`. A project made from the template ignores
+  them out of version control, or type `--as-is`. A project made from the template ignores
   what its build writes.
 - **Only the pipeline's own folder is looked at,** as for what is not committed. Code the build
   uses from elsewhere in its repository can change, and so can an ignored file it reads (`.env`,
@@ -1019,5 +1024,5 @@ changes.
     kind of snapshot `chartbook snapshot` makes, and `--complete`, are in the order of work of
     {doc}`snapshots-and-increments`.
 12. A snapshot is of what a run built: a run leaves a note, and `chartbook snapshot` holds what
-    is committed and what is on disk against it; `--as-built`. *Decided 2026-11-20; this page
+    is committed and what is on disk against it; `--as-is`. *Decided 2026-11-20; this page
     first.*
