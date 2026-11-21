@@ -49,10 +49,6 @@ from tests.rich_store_of_0_5 import (
 
 ASIDE = "_chartbook/left-by-0.5"
 TAKEN = "file(s) {are} not where their record says, and {are} taken from where another snapshot of their pipeline keeps the same bytes: "
-NO_RECORD = (
-    "If a sync may still be bringing a folder's record, wait for it and run this again: a record that arrives after the "
-    "move goes aside, and that snapshot has to be made again."
-)
 
 
 @pytest.fixture
@@ -107,7 +103,15 @@ class TestTheStoreFound:
         print(dry.output)
         assert dry.exit_code == 0 and tree_of(root) == before and dry.output.splitlines()[-1] == "Nothing was moved."
         assert f"has the layout of ChartBook 0.5: 1 pipeline(s), 2 snapshot(s)." in said
-        assert f"  1 folder(s) hold files and have no record: acme+news/{names['a']} ({in_a} file(s)). The files in such a folder that a record names are moved with that record, and the rest goes aside. {NO_RECORD}" in said
+        # A is named for B's snapshot (B's record says the time of A's name, in a folder named a second later): no
+        # record of its own is to be waited for, and none that arrives means a snapshot to be made again
+        of_a = (
+            f"  1 folder(s) {{hold}} files and no record, and {{are}} named for a snapshot whose record {{isw}} in another folder: "
+            f"acme+news/{names['a']} ({in_a} file(s); its record {{isw}} in {names['b']}). The files in such a folder that a record "
+            f"names {{are}} moved with that record, and the rest {{goes}} aside."
+        )
+        assert of_a.format(hold="hold", are="are", isw="is", goes="goes") in said
+        assert "have no record" not in said and "wait for it" not in said and "has to be made again" not in said
         assert "  6 " + TAKEN.format(are="are") + first + " and more." in said
         # What B has of the files that R takes from A goes aside though B's record names it: counted apart from what no record names
         assert f"  {len(IN_A) + 1} file(s) that a record names go aside with the old folder too: each is a second copy, or part of one, of bytes that are moved in from another place a record names." in said
@@ -115,8 +119,9 @@ class TestTheStoreFound:
         assert names["nothing"] not in said and "missing or of another size" not in said
         # At the question, the same
         no, asked = typed("store", "migrate", input="n\n")
-        assert no.exit_code == 0 and "Move it?" in asked and NO_RECORD in asked and tree_of(root) == before
-        assert asked.index(NO_RECORD) < asked.index("Move it?")
+        in_the_dry_run = of_a.format(hold="hold", are="are", isw="is", goes="goes")
+        assert no.exit_code == 0 and "Move it?" in asked and in_the_dry_run in asked and tree_of(root) == before
+        assert asked.index(in_the_dry_run) < asked.index("Move it?")
         result, said = typed("store", "migrate", "--yes")
         print(result.output)
         assert result.exit_code == 0, result.output
@@ -124,12 +129,22 @@ class TestTheStoreFound:
         assert "1 snapshot(s) became complete (0 of them made by a pin), 1 became increments on the newest of their pipeline." in said
         assert "  6 " + TAKEN.format(are="were") + first + " and more." in said
         assert f"  {len(IN_A) + 1} file(s) that a record names went aside with the old folder too: each is a second copy, or part of one, of bytes that were moved in from another place a record names." in said
-        assert (
-            f"  1 folder(s) held files and had no record: acme+news/{names['a']} ({in_a} file(s)). The files in such a folder that "
-            f"a record names were moved with that record, and the rest went aside. A record that a sync brings for one now goes "
-            f"aside when `chartbook store migrate` is run again, and that snapshot has to be made again."
-        ) in said
-        assert "missing or of another size" not in said and "out of the store" not in said
+        assert of_a.format(hold="held", are="were", isw="was", goes="went") in said
+        assert "missing or of another size" not in said and "out of the store" not in said and "has to be made again" not in said and "look there first" not in said
+
+    def test_the_record_of_the_folder_that_had_none_is_a_second_record_when_it_arrives(self, found_store):
+        """A's own record, of B's commit and time, comes once the store is moved. The line of the first run had said that such a record means a snapshot to be made again, and the run that met it said a second record went aside: now neither run says anything is to be made again."""
+        root, names = found_store
+        b = json.loads((root / "pipelines" / "acme+news" / names["b"] / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+        assert names["a"] == b["made_at"][:19].replace(":", "") + "Z_" + b["code"]["commit"][:12]  # A's name is the time and the commit of B's record
+        first, said = typed("store", "migrate", "--yes")
+        assert first.exit_code == 0 and "has to be made again" not in said
+        arrived = root / "pipelines" / "acme+news" / names["a"] / "_chartbook" / "snapshot.json"
+        arrived.parent.mkdir(parents=True)
+        arrived.write_text(json.dumps(b, indent=2).replace(names["b"], names["a"]) + "\n", encoding="utf-8", newline="\n")
+        again, said = typed("store", "migrate", "--yes")
+        assert again.exit_code == 0 and f"1 second record(s) of a snapshot that was moved in went aside: acme+news/{names['a']}." in said
+        assert "Run that pipeline again" not in said and fresh(root).verify() == []
 
     def test_afterwards_the_store_is_whole_and_a_read_through_the_pin_gives_the_bytes_the_record_says(self, found_store, monkeypatch):
         root, names = found_store
@@ -211,8 +226,8 @@ class TestTheStoreFound:
             again, said = typed(*words)
             assert again.exit_code == 0 and "has the layout of this version already: nothing to move." in said and tree_of(root) == moved
 
-    def test_a_record_that_a_sync_brings_for_the_folder_after_the_move_goes_aside_as_the_line_said(self, found_store):
-        """What the sentence at the question promises: the record of A arrives once the store is moved."""
+    def test_a_record_of_another_snapshot_that_a_sync_brings_into_that_folder_after_the_move_is_named_to_be_made_again(self, found_store):
+        """Not A's own record (the test above), but one of a snapshot the store does not have, made in the same second: as any record that arrives on a moved store."""
         root, names = found_store
         late = json.loads((root / "pipelines" / "acme+news" / names["b"] / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
         late["made_at"] = MADE[0].replace(".000000Z", ".500000Z")  # another snapshot than B: made in the same second
@@ -373,7 +388,7 @@ class TestAFileThatIsNotWhereItsRecordSays:
     def test_the_lines_count_them_with_the_first_and_the_missing_line_is_as_true_after_as_before(self, elsewhere_store):
         root, names = elsewhere_store
         first = f"_data/q.parquet ({names['q1']}), _data/k2.parquet ({names['s1']}), _data/k1.parquet ({names['p5']}) and more."
-        missing = f"  1 file(s) a record names are missing or of another size, as before the move: _data/k6.parquet ({names['s3']}). "
+        missing = f"  1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{names['s3']}: 1 of 9 file(s)     the first: _data/k6.parquet "
         dry, said = typed("store", "migrate", "--dry-run")
         print(dry.output)
         assert dry.exit_code == 0 and "  11 " + TAKEN.format(are="are") + first in said and missing in said

@@ -549,31 +549,43 @@ class TestAFileWhereTheMoveMakesAFolder:
 
 
 class TestWhatIsMissingIsSaidAfterTheMoveToo:
-    MISSING = "2 file(s) a record names are missing or of another size, as before the move: "
+    MISSING = "  2 file(s) that a record names are missing or of another size, as before the move, in 2 snapshot(s):"
 
-    def _line(self, said: str) -> str:
-        return said[said.index(self.MISSING):].split(". ")[0]
+    def _block(self, output: str) -> list:
+        """The block that says what is missing, the last time it is said: by snapshot, with the first names; but for its last line, which says what to do, and is another before a move than after."""
+        lines = output.splitlines()
+        first = len(lines) - 1 - lines[::-1].index(self.MISSING)
+        return lines[first:next(index for index in range(first + 1, len(lines)) if not lines[index].startswith("    "))]
 
     def test_the_last_lines_name_the_missing_files_as_the_dry_run_does(self, v2):
         root, names = v2
         found = migrate_0_5.plan(root)
         assert found.missing == [(names["s1"], "_data/lost.parquet"), (names["s3"], "_data/gone.parquet")]
+        assert found.missing_in == [("acme+p", names["s1"], 1, 6), ("acme+p", names["s3"], 1, 4)]
         dry, said_dry = typed("store", "migrate", "--dry-run")
         result, said = typed("store", "migrate", "--yes")
-        assert result.exit_code == 0 and self._line(said) == self._line(said_dry)
-        assert self._line(said) == f"{self.MISSING}_data/lost.parquet ({names['s1']}), _data/gone.parquet ({names['s3']})"
-        assert "If a sync is still bringing them, wait and run again." in said_dry
-        assert "`chartbook store verify` names each. One that a sync brings later is not moved in: it goes aside with the rest when `chartbook store migrate` is run again." in said
+        assert result.exit_code == 0 and self._block(result.output) == self._block(dry.output)
+        assert self._block(result.output) == [
+            self.MISSING, f"    acme+p/{names['s1']}: 1 of 6 file(s)", f"    acme+p/{names['s3']}: 1 of 4 file(s)",
+            "    the first: _data/lost.parquet", "               _data/gone.parquet",
+        ]
+        # Said first, before the other counts; and with what to ask oneself before the move, and what is so after it
+        assert dry.output.splitlines()[1] == self.MISSING and "snapshot(s) become complete" in dry.output.splitlines()[7]
+        assert (
+            "If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards goes "
+            "aside, and does not reach its snapshot. `chartbook store verify` lists every one."
+        ) in said_dry
+        assert "`chartbook store verify` lists every one. A file that a sync brings now goes aside when `chartbook store migrate` is run again, and does not reach its snapshot." in said
 
     @pytest.mark.parametrize("journal", ["kept", "deleted"])
     def test_and_after_a_move_cut_short_and_gone_on_with(self, v2, journal):
         root, names = v2
-        said_dry = typed("store", "migrate", "--dry-run")[1]
+        dry = typed("store", "migrate", "--dry-run")[0]
         cut_at(root, lambda step: step.op == "write")
         if journal == "deleted":
             (root / migrate_0_5.JOURNAL).unlink()
         result, said = typed("store", "migrate", "--yes")
-        assert result.exit_code == 0 and self._line(said) == self._line(said_dry), said
+        assert result.exit_code == 0 and self._block(result.output) == self._block(dry.output), said
 
     def test_and_after_one_cut_short_just_before_the_marker_whose_journal_was_deleted(self, v2):
         root, names = v2

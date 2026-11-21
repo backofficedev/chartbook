@@ -414,8 +414,14 @@ class TestBeforeAnythingMoves:
         os.chmod(lost, stat.S_IWRITE | stat.S_IREAD)
         lost.unlink()
         dry = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
-        assert dry.exit_code == 0 and "1 file(s) a record names are missing or of another size, as before the move: _output/curve.html (" in dry.output
-        assert "If a sync is still bringing them, wait and run again." in dry.output
+        said = dry.output.splitlines()
+        # Said first, by snapshot, with what to ask oneself before saying yes
+        assert dry.exit_code == 0 and said[1] == "  1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):"
+        assert said[2].startswith("    acme+once/") and said[2].endswith(": 1 of 7 file(s)") and said[3] == "    the first: _output/curve.html"
+        assert said[4] == (
+            "  If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards "
+            "goes aside, and does not reach its snapshot. `chartbook store verify` lists every one."
+        )
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert result.exit_code == 0, result.output
         (problem,) = FolderStore(root).verify()  # its record goes on naming it
@@ -429,14 +435,19 @@ class TestTheQuestion:
         dry = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
         assert dry.exit_code == 0 and dry.output.splitlines()[-1] == "Nothing was moved." and _tree(root) == before
         said = dry.output.splitlines()[:-1]
+        left = "  What is left of pipelines/ goes aside whole, under _chartbook/left-by-0.5/: its old records and notes, and 4 file(s) that no record names. Nothing is removed."
+        advice = "  A snapshot that is removed before the move is not copied: `chartbook store gc` of ChartBook 0.5 removes old ones (this version removes nothing from a store of 0.5)."
         assert said[0] == f"The store at {FolderStore(root)} has the layout of ChartBook 0.5: 4 pipeline(s), 7 snapshot(s)."
         assert said[1] == "  5 snapshot(s) become complete (2 of them made by a pin), 2 become increments on the newest of their pipeline."
         assert "moved inside the store by rename: nothing is copied or uploaded again for these." in said[2]
-        assert said[4] == "  What is left of pipelines/ goes aside whole, under _chartbook/left-by-0.5/: its old records and notes, and 4 file(s) that no record names. Nothing is removed."
+        assert said[3].endswith("are copied: each is in two folders that must each hold it. In a synced folder every copied byte is uploaded again.")
+        # The copies are more than a hundredth of this small store: what it will take, and which snapshots are given them
+        assert said[4].startswith("  The store takes ") and " now, and will take " in said[4] and said[4].endswith(" snapshot(s), the largest first:")
+        assert said[-2:] == [advice, left] and all(line.startswith("    acme+") and " file(s)" in line for line in said[5:-2]) and len(said) > 7
         no = CliRunner().invoke(main, ["store", "migrate"], input="n\n")
         assert no.exit_code == 0 and no.output.splitlines()[-1] == "Nothing was moved." and _tree(root) == before
         asked = no.output.splitlines()
-        assert asked[5:8] == [
+        assert asked[: len(said)] == said and asked[len(said):len(said) + 3] == [
             "Nothing else may use the store while this runs, on this machine or another.",
             "Afterwards every machine that uses it needs this ChartBook: an earlier one will not read it.",
             "In a synced folder, let the sync finish before another machine uses the store.",
@@ -444,9 +455,13 @@ class TestTheQuestion:
         yes = CliRunner().invoke(main, ["store", "migrate"], input="y\n")
         assert yes.exit_code == 0, yes.output
         done = yes.output.splitlines()
-        # The same counts, in the past, and the last of the three again
-        past = lambda line: line.replace(" became ", " become ").replace(" were ", " are ").replace(" went ", " goes ")  # noqa: E731
-        assert [past(line) for line in done[-6:-2]] == said[1:5]
+        # The same counts, in the past, but for the one line that was to be acted on before; and the last of the three again
+        past = lambda line: (  # noqa: E731
+            line.replace(" became ", " become ").replace(" were ", " are ").replace(" went aside ", " goes aside ").replace(" went to ", " go to ")
+            .replace("The store took ", "The store takes ").replace(" before the move, and takes ", " now, and will take ").replace(" now. The copies", ". The copies")
+        )
+        last = done[done.index(f"The store at {FolderStore(root)} has this version's layout: 4 pipeline(s), 7 snapshot(s).") + 1:-2]
+        assert [past(line) for line in last] == [line for line in said[1:] if line != advice] and advice not in done[len(asked):]
         assert done[-2] == "The old folder, with its records, is kept at _chartbook/left-by-0.5/pipelines: it may be removed once the move has been checked."
         assert done[-1] == "In a synced folder, let the sync finish before another machine uses the store."
         again = CliRunner().invoke(main, ["store", "migrate"])
@@ -787,8 +802,9 @@ class TestTheWaysOutNeverSayToRemoveWhatARecordMayName:
             link = root / "pipelines" / "acme+linked"
             link.symlink_to(work, target_is_directory=True)
             said = CliRunner().invoke(main, ["store", "migrate", "--yes"]).output.replace("\n", " ")
-            assert "is a link to another place" in said and "move the link out of the store and run this again" in said and "remove" not in said
-            link.rename(work / "the-link")
+            assert "is a link to another place" in said and "put that folder itself where the link is, and run this again" in said
+            assert "remove" not in said and "move the link out" not in said and "is then missing" not in said
+            link.rename(work / "the-link")  # it led to no folder of the store
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
         assert (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+once" / arriving.name / "_data" / "t.parquet").read_bytes() == b"x"
 

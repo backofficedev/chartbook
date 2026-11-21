@@ -313,3 +313,154 @@ def any_store(root: Path, seed: int) -> dict:
         key: ("sha256:" + hashlib.sha256(data[number]).hexdigest(), bool(said[number] & whole))
         for key, number in named.items()
     }
+
+
+# What must hold of any move, and stores drawn more widely: from the review of the mover after a real store (2026-11-20)
+
+
+def facts_before(root: Path) -> dict:
+    """Of a store of 0.5, for each file that a record in a folder named as a snapshot's names (the records 0.5 read): ``(pipeline's ID, snapshot's folder, path) -> (its hash, whether it is at its stated place with its bytes, whether some place a record of its pipeline names for those bytes holds them)``."""
+    import hashlib
+
+    from chartbook.store import is_snapshot_folder
+
+    def holds(path: Path, key: tuple) -> bool:
+        try:
+            if path.is_symlink() or not path.is_file() or path.stat().st_size != key[1]:
+                return False
+            return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest() == key[0]
+        except OSError:
+            return False
+
+    entries, places = [], {}
+    for file in sorted(root.glob("pipelines/*/*/_chartbook/snapshot.json")):
+        snapshot, pipeline = file.parent.parent.name, file.parent.parent.parent.name
+        if not is_snapshot_folder(snapshot):
+            continue
+        document = json.loads(file.read_text(encoding="utf-8"))
+        for part in _parts(document):
+            for entry in part["stored"].get("files") or []:
+                key = (entry["content_hash"], entry["size_bytes"])
+                place = root / "pipelines" / pipeline / entry.get("kept_in", snapshot) / entry.get("kept_as", entry["path"])
+                entries.append((pipeline, document["root"], snapshot, entry["path"], key, place))
+                places.setdefault((pipeline, key), set()).add(place)
+    somewhere = {of: any(holds(place, of[1]) for place in at) for of, at in places.items()}
+    return {
+        (identity, snapshot, path): (key[0], holds(place, key), somewhere[(pipeline, key)])
+        for pipeline, identity, snapshot, path, key, place in entries
+    }
+
+
+def worse_after(before: dict, root: Path) -> tuple[list, list]:
+    """After a move, against :func:`facts_before`: the files that were at their stated place with their bytes and do not read so now; and those whose bytes a place a record of the pipeline named held, which do not read now."""
+    from tests.rich_store_of_0_5 import read_through
+
+    store_module._read_records.clear()
+    reads = read_through(root)
+    lost = sorted(key for key, (content_hash, at_place, _) in before.items() if at_place and "sha256:" + reads.get(key, "nothing") != content_hash)
+    not_taken = sorted(key for key, (content_hash, _, anywhere) in before.items() if anywhere and "sha256:" + reads.get(key, "nothing") != content_hash)
+    return lost, not_taken
+
+
+def stopped_then(root: Path, work: Path, arrive, numbers=None) -> list:
+    """Stop a move of a copy of *root* after each step (or after those of *numbers*), let *arrive* change the store as a sync would, and run the move again, with the journal kept and deleted; each as ``(step, journal kept, the store)``, for the caller to look at and remove."""
+    import pytest
+
+    from chartbook import migrate_0_5
+    from tests.rich_store_of_0_5 import Stop, stop_after
+
+    store_module._read_records.clear()
+    steps = len(migrate_0_5.plan(root).steps)
+    ended = []
+    for number in numbers or range(1, steps + 2):
+        for journal in (True, False):
+            cut = work / f"cut-{number}-{'kept' if journal else 'deleted'}"
+            shutil.copytree(root, cut, symlinks=True)
+            store_module._read_records.clear()
+            with pytest.raises(Stop):
+                migrate_0_5.run(cut, after_step=stop_after(number))
+            if not journal and (cut / migrate_0_5.JOURNAL).is_file():
+                (cut / migrate_0_5.JOURNAL).unlink()
+            arrive(cut)
+            store_module._read_records.clear()
+            migrate_0_5.run(cut)
+            ended.append((number, journal, cut))
+    return ended
+
+
+#: The bytes a store drawn by :func:`wide_store` is made of: two of one size, and one of no bytes at all.
+WIDE = {0: b"a" * 60, 1: b"b" * 69, 2: b"c" * 78, 3: b"d" * 78, 4: b"", 5: b"f" * 105, 6: b"g" * 114}
+
+
+def wide_store(root: Path, seed: int, pipelines: int = 1) -> None:
+    """Fill an empty store of 0.5 with pipelines drawn from a seed, of shapes :func:`any_store` cannot draw (the reviewer's generator).
+
+    Like it: two to five snapshots, each its owner's or a pin's; a record
+    says a file is in its own folder, where an earlier record said the
+    same bytes are, in a folder with no record, or in one that is not
+    there; each place holds the file, part of it, or nothing. And more: a
+    folder that ``store gc`` cleared; a record that says a file is in the
+    folder of a *later* snapshot; a file kept under another name than any
+    record's path; the same bytes named twice by one record, at two
+    places; a place that holds a file longer than its record says; a file
+    of no bytes, and two files of one size and other bytes; and a second
+    pipeline with the same folder names and the same bytes.
+    """
+    import random
+
+    from tests.rich_store_of_0_5 import folder_of, put, record
+
+    drawn = random.Random(seed)
+    for which in range(pipelines):
+        identity = f"acme/{'pq'[which]}"
+        pipeline = identity.replace("/", "+")
+        no_record, was_cleared, not_there = folder_of("2025-01-01", "p"), folder_of("2025-01-02", "n"), folder_of("2024-12-01", "o")
+        count = drawn.randint(2, 5)
+        folders = [folder_of(f"2025-{index + 2:02d}-01", "abcde"[index]) for index in range(count)]
+        said: dict = {}
+        decided: set = set()
+
+        def fill(place: tuple, number: int) -> None:
+            if place in decided or place[0] == not_there:
+                return
+            decided.add(place)
+            holds, data = drawn.random(), WIDE[number]
+            if holds < 0.55:
+                put(root, pipeline, place[0], place[1], data)
+            elif holds < 0.67:
+                put(root, pipeline, place[0], place[1], data[: len(data) // 3] if data else b"!")  # part of it
+            elif holds < 0.72:
+                put(root, pipeline, place[0], place[1], data + b"more")  # longer than its record says
+
+        for index, folder in enumerate(folders):
+            entries = []
+            for number in WIDE:
+                if drawn.random() < 0.35 and (entries or number < 6):
+                    continue
+                path = f"_data/k{number}.parquet"
+                how = drawn.choice(["its own", "its own", "an earlier one's", "an earlier one's", "a later one's", "no record", "cleared", "not there", "another name"])
+                if how == "an earlier one's" and said.get(number):
+                    place = drawn.choice(sorted(said[number]))
+                elif how == "a later one's" and index + 1 < count:
+                    place = (drawn.choice(folders[index + 1:]), path)
+                elif how == "another name":
+                    place = (drawn.choice([folder, no_record, was_cleared]), f"_data/other/k{number}-{index}.bin")
+                else:
+                    place = {"no record": (no_record, path), "cleared": (was_cleared, path), "not there": (not_there, path)}.get(how, (folder, path))
+                fill(place, number)
+                entries.append((path, WIDE[number], None if place[0] == folder else place[0], None if place[1] == path else place[1]))
+                said.setdefault(number, set()).add(place)
+                if drawn.random() < 0.2:
+                    # The same bytes a second time: kept at the same place, or at a place of its own
+                    again = f"_data/k{number}b.parquet"
+                    second = place if drawn.random() < 0.5 else (folder, again)
+                    fill(second, number)
+                    entries.append((again, WIDE[number], None if second[0] == folder else second[0], None if second[1] == again else second[1]))
+                    said[number].add(second)
+            record(root, identity, f"2025-{index + 2:02d}-01", "abcde"[index], entries, made_by="pin" if drawn.random() < 0.3 else "")
+        if (root / "pipelines" / pipeline / was_cleared).is_dir() or drawn.random() < 0.5:
+            mark = root / "pipelines" / pipeline / was_cleared / "_chartbook" / "CLEARED.txt"
+            mark.parent.mkdir(parents=True, exist_ok=True)
+            mark.write_text("Cleared by `chartbook store gc`.\n", encoding="utf-8", newline="\n")
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
