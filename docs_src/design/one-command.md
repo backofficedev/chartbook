@@ -506,7 +506,9 @@ What building it settled:
 - **A note is forgotten only by the machine that left it, and only for a folder that is gone
   and not away.** *(Found by the review: a drive unplugged, or a share not connected, lost its
   folders' notes at the next run of anything; and one machine removed another's on a home they
-  share.)* Gone is where the folder it was in is there and it is not.
+  share.)* Gone is where the folder it was in is there and it is not. *(Left, from the same
+  review: a project directly under a mount point that stays behind as an empty folder when
+  nothing is mounted is taken for gone. It is built again.)*
 - **A run refused as its script is to be started puts the note back.** *(Found by the review:
   on Windows a share with no drive letter is refused there, and "a build began" was left.)*
 - **One folder has one note, under whatever spelling it was last built.** *(Found by the review:

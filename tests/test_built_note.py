@@ -197,6 +197,11 @@ class TestWhatDiffers:
         note["hashed_at"] = int(before.st_mtime) + 5
         built.note_path(demo).write_text(json.dumps(note), encoding="utf-8")
         assert _snapshot().exit_code == 0
+        # Its size alone is enough to hash it again, whatever its time says
+        _change(demo / "params.py", "RATE = 20\n")
+        os.utime(demo / "params.py", ns=(before.st_atime_ns, before.st_mtime_ns))
+        _committed(demo)
+        assert "these differ from what it was built from: params.py." in _snapshot().output
 
     def test_a_built_file_that_git_tracks_is_settled_by_its_bytes(self, work, store, monkeypatch):
         """Found by the review of the design: `git stash`, a rebase, a checkout and back write such a file again, with the same bytes and another time."""
@@ -317,7 +322,8 @@ class TestWhatTheReviewOfTheCodeFound:
         assert _run().exit_code == 0
         kept = built.note_path(other)
         theirs = kept.with_name("0" * 32 + ".json")
-        theirs.write_text(json.dumps({**_note(other), "machine": "node-2", "folder": "/scratch/node-2/proj"}), encoding="utf-8")
+        # Another machine's, of a folder that is not on this one, in a folder that is: not this machine's to forget
+        theirs.write_text(json.dumps({**_note(other), "machine": "node-2", "folder": str(work / "node-2-proj")}), encoding="utf-8")
         monkeypatch.chdir(demo)
         parent.rename(work / "unplugged")
         assert _run().exit_code == 0
@@ -377,6 +383,10 @@ class TestWhatTheReviewOfTheCodeFound:
             assert "has not been built by `chartbook run` here, so there is nothing" in _snapshot().output
         built.note_path(demo).write_text("{ half a no", encoding="utf-8")
         assert built.read(demo) is None
+        built.note_path(demo).write_text(json.dumps({**note, "schema": "chartbook/built/v0"}), encoding="utf-8")
+        assert built.read(demo) is None
+        built.note_path(demo).write_text(json.dumps(note), encoding="utf-8")
+        assert built.read(demo) == note
 
     def test_the_list_says_as_is_only_of_a_folder_as_it_stands(self, work, store):
         """The choice was made at the commit the folder was on, for a line that checks another out first."""
@@ -395,6 +405,51 @@ class TestWhatTheReviewOfTheCodeFound:
         assert command(commit=None) == f"chartbook snapshot --as-is --project-dir {typed}"
         assert command(commit="c" * 40, on_commit=True) == f"chartbook snapshot --as-is --project-dir {typed}"
         assert command(commit="c" * 40, on_commit=False) == f"chartbook snapshot --project-dir {typed}"
+
+
+class TestWhatIsSourceAndWhatIsBuilt:
+    def test_a_built_file_that_git_tracks_is_what_the_build_left_and_not_what_it_ran_on(self, work, store, monkeypatch):
+        """A build that writes another table each time, kept in git: the table it found when it began is not what it is held against."""
+        table = {**DEMO, "scripts": {"build": "echo row >> out.csv"}}
+        directory = _committed(_folder(work / "p", table, "/build.log\n"))
+        monkeypatch.chdir(directory)
+        for _ in range(2):
+            assert _run().exit_code == 0
+            _committed(directory)
+        note = _note(directory)
+        assert "out.csv" not in note["source"] and "out.csv" in note["outputs"]
+        result = _snapshot()
+        assert result.exit_code == 0, result.output
+
+    def test_a_lockfile_that_git_ignores_is_what_the_build_ran_on_all_the_same(self, demo, store):
+        """A project that keeps its lockfile out of git: it still says what the build read."""
+        _change(demo / ".gitignore", IGNORED + "/chartbook.lock\n")
+        _change(demo / "chartbook.lock", "as the build found it\n")
+        _committed(demo)
+        assert _run().exit_code == 0
+        assert "chartbook.lock" in _note(demo)["source"]
+        _change(demo / "chartbook.lock", "as something moved it since\n")
+        assert _snapshot().output.splitlines()[0] == "Error: acme/demo: these differ from what it was built from: chartbook.lock."
+
+    def test_a_file_that_was_source_and_is_ignored_now_is_not_held_against_it(self, demo, store):
+        """What is source is asked when the snapshot is made. Such a file is still there, and is not called gone."""
+        _change(demo / "scratch.txt", "notes to self\n")
+        assert _run().exit_code == 0 and "scratch.txt" in _note(demo)["source"]
+        with open(demo / ".git" / "info" / "exclude", "a", encoding="utf-8", newline="\n") as ignored:
+            ignored.write("/scratch.txt\n")
+        result = _snapshot()
+        assert result.exit_code == 0, result.output
+        # One that is gone is
+        (demo / ".git" / "info" / "exclude").write_text("", encoding="utf-8")
+        (demo / "scratch.txt").unlink()
+        assert "these differ from what it was built from: scratch.txt (gone)." in _snapshot().output
+
+    def test_a_file_that_git_ignores_is_no_source(self, demo, store):
+        _change(demo / "build.log", "whatever the build logs\n")
+        assert _run().exit_code == 0
+        assert sorted(_note(demo)["source"]) == [".gitignore", "chartbook.toml"]
+        _change(demo / "build.log", "and more\n")
+        assert _snapshot().exit_code == 0
 
 
 class TestTakingTheFilesAsTheyAre:
@@ -416,6 +471,15 @@ class TestTakingTheFilesAsTheyAre:
             f"  Build it: `chartbook run{here}` (a build with nothing left to do takes a moment). Or, to take what is on disk "
             f"as it is: `chartbook snapshot --as-is --deep --store mine --complete{here}`."
         )
+
+    def test_the_folder_is_in_both_commands_of_a_refusal(self, demo, store, work, monkeypatch):
+        from chartbook import missing
+
+        assert _run().exit_code == 0
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+        monkeypatch.chdir(work)
+        here = f" --project-dir {missing._quoted(demo)}"
+        assert _snapshot("--project-dir", str(demo)).output.splitlines()[1] == AGAIN.format(here, here)
 
     def test_the_option_is_in_the_help(self):
         from click.testing import CliRunner
@@ -463,10 +527,27 @@ class TestTheNotesThemselves:
         assert _run().exit_code == 0
         gone = built.note_path(other)
         assert gone.exists()
+        monkeypatch.chdir(demo)  # first: Windows removes no folder that a process stands in (found by running this there)
         shutil.rmtree(other, onerror=lambda function, path, _: (os.chmod(path, 0o700), function(path)))
-        monkeypatch.chdir(demo)
         assert _run().exit_code == 0
         assert not gone.exists() and built.note_path(demo).exists()
+
+    def test_a_note_whose_folder_is_there_is_kept(self, demo, store, work, monkeypatch):
+        other = _committed(_folder(work / "other", {**DEMO, "project": {"id": "acme/other"}}))
+        monkeypatch.chdir(other)
+        assert _run().exit_code == 0
+        monkeypatch.chdir(demo)
+        assert _run().exit_code == 0
+        assert built.note_path(other).exists() and built.note_path(demo).exists()
+
+    def test_a_script_never_started_does_not_take_anothers_note_back(self, demo, store):
+        first = built.began(demo, "acme/demo")
+        second = built.began(demo, "acme/demo")
+        built.never_started(first)
+        assert _note(demo)["token"] == second.token and _note(demo)["state"] == "building"
+        # And the second's own is put back to what it found: the first's "a build began"
+        built.never_started(second)
+        assert _note(demo)["token"] == first.token and _note(demo)["state"] == "building"
 
     def test_a_cache_that_cannot_be_written_is_said_and_the_build_is_made(self, demo, store, monkeypatch):
         def refuse(path, note):
@@ -482,6 +563,20 @@ class TestTheNotesThemselves:
         # And the run that makes its own snapshot holds it against what it has in hand
         strict = _run("--snapshot", "--no-gc-reminder")
         assert strict.exit_code == 0, strict.output
+
+    def test_a_run_that_makes_its_own_snapshot_holds_it_against_its_own_build(self, demo, store, monkeypatch):
+        """A file that changes between the end of the build and the snapshot is not the build's."""
+        finished = built.finished
+
+        def and_then_a_file_changes(building):
+            note = finished(building)
+            _change(building.directory / "out.csv", "a,b\nwritten,since\n")
+            return note
+
+        monkeypatch.setattr(built, "finished", and_then_a_file_changes)
+        result = _run("--snapshot", "--no-gc-reminder")
+        assert result.exit_code == 1 and _snapshots(store) == []
+        assert "these differ from what its build left: out.csv, so no snapshot was made" in result.output
 
     def test_the_same_folder_by_another_name_has_the_same_note(self, demo, store, work):
         other = work / "DEMO"
