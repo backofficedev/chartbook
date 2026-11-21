@@ -246,12 +246,14 @@ Build them in this order, with the commands below. Each ends with a snapshot, wh
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
+     git -C /work/he_kelly_manela checkout 7802799a41c2
+     chartbook run --snapshot --project-dir /work/he_kelly_manela
 2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
-     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
+     git -C /work/fed_yield_curve checkout 0db8051e3f7b
+     chartbook run --snapshot --project-dir /work/fed_yield_curve
 
 Then here again:
-     cd /work/report && chartbook run
+     chartbook run --project-dir /work/report
 Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
@@ -259,12 +261,17 @@ Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the o
 - **It goes up.** Each listed pipeline's own `chartbook.toml` and `chartbook.lock` are read at the commit to build, and what it reads that the store lacks comes before it. A folder a `path` entry names is asked through git and is not changed; a repository is fetched into the git cache, with nothing checked out, and a fetch that receives nothing for 30 seconds is given up.
 - **A clone you already have is read where it is,** with nothing fetched: this pipeline's own repository, or a folder beside it whose `origin` is the address a pin records. A class has its clones side by side, and a repository that wants a password cannot be fetched from here.
 - **A line says what is known:** it may lack its commit (never pinned), its address (`its repository is not recorded`), or what it reads in turn (`its repository could not be fetched (…)`).
+- **A line is one command, the same in a POSIX shell, in `cmd.exe` and in PowerShell.** It names the folder it works in (`git -C FOLDER checkout …`, `chartbook run --snapshot --project-dir FOLDER`); none enters a folder or is joined to another with `&&`, so you stay where you are, and the last line is the command you typed, with this pipeline's folder. On Windows a folder is in double quotes, and a line whose commands would hold what a shell there reads even inside quotes (a `$`, a backtick, a `!`, a `"`, a `%NAME%`) is given no command and says so: an address in a lockfile is anyone's, and so is a folder's name in a repository that was cloned.
 - **Every command can be pasted from any folder, in order,** and following them ends in a build: tests type each line as printed, and then the last, for a chain, a repository of two pipelines, one pipeline wanted at two commits, and a pipeline in this pipeline's own repository. A pipeline with no `build` script is given `chartbook snapshot`, and so is a folder that was never pinned, is committed and has its declared files on disk (`built already`).
-- **No command moves this pipeline's own repository:** a pipeline in it that is wanted at another commit is built in a `git worktree` of that commit. In any other repository the checkout is made from its top before the folder is entered, so that a line holds whatever commit the lines above left the clone on.
+- **No command moves this pipeline's own repository:** a pipeline in it that is wanted at another commit is built in a `git worktree` of that commit. In any other repository the checkout is made at its top, so that a line holds whatever commit the lines above left the clone on.
 - **An address is printed and fetched only if it is a plain web address,** a pipeline's name only if it is an ID, and all of it without control characters: a lockfile is anyone's. The words `chartbook pin --check` has for a pin that is not in the store follow the same rule now.
 - **Pipelines that are not in the store and read each other** are an error, in the words of any cycle.
 - `chartbook pin --update` is as it was. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline lacks and add `` `chartbook run` lists all there is to build, in order``.
 - In Python: `chartbook.missing.find()` gives the list (`Listing`, of `Wanted` lines) and `missing.said()` its lines; `RunReport.not_in_store` and `PinReport.not_in_store` hold it, and a run stopped by nothing else has `reason == run.NOT_IN_STORE`. `GitCache.paths_at()` and `GitCache.text_at()` read a commit's files with nothing checked out.
+
+### Fixed — on Windows, a command that a message prints can be pasted
+
+A message that names a command to type, such as `chartbook restore --project-dir …`, `chartbook pin --project-dir …` or a line of the list above, wrote its folder for a POSIX shell: in single quotes, which `cmd.exe` reads as part of the folder's name, or bare, which Git Bash reads without its backslashes. On Windows a folder is now in double quotes, which `cmd.exe`, PowerShell and Git Bash all read. A word that one of them would read even inside quotes (a folder named `$(…)`, say) is never written into a command: `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. The `cruft link` line that `chartbook init` prints is as it was: its answers are JSON, which no one spelling gives to `cmd.exe` and PowerShell alike.
 
 ### Added — `chartbook run` offers to add a pipeline your code reads and `chartbook.toml` does not declare
 

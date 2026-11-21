@@ -2085,11 +2085,13 @@ def _discover_member_pipelines(
                 raise ValueError(f"{source}: catalog member {error}") from None
 
             if detect_v1_format(member_raw):
+                from chartbook.missing import _quoted  # here: that module reads this one's
+
                 raise ValueError(
                     f"{source}: catalog member {member_dir} uses the old v1 "
                     f"chartbook.toml format.\n"
                     f"To fix, do one of:\n"
-                    f"  - migrate it: python scripts/migrate_toml_v2.py {member_dir}\n"
+                    f"  - migrate it: python scripts/migrate_toml_v2.py {_quoted(member_dir)}\n"
                     f"    (script lives in the chartbook repo)\n"
                     f"  - exclude it from this catalog: add "
                     f"\"{pattern if not is_glob else member_dir}\" to pipelines.exclude"

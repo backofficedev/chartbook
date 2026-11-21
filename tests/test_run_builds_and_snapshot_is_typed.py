@@ -590,6 +590,14 @@ class TestASnapshotIsTyped:
         assert strict.exit_code == 0 and _ran(a) == 2 and "named otherwise" not in strict.output, strict.output
         assert {taken.subdirectory for taken in _snapshots(store)} == {"pipes/a"}
 
+    def test_a_folder_in_no_repository_is_said_as_it_was(self, work, store, monkeypatch):
+        """What is wrong with a folder is said by the command, in its own words, and not by the look at how the folder is spelled."""
+        directory = _folder(work / "loose")
+        monkeypatch.chdir(directory)
+        for result in (_snapshot(), _run("--snapshot", "--no-gc-reminder")):
+            assert result.exit_code == 1 and "is not in a git repository" in result.output, result.output
+            assert "Traceback" not in result.output and result.exception.__class__ is SystemExit
+
     def test_a_folder_in_another_of_unicodes_forms_is_no_mistake(self, work, store, monkeypatch):
         """Git and the system may write one name two ways. Whoever typed it made no mistake, and is not refused."""
         import unicodedata
