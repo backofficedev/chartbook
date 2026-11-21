@@ -383,6 +383,125 @@ class TestTheNotesTimeIsSetOnceAMinute:
         assert store_module.ALIVE_SECONDS * 60 <= store_module.PENDING_FOLDER_SECONDS
 
 
+def _chart(project: Path, text: str) -> None:
+    """The pipeline draws its chart again: one file of it changes, and its index with it."""
+    (project / "_output" / "curve.html").write_text(f"<html><body>{text}</body></html>", encoding="utf-8", newline="\n")
+
+
+def _files_of(folder: Path) -> set:
+    """Every file under a snapshot's folder, by its path in it."""
+    return {path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file()}
+
+
+def _gc(root: Path):
+    """Plan a `store gc` of a store and carry it out, sparing nothing for being new."""
+    from chartbook import lock
+
+    return lock.carry_out_gc(lock.plan_gc(FolderStore(root), recent_seconds=0), FolderStore(root))
+
+
+def _one_gc_may_remove(project: Path, root: Path) -> tuple:
+    """A store in which the snapshot the next one builds on is one `store gc` may remove; its three snapshots.
+
+    A complete snapshot; a second complete one that a sync had not brought
+    whole when the third was made, so that the third is an increment on the
+    first; and then the second is whole after all. The next snapshot builds
+    on the second, which is neither the newest nor built on yet, and all
+    three are long past.
+    """
+    from chartbook import snapshot
+
+    first = snapshot.make(project, store=FolderStore(root), made_at=LONG_AGO.format(0))
+    _chart(project, "two")
+    second = snapshot.make(project, store=FolderStore(root), made_at=LONG_AGO.format(1), complete=True)
+    table, aside = second.kept.folder / "_data" / "codes.parquet", root.parent / "not-synced-yet.parquet"
+    os.rename(table, aside)
+    store_module._found_whole.clear()
+    _chart(project, "three")
+    third = snapshot.make(project, store=FolderStore(root), made_at=LONG_AGO.format(2))
+    assert third.kept.increment and third.kept.builds_on == first.kept.folder.name
+    os.rename(aside, table)  # the sync brings it
+    store_module._found_whole.clear()
+    store_module._read_records.clear()
+    return first, second, third
+
+
+class TestOneNoteForTheFolderItTakesFilesFrom:
+    """A snapshot being made noted each file of an earlier snapshot it used, a line a file, twice: an open, a write and a close of the note for each. It notes the folder of the snapshot that keeps them, once.
+
+    What the notes keep `store gc` from, on this machine, while a snapshot
+    is being made. Before: the plan of a gc never read them, so it could
+    take the record of a snapshot the writer was using; its sweep then
+    removed every file of that folder but the ones the note listed. Now:
+    the record can go as it could, and the sweep removes nothing at all
+    from a folder the note names, until the note has gone (the snapshot
+    written, or let go) or is a day old. So the note keeps more, never
+    less.
+    """
+
+    @counted
+    def test_the_note_has_a_line_for_each_folder_and_none_for_a_file(self, asked):
+        for found in asked.values():
+            mark = store_module.FOLDER_MARK
+            assert all(line.startswith(mark) for line in found.note_lines), found.note_lines
+            folders = sorted(line[len(mark):] for line in found.note_lines)
+            assert len(folders) == 2 and folders[1] == found.built_on, folders  # its own, under increments/, and the one it builds on
+            assert folders[0].startswith("increments/acme+daily/")
+
+    def test_a_gc_while_the_note_is_fresh_removes_nothing_from_the_folder(self, tmp_path, store, monkeypatch):
+        """`store gc` is carried out as the increment's own files come into its folder, and may remove the snapshot it builds on. It takes that one's record, as it always could; of its folder it removes nothing, where it used to leave only the files the increment keeps there."""
+        from chartbook import snapshot
+
+        project = _pipeline(tmp_path.resolve() / "project", 3)
+        first, second, third = _one_gc_may_remove(project, store.root)
+        _chart(project, "four")
+        before = _files_of(second.kept.folder)
+        assert {"_output/curve.html", "_chartbook/index.json", "_data/codes.parquet", "README.md"} <= before
+        noted, real = [], store_module._FolderPending._complete
+
+        def completing(self):
+            if self.builds_on is not None:
+                noted.extend(self._note.read_text(encoding="utf-8").splitlines())
+                _gc(self.store.root)
+            return real(self)
+
+        with monkeypatch.context() as patched:
+            patched.setattr(store_module._FolderPending, "_complete", completing)
+            with pytest.raises(store_module.StoreError, match="went from the store as this snapshot was being written"):
+                snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(3))
+        # The note named the folder it builds on, each folder once, and no file
+        built_on = second.kept.folder.relative_to(store.root).as_posix()
+        assert store_module.FOLDER_MARK + built_on in noted and len(set(noted)) == len(noted)
+        assert all(line.startswith(store_module.FOLDER_MARK) for line in noted), noted
+        # The record went: no note ever kept one. Every file of the folder is there, the chart and the index too,
+        # which the increment does not keep there and which a line for each file it does keep left to the sweep
+        after = _files_of(second.kept.folder)
+        assert "_chartbook/snapshot.json" not in after
+        assert after == (before - {"_chartbook/snapshot.json"}) | {"_chartbook/CLEARED.txt"}
+        # Its note has gone with the snapshot that was let go: the next gc takes the folder whole
+        assert not list((store.root / "_chartbook" / "tmp").glob("*" + store_module.PENDING_SUFFIX))
+        _gc(store.root)
+        assert not second.kept.folder.exists()
+        # Made again, it is decided on what is there now, and is whole
+        store_module._read_records.clear()
+        again = snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(4))
+        assert again.made and FolderStore(store.root).verify() == []
+
+    def test_a_line_for_a_file_still_keeps_that_file_alone(self, tmp_path, store):
+        """As a migrate's writer notes one, and as a note written before this did: the file it names stays, and the rest of a cleared folder goes."""
+        from chartbook import snapshot
+
+        project = _pipeline(tmp_path.resolve() / "project", 3)
+        first, second, third = _one_gc_may_remove(project, store.root)
+        tmp = store.root / "_chartbook" / "tmp"
+        tmp.mkdir(parents=True, exist_ok=True)
+        kept = second.kept.folder / "_data" / "codes.parquet"
+        (tmp / "aaaaaaaaaaaa.pending").write_text(kept.relative_to(store.root).as_posix() + "\n", encoding="utf-8", newline="\n")
+        _gc(store.root)
+        assert _files_of(second.kept.folder) == {"_data/codes.parquet", "_chartbook/CLEARED.txt"}
+        assert snapshot.all_snapshots(FolderStore(store.root)) and FolderStore(store.root).verify() == []
+
+
 @pytest.fixture
 def store(tmp_path, monkeypatch) -> FolderStore:
     """A store of this test's own, which the commands of the test write to."""

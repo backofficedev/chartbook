@@ -2311,7 +2311,7 @@ class FolderStore(Store):
         return True
 
     def _notes(self) -> tuple[set, set]:
-        """What the notes of snapshots being made keep, while each is younger than :data:`PENDING_SECONDS`: their own folders, and the files of earlier ones they use."""
+        """What the notes of snapshots being made keep, while each is younger than :data:`PENDING_FOLDER_SECONDS`: the folders they name, their own and those of the earlier snapshots they take files from, and the files they name one by one."""
         folders: set = set()
         files: set = set()
         tmp = self.root / self._places().tmp
@@ -2356,7 +2356,11 @@ class FolderStore(Store):
           ``part-0 (1).parquet``), which no reader reads.
 
         Nothing is removed from a pipeline's folder while one of its records
-        cannot be read, or names files this machine cannot follow. The notes
+        cannot be read, or names files this machine cannot follow. Nothing
+        is removed from a snapshot's folder that a snapshot being made has
+        noted, whatever has become of its record: the folder of the one
+        being made, and that of each earlier one it takes files from
+        (:meth:`_FolderPending._note_folder_of`). The notes
         are read again just before anything goes, for a snapshot that began
         meanwhile. Each file is removed by itself, and a folder left empty goes.
 
@@ -3823,10 +3827,12 @@ def _is_or_under_a_link(location: Path, pipelines: Path, checked: Optional[dict]
     return os.path.islink(location)
 
 
-#: The end of a note, under ``tmp/``, of a snapshot being made: its own folder, and the files of earlier ones it uses.
+#: The end of a note, under ``tmp/``, of a snapshot being made: its own folder, and the folders of the earlier
+#: ones it takes files from (a file by itself, where a migrate writes the snapshot).
 PENDING_SUFFIX = ".pending"
 
-#: How a note names the folder of the snapshot being made, beside the files of earlier ones it uses.
+#: How a note names a snapshot's folder that ``store gc`` is to remove nothing from: that of the snapshot being
+#: made, and that of each earlier one it takes files from. A line without it names one file.
 FOLDER_MARK = "folder "
 
 #: How long a snapshot's folder that never got its record is left, nothing in it changing, before
@@ -4017,6 +4023,10 @@ class _FolderPending(PendingSnapshot):
         #: For an increment begun undecided, once :meth:`_settle` has looked: where the snapshot it builds on keeps each file it has, by the entry
         self._there: dict = {}
         self._note: Optional[Path] = None
+        #: The folders of earlier snapshots that the note says this one takes files from, each noted once (:meth:`_note_folder_of`)
+        self._noted: set = set()
+        #: The folders that hold snapshots' folders in this store, asked once (:meth:`FolderStore._trees`)
+        self._trees: Optional[list] = None
         #: When the note's time was last brought up to date, by a line written to it or by :meth:`_alive`, on this process's own clock
         self._alive_at = 0.0
         #: Hashes already known, by the source file's path, which are then not read again
@@ -4113,6 +4123,39 @@ class _FolderPending(PendingSnapshot):
     def _note_use(self, location: Path) -> None:
         """Note, before it is used, a file of an earlier snapshot that this one uses, so that ``store gc`` keeps it meanwhile."""
         self._note_line(location.relative_to(self.store.root).as_posix())
+
+    def _note_folder_of(self, location: Path) -> None:
+        """Note, before a file of an earlier snapshot is used, the folder of the snapshot that keeps it: once for the folder, however many of its files are used.
+
+        With the mark this snapshot notes its own folder with
+        (:data:`FOLDER_MARK`), which ``store gc`` already reads: its sweep
+        removes nothing from a snapshot's folder a note names
+        (:meth:`FolderStore.sweep`), where a line for each file kept those
+        files alone. A line a file was two a file for a table in parts,
+        each an open, a write and a close of a note that a sync service
+        then sends again.
+
+        The folder is told by its path below the store, which is a
+        pipeline's folder and a snapshot's, both written in plain letters
+        that every system spells alike (:func:`pipeline_folder`,
+        :func:`snapshot_folder_name`); so it is found by its name as the
+        sweep names it. A file that is in no snapshot's folder of this
+        layout is noted by itself, as before.
+        """
+        if self._trees is None:
+            self._trees = [Path(tree) for tree in self.store._trees()]
+        for tree in self._trees:
+            try:
+                parts = location.relative_to(tree).parts
+            except ValueError:
+                continue
+            if len(parts) > 2 and is_snapshot_folder(parts[1]):
+                folder = (tree / parts[0] / parts[1]).relative_to(self.store.root).as_posix()
+                if folder not in self._noted:
+                    self._noted.add(folder)
+                    self._note_line(FOLDER_MARK + folder)
+                return
+        self._note_use(location)
 
     def _alive(self) -> None:
         """Say, by the note's time, that this snapshot is still being made: a slow one is not taken for one given up.
@@ -4253,6 +4296,7 @@ class _FolderPending(PendingSnapshot):
             except OSError:
                 pass
             self._note = None
+            self._noted = set()
 
     def _write_file(self, source: str, target: Path, links: tuple, expect: Optional[str] = None) -> tuple[str, str]:
         """Write one file into the store at *target*, its own bytes, and return its hash and how it was made.
@@ -4406,15 +4450,17 @@ class _FolderPending(PendingSnapshot):
         """Where an earlier snapshot of the pipeline keeps a file of these bytes, whole by its size; None if none does.
 
         The newest first: ``store gc`` never removes the newest snapshot of
-        a pipeline. Its use is noted before it is looked at, so that ``store
-        gc`` keeps it until this snapshot is written or let go. Nothing is
-        written: a snapshot's folder is not changed once its record is
-        written, and one that has lost a file stays as it is.
+        a pipeline. Its use is noted before it is looked at, by the folder
+        of the snapshot that keeps it (:meth:`_note_folder_of`), so that
+        ``store gc`` removes nothing from that folder until this snapshot
+        is written or let go. Nothing is written: a snapshot's folder is
+        not changed once its record is written, and one that has lost a
+        file stays as it is.
         """
         for file in reversed(self._kept_files().get(content_hash, [])):
             if file.size_bytes != size:
                 continue
-            self._note_use(file.location)
+            self._note_folder_of(file.location)
             if _is_whole(file, self.pipeline_path):
                 return file.location
         return None
