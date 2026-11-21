@@ -2226,7 +2226,7 @@ class FolderStore(Store):
             )
         kept = read_kept_record(path)
         try:
-            path.unlink()
+            _remove_file(path)  # read-only, as the store keeps its files: Windows removes no such file as it is
         except OSError as error:
             raise StoreError(
                 f"Cannot remove the snapshot record {self._shown(path)}: {error.strerror or error}. "

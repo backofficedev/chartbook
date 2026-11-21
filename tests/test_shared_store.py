@@ -2035,16 +2035,41 @@ class TestWhatGcCannotRemove:
         work, machine, rates = drive
         store = default_store()
         taken = snapshot.make(rates).snapshot
-        unlink = Path.unlink
+        remove_file = store_module._remove_file
 
-        def refused(self, *args, **kwargs):
-            if self == taken.path:
-                raise PermissionError(errno.EACCES, "Permission denied", str(self))
-            return unlink(self, *args, **kwargs)
+        def refused(path):
+            if Path(path) == taken.path:
+                raise PermissionError(errno.EACCES, "Permission denied", str(path))
+            return remove_file(path)
 
-        monkeypatch.setattr(Path, "unlink", refused)
+        monkeypatch.setattr(store_module, "_remove_file", refused)  # the store's remover, once it has tried all it may
         with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(taken.path))}: Permission denied\. It is another user's"):
             store.remove_snapshot(taken.path)
+        assert taken.path.is_file()
+
+    def test_a_record_that_is_read_only_goes_as_any_file_of_the_store_does(self, drive, monkeypatch):
+        """Found on Windows, which removes no read-only file as it is: "Cannot remove the snapshot record …: Access is denied.
+        It is another user's, most likely", of a record that was this user's. The store's remover gives the file its
+        permission and removes it, as it does every other file of the store. A system that refuses stands in for Windows."""
+        work, machine, rates = drive
+        store = default_store()
+        taken = snapshot.make(rates).snapshot
+        os.chmod(taken.path, stat.S_IREAD)
+        remove = os.remove
+
+        def as_windows(path, *args, **kwargs):
+            if os.path.isfile(path) and not os.stat(path).st_mode & stat.S_IWUSR:
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return remove(path, *args, **kwargs)
+
+        with monkeypatch.context() as windows:
+            windows.setattr(os, "remove", as_windows)
+            windows.setattr(os, "unlink", as_windows)
+            windows.setattr(Path, "unlink", lambda self, missing_ok=False: as_windows(self))  # Python 3.10's keeps os.unlink from its import
+            with pytest.raises(PermissionError, match="Access is denied"):
+                taken.path.unlink()  # the stand-in refuses as Windows does
+            assert store.remove_snapshot(taken.path) is True
+        assert not taken.path.exists()
 
     def test_what_stayed_is_named_by_a_path_of_the_system(self, drive, monkeypatch):
         """Found on Windows: ``C:\\…\\chartbook-store/snapshots/acme+rates/…``. Its own join stands in for the system's here."""
