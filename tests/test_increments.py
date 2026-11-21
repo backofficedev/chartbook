@@ -29,7 +29,7 @@ from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotPinnedError
 from chartbook.store import FolderStore
-from tests.fixtures import _git
+from tests.fixtures import _git, needs_symlinks
 from tests.increments import with_increments
 
 OLDER, OLD, OLDISH = "2025-12-01T09:15:00.000000Z", "2026-01-01T09:15:00.000000Z", "2026-02-01T09:15:00.000000Z"
@@ -626,13 +626,16 @@ class TestRestore:
 def _aged(root: Path) -> None:
     """Every file under a folder was last changed two hours ago: nothing is spared for being new."""
     then = __import__("time").time() - 7200
+    # A link's own time where the system can set one: Windows cannot, and raises NotImplementedError if asked
+    own = {"follow_symlinks": False} if os.utime in os.supports_follow_symlinks else {}
     for path in sorted(root.rglob("*")):
-        os.utime(path, (then, then), follow_symlinks=False)
+        os.utime(path, (then, then), **own)
 
 
 class TestAfterTheReviewOfIncrements:
     """What the sixth review found of increments (2026-11-20), each under the rule it broke."""
 
+    @needs_symlinks
     def test_a_folder_an_increment_builds_on_that_is_a_link_is_not_read_from(self, unpinned, work, store):
         """The folder a file is read from is checked, whichever of the two it is: an import takes nothing through a link."""
         import shutil
