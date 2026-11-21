@@ -527,7 +527,11 @@ What building it settled:
   command that makes a snapshot, which would be refused there twice: for git's trust, and then
   for the note. *(The second by the review: the line was said, and the command after it.)* The
   snapshot says the same. In a folder that is in no repository the run says nothing of a note:
-  there is no snapshot to hold against one.
+  there is no snapshot to hold against one. In the list of what is not in a store, the line of
+  a folder in such a repository begins with that command, as a command of its own. *(Found on
+  Windows by typing the list's lines in their order: the list says "one at a time", git
+  refused the first of them, and the command that would have let it run was at the end of the
+  line's third, inside a sentence that began with something else.)*
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It
@@ -877,8 +881,12 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     The function that quotes never writes such a word, whatever message asks it to:
     `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. So a run's
     closing line, `chartbook restore` and the rest hold no such word either, and say less well
-    why. A network folder (`\\server\…`) is read otherwise by Git Bash, and the reference says
-    so.
+    why. A network folder (`\\server\…`) was read otherwise by Git Bash, and the reference said
+    so. *(Typed on Windows later, 2026-11-20, with the list's own lines for a folder on a
+    share: none of its three commands ran in Git Bash, which reads the two backslashes as one
+    in double quotes too. With forward slashes, `"//server/share/…"`, git and ChartBook take
+    the same folder in all three shells, so a network folder is written so, but for
+    `net use`, which wants its own.)*
   - *A clone found beside the pipeline is named as the disk names it.* It is looked for under
     the name its address gives (`rates`), and a disk that takes either letter case finds
     `Rates`. *(Found by review: under the address's name the list had pathlib's words in it, a

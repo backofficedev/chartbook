@@ -130,6 +130,9 @@ class Wanted:
             on this machine: what ``chartbook run --upstream`` builds.
         reads: The lines above it that it reads, by their numbers from 1.
         unknown: Why what it reads in turn is not known, where it is not.
+        trust: For a folder in a repository git does not trust: the command
+            that makes git trust it, which every other command of its line
+            waits for. Empty where there is none to give.
     """
 
     pipeline: str
@@ -152,6 +155,7 @@ class Wanted:
     by_path: bool = False
     reads: list[int] = field(default_factory=list)
     unknown: str = ""
+    trust: str = ""
 
 
 @dataclass
@@ -463,9 +467,17 @@ class _Walk:
             code = snapshot.code_of(folder)
         except snapshot.NotInARepository:
             code, why_not = None, f"{folder} is not in a git repository"  # the list's own words: what a snapshot is does not belong in a line of it
+        except snapshot.RepositoryNotTrusted as error:
+            # Git reads nothing of it until it is told to, so the command that tells it is the first of the
+            # line's commands, and is not said twice. Where there is none to give, the sentence is said whole:
+            # it names where git's own is
+            code, wanted.trust = None, error.command
+            why_not = (
+                "git does not trust the repository it is in, until the first command here has been typed" if error.command
+                else _plain((str(error).strip().splitlines() or [""])[0].rstrip("."), most=4096)
+            )
         except snapshot.SnapshotError as error:
-            # Said as the folder's own commands say it, and whole: git that does not trust the repository
-            # (the sentence ends with the command that makes it), git that could not be run, a repository
+            # Said as the folder's own commands say it, and whole: git that could not be run, a repository
             # with no commit yet. Each was "is not in a git repository" here, of a folder that is in one
             code, why_not = None, _plain((str(error).strip().splitlines() or [""])[0].rstrip("."), most=4096)
         wanted.top = code.top if code is not None else None
@@ -886,7 +898,7 @@ def _plain(text: str, most: int = 300) -> str:
     return kept if len(kept) <= most else kept[: most - 1] + "…"
 
 
-def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool = True) -> str:
+def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool = True, backslashes: bool = False) -> str:
     """A word of a command, as this system's shells take it: quoted where it has to be, and never with a control character.
 
     :param windows: Whether for Windows, where the word is one that
@@ -897,10 +909,22 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool 
         then reads the word once more, and more of it
         (:func:`_a_windows_shell_reads`). False for a word handed to
         ``git``, which is a program wherever it is installed.
+    :param backslashes: Whether a network path on Windows keeps its
+        backslashes (``\\\\server\\share``), as ``net use`` wants it. Otherwise
+        it is written with forward slashes, which git, ChartBook and all
+        three shells take.
     """
     text = _plain(str(text), most=4096)
     if not (os.name == "nt" if windows is None else windows):
         return shlex.quote(text)
+    # A network path: Git Bash reads the two backslashes it begins with as one, in double quotes too, and the
+    # folder is then another (`"\\server\share\x"` reached git as `\server\share\x`; found by typing the list's
+    # lines there, 2026-11-20). Written with forward slashes it is the same folder to git and to ChartBook in
+    # cmd.exe, Windows PowerShell and Git Bash (typed there too), and is always in quotes. Not a device's
+    # path (`\\?\`, `\\.\`), which Windows reads as it is written
+    share = not backslashes and re.match(r"\\\\[^\\?.]", text) is not None
+    if share:
+        text = text.replace("\\", "/")
     # cmd.exe: inside double quotes `&`, `|`, `<`, `>`, `^` and spaces are text. A `%` stays
     # as it is: doubled it is one only in a batch file, and these lines are pasted at a prompt, where `%20` in an
     # address must stay `%20`. (A `%NAME%` that names a variable is filled in there, in quotes or out, and
@@ -915,7 +939,7 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool 
     # is to hold it either, whoever writes it: the word is then this one, which runs nothing and says why
     if _a_windows_shell_reads([text], batch=batch):
         return NOT_TEXT
-    if re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
+    if not share and re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
         return text
     # A backslash that would come before the closing quote would be read with it, as a quote that is text:
     # doubled, it is one backslash (`"C:\\"`, of a drive's own folder)
@@ -1222,6 +1246,10 @@ def said(
                     commands = at_its_commit(line.top, line.folder, commit, make)
                 else:
                     commands = [*([f"git -C {word(line.folder)} checkout {commit}"] if moves else []), make + named(line.folder)]
+                if line.trust:
+                    # Git reads nothing of its repository until this has been typed, and the commands after
+                    # it are refused for that: found on Windows, on a share, by typing the lines in their order
+                    commands.insert(0, line.trust)
         elif line.repository and line.clone is not None:
             # A clone of it is here, and its files could not be read at that commit. Where it lacks the commit,
             # fetched there, it can be. Its folder in the clone is the one its reader names, or where the clone has

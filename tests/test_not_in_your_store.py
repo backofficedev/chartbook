@@ -1559,6 +1559,35 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         assert missing._a_windows_shell_reads([word], environment=["USERNAME"], batch=False) == read
         assert missing._a_windows_shell_reads([word], environment=["USERNAME"]) == in_a_batch_file
 
+    @pytest.mark.parametrize("word, typed", [
+        ("\\\\localhost\\c$\\cbtest\\said\\bash\\e\\rates", '"//localhost/c$/cbtest/said/bash/e/rates"'),  # the one that was typed
+        ("\\\\fileserver\\home\\ab123\\my work\\mid", '"//fileserver/home/ab123/my work/mid"'),
+        ("\\\\fileserver\\share", '"//fileserver/share"'),  # in quotes always: only that was typed
+        ("\\\\fileserver\\share\\", '"//fileserver/share/"'),  # and no backslash is left to come before the quote
+        ("\\\\?\\C:\\work\\rates", '"\\\\?\\C:\\work\\rates"'),  # a device's path is read as it is written
+        ("\\\\.\\C:\\work\\rates", '"\\\\.\\C:\\work\\rates"'),
+        ("C:\\work\\rates", '"C:\\work\\rates"'),  # a folder on a drive is as it was
+        ("\\work\\rates", '"\\work\\rates"'),  # one backslash: of the drive one is on, and no share
+    ])
+    def test_a_network_path_is_written_as_all_three_shells_take_it(self, word, typed):
+        """Found on Windows by typing the list's lines in Git Bash: it reads the two backslashes a network
+        path begins with as one, in double quotes too, so `git -C "\\\\localhost\\c$\\…"` could not change to
+        `\\localhost\\c$\\…`, and `chartbook run --project-dir` looked on drive C. Typed there with forward
+        slashes, in cmd.exe, Windows PowerShell 5.1 and Git Bash, the folder is the same one to git and to
+        ChartBook."""
+        assert missing._quoted(word, windows=True) == typed
+        assert missing._in(word, windows=True) == f" --project-dir {typed}"
+        assert missing.typed(["git", "-C", word, "checkout", "abc"], windows=True) == f"git -C {typed} checkout abc"
+
+    def test_net_use_is_given_a_network_path_as_windows_writes_it(self):
+        word = "\\\\fileserver\\my share"
+        assert missing._quoted(word, windows=True, backslashes=True) == f'"{word}"'
+        assert missing._quoted("\\\\fileserver\\share", windows=True, backslashes=True) == '"\\\\fileserver\\share"'
+
+    def test_elsewhere_a_word_that_begins_with_two_backslashes_is_no_network_path(self):
+        word = "\\\\fileserver\\share"
+        assert missing._quoted(word, windows=False) == shlex.quote(word)
+
     def test_a_shares_word_is_quoted_whole_for_git_and_withheld_for_what_may_be_a_batch_file(self):
         word = "%(prefix)///fileserver/home/ab123/work/mid"
         assert missing._quoted(word, windows=True, batch=False) == f'"{word}"'
@@ -2187,6 +2216,13 @@ NOT_TRUSTED = (
 )
 
 
+def _git_as_it_was(directory: Path) -> str:
+    """The commit a folder is at, asked of git itself: before a test has git refuse the folder."""
+    return subprocess.run(
+        ["git", "-C", str(directory), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
 def _git_refuses(monkeypatch, words: str, under: Path) -> None:
     """Git fails with *words* wherever it is run in *under*, as ``snapshot._git`` raises what git said; elsewhere it runs."""
     real = snapshot._git
@@ -2217,30 +2253,58 @@ class TestAFolderGitWillNotRead:
         mine()
         return mid
 
-    def test_a_repository_git_does_not_trust_is_said_with_the_command_that_makes_git_trust_it(self, work, mid, monkeypatch):
+    def test_the_command_that_makes_git_trust_it_is_the_first_of_its_line(self, work, mid, monkeypatch):
+        """Found on Windows, on a share, by typing the list's lines in their order: the list says "one at a
+        time", git refused the first of them, and the command that would have let it run was at the end of
+        the line's third, inside a sentence that began with something else."""
         at = mid.as_posix()  # as git writes a folder, on Windows too
         _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=mid)
         said = _said(_run(work, monkeypatch, "run"))
         assert not any("is not in a git repository" in line for line in said), said
-        assert (
-            "     What it reads in turn is not known: "
-            + NOT_TRUSTED.format(folder=mid, at=at, typed=missing._quoted(at))
-            + ". Its own `chartbook run` says."
-        ) in said, said
+        commit = _git_as_it_was(mid)
+        assert _has(
+            said,
+            f"git config --global --add safe.directory {missing._quoted(at, batch=False)}",
+            f"git -C {_q(mid)} checkout {commit[:12]}",
+            f"chartbook run --snapshot --project-dir {_q(mid)}",
+            "What it reads in turn is not known: git does not trust the repository it is in, until the first command here "
+            "has been typed. Its own `chartbook run` says.",
+        ), said
+        # Said once: the sentence with the command in it is the folder's own commands', not a line of the list
+        assert sum("safe.directory" in line for line in said) == 1
 
-    def test_the_command_is_not_cut_where_a_line_of_the_list_otherwise_is(self, work, theirs, mine, monkeypatch):
-        """A line of the list holds 300 characters of what a file gave; this one ends with a command to type, and holds 4,096."""
-        name = "m" * 200
-        mid = _pipeline(work, name)
-        _ready(mid, theirs)
-        _ready(_pipeline(work, "report", {f"acme/{name}": {"path": f"../{name}"}}), theirs)
+    def test_one_that_was_never_pinned_is_refused_by_its_pin_which_says_the_command(self, work, theirs, mine, monkeypatch):
+        """It never reaches the list: the pin of it is what fails, with the folder's own sentence."""
+        mid = _pipeline(work, "mid")
+        _pipeline(work, "report", {"acme/mid": {"path": "../mid"}})
         mine()
-        _git_refuses(monkeypatch, DUBIOUS.format(at=mid.as_posix()), under=mid)
+        at = mid.as_posix()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=mid)
         said = _said(_run(work, monkeypatch, "run"))
         assert any(
-            line.endswith(f"safe.directory {missing._quoted(mid.as_posix())}`, and then this again. Its own `chartbook run` says.")
+            line.startswith("acme/mid: cannot be pinned: git does not trust the repository that ")
+            and f"run `git config --global --add safe.directory {missing._quoted(at, batch=False)}`, and then this again" in line
             for line in said
         ), said
+
+    def test_where_there_is_no_command_to_give_the_sentence_is_said_whole_and_not_cut(self, work, mid, monkeypatch):
+        """On Windows, a folder whose name holds what a shell reads gets no command of ChartBook's, and the
+        sentence says where git's own is. A line of the list holds 300 characters of what a file gave;
+        this one is the folder's own commands' sentence, and holds 4,096."""
+        sentence = (
+            f"git does not trust the repository that {mid} is in ({'m' * 400}): another user owns it, or it is on a "
+            "network share, and git reads no such repository until it is told to. To have git trust it, run the `git "
+            "config --global --add safe.directory` command that `git status` prints in that folder (in PowerShell or "
+            "Git Bash: `cmd.exe` does not read its quotes), and then this again"
+        )
+
+        def refuse(directory):
+            raise snapshot.RepositoryNotTrusted(sentence)  # with no command
+
+        monkeypatch.setattr(snapshot, "code_of", refuse)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert f"     What it reads in turn is not known: {sentence}. Its own `chartbook run` says." in said, said
+        assert not any(line.strip().startswith("git config") for line in said)
 
     def test_git_that_could_not_be_run_is_said_so(self, work, mid, monkeypatch):
         _git_refuses(monkeypatch, f"{snapshot._GIT_NOT_RUN}: [Errno 2] No such file or directory: 'git'", under=mid)
