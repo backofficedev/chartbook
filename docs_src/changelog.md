@@ -28,10 +28,12 @@ Wrote chartbook.lock.
 
 **`chartbook run` is stricter.** It fails when its build did not write something `chartbook.toml` declares (below, "`chartbook run` builds, and looks for what it was to make"). A manifest that declares an output its build does not make yet will stop the run: take the entry out, or make it.
 
+**`chartbook snapshot` is held against a build.** It stops where what is committed, or what is on disk, is not what the last `chartbook run` here built from and left (below, "a snapshot is held against what `chartbook run` built"). A `dodo.py`, a Makefile or a CI file that built some other way and then ran `chartbook snapshot` stops there: build with `chartbook run`, or have it run `chartbook snapshot --as-is`.
+
 In order:
 
 1. Upgrade: `pip install -U chartbook`, or `uv add "chartbook>=0.6.0"` in a uv project, where everyone else then gets it at their next `uv sync`.
-2. In each pipeline that others pin: `chartbook snapshot`. The same commit and the same files make one new snapshot, which records each dataframe's rows, and the command says that is why it was made.
+2. In each pipeline that others pin: `chartbook run`, and then `chartbook snapshot`. The same commit and the same files make one new snapshot, which records each dataframe's rows, and the command says that is why it was made. The run comes first because a snapshot is now held against what `chartbook run` built (below): with nothing to rebuild it takes a moment. Or `chartbook snapshot --as-is`, which takes the files as they are.
 3. In each pipeline that pins them: `chartbook pin --update`, which says `already pinned`, since no file changed, and then what did: `1 dataframe has its rows pinned now, as well as its file: a build of someone's own that holds the same rows meets the pin.` Commit `chartbook.lock` and `chartbook.toml` together.
 4. A script that ran `chartbook pin --frozen` runs `chartbook pin --check` (below), and one that ran `chartbook update` runs `chartbook pin --update`.
 5. A CI file, a `dodo.py` or a Makefile that ran `chartbook check` runs `chartbook run --check`, without `--skip-outputs` (below).
@@ -130,6 +132,26 @@ Snapshot made: 5 files, 23.0 MB.
 - **A large table that grows by date is better written as a folder partitioned by year.** The store compares files: a table in one file changes whole when a day is added, and a folder by year changes in its newest part alone ({doc}`guide/depending-on-pipelines`).
 - **Fixed, where the store read increments already.** A snapshot under `snapshots/` that keeps files in another snapshot's folder (a pipeline's folder that ChartBook 0.5 laid out, copied in by hand) is not complete, and nothing builds on it: taken for complete by its folder, it stopped the writer. Two snapshots made at one instant are two, whichever way each is kept: an increment made at the instant of a complete one was taken for that one kept twice, and not listed. And a file in an increment's own folder whose name a sync wrote in the other of Unicode's forms is found when a later snapshot asks whether the store has it.
 - In Python: `snapshot.make(..., complete=True)`; `snapshot.to_be_kept(store, snapshot, complete=False)` is the rule, and `snapshot.as_kept(store, snapshot)` what a record says, each a `snapshot.Kept` (`files`, `size_bytes`, `builds_on`, `rest_made_at`, `own_files`, `own_bytes`, `increments_bytes`, `added_up`, `folder`, and `.increment`); `SnapshotReport.kept`, `.asked_complete` and `.kept_otherwise`. An increment's record carries the bytes of the increments made on its complete snapshot up to and with itself, beside what it builds on: `"stored": {"builds_on": "2026-11-16T091500Z_4f2a91c0e1b2", "increments_bytes": 430152}`, read as `KeptRecord.increments_bytes`; `KeptRecord.complete` says whether a record is a complete snapshot's. `FolderStore.begin(..., undecided=True)` begins a snapshot whose kind is said once every file is put (`keep_as_increment(builds_on, increments_bytes)` on what it returns), and `transfer.copy_snapshot(..., decides=True)` copies one into a store that decides for itself; `run.run(..., complete=True)`.
+
+### Added — a snapshot is held against what `chartbook run` built
+
+A snapshot is labelled with the commit you are on and holds the files on disk, and since a snapshot is typed after the build nothing tied the two: build, fix the code, commit, snapshot, and the old files were labelled with the fix ({design}`one-command`). A build that succeeds now leaves a note of what it ran on and what it left, and `chartbook snapshot` holds what is committed, and what is on disk, against it:
+
+```text
+$ chartbook run
+$ git commit -am "Fix the day count"
+$ chartbook snapshot
+Error: acme/rates: these differ from what it was built from: load_rates.py.
+  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-is`.
+```
+
+- **Run, commit that same work, snapshot** passes, and nothing more is said. Its record says that ChartBook ran the build.
+- **Files that no `chartbook run` built are refused too** (`doit` by hand, a notebook, a job elsewhere), and so is a snapshot after a build that failed, which used to be made of what there was. **`chartbook snapshot --as-is` takes what is on disk as it is.** A script that typed `chartbook snapshot` after building some other way needs `chartbook run` before it, or `--as-is`.
+- **A pipeline with no `build` script is not asked:** it commits what it declares.
+- **The note** is of each source file's bytes (a plain hash; a source file is one git tracks or would add) and of `chartbook.lock`, as they were when the run's script was about to start, and of the size and time of every file the build declares. It is kept with ChartBook's own things, `~/.chartbook/cache/built/`, and nothing is written in the project or in `.git`.
+- **What it costs:** any change after a build is a difference, a word in the README among them (a second `chartbook run` takes a moment where the build has nothing to do); and `chartbook run` rebuilds what your build tool finds out of date and no more.
+- `chartbook run --snapshot` is as it was, and is held against the note of its own build. The list of what is not in your store calls a folder `built already` only where its snapshot would be made.
+- In Python: `chartbook.built` (`began`, `finished`, `check`, `NotHeld`); `run.what_a_build_writes()` lists what a build is to write with its files.
 
 ### Changed — `chartbook run` builds, and looks for what it was to make; `chartbook snapshot` is typed
 

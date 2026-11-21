@@ -56,7 +56,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 
-from chartbook import lock
+from chartbook import built, lock
 from chartbook import snapshot as snapshots
 from chartbook.gitcache import (
     GitCache,
@@ -461,8 +461,8 @@ def _declares_what_a_snapshot_holds(directory: Path) -> bool:
         return True  # a manifest that cannot be read is said by what reads it next
 
 
-def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
-    """What a pipeline's manifest declares with a path that a build is to write, and that is not there: each as ``chartbook path`` names it, with its path as declared.
+def what_a_build_writes(directory: Union[str, Path]) -> list[tuple[str, str, list]]:
+    """What a pipeline's manifest declares with a path that a build is to write: each as ``chartbook path`` names it, its path as declared, and its files that are there.
 
     Read from the raw ``chartbook.toml``, as a snapshot reads it, and asked
     as a snapshot asks: an asset is there when its path holds a file, so a
@@ -481,18 +481,18 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
 
     # Whole, so that a source's file is not looked for under the folder's own name a second time
     directory = Path(os.path.abspath(directory))
-    missing = []
+    written = []
     for local, declared, absolute in declared_files(directory):
         if local.kind == "note":
             continue
         found = hashing.find_files(absolute)
-        if found is None or not found.files:
-            missing.append((str(local), declared))
+        written.append((str(local), declared, list(found.files) if found is not None else []))
     models = _read_manifest(directory).get("models") or {}
     for name in sorted(models) if isinstance(models, dict) else ():
         scores = models[name].get("metrics_path") if isinstance(models[name], dict) else None
-        if isinstance(scores, str) and scores.strip() and not os.path.isfile(os.path.normpath(directory / scores)):
-            missing.append((f"model/{name}'s scores", scores))
+        if isinstance(scores, str) and scores.strip():
+            path = Path(os.path.normpath(directory / scores))
+            written.append((f"model/{name}'s scores", scores, [path] if path.is_file() else []))
     # The file of a DuckDB source: what its tables and queries are read from, and what a snapshot writes them out of
     from chartbook.backends import MEMORY_URL, duckdb_path
     from chartbook.manifest import validate_sources
@@ -509,13 +509,21 @@ def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
             path = Path(duckdb_path(url, directory))
         except (ValueError, KeyError, TypeError):
             continue
-        if not path.is_file():
-            try:
-                shown = "./" + path.resolve().relative_to(directory.resolve()).as_posix()
-            except ValueError:
-                shown = str(path)
-            missing.append((f"source {name}", shown))
-    return missing
+        try:
+            shown = "./" + path.resolve().relative_to(directory.resolve()).as_posix()
+        except ValueError:
+            shown = str(path)
+        written.append((f"source {name}", shown, [path] if path.is_file() else []))
+    return written
+
+
+def unwritten(directory: Union[str, Path]) -> list[tuple[str, str]]:
+    """What a pipeline's manifest declares with a path that a build is to write, and that is not there: each as ``chartbook path`` names it, with its path as declared.
+
+    :raises OSError: If there is no ``chartbook.toml`` there to read.
+    :raises ValueError: If it is not valid TOML.
+    """
+    return [(shown, declared) for shown, declared, files in what_a_build_writes(directory) if not files]
 
 
 def _read_manifest(directory: Path) -> dict:
@@ -1698,6 +1706,16 @@ def run(
                     ).rstrip(".")
                     break
 
+            # What this build runs on, noted now that it has pinned and its script is about to start: a
+            # snapshot is held against it (chartbook.built). Of a pipeline of one's own, which a snapshot is
+            # made of; a git dependency's is the pin's
+            noted = None
+            if building and step.source in ("asked", "upstream"):
+                try:
+                    noted = built.began(step.directory, built.pipeline_of(step.directory, step.id))
+                except (OSError, ValueError):
+                    noted = None  # a manifest that cannot be read is said by what reads it next
+
             where = "" if step.directory == here else f"    in {step.directory}"
             echo(f"{step.id}: {script}{where}")
             old_frozen = os.environ.get("CHARTBOOK_FROZEN")
@@ -1709,6 +1727,12 @@ def run(
                     command, step.directory, script, foreign=step.source == "git",
                     undeclared=refused if building and step.source == "asked" else None,
                 )
+            except RunError:
+                # Refused as its script was to be started (a share with no drive letter, a line cmd cannot
+                # read): nothing was built, and the note is as it was
+                if noted is not None:
+                    built.never_started(noted)
+                raise
             finally:
                 if frozen:
                     if old_frozen is None:
@@ -1753,6 +1777,19 @@ def run(
                     )
                     break
 
+            left = None
+            if noted is not None:
+                # Built, and everything it declares is there: what it left, noted
+                try:
+                    left = built.finished(noted)
+                except (OSError, ValueError):
+                    left = None
+                if left is None or not noted.kept:
+                    echo(
+                        f"{step.id}: the note of this build could not be kept, so `chartbook snapshot` "
+                        f"will ask for it to be built again, or for `{built.AS_IS}`."
+                    )
+
             if building and step.source == "asked" and not snapshot and not step.snapshot_first:
                 # Built, and no snapshot asked for: none is made, and the run's last line names the
                 # command that makes one. One that declares nothing a snapshot could hold is told nothing
@@ -1780,6 +1817,15 @@ def run(
                             f"{commits_before[step.directory][:7]} to {now[:7]}, so no "
                             f"snapshot was made: the label would not say which code ran"
                         )
+                    if left is not None:
+                        # Held against what this very build ran on and left, as a typed snapshot is
+                        try:
+                            built.held(step.directory, left)
+                        except built.NotHeld as refusal:
+                            raise snapshots.SnapshotError(
+                                "; ".join(line.strip().rstrip(".") for line in built.said(refusal, step.id)[:-1])
+                                + ", so no snapshot was made"
+                            ) from None
                     made = snapshots.make(
                         step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,), ask=False,
                         complete=complete and snapshot and step.source == "asked",

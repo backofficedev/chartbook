@@ -46,6 +46,7 @@ chartbook
 ../apidocs/chartbook/chartbook.gitcache
 ../apidocs/chartbook/chartbook.replacing
 ../apidocs/chartbook/chartbook.run
+../apidocs/chartbook/chartbook.built
 ../apidocs/chartbook/chartbook.build_docs
 ../apidocs/chartbook/chartbook.check
 ../apidocs/chartbook/chartbook.diagnostics

@@ -435,8 +435,9 @@ class TestASnapshotIsTyped:
         assert made_at(result.output.splitlines(), COMPLETE) == 1  # a pipeline's first: complete
         (taken,) = _snapshots(store)
         assert taken.commit == commit and taken.assets["out"]["content_hash"]
-        # Nothing was built again, and its record does not say that ChartBook ran the build: it took the person's word
-        assert _ran(demo) == 1 and not taken.built_by_run
+        # Nothing was built again, and its record says that ChartBook ran the build: the snapshot was held
+        # against what the run built from and left (tests/test_built_note.py)
+        assert _ran(demo) == 1 and taken.built_by_run
 
     def test_the_same_files_make_no_second_one(self, demo, store):
         assert _run().exit_code == 0 and _snapshot().exit_code == 0
@@ -748,7 +749,7 @@ class TestAFirstStoreThatIsOnlyRead:
             first={"url": str(work / "first"), "read_only": True},
             second={"url": str(work / "second"), "pipelines": ["acme/demo"]},
         )
-        again = _snapshot()
+        again = _snapshot("--as-is")  # a table written by hand, and not by a run
         assert again.exit_code == 0, again.output
         # The second of the pipeline there, its table another and its documents the same: an increment
         assert said_made(again.output, INCREMENT) and "Stores: second" in again.output.splitlines()

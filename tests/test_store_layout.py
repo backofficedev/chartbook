@@ -983,7 +983,7 @@ class TestAStoreOf05IsNotWritten:
         old, second, cleared = of_0_5
         before = _tree(old.root)
         _chart(rates, "the curve on the 20th")
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates)])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates)])
         assert result.exit_code == 1
         assert result.output.splitlines() == [f"Error: {refusal(old)}"]
         assert _tree(old.root) == before
@@ -1005,7 +1005,7 @@ class TestAStoreOf05IsNotWritten:
         )
         _chart(rates, "the curve on the 22nd")
         before = _tree(old.root)
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates)])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates)])
         assert result.exit_code == 1
         assert result.output.splitlines() == [f"Error: {refusal(old)}"]
         assert _tree(old.root) == before and list(new.iterdir()) == []
@@ -1120,7 +1120,7 @@ class TestARunWhoseStoreIsOf05:
 
     def test_chartbook_snapshot_stops_with_the_stores_words(self, demo, store):
         (demo / "out.csv").write_text("a,b\n", encoding="utf-8", newline="\n")
-        result = CliRunner().invoke(main, ["snapshot"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is"])
         assert result.exit_code == 1
         assert result.output.splitlines() == [f"Error: {refusal(store)}"]
         assert _tree(store.root) == ["store.json"]
@@ -1422,7 +1422,7 @@ class TestAFolderWithBothLayoutsInIt:
         both = "at its top what ChartBook 0.5 keeps there (pipelines/" if marker.endswith("v3") else "and folders laid out as this version lays them out"
         for arguments in (
             ["store", "verify"], ["store", "info"], ["store", "ls"], ["store", "gc", "--dry-run"],
-            ["pin", "--project-dir", str(reader)], ["snapshot", "--project-dir", str(rates)],
+            ["pin", "--project-dir", str(reader)], ["snapshot", "--as-is", "--project-dir", str(rates)],
             ["path", "acme/rates:treasury", "--project-dir", str(reader)], ["lineage", "--project-dir", str(reader)],
             ["store", "export", "acme/rates", "--to", str(work / "out")],  # (`restore` here has nothing to restore, and asks the store nothing)
         ):

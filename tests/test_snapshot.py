@@ -1219,7 +1219,7 @@ class TestCommands:
     def test_snapshot(self, maker, work, monkeypatch):
         commit = _git(work, "rev-parse", "HEAD")
         monkeypatch.chdir(maker)
-        result = self._run("snapshot")
+        result = self._run("snapshot", "--as-is")
         assert result.exit_code == 0, result.output
         (record,) = default_store().records()
         size = sum(file.size_bytes for asset in record.assets for file in asset.files)
@@ -1236,8 +1236,8 @@ class TestCommands:
 
     def test_snapshot_again(self, maker, monkeypatch):
         monkeypatch.chdir(maker)
-        self._run("snapshot")
-        result = self._run("snapshot")
+        self._run("snapshot", "--as-is")
+        result = self._run("snapshot", "--as-is")
         assert result.exit_code == 0
         last = result.output.splitlines()[-1]  # and no line of which store, where there is one
         assert last.startswith("No new snapshot: the same bytes and the same pins as the one made 20")
@@ -1245,7 +1245,7 @@ class TestCommands:
 
     def test_snapshot_says_what_is_not_built(self, maker, work):
         (maker / "_output" / "curve.html").unlink()
-        result = self._run("snapshot", "--project-dir", maker)
+        result = self._run("snapshot", "--as-is", "--project-dir", maker)
         assert result.exit_code == 0, result.output
         said = result.output.splitlines()
         assert said[0].endswith(": 1 asset(s) in the store, 1 not built")
@@ -1254,7 +1254,7 @@ class TestCommands:
     def test_snapshot_with_uncommitted_changes_is_refused(self, maker, monkeypatch):
         (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(maker)
-        result = self._run("snapshot")
+        result = self._run("snapshot", "--as-is")
         assert result.exit_code == 1
         assert result.output.startswith("Error: acme/maker has changes that are not committed:")
         assert "  ?? maker/pull.py" in result.output.splitlines()
@@ -1281,14 +1281,16 @@ class TestCommands:
         result = self._run("pin")
         assert result.exit_code == 1 and commit
         # The list of what is not in the store (tests/test_not_in_your_store.py). Its files are there and
-        # committed, so a snapshot is all there is to make
+        # committed, and no run of ChartBook's left them, so a snapshot of them would be refused: the list
+        # says to build
         assert result.output.splitlines()[:7] == [
             "Wrote chartbook.lock.",
             f"acme/user cannot be pinned yet: 1 pipeline it reads is not in the store at {default_store()}.",
             "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads.",
             "",
-            f"1. acme/maker    {os.path.join('..', 'maker')} (a folder on this machine, built already)",
-            f"     chartbook snapshot --project-dir {typed}",
+            f"1. acme/maker    {os.path.join('..', 'maker')} (a folder on this machine)",
+            # It has no `build` script, and what it declares is not committed: taking its files as they are is typed
+            f"     chartbook snapshot --as-is --project-dir {typed}",
             "",
         ]
         assert "could not be pinned" not in result.output

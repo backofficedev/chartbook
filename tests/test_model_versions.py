@@ -637,7 +637,7 @@ class TestAnotherPipelinesVersion:
         assert report.skipped_labels == [("model/m", "deadbeef"), ("model/m", "my label")]
         monkeypatch.chdir(forecast)
         _train(forecast, b"weights-3", 0.1)
-        result = CliRunner().invoke(main, ["snapshot"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is"])
         assert result.exit_code == 0, result.output
         assert "label not recorded: model/m 'my label'" in result.output
         assert "label not recorded: model/m 'deadbeef'" in result.output
@@ -999,12 +999,12 @@ class TestCommands:
 
     def test_snapshot_says_when_it_makes_a_version(self, forecast, monkeypatch):
         monkeypatch.chdir(forecast)
-        result = self._run("snapshot")
+        result = self._run("snapshot", "--as-is")
         assert result.exit_code == 0, result.output
         (version,) = models.versions("m", project_dir=forecast)
         assert f"  model/m: new version {version.name}" in result.output.splitlines()
 
-        again = self._run("snapshot")  # nothing new, so nothing to say
+        again = self._run("snapshot", "--as-is")  # nothing new, so nothing to say
         assert "new version" not in again.output
 
     def test_path_takes_a_version_and_a_label(self, forecast, monkeypatch):

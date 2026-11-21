@@ -189,7 +189,12 @@ def task_snapshot_yield_curve():
         # of what yield_curve built, and its documents, at the commit it is
         # at, in the store: with none of those changed there is nothing to
         # declare, and chartbook would make no new snapshot either.
-        "actions": [f"chartbook snapshot --project-dir {YIELD_CURVE_DIR}"],
+        #
+        # `--as-is`: these files are built by this file's own doit, above,
+        # and not by `chartbook run`, which is what a snapshot is held
+        # against. By hand, in one pipeline, the two commands are
+        # `chartbook run` and then `chartbook snapshot`, with no option.
+        "actions": [f"chartbook snapshot --as-is --project-dir {YIELD_CURVE_DIR}"],
         "file_dep": [*git_files(YIELD_CURVE_DIR), *made_by(YIELD_CURVE_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],
         "task_dep": ["build_yield_curve"],
@@ -215,7 +220,7 @@ def task_build_rate_forecast():
 def task_snapshot_fred_charts():
     """Publish the FRED pipeline for the store catalog."""
     return {
-        "actions": [f"chartbook snapshot --project-dir {FRED_CHARTS_DIR}"],
+        "actions": [f"chartbook snapshot --as-is --project-dir {FRED_CHARTS_DIR}"],
         "file_dep": [*git_files(FRED_CHARTS_DIR), *made_by(FRED_CHARTS_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],
         "task_dep": ["build_fred_charts"],
@@ -226,7 +231,7 @@ def task_snapshot_fred_charts():
 def task_snapshot_rate_forecast():
     """Publish the consumer after its upstream pin and model are built."""
     return {
-        "actions": [f"chartbook snapshot --project-dir {RATE_FORECAST_DIR}"],
+        "actions": [f"chartbook snapshot --as-is --project-dir {RATE_FORECAST_DIR}"],
         "file_dep": [*git_files(RATE_FORECAST_DIR), *made_by(RATE_FORECAST_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],
         "task_dep": ["build_rate_forecast"],

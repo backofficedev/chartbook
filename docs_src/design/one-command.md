@@ -336,7 +336,8 @@ Said plainly, since the day with one command hid each of these *(found by review
 
 ### A snapshot is of what a run built
 
-*Decided 2026-11-20 by the maintainer: "Yes. We need to do this." Not built yet.* Proposed by
+*Decided 2026-11-20 by the maintainer: "Yes. We need to do this." Built the same day
+(`chartbook/built.py`).* Proposed by
 Claude as a note of what a run built from; the maintainer added what it built ("Can chartbook
 run always hash the stuff at the end and keep a note of those hashes somewhere? Then when
 chartbook snapshot happens it can verify?"), and chose where the note is kept. *The design was
@@ -487,6 +488,47 @@ What is settled:
   would pass,** and gives it `chartbook snapshot`; otherwise `chartbook run --snapshot`.
   *(From the review: its `chartbook snapshot` lines would have been refused.)*
 
+What building it settled:
+
+- **Where nothing at all is built, the snapshot says so in its own words,** naming each thing
+  that is not built, as it did: that is more use than "has not been built by `chartbook run`".
+- **The list gives `chartbook snapshot --as-is` for a pipeline that nothing builds and whose
+  files are not committed,** where it is known: no other command can make that snapshot.
+- **A cache that cannot be written keeps no note,** and the run says so in a line, and builds.
+  A run that makes its own snapshot holds it against the note it has in hand.
+- **Tests of other things that typed `chartbook snapshot` over files written by hand type
+  `--as-is`:** fifty-four of them, in seventeen files.
+- **This repository's own examples, and the upgrade notes, were scripts that snapshot.** *(Found
+  by the first full build on the branch.)* `examples/dodo.py` builds each example with that
+  example's doit and then typed `chartbook snapshot`: it types `--as-is` now, and says why.
+  It could build with `chartbook run` instead, which needs the examples trusted on the machine
+  that runs it: the maintainer's to choose. And the notes for upgrading from 0.5 sent every
+  pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
+  `--as-is`.
+- **In a repository git does not trust, a run leaves no note and says nothing of it,** since it
+  cannot ask which files are source; the snapshot there says the folder is in no repository.
+  *(Found on Windows, on a share.)* Left until `snapshot.code_of` tells the two apart.
+- **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
+  `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
+  files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It
+  steps aside only for what the snapshot itself says better: something that is not committed,
+  nothing built at all, no pipeline there.
+- **A note is forgotten only by the machine that left it, and only for a folder that is gone
+  and not away.** *(Found by the review: a drive unplugged, or a share not connected, lost its
+  folders' notes at the next run of anything; and one machine removed another's on a home they
+  share.)* Gone is where the folder it was in is there and it is not. *(Left, from the same
+  review: a project directly under a mount point that stays behind as an empty folder when
+  nothing is mounted is taken for gone. It is built again.)*
+- **A run refused as its script is to be started puts the note back.** *(Found by the review:
+  on Windows a share with no drive letter is refused there, and "a build began" was left.)*
+- **One folder has one note, under whatever spelling it was last built.** *(Found by the review:
+  built as `demo` and then as `DEMO`, it had two, and the snapshot was held against the older.)*
+- **A file a pipeline declares outside its own folder is not asked of here:** the snapshot says
+  of it what is to be said. *(Found by the review.)*
+- **A note that does not say whose it is, or in which state, is no note.**
+- **The list says `--as-is` only of a folder as it stands,** and not of one that a line is to
+  check out to another commit first. *(Found by the review.)*
+
 What it costs:
 
 - **Any change after the build is refused, a word in the README among them.** With a build that
@@ -508,7 +550,8 @@ What it costs:
   what its build writes.
 - **Only the pipeline's own folder is looked at,** as for what is not committed. Code the build
   uses from elsewhere in its repository can change, and so can an ignored file it reads (`.env`,
-  a download) and the packages it runs on, and the note does not see them.
+  a download) and the packages it runs on, and the note does not see them. Nor another
+  repository kept inside the folder (a submodule): it is no file, and a new commit of it passes.
 - **A time of last change is not the bytes.** A file rewritten to the same size within the same
   second passes. A disk that shifts its times at a clock change (FAT) refuses what did not
   change, and so does a database file that was opened for writing and left as it was.
@@ -1025,4 +1068,4 @@ changes.
     {doc}`snapshots-and-increments`.
 12. A snapshot is of what a run built: a run leaves a note, and `chartbook snapshot` holds what
     is committed and what is on disk against it; `--as-is`. *Decided 2026-11-20; this page
-    first.*
+    first. Built 2026-11-20.*

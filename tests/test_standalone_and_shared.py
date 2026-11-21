@@ -138,7 +138,7 @@ class TestTheGcReminder:
         _write_year(news, 2024, [3])
         snapshot.make(news, store=store, complete=True)  # complete, so that the old one is built on by nothing and is one gc would clear
         _write_year(news, 2025, [4])
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news)])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(news)])
         assert result.exit_code == 0, result.output
         assert "Snapshot made" in result.output
         assert "`chartbook store gc` would clear 1 snapshot(s), freeing" in result.output
@@ -146,12 +146,12 @@ class TestTheGcReminder:
         assert (store.root / "snapshots" / "news").is_dir() and len(list(store.all_snapshot_files())) == 3  # said, not done
 
     def test_silenced_and_quiet_when_there_is_nothing_to_clear(self, news, store):
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news)])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(news)])
         assert result.exit_code == 0 and "store gc" not in result.output  # one snapshot, the newest: nothing to clear
         _write_year(news, 2024, [3])
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")
         _write_year(news, 2025, [4])
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(news), "--no-gc-reminder"])
         assert result.exit_code == 0 and "store gc" not in result.output
 
     def test_a_snapshot_a_pin_made_that_gc_would_remove_is_said(self, monkeypatch):
