@@ -295,7 +295,7 @@ def reads_here(store) -> bool:
     return isinstance(store, FolderStore)
 
 
-def since(before: Mapping, after: Mapping, taken, store, read: bool = True) -> Optional[str]:
+def since(before: Mapping, after: Mapping, taken, store, read: bool = True, at_hand=None) -> Optional[str]:
     """What a dataframe's rows are beside an earlier record of them, in a few words; None where they are the same file, or there is nothing to tell them by.
 
     ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
@@ -317,16 +317,20 @@ def since(before: Mapping, after: Mapping, taken, store, read: bool = True) -> O
         not say it all. False for a store whose files are not on this
         machine (:func:`reads_here`): a line of output is not worth
         fetching a table for.
+    :param at_hand: For a snapshot just made: what gives its table where
+        it was put from, for as long as the files there are the ones that
+        were put (:func:`chartbook.snapshot._at_hand`). The table is then
+        read there, and not in the store (:func:`rows_compared`).
     """
     try:
-        return _since(before, after, taken, store, read)
+        return _since(before, after, taken, store, read, at_hand)
     except (KeyboardInterrupt, SystemExit, GeneratorExit):
         raise
     except BaseException:  # noqa: BLE001 - a store that cannot be reached, a record no pin wrote, a panic of polars: nothing is said
         return None
 
 
-def _since(before: Mapping, after: Mapping, taken, store, read: bool) -> Optional[str]:
+def _since(before: Mapping, after: Mapping, taken, store, read: bool, at_hand=None) -> Optional[str]:
     if not before.get("content_hash") or before.get("content_hash") == after.get("content_hash"):
         return None
     was, now = before.get("rows"), after.get("rows")
@@ -347,12 +351,12 @@ def _since(before: Mapping, after: Mapping, taken, store, read: bool) -> Optiona
         return f"its rows changed{counted}; it has no date column to tell new rows by"
     if rowhash.ALL in was:
         # It is dated now and was not then: all its rows are compared, and none can be told to be new
-        compared = rows_compared(before, after, taken, store, read)
+        compared = rows_compared(before, after, taken, store, read, at_hand)
         if compared.same:
             return f"the same rows, in other bytes; now dated by {after.get('date_col')!r}"
         return f"its rows changed{counted}; the earlier record had no date column to tell new rows by"
     # The earlier record is dated: its periods are compared, up to its last date
-    compared = rows_compared(before, after, taken, store, read)
+    compared = rows_compared(before, after, taken, store, read, at_hand)
     if compared.undated:
         return (
             f"its rows are no longer dated by {before.get('date_col')!r}, so new rows cannot be told from "
@@ -375,7 +379,7 @@ def _since(before: Mapping, after: Mapping, taken, store, read: bool) -> Optiona
     return told
 
 
-def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = True) -> "rowhash.Compared":
+def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = True, at_hand=None) -> "rowhash.Compared":
     """A snapshot's file beside a pin's record of rows: the same rows up to the pin's last date, or where not.
 
     Cheapest first. What was found before, for this pin's rows and these
@@ -384,8 +388,19 @@ def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = T
     same rows, and is not read. Only then are the table's rows read, and
     hashed in the periods still to be told (:func:`chartbook.rowhash.hash_in`).
 
+    The table is read in the store, where the snapshot's file is. For a
+    snapshot just made, *at_hand* gives the table where it was put from,
+    and it is read there: the same bytes, on the disk the pipeline is
+    built on, where the store may be a folder a sync service keeps. What
+    is found there is taken, and remembered, only where the files are
+    still as they were put once they have been read; else the store's
+    copy is read after all (:func:`_read_at_hand`).
+
     :param read: Whether the table may be read. With False, what is
         remembered and what the two records say is all that is used.
+    :param at_hand: What gives the table where the snapshot was put from,
+        or None once the files there are no longer the ones put
+        (:func:`chartbook.snapshot._at_hand`).
     :raises chartbook.rowhash.NotHashed: If the table's rows cannot be hashed.
     :raises _NotRead: If the table would have to be read, and may not be.
     """
@@ -411,11 +426,35 @@ def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = T
     elif not read:
         raise _NotRead()
     else:
-        table = rowhash.Table.at(_held(store, dict(theirs), taken.pipeline))
-        compared = rowhash.hash_in(table, date_col, rows, as_of, known=known)
+        compared = _read_at_hand(at_hand, date_col, rows, as_of, known) if at_hand is not None else None
+        if compared is None:
+            table = rowhash.Table.at(_held(store, dict(theirs), taken.pipeline))
+            compared = rowhash.hash_in(table, date_col, rows, as_of, known=known)
     _compared[answers] = compared
     _write(remembered, answers, compared)
     return compared
+
+
+def _read_at_hand(at_hand, date_col, rows: Mapping, as_of, known) -> Optional["rowhash.Compared"]:
+    """A snapshot's table beside a record of rows, read where the snapshot was put from; None where the files there are not the ones put, before they are read or once they have been.
+
+    They are looked at before the table is read and again after: a file
+    that changes while it is read gave rows that are not the snapshot's,
+    and nothing is said or remembered of them. What reading raises is the
+    table's own where the files are still as they were put, and is raised.
+    """
+    table = at_hand()
+    if table is None:
+        return None
+    try:
+        compared = rowhash.hash_in(table, date_col, rows, as_of, known=known)
+    except (KeyboardInterrupt, SystemExit, GeneratorExit):
+        raise
+    except BaseException:  # noqa: BLE001 - a file gone as it was read, a panic of polars: the store's copy is read where the folder has changed
+        if at_hand() is None:
+            return None
+        raise
+    return compared if at_hand() is not None else None
 
 
 def _told_by_the_records(pinned: Mapping, theirs: Mapping) -> Optional[list]:

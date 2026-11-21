@@ -3211,6 +3211,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     not_now: list[tuple[str, str]] = []  # the dataframes whose rows could not be hashed this time, each with why
     index_columns: list[str] = []  # the dataframes whose file has the column pandas makes of an index with no name
     index_names: dict = {}  # and which columns those are
+    # Each dataframe put from files of the folder: where they are, how they are read, and each as it was just before
+    # it was put (_as_they_are). What is said of its rows is told from the folder while they are still so (_rows_since)
+    put_from: dict = {}
 
     def rows(name: str, record: dict, path: Path, entry, reading: Optional[dict]) -> dict:
         """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one.
@@ -3244,9 +3247,11 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True, keep=str(local) in marked, locked=str(local) in locked)
             not_built.append((str(ref), declared_path))
             continue
+        reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
+        if local.kind == "dataframe":
+            put_from[str(local)] = (absolute, reading, _as_they_are(found.files))  # before a byte of them is hashed
         stored = pending.put(absolute, links=LINKS)
         held[str(local)] = stored.stored
-        reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
         record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked, reading=reading,
                               locked=str(local) in locked)
         if local.kind == "model":
@@ -3440,7 +3445,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     snapshot = dataclasses.replace(snapshot, path=path)
     # As its record says it is kept, and whether it is complete because the increments had added up
     kept = dataclasses.replace(as_kept(store, snapshot), added_up=decided.added_up)
-    beside, rows_said = _rows_since(directory, snapshot, store)
+    beside, rows_said = _rows_since(directory, snapshot, store, put_from)
     return SnapshotReport(
         snapshot,
         True,
@@ -3463,15 +3468,70 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     )
 
 
-def _rows_since(directory: Path, taken: Snapshot, store: Store) -> tuple:
+def _as_they_are(files) -> Optional[dict]:
+    """Each of some files with its size and when it was last written, as the disk has them now; None where one cannot be asked about."""
+    seen = {}
+    for file in files:
+        try:
+            looked = os.stat(file)
+        except OSError:
+            return None
+        seen[str(file)] = (looked.st_size, looked.st_mtime_ns)
+    return seen
+
+
+def _at_hand(put: Optional[tuple]):
+    """What gives a dataframe's table where it was put from, in the pipeline's folder, for as long as it is there as it was put; None for a dataframe put from no file of the folder.
+
+    Asked, it gives the table to read (:class:`chartbook.rowhash.Table`)
+    where the folder holds the files the dataframe was put from, no more
+    and no fewer, each at the size and the time it had just before it was
+    put: they are then the bytes the snapshot holds. It gives None once
+    any of that is no longer so (a build under way again while the
+    snapshot is made), and whoever asks reads the store's copy.
+
+    :param put: Where its files are, how they are read, and each as it was
+        (:func:`_as_they_are`), as :func:`_make` notes them.
+    """
+    if put is None or put[2] is None:
+        return None
+    path, reading, as_put = put
+
+    def table():
+        from chartbook import rowhash
+
+        found = hashing.find_files(path)
+        if found is None or _as_they_are(found.files) != as_put:
+            return None
+        return rowhash.Table(path, (reading or {}).get("format"), (reading or {}).get("read_options"))
+
+    return table
+
+
+def _rows_since(directory: Path, taken: Snapshot, store: Store, put_from: Optional[dict] = None) -> tuple:
     """The snapshot of this pipeline before one just made, and what each dataframe's rows are beside it: ``(snapshot, [(asset ID, what)])``.
 
     Only a dataframe whose file is another than the one before is told
     of: ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
     ``earlier rows changed: …`` (:func:`chartbook.standins.since`). Telling
-    it reads what the two records do not already show to be the same,
-    which for a table that gained rows is its last period. Nothing here
-    stops a snapshot: what cannot be told is left unsaid.
+    it reads nothing where the two records already show every period to
+    be the same. Otherwise the new table is read, every file of it, and
+    its rows hashed in the periods still to be told, which for a table
+    that gained rows is its last. Nothing here stops a snapshot: what
+    cannot be told is left unsaid.
+
+    **The table is read where it was put from, in the pipeline's folder,
+    and not in the store,** where its files are still as they were put
+    (:func:`_at_hand`). Its rows were hashed there a moment ago; the store
+    may be a folder a sync service keeps, where reading the table back was
+    more than a dozen questions of the disk for each of its files, and
+    every byte of it. Where the folder has changed since, the store's
+    copy is read, as it always was: the line is of the snapshot's bytes
+    or it is not said. A table written out of a DuckDB file has no file in
+    the folder, and is read in the store.
+
+    :param put_from: The dataframes put from files of the folder, by name,
+        each as :func:`_make` notes it.
     """
     from chartbook import standins
 
@@ -3488,7 +3548,7 @@ def _rows_since(directory: Path, taken: Snapshot, store: Store) -> tuple:
         if (record.get("ref") or {}).get("kind") != "dataframe" or name not in before.assets:
             continue
         # A snapshot is made whatever becomes of what is said of it: since() raises nothing
-        what = standins.since(before.assets[name], record, taken, store, read=read)
+        what = standins.since(before.assets[name], record, taken, store, read=read, at_hand=_at_hand((put_from or {}).get(name)))
         if what:
             told.append((record["id"], what))
     return (before, told) if told else (None, [])

@@ -1,16 +1,20 @@
 """A snapshot of a table of many small files asks the store little for each file.
 
 A store may be a folder a sync service keeps, where each question to the
-disk (is this file there, how large is it, open it) costs a thousand times
-what it costs on a disk of one's own. A table kept as a folder of small
-files, one a day, is thousands of files, and a snapshot of it that adds
-twenty of them is kept as an increment: twenty files are copied. What it
-asks of the store must not grow with the files it does not copy, beyond
-one look at each to know that the snapshot it builds on still has it.
+disk (is this file there, how large is it, open it) takes the better part
+of a millisecond: hundreds of times what it takes on a disk of one's own.
+A table kept as a folder of small files, one a day, is thousands of files,
+and a snapshot of it that adds twenty of them is kept as an increment:
+twenty files are copied. What it asks of the store must not grow with the
+files it does not copy, beyond a look at each to know that the snapshot it
+builds on still has it.
 
-Measured on 2026-11-20, before the rules these tests hold, the second
+Measured on 2026-11-20, before the six rules these tests hold, the second
 snapshot of such a table asked the store 26 questions for each file of the
-table, and read every one of them back from it.
+table, and read every one of them back from it. It asks 4: whether the
+file is a link and how large it is, as the snapshot's kind is decided and
+once more before its record. Each rule has a class below, with what it
+saves and what it must not lose.
 
 The second snapshot is counted here by wrappers that count and call
 through, for two sizes of table, so that what grows with the table shows.
@@ -326,6 +330,30 @@ def asked(tmp_path_factory) -> dict:
             except OSError:
                 pass
     return found
+
+
+# --- What it comes to ----------------------------------------------------------------
+
+
+@counted
+class TestWhatAFileMoreOfTheTableAsksOfTheStore:
+    """Twenty new files either way: what the larger table asks beyond the smaller is asked for the files that were not copied."""
+
+    def test_it_is_four_questions_where_it_was_twenty_six(self, asked):
+        """Whether it is a link and how large it is, twice: as the kind is decided, and before the record."""
+        small, large = (asked[files] for files in SIZES)
+        more = large.files - small.files
+        added = {what: (large.store[what] - small.store[what]) / more for what in sorted(set(small.store) | set(large.store))}
+        said = f"{sorted(small.store.items())} then {sorted(large.store.items())}"
+        assert sum(added.values()) <= 4.1, said
+        # Nothing is opened, listed, written or resolved for a file that is not copied, and no file's time is set
+        assert {what for what, a_file in added.items() if abs(a_file) > 0.05} <= {"stat", "lstat"}, said
+        assert added.get("stat", 0) <= 2.1 and added.get("lstat", 0) <= 2.1, said
+
+    def test_and_the_rest_does_not_grow_with_the_table(self, asked):
+        """What is asked whatever the table's size: the records, the note, the twenty files copied and the record written. Measured at 465."""
+        for found in asked.values():
+            assert found.of_the_store() - 4 * found.files <= 600, sorted(found.store.items())
 
 
 # --- The reminder of `store gc` sweeps nothing ---------------------------------------
@@ -778,6 +806,138 @@ class TestARecordIsReadOnce:
                 snapshot.read(taken.path)
         taken.path.write_bytes(whole)
         assert snapshot.read(taken.path).content() == taken.content()
+
+
+class TestTheRowsLineReadsTheFolder:
+    """The line a snapshot says of a dataframe's rows beside the snapshot before it (``60 new rows, through 2019-04-30; earlier rows unchanged``) was told by reading the new table back from the store: every file of it asked about and opened there, though the same bytes had been read and hashed in the pipeline's folder a moment before. It is told from the folder.
+
+    From the folder only while each of its files has the size and the time
+    it had when it was put, and the folder has gained and lost none: they
+    are then the snapshot's bytes, and what is found is remembered as what
+    the snapshot's file gives. Where the folder has changed since, the
+    line is what the store's copy gives, as before: never a line about
+    bytes that are not in the snapshot.
+    """
+
+    @counted
+    def test_no_file_of_the_table_is_read_from_the_store(self, asked):
+        for found in asked.values():
+            assert found.table_reads == Counter(), found.table_reads
+            last = FIRST_DAY + timedelta(days=found.files - 1)
+            said = f"    acme/daily:daily: {3 * NEW} new rows, through {last.isoformat()}; earlier rows unchanged"
+            assert said in found.output.splitlines(), found.output
+
+    #: What the second snapshot says of the table: seven days where there were five
+    SAID = {"acme/daily:daily": "6 new rows, through 2019-01-07; earlier rows unchanged"}
+
+    @pytest.fixture
+    def daily(self, tmp_path, store):
+        """A pipeline with a first snapshot of five days, and two days more in its folder."""
+        from chartbook import snapshot, standins
+
+        project = _pipeline(tmp_path.resolve() / "project", 5)
+        assert snapshot.make(project, store=store, made_at=LONG_AGO.format(0)).made
+        _write_days(project, 5, 2)
+        standins._compared.clear()  # what this process has compared: each test is a process of its own
+        return project
+
+    @pytest.fixture
+    def read(self, daily, monkeypatch) -> list:
+        """Where each table hashed for a line is read: ``folder``, the pipeline's own, or ``store``."""
+        found, real = [], rowhash.hash_in
+
+        def hashing_in(table, *arguments, **options):
+            found.append("folder" if str(table.path).startswith(str(daily)) else "store")
+            return real(table, *arguments, **options)
+
+        monkeypatch.setattr(rowhash, "hash_in", hashing_in)
+        return found
+
+    def _remembered(self, store) -> list:
+        """The comparisons this machine remembers."""
+        return sorted((store.root.parent / "cache" / "rows" / "met").glob("*.json"))
+
+    def _before_the_line(self, monkeypatch, change) -> None:
+        """Do *change* once the snapshot's record is written, before its rows are told."""
+        from chartbook import snapshot
+
+        real = snapshot._rows_since
+
+        def telling(*arguments, **options):
+            change()
+            return real(*arguments, **options)
+
+        monkeypatch.setattr(snapshot, "_rows_since", telling)
+
+    def test_the_table_is_read_in_the_folder_and_what_is_found_is_remembered(self, daily, store, read):
+        from chartbook import snapshot
+
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.rows_said == list(self.SAID.items()) and read == ["folder"]
+        assert len(self._remembered(store)) == 1
+
+    def test_it_is_the_line_the_stores_copy_gives(self, daily, store, read):
+        from chartbook import snapshot, standins
+
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        before, after = second.rows_beside.assets["daily"], second.snapshot.assets["daily"]
+        standins._compared.clear()
+        for remembered in self._remembered(store):
+            remembered.unlink()  # nothing remembered of it, as on another machine
+        assert standins.since(before, after, second.snapshot, FolderStore(store.root)) == self.SAID["acme/daily:daily"]
+        assert read == ["folder", "store"]
+
+    def _revised(self, project: Path) -> None:
+        """The first day's file is written again with other values, as a build under way would: read, it would say that earlier rows changed."""
+        day = project / "_data" / "parts" / "2019-01" / "2019-01-01.parquet"
+        seen = day.stat()
+        pl.DataFrame({"ds": [FIRST_DAY] * 3, "unique_id": ["T0", "T1", "T2"], "y": [9.0, 9.0, 9.0]}).write_parquet(day)
+        os.utime(day, ns=(seen.st_atime_ns, seen.st_mtime_ns + 5_000_000_000))  # whatever the disk's clock is good for
+
+    @pytest.mark.parametrize("change", ["a file written again", "a day more", "a day gone"])
+    def test_a_folder_that_has_changed_since_the_put_is_not_read_for_it(self, daily, store, read, monkeypatch, change):
+        """A build is under way again while the snapshot is made. The line is of the snapshot's bytes, which the store has: the store's copy is read for it, as it used to be."""
+        from chartbook import snapshot
+
+        changes = {
+            "a file written again": lambda: self._revised(daily),
+            "a day more": lambda: _write_days(daily, 7, 1),
+            "a day gone": lambda: (daily / "_data" / "parts" / "2019-01" / "2019-01-02.parquet").unlink(),
+        }
+        self._before_the_line(monkeypatch, changes[change])
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.made and second.rows_said == list(self.SAID.items())
+        assert read == ["store"]
+
+    def test_a_folder_that_changes_while_it_is_read_is_read_for_nothing(self, daily, store, monkeypatch):
+        """Looked at before it is read and again after: what was read of a folder that changed meanwhile is not the snapshot's, is not said and is not remembered."""
+        from chartbook import snapshot
+
+        read, real = [], rowhash.hash_in
+
+        def hashing_in(table, *arguments, **options):
+            where = "folder" if str(table.path).startswith(str(daily)) else "store"
+            read.append(where)
+            if where == "folder":
+                self._revised(daily)  # as it is read
+            return real(table, *arguments, **options)
+
+        monkeypatch.setattr(rowhash, "hash_in", hashing_in)
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.rows_said == list(self.SAID.items()) and read == ["folder", "store"]
+        assert len(self._remembered(store)) == 1  # what the store's copy gave
+
+    def test_where_the_two_records_say_it_all_nothing_is_read(self, daily, store, read):
+        """The same rows in other bytes: every period has the hash it had, and no table is read, in the folder or in the store."""
+        from chartbook import snapshot
+
+        for file in sorted((daily / "_data" / "parts").rglob("*.parquet"))[5:]:
+            file.unlink()  # the five days of the first snapshot
+        first_day = daily / "_data" / "parts" / "2019-01" / "2019-01-01.parquet"
+        pl.read_parquet(first_day).reverse().write_parquet(first_day, compression="uncompressed")
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.made and second.rows_said == [("acme/daily:daily", "the same rows, in other bytes")]
+        assert read == []
 
 
 @pytest.fixture
