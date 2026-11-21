@@ -71,7 +71,8 @@ def path(
     that holds the version whole, which is the one ``chartbook store gc``
     keeps: so it changes when a later snapshot holds that version too. A model that is a folder has files
     there and no one path, since a store may keep each file once (a bucket
-    does, and a store that ChartBook 0.5 laid out):
+    does, a store that ChartBook 0.5 laid out, and a snapshot kept as an
+    increment):
     :func:`chartbook.assets.files` lists them, and
     :func:`chartbook.assets.gathered` lays them out in a temporary folder
     for a loader that takes a directory.
