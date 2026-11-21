@@ -339,7 +339,8 @@ Said plainly, since the day with one command hid each of these *(found by review
 *Decided 2026-11-20 by the maintainer: "Yes. We need to do this." Not built yet.* Proposed by
 Claude as a note of what a run built from; the maintainer added what it built ("Can chartbook
 run always hash the stuff at the end and keep a note of those hashes somewhere? Then when
-chartbook snapshot happens it can verify?"), and chose where the note is kept.
+chartbook snapshot happens it can verify?"), and chose where the note is kept. *The design was
+reviewed before anything was built, and what the review changed is marked.*
 
 A run that succeeds leaves a note. `chartbook snapshot` holds what is committed, and what is on
 disk, against it. The two halves stop two different slips.
@@ -364,8 +365,8 @@ been labelled with it.
 $ chartbook run
 $ (a fix in load_rates.py) && git commit -am "Fix the day count"
 $ chartbook snapshot
-Error: acme/rates was built before these changed: load_rates.py.
-  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+Error: acme/rates: these differ from what it was built from: load_rates.py.
+  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
 ```
 
 **3. A file was changed after the build,** by hand or by a tool run by hand.
@@ -374,17 +375,26 @@ Error: acme/rates was built before these changed: load_rates.py.
 $ chartbook run
 $ doit pull_rates
 $ git commit -am "…" && chartbook snapshot
-Error: acme/rates: these changed after it was built: _data/rates.parquet.
-  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+Error: acme/rates: these differ from what its build left: _data/rates.parquet.
+  Build again: `chartbook run`, which rebuilds what your build finds out of date. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
 ```
 
-**4. No run of ChartBook's built it here:** a clone whose files came from a job elsewhere, a
-notebook, `doit` by hand.
+Where both differ, both are said, what it was built from first. A file is named with what
+became of it where it did not only change (`notes.md (new)`, `old.py (gone)`), ten of them and
+then how many more.
+
+**4. No run of ChartBook's built it here,** or the last one did not end.
 
 ```text
 $ chartbook snapshot
 Error: acme/rates has not been built by `chartbook run` here, so there is nothing to hold its files against.
   Build it: `chartbook run` (a build with nothing left to do takes a moment). Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+```
+
+```text
+$ chartbook snapshot
+Error: acme/rates: its last build here did not finish, or is still running (it began 2026-11-20 21:14 UTC).
+  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
 ```
 
 **5. Taking the files as they are is typed, and no longer assumed.**
@@ -396,24 +406,39 @@ Snapshot made: 5 files, 23.0 MB.
 A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
+**6. A pipeline with no `build` script has nothing to be held against, and is not asked.** It
+commits what it declares, so its commit is the whole of it. *(Found by the review of the design:
+it was told to `chartbook run`, which says it has no such script, and every snapshot of it would
+have been `--as-built`.)* Where it declares a file that is not committed, that is said, with
+`--as-built`.
+
 What is settled:
 
 - **The note has two halves.** *What the build ran on:* a plain hash of each source file of the
   pipeline's folder, and of `chartbook.lock`, as they are when the run has pinned and its script
   is about to start. A source file is one git tracks, or would add; what the manifest declares
-  as built is not one. *What the build left:* the size and the time of last change of every file
-  the manifest declares with a path, when the build has ended and each was found.
+  as built is not one, and a note, which is prose that no build writes, is one. *What the build
+  left:* the size and the time of last change of every file the manifest declares as built,
+  when the build has ended and each was found.
 - **Size and time for what was built, and not its bytes** *(the maintainer's choice, on Claude's
   recommendation)*. A hash of every output at the end of every run costs seconds for each
   gigabyte, on runs that are never snapshotted; size and time cost nothing and catch what
   happens by accident. Hashes of the outputs can replace them later without changing anything
-  that is typed.
+  that is typed. *From the review:* a time is kept and compared in whole seconds, since a
+  network or synced folder may give a finer one at first and a coarser one later. And a built
+  file that git tracks has its hash kept too, and a time that differs is settled by it: `git
+  stash`, a rebase, a checkout of another branch and back all write such a file again with the
+  same bytes.
+- **A source file's size and time are kept beside its hash,** and it is hashed again only where
+  they differ, as git does for its own index. *(From the review: a large file kept in git was
+  hashed at every run and every snapshot.)*
 - **Files that no run built are refused too** *(the maintainer's choice)*. The check is strict,
   with a plain message, as every check here is.
 - **`chartbook snapshot --as-built` is the way past** *(the maintainer's choice of the name; the
   session building the store's side has since said it can be read as "exactly as the run built
   it", the opposite of what it does, and offered `--as-is`: put to the maintainer)*. Its record
-  does not say that ChartBook ran the build, as a typed snapshot's never did.
+  does not say that ChartBook ran the build, as a typed snapshot's never did. The other options
+  that were typed (`--project-dir`, `--store`, `--deep`) are in the line that offers it.
 - **Where the check passes, the record says that ChartBook ran the build,** as the record of
   `chartbook run --snapshot` does, and the catalog marks it so.
 - **The note is kept with ChartBook's own things, and not in the project or in `.git`** *(the
@@ -424,34 +449,67 @@ What is settled:
   itself. Of `.git` the maintainer said: "My resistance to .git is about tying ourselves to git
   too much and messing with how git works … I would like to be version control agnostic and
   work towards that". So the note holds plain hashes and no git ids, nothing has to be ignored
-  by any version control system, and git is asked one thing, in one place: which files of the
-  folder are its source.
-- **A build that fails leaves no note,** and the note before it is gone when a build starts. A
-  snapshot after a run that failed was made of the rest, with what was missing listed; it is
-  now refused, or made with `--as-built`.
+  by any version control system, and of the things this check asks, git is asked one: which
+  files of the folder are its source.
+- **The note says whose it is:** the pipeline's ID and this machine's name
+  (`~/.chartbook/machine-id`). One of another pipeline, or left by another machine, is no note
+  of this one, and the refusal says which. *(From the review: a path is not enough where one
+  home folder serves several machines, where a container puts every project at the same path,
+  and where another pipeline is put at an old one.)*
+- **A note is in one of two states.** When a build's script is started, the note before it is
+  replaced by one that says a build began, and when. When the build has ended and every declared
+  file was found, that one is replaced by the finished note, if it is still this run's. So a
+  build that fails, is stopped, or is overtaken by another leaves "a build began", and the
+  refusal says so (scenario 4). A run that stops before its script (a pin, trust, a file that
+  is kept and missing) leaves the note as it was. *(From the review: "gone when a build starts"
+  was a removal, and the words after a failed build were then "has not been built", which is
+  false.)* A snapshot after a run that failed was made of the rest, with what was missing
+  listed; it is now refused, or made with `--as-built`.
+- **Every build leaves a note, of each pipeline it builds:** the one asked for, and each one
+  `--upstream` builds first, each hashed after its own pin and immediately before its own
+  script. Not a git dependency, whose snapshot is the pin's. `--frozen` builds, and leaves one
+  too: it writes nothing to the project or the store, and this is neither. A script other than
+  `build` (`lab`, `test`) builds nothing a snapshot holds, and leaves the note alone, also when
+  a build runs it.
 - **`chartbook run --snapshot` writes the note and holds its snapshot against it in the one
   command,** and so does each pipeline `--upstream` builds. Nothing changes in what is typed.
-- **Only a `build` leaves a note.** Another script (`lab`, `test`) builds nothing a snapshot
-  holds.
+- **What is source is asked when the snapshot is made:** a file that was source when the build
+  ran and is ignored now is not held against it, and one that is gone is.
 - **A folder reached by another spelling is the same folder:** where no note is under the
   folder's name, one whose folder is the same folder is taken.
 - **A note whose folder is gone is removed** when another note is written.
+- **The list of what is not in a store calls a folder "built already" only where this check
+  would pass,** and gives it `chartbook snapshot`; otherwise `chartbook run --snapshot`.
+  *(From the review: its `chartbook snapshot` lines would have been refused.)*
 
 What it costs:
 
+- **Any change after the build is refused, a word in the README among them.** With a build that
+  rebuilds only what is out of date, `chartbook run` again takes a moment and writes a new note.
+  With one that builds everything each time, it is the whole build again, or `--as-built`,
+  whose record then does not say that ChartBook ran the build, though it did. *(From the
+  review.)*
+- **The build's own account is taken, and the refusal sends people to it.** "Build again:
+  `chartbook run`" rebuilds what the build finds out of date. A build tool that does not know
+  the changed file bears on an output leaves that output as it was, and the new note says it is
+  of the new source. ChartBook cannot tell that from a build that rightly left it: only the
+  build knows what bears on what. `chartbook run --snapshot` has always taken that account.
+  Building a commit in a clean copy is what would not, and is in the roadmap (`chartbook run
+  --clean`). *(From the review, which would have had the run mark such outputs; a build that
+  rightly leaves most of its outputs alone would then be marked at every run.)*
 - **A build that rewrites a tracked file it does not declare is refused every time:** a notebook
   run in place, a README written by the build. The message names the files. Declare them, keep
-  them out of version control, or type `--as-built`.
+  them out of version control, or type `--as-built`. A project made from the template ignores
+  what its build writes.
 - **Only the pipeline's own folder is looked at,** as for what is not committed. Code the build
-  uses from elsewhere in its repository can change, and the note does not see it.
-- **The build's own account is taken.** A build tool that finds nothing to do leaves the files
-  it left before, and the note then says they are of this source. `chartbook run --snapshot`
-  has always taken that account.
+  uses from elsewhere in its repository can change, and so can an ignored file it reads (`.env`,
+  a download) and the packages it runs on, and the note does not see them.
+- **A time of last change is not the bytes.** A file rewritten to the same size within the same
+  second passes. A disk that shifts its times at a clock change (FAT) refuses what did not
+  change, and so does a database file that was opened for writing and left as it was.
 - **A folder that is moved or renamed, and a cache that is cleared, have no note:** build again.
   A machine whose home folder does not last (a container) types `chartbook run --snapshot`, or
   points `CHARTBOOK_CACHE` at a folder that lasts.
-- **A file rewritten to the same size, with its time put back, passes.** Nothing does that by
-  accident.
 - **One more option,** on a first screen that was cut to six commands a day before.
 
 ### Clearing old snapshots: the record

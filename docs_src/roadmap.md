@@ -134,16 +134,18 @@ settled.
 pipeline's commands on lines of their own, which every shell reads, PowerShell among them. A line
 no longer stops the next where it fails. Typed one at a time, as the list says, a failure is seen.
 Typed together, a build runs after a `git checkout` that failed, and is of the commit its folder is
-on. What is read through a pin is safe from it, since a pin is met only by the same rows. An option
+on. What is read through a pin is safe from it, since a pin is met only by the same file or, for
+a dataframe, the same rows. An option
 that names the commit (`chartbook run --snapshot --commit 7802799a41c2`), refused anywhere else,
 would make each line safe by itself. It waits until a list is meant to be typed whole, by a class
 say, or a build of the wrong commit is met ({design}`one-command`).
 
-**Without git.** A snapshot is labelled with a git commit, and whether everything is committed is
-asked of git. The direction is to need no version control system in particular. What ChartBook
-keeps for itself is already kept in its own folder and in plain hashes, and git is asked which
-files of a folder are its source in one place. What a snapshot would be labelled with where there
-is no commit is not settled.
+**Without git.** Today git is asked a good deal: the commit a snapshot is labelled with, whether
+everything is committed, a file as it was at a commit, a repository's address. The direction is to
+need no version control system in particular. A first step is the note a run leaves of what it
+built, for a snapshot to be held against ({design}`one-command`): it is kept in ChartBook's own
+folder, in plain hashes, and asks git only which files of a folder are its source. What a snapshot
+would be labelled with where there is no commit is not settled.
 
 ## Smaller things, noted so they are not lost
 
