@@ -886,12 +886,17 @@ def _plain(text: str, most: int = 300) -> str:
     return kept if len(kept) <= most else kept[: most - 1] + "…"
 
 
-def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
+def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool = True) -> str:
     """A word of a command, as this system's shells take it: quoted where it has to be, and never with a control character.
 
     :param windows: Whether for Windows, where the word is one that
         ``cmd.exe``, PowerShell and Git Bash all take; by the system it runs
         on, by default.
+    :param batch: Whether the command the word is for may be a batch file
+        on Windows, as ``chartbook`` is where pyenv installed it: ``cmd.exe``
+        then reads the word once more, and more of it
+        (:func:`_a_windows_shell_reads`). False for a word handed to
+        ``git``, which is a program wherever it is installed.
     """
     text = _plain(str(text), most=4096)
     if not (os.name == "nt" if windows is None else windows):
@@ -908,7 +913,7 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None) -> str:
     # a `$NAME` or a backtick, as in PowerShell, and the `\\` a network path begins with.) What no spelling
     # makes text in all three, the list gives no command for: `_a_windows_shell_reads`. And no other message
     # is to hold it either, whoever writes it: the word is then this one, which runs nothing and says why
-    if _a_windows_shell_reads([text]):
+    if _a_windows_shell_reads([text], batch=batch):
         return NOT_TEXT
     if re.fullmatch(r"[A-Za-z0-9_./:-]+", text):
         return text
@@ -985,7 +990,9 @@ _CMD_OWN = frozenset({
 _QUOTES = "\u201c\u201d\u201e"
 
 
-def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optional[Iterable[str]] = None) -> str:
+def _a_windows_shell_reads(
+    words: Iterable[Union[str, Path]], environment: Optional[Iterable[str]] = None, batch: bool = True
+) -> str:
     """What, in a word of a command, a shell on Windows reads even inside double quotes, as a message names it; empty for nothing.
 
     On Windows a word is in double quotes, and each of its shells reads
@@ -1010,6 +1017,20 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
       (a shim of pyenv's is one) cmd.exe reads its ``&``, ``|``, ``<``,
       ``>`` and ``^``. A word with a space keeps its quotes.
 
+    The last is of a batch file alone, and so is part of the one before
+    it. A word with a single ``%`` has no name in it, and at a prompt all
+    three shells hand it to a program as it is: typed on Windows 11,
+    2026-11-20, with the word git writes for a network share
+    (``%(prefix)///server/share/…``). A batch file that hands its words
+    on through ``call``, as pyenv's shims do, has cmd.exe read the line
+    once more by a batch file's rules, and that ``%`` is dropped with
+    nothing said, whichever shell the line was typed in:
+    ``C:\work\100%\mid`` reached the program as ``C:\work\100\mid``.
+    Doubled, it is right there and wrong everywhere else. So for what may
+    be a batch file, a single ``%`` is withheld too. With *batch* false,
+    for a command that is a program (``git``), it is text, and so are the
+    ``&``, ``|``, ``<``, ``>`` and ``^`` of a word with no space.
+
     No one spelling keeps any of them as text in all three, so a line with
     one is given no command. A folder may be named so, and an address or a
     folder in a lockfile or in a repository's tree is anyone's: a command
@@ -1021,6 +1042,8 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
 
     :param environment: The names of the variables that are set; this
         process's, by default.
+    :param batch: Whether the command the words are for may be a batch
+        file.
     """
     names = {name.upper() for name in (os.environ if environment is None else environment)} | _CMD_OWN
     for word in words:
@@ -1031,7 +1054,7 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
         if re.search(r"\\\$|\$(?![\\/]|$)", word):
             return "a `$`"
         # A space or a tab, and no other kind: whether PowerShell quotes a word for a space of another kind is not known
-        behind = None if re.search(r"[ \t]", word) else re.search(r"[&|<>^]", word)
+        behind = None if not batch or re.search(r"[ \t]", word) else re.search(r"[&|<>^]", word)
         if behind:
             return f"a `{behind[0]}`"
         # As cmd.exe reads a line at its prompt: from a `%` to the next is a name (up to a `:`, which
@@ -1045,8 +1068,9 @@ def _a_windows_shell_reads(words: Iterable[Union[str, Path]], environment: Optio
             if name.upper() in names:
                 return f"`%{name}%`"
             start = end
-        # And a name that is no variable here may be one in the shell the line is pasted into
-        if re.search(r"%(?![0-9A-Fa-f]{2})", word):
+        # And a name that is no variable here may be one in the shell the line is pasted into. With one
+        # `%` there is no name; that one is withheld only for what may be a batch file, which drops it
+        if (batch or word.count("%") > 1) and re.search(r"%(?![0-9A-Fa-f]{2})", word):
             return "a `%`"
     return ""
 

@@ -865,7 +865,13 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     web address writes a sign with (`%20`), and where no name between two of them is a variable
     of this machine or one `cmd.exe` fills in by itself (`%CD%`). What that leaves: a variable
     whose name begins, and is followed, as such digits (`%DB_PASSWORD%2F`), set in the window
-    the line is pasted into and not in the one that printed it.
+    the line is pasted into and not in the one that printed it. *(Typed on Windows later,
+    2026-11-20: a single `%` reaches a program as it is in all three shells; a batch file that
+    hands its words on through `call`, as pyenv's shims do, drops it with nothing said
+    (`C:\work\100%\mid` arrived as `C:\work\100\mid`), and doubled it is right there and
+    wrong everywhere else. So it stays withheld for `chartbook`, which may be such a file, and
+    is text for a word handed to `git`, which is a program: git's own word for a network
+    share, in the `safe.directory` command, begins with one.)*
     The function that quotes never writes such a word, whatever message asks it to:
     `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. So a run's
     closing line, `chartbook restore` and the rest hold no such word either, and say less well

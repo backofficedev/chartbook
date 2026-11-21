@@ -1535,6 +1535,36 @@ class TestWhatAShellOnWindowsReadsInQuotes:
     def test_what_is_read(self, words, said):
         assert missing._a_windows_shell_reads(words, environment=["Path", "GITHUB_TOKEN", "UserName"]) == said
 
+    @pytest.mark.parametrize("word, read, in_a_batch_file", [
+        # Git's own word for a network share, and the one git printed on the machine these were typed on
+        ("%(prefix)///fileserver/home/ab123/work/mid", "", "a `%`"),
+        ("%(prefix)///localhost/c$/cbtest/work2/rates", "", "a `%`"),
+        ("%(prefix)///fileserver/home/ab 123/work/mid", "", "a `%`"),
+        ("//fileserver/home/R&D/rates", "", "a `&`"),  # only a batch file's cmd.exe reads it
+        ("%(prefix)///fileserver/%USERNAME%/mid", "`%USERNAME%`", "`%USERNAME%`"),  # cmd.exe fills it in: typed there too
+        ("%(prefix)///fileserver/home/100% done/mid", "a `%`", "a `%`"),  # two of them may hold a name where it is pasted
+        ("%(prefix)///fileserver/$(calc)/mid", "a `$`", "a `$`"),
+        ("%(prefix)///fileserver/a`b/mid", "a backtick", "a backtick"),
+    ])
+    def test_a_word_for_a_program_and_not_a_batch_file(self, word, read, in_a_batch_file):
+        """Found by the review of what prints git's `safe.directory` command: git begins a share's folder
+        with `%(prefix)/`, the word was withheld for its `%`, and the command named no folder.
+
+        Typed on Windows 11, 2026-11-20, in cmd.exe, Windows PowerShell 5.1 and Git Bash: in double
+        quotes, the word reaches a program as it is, and the command makes git trust the folder; a
+        `%NAME%` in it is filled in by cmd.exe. `git` is a program wherever it is installed.
+        `chartbook` may be a batch file (pyenv's), and through one that uses `call` the `%` was
+        dropped in all three shells (`C:\\work\\100%\\mid` arrived as `C:\\work\\100\\mid`): for its
+        words nothing changes."""
+        assert missing._a_windows_shell_reads([word], environment=["USERNAME"], batch=False) == read
+        assert missing._a_windows_shell_reads([word], environment=["USERNAME"]) == in_a_batch_file
+
+    def test_a_shares_word_is_quoted_whole_for_git_and_withheld_for_what_may_be_a_batch_file(self):
+        word = "%(prefix)///fileserver/home/ab123/work/mid"
+        assert missing._quoted(word, windows=True, batch=False) == f'"{word}"'
+        assert missing._quoted(word, windows=True) == missing.NOT_TEXT
+        assert missing._quoted(word, windows=False, batch=False) == missing._quoted(word, windows=False) == shlex.quote(word)
+
     def test_the_variables_are_this_machines(self, monkeypatch):
         """A name that begins and is followed as a web address writes a sign (`%AB…%20`) is a variable only if this machine has it."""
         word = "https://example.org/acme/%AB_TEST_SECRET%20x"

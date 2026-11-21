@@ -1004,7 +1004,7 @@ def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
         return None
     import shlex
 
-    from chartbook.missing import _quoted  # which imports this module
+    from chartbook.missing import NOT_TEXT, _quoted  # which imports this module
 
     folder = None
     if command:
@@ -1019,10 +1019,19 @@ def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
     else:
         repository = found.group(1) if found else str(directory)
         folder = repository
+    # The word is handed to git, which is a program and no batch file: the `%` git begins a share's with is
+    # text in every shell there, and the command in double quotes makes git trust the folder, by its server
+    # and through a connected letter (typed on Windows 11, 2026-11-20, in cmd.exe, Windows PowerShell and Git
+    # Bash; git's own line, in single quotes, is two words in cmd.exe). Where the folder's own name holds what
+    # a shell would read (a `%NAME%`, a backtick), no command of ours is given: git prints its own in that folder
+    if _quoted(folder, batch=False) == NOT_TEXT:
+        to_run = "run the `git config --global --add safe.directory` command that `git status` prints in that folder"
+    else:
+        to_run = f"run `git config --global --add safe.directory {_quoted(folder, batch=False)}`"
     return (
         f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it "
-        f"is on a network share, and git reads no such repository until it is told to. To have git trust it, run "
-        f"`git config --global --add safe.directory {_quoted(folder)}`, and then this again"
+        f"is on a network share, and git reads no such repository until it is told to. To have git trust it, "
+        f"{to_run}, and then this again"
     )
 
 
