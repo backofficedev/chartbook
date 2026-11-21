@@ -4240,6 +4240,7 @@ class GcPlan:
         unused: What no snapshot uses besides, each name with its size: a
             snapshot's folder begun and never written, a sync service's
             copies beside a snapshot's files (:meth:`chartbook.store.Store.tidy`).
+            Empty in a plan made without a sweep (:func:`plan_gc`).
         kept_versions: Each version of an asset marked ``keep = true`` that
             a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
             what the marks keep, for the bill.
@@ -4317,6 +4318,7 @@ def plan_gc(
     keep_lineage: bool = False,
     aggressive: bool = False,
     hashed: bool = False,
+    sweep: bool = True,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
@@ -4362,6 +4364,13 @@ def plan_gc(
         stays, which a read is handed afterwards, is read and hashed, and
         if it is not what its record says nothing of that pipeline goes.
         Off by default: the line a snapshot ends with reads nothing.
+    :param sweep: Whether every pipeline's folder is walked for what no
+        snapshot uses (:attr:`GcPlan.unused`), which asks the disk about
+        each file of every snapshot in the store. False for the line a
+        snapshot ends with, which says nothing of it: the plan is then of
+        the snapshots and the objects alone, and what a sweep refuses
+        before it looks at anything is still refused
+        (:meth:`chartbook.store.Store.check_tidy`).
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.
     :returns: The plan, for :func:`run_gc`.
@@ -4372,10 +4381,13 @@ def plan_gc(
     store = store if store is not None else default_store()
     # Asked many times over: the records are read once for the whole plan
     with store.reading():
-        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed)
+        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed, sweep)
 
 
-def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool, hashed: bool = False) -> GcPlan:
+def _plan_gc(
+    store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool,
+    hashed: bool = False, sweep: bool = True,
+) -> GcPlan:
     """The rest of :func:`plan_gc`, within one reading of the store's records."""
     plan = GcPlan(
         forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
@@ -4562,6 +4574,11 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
         note = Path(path).parent / "INCREMENT.txt"
         if store.builds_on(Path(path)) is not None and note.is_file():
             plan.copies[note.relative_to(root).as_posix()] = note.stat().st_size
+    if not sweep:
+        # The line a snapshot ends with says nothing of what a sweep would find, and a sweep asks the disk about
+        # every file of every snapshot in the store. What one refuses before it looks at anything is refused still
+        store.check_tidy()
+        return plan
     # What no snapshot uses beside that: a snapshot never written, a sync service's copies
     named = {name for names in plan.files.values() for name in names}
     plan.unused = [(name, size) for name, size in store.tidy(dry_run=True, keep=recent_files) if name not in named]

@@ -1523,6 +1523,14 @@ class Store(abc.ABC):
         """
         return []
 
+    def check_tidy(self) -> None:
+        """Raise as :meth:`tidy` does before it looks at anything; nothing otherwise.
+
+        For a plan of ``store gc`` that is made without a sweep, the line a
+        snapshot ends with: a store that nothing is removed from has no
+        plan either way.
+        """
+
     def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from one pipeline's folder, as :meth:`tidy` does from every one; what was removed, or with *dry_run* would be, each with its size.
 
@@ -3336,8 +3344,7 @@ class FolderStore(Store):
         :raises TidyError: Once the rest is removed, if some of it could not
             be, naming each with what the system said and what to do.
         """
-        self._check_migrated()
-        self.check_writable()
+        self.check_tidy()
         if not dry_run:
             self._tidy_tmp()
         names: set = set()
@@ -3354,9 +3361,17 @@ class FolderStore(Store):
         :raises EarlierLayoutError: As :meth:`tidy` does.
         :raises TidyError: As :meth:`tidy` does.
         """
+        self.check_tidy()
+        return self._tidy_folders([pipeline_folder(pipeline)], [], dry_run)
+
+    def check_tidy(self) -> None:
+        """Refuse a store nothing is removed from, as :meth:`tidy` does before it looks at anything (:meth:`Store.check_tidy`).
+
+        :raises StoreError: For a store a migrate has not finished moving (:meth:`_check_migrated`).
+        :raises EarlierLayoutError: For one laid out as ChartBook 0.5 laid one out (:meth:`check_writable`).
+        """
         self._check_migrated()
         self.check_writable()
-        return self._tidy_folders([pipeline_folder(pipeline)], [], dry_run)
 
     def _tidy_folders(self, names: list[str], keep: list[str], dry_run: bool) -> list[tuple[str, int]]:
         """Sweep the pipelines' folders of these names; raise :class:`TidyError` once all are swept, if some of it could not be removed."""

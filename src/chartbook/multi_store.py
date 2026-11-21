@@ -354,7 +354,7 @@ class Stores:
             yield self
 
     def __getattr__(self, name):
-        if name in {"delete", "delete_unowned", "remove_snapshot", "tidy", "remove_root"}:
+        if name in {"delete", "delete_unowned", "remove_snapshot", "tidy", "check_tidy", "remove_root"}:
             raise ValueError("Select one store for destructive maintenance with --store NAME")
         return getattr(self.default(), name)
 

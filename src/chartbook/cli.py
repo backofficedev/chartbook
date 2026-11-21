@@ -4385,8 +4385,10 @@ def _remind_of_gc(silenced: bool) -> None:
     After `chartbook snapshot`, `chartbook run --snapshot` and `chartbook catalog build`, the two
     commands that grow the store or read all of it: a store that nobody
     ever clears grows without bound, and this is where a person learns the
-    command. The plan is the one gc makes, read-only; a store that cannot
-    be read says nothing, since a reminder never fails a command.
+    command. The plan is the one gc makes, read-only, less its sweep of
+    every folder, of which the line says nothing
+    (:func:`_what_gc_would_clear`); a store that cannot be read says
+    nothing, since a reminder never fails a command.
     """
     if silenced:
         return
@@ -4544,11 +4546,17 @@ def store_info(store_name):
 
 
 def _what_gc_would_clear(the_store) -> "str | None":
-    """In a few words, what `chartbook store gc` would clear from a store; None when nothing, or when that cannot be told."""
+    """In a few words, what `chartbook store gc` would clear from a store; None when nothing, or when that cannot be told.
+
+    The plan is made without a sweep: what no snapshot uses is no part of
+    the line, and finding it asks the disk about every file of every
+    snapshot in the store, at each snapshot of any pipeline. A store a
+    sweep would refuse still says nothing.
+    """
     try:
         from chartbook import lock
 
-        plan = lock.plan_gc(the_store)
+        plan = lock.plan_gc(the_store, sweep=False)
     except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
         return None
     # A snapshot a pin made from a repository goes with gc too, with its own copy of every file
