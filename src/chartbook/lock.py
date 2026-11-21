@@ -4301,12 +4301,17 @@ class GcPlan:
         return sum(self.copies.values())
 
     @property
+    def unused_bytes(self) -> int:
+        """The total size of *unused*: what no snapshot uses, which the real ``store gc`` removes with :meth:`~chartbook.store.Store.tidy`."""
+        return sum(size for _, size in self.unused)
+
+    @property
     def freed_bytes(self) -> int:
-        """What carrying out the plan would free: the objects nothing names, and the removed snapshots' own copies of files that objects which stay have too.
+        """What carrying out the plan would free: the objects nothing names, the removed snapshots' own copies of files that objects which stay have too, and what no snapshot uses.
 
         What ``store gc`` says before it asks; after, it says what was freed (:class:`GcDone`).
         """
-        return self.size_bytes + self.copies_bytes
+        return self.size_bytes + self.copies_bytes + self.unused_bytes
 
 
 def plan_gc(
