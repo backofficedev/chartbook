@@ -4768,11 +4768,17 @@ def store_migrate(dry_run, yes):
     newest snapshot its owner made becomes complete under `snapshots/`,
     the others it made become increments on it under `increments/`, and
     a snapshot a pin made becomes complete. Files change folder by rename,
-    so a store in a synced folder uploads nothing again; only a file that
-    two folders must each hold is copied. What no record names is moved
-    aside under `_chartbook/left-by-0.5/`, never removed. Nothing else
-    may use the store while it runs, and afterwards every machine that
-    uses it needs this ChartBook. Cut short, it is run again and goes on.
+    and a synced folder uploads nothing again for them. A file that two
+    folders must each hold is copied, and uploaded again: that is much
+    where older snapshots share files the newest does not have, so
+    `--dry-run` says what the store will take, and a snapshot removed
+    first (with `chartbook store gc` of ChartBook 0.5) is not copied. A
+    file that is not where its record says is taken from where another
+    snapshot of its pipeline keeps the same bytes; one that is missing is
+    said first, by snapshot. What is not moved in goes aside under
+    `_chartbook/left-by-0.5/`, never removed. Nothing else may use the
+    store while it runs, and afterwards every machine that uses it needs
+    this ChartBook. Cut short, it is run again and goes on.
 
     A store made by ChartBook 0.2 is moved to the layout of 0.5 by the
     first run of this command, and on to this version's by a second.

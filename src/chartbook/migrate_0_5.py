@@ -6,13 +6,15 @@ and its own temporary files, and it never renames a file onto one that is
 there:
 
 1. It renames the files that records name to where this layout keeps them,
-   and makes the few copies the result needs (a file two folders must each
-   hold), each hashed as it is written. Per pipeline: the newest snapshot
-   its owner made becomes complete under ``snapshots/``; every other one its
-   owner made becomes an increment on it under ``increments/``, keeping in
-   its own folder only the files that one does not have at their size; and
-   every snapshot a pin made becomes complete. The one the others build on
-   does not change once a move has begun.
+   and makes the copies the result needs (a file two folders must each
+   hold: few where a pipeline's snapshots share their files with the
+   newest, and many where older ones share files with each other that it
+   does not have), each hashed as it is written. Per pipeline: the newest
+   snapshot its owner made becomes complete under ``snapshots/``; every
+   other one its owner made becomes an increment on it under
+   ``increments/``, keeping in its own folder only the files that one does
+   not have at their size; and every snapshot a pin made becomes complete.
+   The one the others build on does not change once a move has begun.
 2. It writes the new records (rewritten only in ``stored``), each
    increment's line for a person, and the READMEs, in the new trees.
 3. It moves the top's own folders (``roots/``, ``origins/``, ``tmp/``,
@@ -22,8 +24,12 @@ there:
    other goes aside first.
 4. Last, it moves what is left of ``pipelines/`` aside in one rename, to
    ``_chartbook/left-by-0.5/pipelines``: the old records, the notes, every
-   file no record names, and anything that arrived meanwhile. Then
-   ``store.json`` says the new layout, and then the journal goes.
+   file no record names, a second copy of a file whose bytes were moved in
+   from another place a record names, a sync's second copy of a snapshot's
+   folder or of a pipeline's (``<name> 2``), and anything that arrived
+   meanwhile. Then ``store.json`` says the new layout, and then the journal
+   goes. A run cut short between that rename and ``store.json`` has moved
+   all it was to move, and is planned as a moved store (:func:`is_moved`).
 
 Three rules hold it together.
 

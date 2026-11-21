@@ -679,10 +679,13 @@ and his other work read them with 0.5 until then.*
   of the mover.)* Once the files that records name are in their new places and the new records
   are written, what is left of `pipelines/` is moved aside whole, in one rename, to
   `_chartbook/left-by-0.5/pipelines`: the old records, the folders that held files for later
-  snapshots and were no snapshot, the old notes, and every file that no record names. Left
-  under `pipelines/` it would make a store of both layouts, which every command refuses. A
-  person removes that folder once the move has been checked. A top `README.txt` that a person
-  wrote goes aside too; only ChartBook's own text is replaced.
+  snapshots and were no snapshot, the old notes, every file that no record names, a second copy
+  of a file whose bytes were moved in from another place a record names, and a sync's second
+  copy of a snapshot's folder or of a pipeline's (`<name> 2`). Left under `pipelines/` it would
+  make a store of both layouts, which every command refuses. A person removes that folder once
+  the move has been checked, and looks in it first where the last lines say that files are
+  missing: a sync's second copy of a snapshot's folder may hold what the first lacked. A top
+  `README.txt` that a person wrote goes aside too; only ChartBook's own text is replaced.
 - **Nobody else writes to the store meanwhile,** and every machine that shares it needs this
   ChartBook afterwards: a 0.5 that has not yet seen the new `store.json` would go on writing a
   `pipelines/` folder. The command says both before it starts.
@@ -690,14 +693,19 @@ and his other work read them with 0.5 until then.*
   move is a copy and a delete, file by file".* It is withdrawn in 0.6 (step 4 of "The order of
   work"); the bucket itself is as it was.
 
-As built, after three reviews of the mover, by three rules:
+As built, after three reviews of the mover, and changed on 2026-11-20 after three real stores
+were moved on copies (the note below the rules), by three rules:
 
 1. **Nothing that was true before the move stops it half way.** What can stop it is found before
    the first file moves, each with its way out: a record that cannot be read, or that names a
-   file outside its pipeline's folder; a folder with files and no record (a sync brings a record
-   last); two names the disk does not tell apart; a folder that may not be written; a folder
-   that is a link. A file that is missing, or is not what its record says, does not stop it: it
-   was so before, it is asked about, and the last lines name it.
+   file outside its pipeline's folder; a snapshot being made; two names the disk does not tell
+   apart; a folder that may not be written, the old folders at the top among them, which are
+   moved themselves; a link at any depth on the way to a file a record names; a locked file; a
+   file where the move makes a folder; too little room for the copies; a path too long. A file
+   that is missing does not stop it: it was so before, it is said first, by snapshot, and its
+   record goes on naming it. Nor does one to be copied that has its size and not the bytes its
+   record says: it is copied as it is, and the last lines name it. Nor does a folder with files
+   and no record, which the first form of this rule stopped for (below).
 2. **The folders are the truth.** A journal, `_chartbook/move-to-v3.jsonl`, says only that a move
    is under way and on which machine; while it is there every other command stops with one line.
    What is left to do is worked out from the folders, so a move cut short at any step is taken up
@@ -709,15 +717,78 @@ As built, after three reviews of the mover, by three rules:
    note of a lockfile in `roots/`, a snapshot in `pipelines/`. Every other command then refuses
    the store and names this one. Run again, it puts the notes with the others and moves that
    `pipelines/` aside whole, beside the first. A snapshot written there is not moved in: it is
-   named, and its pipeline is run again with this ChartBook. *(The second review's rule moved
-   such a snapshot in where its files could be found, and set it aside file by file where not;
-   the third review broke both, and neither is built.)*
+   named, and its pipeline is run again with this ChartBook. A record there of a snapshot the
+   store has (the same pipeline, commit and time: a sync's late copy of its folder) is said as a
+   second record, and nothing is run again for it. *(The second review's rule moved such a
+   snapshot in where its files could be found, and set it aside file by file where not; the
+   third review broke both, and neither is built.)* A move cut short after its last step, its
+   old folder aside and `store.json` not yet saying the new layout, is a moved store by this
+   rule: what a sync brings under `pipelines/` then goes aside, and is not taken for the first
+   of a new move.
 
-- **A file changes folder by a rename and is not read.** The copies are few: a file that several
-  older snapshots share and the newest lacks, a file a snapshot kept once under two names, and
-  what a pin-made snapshot shared. On a skeleton of a real store of 23 GB (its records, with
-  empty files of the real sizes) the move came to 38 snapshots, 32 complete and 6 increments,
-  6,015 renames and 6 copies of 858 KB together.
+*Changed 2026-11-20, after three real stores were moved on copies.* No test store had what they
+held. What they showed, and the rule each thing gave:
+
+- **One was a shared store in a synced folder: 9.5 GB, about 55,000 files, four pipelines, whole
+  by the `store verify` of 0.5.** In one pipeline a folder held some 5,000 files and no record,
+  and the newest record kept nearly all of its 9,000 files there. The move stopped at that
+  folder and said to move it out of the store, which made things worse: the newest snapshot
+  then lacked every file it kept there. And about 4,000 of those were not in that folder to
+  begin with: the same bytes were in the snapshot beside it, where 0.5 found them, by their
+  hash, anywhere in the pipeline's folder. So: **a folder with files and no record never stops
+  the move** (it is taken as a cleared one is: the files in it that a record names are moved
+  with that record, the rest goes aside, and it is counted and named, with a word to wait where
+  a sync may still be bringing its record); **no message tells a person to move out a folder
+  that a record may name files in**; and **a file that is not where its record says is taken
+  from where another snapshot of its pipeline keeps the same bytes**, which is a lookup every
+  plan makes from the folders, and no new step or state. What 0.5 could read, the moved store
+  holds.
+- **The same store had a sync's second copies:** of a snapshot's folder (`<name> 2`, its record
+  the same but for where it kept its files), of a `README.txt`, of a note of a lockfile and of
+  two folders under `origins/`; and a desktop's own file (`desktop.ini`) in every folder. The
+  second copy of the snapshot went aside and was named as a snapshot to be made again, though
+  the store had it; and a folder that held nothing but the desktop's file stopped the move as
+  one with files and no record. So: **a record that goes aside is to be made again only where
+  the store has no snapshot of its pipeline, its commit and its time**, and is otherwise said as
+  a second record; a second copy of a pipeline's whole folder is passed over in the same way;
+  and **what a desktop leaves in every folder is no file of one.**
+- **One was a store of 43 GB and about 74,000 files, and the move went through.** It copied
+  17,612 files, 31 GB, and the store went from 43 GB to 74: five older snapshots of one pipeline
+  share 7 to 8 GB with each other that the newest does not have, and each but one was given its
+  own copy. The lines said how much was copied, and not what the store would take. And 58,325
+  files that one record names were not there (an upload from another machine that never
+  finished), which one line among seventeen said. So: **where much is copied, the lines say
+  what the store takes now and what it will take, which snapshots are given the copies, and
+  that a snapshot removed before the move is not copied**; and **missing files are said first,
+  by snapshot,** with the one thing to ask before saying yes, whether a sync is still bringing
+  them.
+- **On Windows, in a folder that Google Drive for desktop syncs,** a rename was at times refused
+  for a moment ("Access is denied") while something else held the file, and the move stopped
+  part way. So: **a rename that Windows refuses is tried again for two seconds** before the
+  move stops and says so. The move took 40 to 55 ms a file there, against 3 ms on a local disk.
+
+A reviewer then attacked the changed mover at its edges, and these were added: every try of a
+rename looks first, so that it never lands on a file that came to be there meanwhile; a link at
+any depth on the way to a file a record names, a locked file, and an old folder that may not be
+written are found before the first step; only a plain file is taken, under the name the disk has
+for it; and a copy is made only from a file that has its size.
+
+- **A file changes folder by a rename and is not read; a file that two folders must each hold is
+  copied.** The copies are a file that several older snapshots share and the newest lacks, a
+  file a snapshot kept once under two names, and what a pin-made snapshot shared. They are few
+  where the snapshots of a pipeline share their files with the newest: on a skeleton of a real
+  store of 23 GB (its records, with empty files of the real sizes) the move came to 38
+  snapshots, 32 complete and 6 increments, 6,015 renames and 6 copies of 858 KB together. They
+  are many where older snapshots share files with each other that the newest does not have,
+  since each of those snapshots but one is given its own copy: on one real store, 31 GB of 43
+  (above). That is the layout's price. An increment builds on one complete snapshot, the newest
+  when the store is moved, and on nothing else, so what two increments share and that one lacks
+  is in each of their folders; 0.5 kept every file once in its pipeline's folder, whichever
+  snapshots named it. What a person can do is remove old snapshots first, with `chartbook store
+  gc` of ChartBook 0.5: a snapshot that is not there is not copied, and this version removes
+  nothing from a store of 0.5. The dry run says what the store takes and what it will take, and
+  which snapshots are given the copies, so the choice is made before saying yes. In a synced
+  folder every copied byte is uploaded again.
 - **An increment made by a move builds on a snapshot made after it.** Nothing that reads one may
   take the complete snapshot for the older.
 - **A store of 0.2 takes two runs:** the first moves it to the layout of 0.5 and says to run the
