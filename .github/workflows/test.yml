@@ -27,7 +27,7 @@ jobs:
     - name: Set up uv and Python ${{ matrix.python-version }}
       uses: astral-sh/setup-uv@v6
       with:
-        version: "0.6.6"
+        version: "0.13.6"
         python-version: ${{ matrix.python-version }}
         enable-cache: true
 
@@ -36,8 +36,10 @@ jobs:
     - name: Install the project and its dev group
       run: uv sync --locked
 
+    # On every core the runner has (pytest-xdist, in the dev group): in one
+    # process the suite is over two hours of tests
     - name: Run tests
-      run: uv run pytest -v -rfE
+      run: uv run pytest -n auto -v -rfE
 
   # The oldest polars and DuckDB pyproject.toml takes: polars 1 reads a folder
   # of files unlike polars 2, and DuckDB 1.5 fetches unlike 2.0, in ways the
@@ -51,7 +53,7 @@ jobs:
     - name: Set up uv and Python 3.12
       uses: astral-sh/setup-uv@v6
       with:
-        version: "0.6.6"
+        version: "0.13.6"
         python-version: "3.12"
         enable-cache: true
 
@@ -59,4 +61,4 @@ jobs:
       run: uv sync --locked
 
     - name: Run tests on polars 1.33 and DuckDB 1.5
-      run: uv run --with "polars==1.33.1" --with "duckdb==1.5.6" pytest -rfE
+      run: uv run --with "polars==1.33.1" --with "duckdb==1.5.6" pytest -n auto -rfE
