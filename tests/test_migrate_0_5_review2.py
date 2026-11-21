@@ -580,3 +580,453 @@ class TestAStoreThatLooksHalfMovedAndHasNoJournal:
         _clear()
         result = typed("store", "migrate")
         assert result.exit_code == 0 and "was cut short: it goes on where it stopped." in result.output.splitlines()[0] and "sync may still be bringing" not in result.output.splitlines()[0]
+
+
+class TestStoppedWhereFilesWereAlreadyInTheNewTrees:
+    """P7. In a store a sync has part brought from a move made elsewhere, a move stopped and run again ended in another tree than an uninterrupted one, both whole (6 of 150 drawn stores)."""
+
+    def test_stopped_after_a_rename_a_file_that_was_to_go_aside_is_not_taken_instead(self, work):
+        """A pin's snapshot has its file at its old place and in the new tree already, so the one at the old place goes aside, and is said. The newest snapshot names the same bytes twice, at its own place.
+
+        Stopped once the newest one's file was renamed, and run again, the
+        second name of the newest was no longer copied from the first: the
+        pin's file at the old place was renamed there instead, and did not
+        go aside. A file at its old place whose own place is taken is
+        copied from, and goes aside: it is never renamed into another
+        snapshot.
+        """
+        root = empty_store(work)
+        pin = folder_of("2025-10-15", "i")
+        put(root, "acme+p", pin, "_data/k.parquet", K)
+        record(root, "acme/p", "2025-10-15", "i", [("_data/k.parquet", K, None, None)], made_by="pin")
+        newest = folder_of("2025-11-01", "b")
+        put(root, "acme+p", newest, "_data/k.parquet", K)
+        record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, None, None), ("_data/kb.parquet", K, None, "_data/k.parquet")])
+        put(root, "acme+p", pin, "_data/k.parquet", K, tree="snapshots")
+        differ = _stopped_after_each_step(root, work)
+        assert differ == [], f"{len(differ)} of the moves that were stopped ended in another tree; the first: {differ[0]}"
+        _clear()
+        done = migrate_0_5.run(root)
+        assert (root / ASIDE / "pipelines" / "acme+p" / pin / "_data" / "k.parquet").read_bytes() == K and len(done.in_place) == 1
+
+
+# Stores drawn from seeds with the second review's shapes (``tests.found_store_of_0_5.drawn_store``). The reviewer ran
+# 300 of them; a few are kept, and ``MOVER_SEEDS=0-149`` runs a range
+
+
+def _seeds(default):
+    asked = os.environ.get("MOVER_SEEDS", "")
+    if not asked:
+        return default
+    first, _, last = asked.partition("-")
+    return tuple(range(int(first), int(last or first) + 1))
+
+
+SEEDS = _seeds((0, 1, 2, 3, 4, 5, 6, 7))
+
+#: The seeds of 0 to 149 whose stores, with files brought of a move made elsewhere, ended in another tree when stopped,
+#: one of each kind: one file more or fewer was aside (16), and the record of an increment named another of two files
+#: of the same bytes (136). The small cases of each are in ``TestStoppedWhereFilesWereAlreadyInTheNewTrees``
+FOUND = (16,)
+
+
+def _worse(before: dict, reads: dict, placed: dict) -> tuple:
+    """The files that read before and do not now; but one whose own place in the new trees held other bytes before the move (what is in place stays, and is said).
+
+    And but one that reads a copy of a file of its size and other bytes
+    that was in the new trees, where the place its bytes were to be taken
+    from did not hold them. The move goes by sizes and reads nothing, so
+    such a file is not told from one that a move cut short put there, and
+    is taken for the bytes: the copy is hashed as it is written and the
+    last lines name it, and nothing is removed
+    (``TestWhatIsInTheNewTreesIsTakenByItsSize``). Where the old place
+    holds the whole file the copy is made from there (P2).
+    """
+    lost, not_taken = [], []
+    other_bytes = set(placed.values())
+    for key, (content_hash, _, at_place, anywhere, _) in sorted(before.items()):
+        now, where = reads.get(key, ("nothing", ""))
+        if now == content_hash or placed.get(where, content_hash) != content_hash or now in other_bytes:
+            continue
+        if at_place:
+            lost.append((key, now, where))
+        elif anywhere:
+            not_taken.append((key, now, where))
+    return lost, not_taken
+
+
+@pytest.mark.parametrize("brought", [True, "of a move made elsewhere"], ids=["at any place a step writes to", "of a move made elsewhere"])
+@pytest.mark.parametrize("pipelines", [1, 2])
+@pytest.mark.parametrize("seed", SEEDS)
+def test_a_move_of_a_store_drawn_with_the_second_reviews_shapes_makes_nothing_worse_and_removes_nothing(work, seed, pipelines, brought, monkeypatch):
+    from tests.found_store_of_0_5 import drawn_store
+    from tests.rich_store_of_0_5 import OWN, contents
+
+    root = empty_store(work)
+    drawn = drawn_store(root, seed, pipelines, in_the_new_trees=brought)
+    before, held, tree = facts_by_folder(root), contents(root), tree_of(root)
+    _clear()
+    gone: list = []
+    try:
+        with monkeypatch.context() as patch:
+            watch(patch, root, gone)
+            migrate_0_5.run(root)
+    except migrate_0_5.MoveError as refused:
+        assert tree_of(root) == tree, f"refused ({refused}), and the store is not as it was"
+        pytest.skip(f"refused before anything moved: {str(refused)[:160]}")
+    lost, not_taken = _worse(before, reads_after(root), drawn["placed"])
+    assert lost == [], f"{drawn['shapes']}: at their stated place before, and not read now: {lost[:4]}"
+    assert not_taken == [], f"{drawn['shapes']}: held at a place a record of the pipeline names, and not read now: {not_taken[:4]}"
+    assert not_its_own(gone) == [], drawn["shapes"]
+    after = contents(root)
+    assert [paths for key, paths in held.items() if key not in after and not any(path in OWN for path in paths)] == [], drawn["shapes"]
+    assert not (root / migrate_0_5.MOVING).exists()
+    # Every file of data that was in the new trees before the move is as it was (a record of other words goes aside, by
+    # the rule; its bytes are among those looked for above)
+    now = tree_of(root)
+    for target, content_hash in drawn["placed"].items():
+        if "/_chartbook/" not in target and not target.endswith("README.txt"):
+            assert "sha256:" + now.get(target, "gone") == content_hash, target
+
+
+def _stopped(work, seed, brought):
+    """Stop a move of the store of a seed after each step, journal kept and deleted, some of them twice, and go on: what was drawn, each end that differs from the uninterrupted move, and how many ends there were."""
+    from tests.found_store_of_0_5 import drawn_store
+    from tests.rich_store_of_0_5 import stop_after
+
+    root = empty_store(work)
+    drawn = drawn_store(root, seed, 1 + seed % 2, in_the_new_trees=brought)
+    whole = work / "whole"
+    shutil.copytree(root, whole)
+    _clear()
+    try:
+        migrate_0_5.run(whole)
+    except migrate_0_5.MoveError as refused:
+        pytest.skip(f"refused before anything moved: {str(refused)[:160]}")
+    wanted = tree_of(whole)
+    reads = reads_after(whole)
+    chosen = random.Random(seed)
+    _clear()
+    steps = len(migrate_0_5.plan(root).steps)
+    wrong = []
+    for first in range(1, steps + 2):
+        for journal in (True, False):
+            cut = work / "cut"
+            shutil.copytree(root, cut)
+            _clear()
+            with pytest.raises(Stop):
+                migrate_0_5.run(cut, after_step=stop_after(first))
+            if not journal and (cut / migrate_0_5.JOURNAL).is_file():
+                (cut / migrate_0_5.JOURNAL).unlink()
+            _clear()
+            second = None
+            if chosen.random() < 0.3:
+                second = chosen.randint(1, max(1, len(migrate_0_5.plan(cut).steps)))
+                try:
+                    migrate_0_5.run(cut, after_step=stop_after(second))
+                except Stop:
+                    pass
+                if not journal and (cut / migrate_0_5.JOURNAL).is_file():
+                    (cut / migrate_0_5.JOURNAL).unlink()
+                _clear()
+            migrate_0_5.run(cut)
+            if tree_of(cut) != wanted:
+                wrong.append((first, second, journal, sorted(set(tree_of(cut).items()) ^ set(wanted.items()))[:6]))
+            elif reads_after(cut) != reads:
+                wrong.append((first, second, journal, "reads differ"))
+            rmtree(cut)
+    return drawn["shapes"], wrong, 2 * (steps + 1)
+
+
+@pytest.mark.parametrize("brought", [False, "of a move made elsewhere"], ids=["nothing in the new trees", "files brought of a move made elsewhere"])
+@pytest.mark.parametrize("seed", SEEDS)
+def test_stopped_after_any_step_and_stopped_twice_a_drawn_store_ends_in_the_tree_of_an_uninterrupted_move(work, seed, brought):
+    import json
+
+    shapes, wrong, ends = _stopped(work, seed, brought)
+    assert not wrong, f"{shapes}: {len(wrong)} of {ends}: " + json.dumps(wrong[:3], indent=1)
+
+
+@pytest.mark.parametrize("seed", FOUND if not os.environ.get("MOVER_SEEDS") else ())
+def test_the_seeds_found_end_in_the_tree_of_an_uninterrupted_move_too(work, seed):
+    import json
+
+    shapes, wrong, ends = _stopped(work, seed, "of a move made elsewhere")
+    assert not wrong, f"{shapes}: {len(wrong)} of {ends}: " + json.dumps(wrong[:2], indent=1)
+
+
+@pytest.mark.parametrize("when", ["before", "after"])
+@pytest.mark.parametrize("seed", SEEDS[:4])
+def test_killed_around_every_rename_a_drawn_store_ends_in_the_tree_of_an_uninterrupted_move(work, seed, when, monkeypatch):
+    import json
+
+    from tests.found_store_of_0_5 import drawn_store
+
+    root = empty_store(work)
+    drawn = drawn_store(root, seed, 1, in_the_new_trees="of a move made elsewhere")
+    whole = work / "whole"
+    shutil.copytree(root, whole)
+    _clear()
+    real = os.replace
+    calls = []
+    monkeypatch.setattr(os, "replace", lambda a, b: (calls.append(1), real(a, b))[1])
+    try:
+        migrate_0_5.run(whole)
+    except migrate_0_5.MoveError as refused:
+        pytest.skip(f"refused before anything moved: {str(refused)[:160]}")
+    finally:
+        monkeypatch.setattr(os, "replace", real)
+    wanted, reads = tree_of(whole), reads_after(whole)
+    wrong = []
+    for number in range(1, len(calls) + 1):
+        for journal in (True, False):
+            cut = work / "cut"
+            shutil.copytree(root, cut)
+            seen = []
+
+            def dying(a, b, number=number, seen=seen):
+                seen.append(1)
+                if len(seen) == number and when == "before":
+                    raise Stop()
+                real(a, b)
+                if len(seen) == number and when == "after":
+                    raise Stop()
+
+            _clear()
+            monkeypatch.setattr(os, "replace", dying)
+            try:
+                with pytest.raises(Stop):
+                    migrate_0_5.run(cut)
+            finally:
+                monkeypatch.setattr(os, "replace", real)
+            if not journal and (cut / migrate_0_5.JOURNAL).is_file():
+                (cut / migrate_0_5.JOURNAL).unlink()
+            _clear()
+            migrate_0_5.run(cut)
+            if tree_of(cut) != wanted:
+                wrong.append((number, journal, sorted(set(tree_of(cut).items()) ^ set(wanted.items()))[:6]))
+            elif reads_after(cut) != reads:
+                wrong.append((number, journal, "reads differ"))
+            rmtree(cut)
+    assert not wrong, f"{drawn['shapes']}: {len(wrong)} of {2 * len(calls)}: " + json.dumps(wrong[:3], indent=1)
+
+
+@pytest.mark.parametrize("pipelines", [1, 2])
+@pytest.mark.parametrize("seed", SEEDS)
+def test_every_number_of_the_plan_is_true_of_the_tree_before_and_after(work, seed, pipelines):
+    """On a store with nothing in the new trees yet: what the dry run counts, against the folders."""
+    import unicodedata
+
+    from tests.found_store_of_0_5 import _parts, drawn_store, records_0_5_read
+
+    root = empty_store(work)
+    drawn = drawn_store(root, seed, pipelines, in_the_new_trees=False)
+    before = facts_by_folder(root)
+    takes = sum(path.stat().st_size for path in root.rglob("*") if path.is_file() and not path.is_symlink())
+    said = set()
+    names_of: dict = {}
+    for pipeline, snapshot, document in records_0_5_read(root):
+        for part in _parts(document):
+            for entry in part["stored"]["files"]:
+                said.add(f"pipelines/{pipeline}/{entry.get('kept_in', snapshot)}/{entry.get('kept_as', entry['path'])}")
+                names_of.setdefault((pipeline, snapshot), set()).add(entry["path"])
+    _clear()
+    try:
+        planned = migrate_0_5.plan(root)
+        migrate_0_5.check(root, planned)
+        done = migrate_0_5.run(root)
+    except migrate_0_5.MoveError as refused:
+        pytest.skip(f"refused before anything moved: {str(refused)[:160]}")
+    shapes = drawn["shapes"]
+    # What is missing: what no stated place of the pipeline held, by pipeline and snapshot
+    lacks: dict = {}
+    for (pipeline, snapshot, path), (_, _, _, anywhere, _) in before.items():
+        if not anywhere:
+            lacks.setdefault((pipeline, snapshot), set()).add(path)
+    expected_in = sorted(((pipeline, snapshot, len(paths), len(names_of[(pipeline, snapshot)])) for (pipeline, snapshot), paths in lacks.items()), key=lambda one: (-one[2], one[:2]))
+    assert planned.missing_in == expected_in, shapes
+    assert done.missing_in == expected_in, shapes
+    # The first line's number is the sum of the lines under it, for two pipelines with the same folder names too
+    assert len(planned.missing) == sum(one[2] for one in planned.missing_in), shapes
+    assert len(done.missing) == sum(one[2] for one in done.missing_in), shapes
+    # What is moved in, and what goes aside
+    moved_in = [path for tree in ("snapshots", "increments") for path in (root / tree).rglob("*") if path.is_file() and "_chartbook" not in path.parts and path.name != "README.txt"]
+    assert planned.renamed + planned.copied == len(moved_in) == done.renamed + done.copied, shapes
+    assert planned.renamed_bytes + planned.copied_bytes == sum(path.stat().st_size for path in moved_in), shapes
+    aside = [path.relative_to(root / ASIDE).as_posix() for path in (root / ASIDE).rglob("*") if path.is_file() and path.name not in ("snapshot.json", "CLEARED.txt", "README.txt")]
+    named = [path for path in aside if unicodedata.normalize("NFC", path) in said]  # as the disk tells names apart: the name may be there in the other form
+    assert (done.doubled, done.aside) == (len(named), len(aside) - len(named)) == (planned.doubled, planned.aside), shapes
+    # The copies, and what the store takes
+    assert sum(one[2] for one in planned.copied_into) == planned.copied and sum(one[3] for one in planned.copied_into) == planned.copied_bytes, shapes
+    if planned.copied:
+        assert (planned.store_bytes, planned.store_after) == (takes, takes + planned.copied_bytes), shapes
+    # The files that were not where their record says and read now
+    reads = reads_after(root)
+    elsewhere = [key for key, (content_hash, _, at_place, anywhere, _) in before.items() if not at_place and anywhere and reads.get(key, ("",))[0] == content_hash]
+    assert planned.elsewhere == len(elsewhere) == done.elsewhere, shapes
+
+
+# What the second review attacked and found sound, kept as it tested it
+
+
+EDGES = [
+    "a", "A", "z9", "0", "-", "_", "...", "a.", "A.", ".a", "..a", "a..", "a.b", "a-b", "a_b", "A-b_C.d",
+    "con", "CON", "con.txt", "Con.TXT", "nul", "aux", "prn", "com1", "COM9.dat", "lpt0", "lpt9.x.y",
+    "acme/p", "Acme/P", "acme/P", "ACME/p", "a.b/c.d", "-/-", "_/_", "./a", "a/...", "nul/x", "x/aux", "con/con", "localhost",
+    "x" * 100, "X" * 60 + "/" + "y" * 60, "a.b-c_d/e.f-g_h", "9/9", "a/b.", "a./b", "A./B.",
+]
+
+
+@pytest.mark.parametrize("identity", EDGES)
+def test_a_pipeline_of_any_id_the_grammar_takes_is_moved_and_never_passed_over(work, identity):
+    """The worst a test of names could do is pass a real pipeline's folder over: it would go aside whole. Each ID at an edge of what ``validate_pipeline_id`` takes, in the folder ``pipeline_folder`` gives it."""
+    if identity.startswith("./"):
+        with pytest.raises(ValueError):
+            validate_pipeline_id(identity)  # "." is no component: not an ID, and so no folder of a store
+        return
+    validate_pipeline_id(identity)
+    root = empty_store(work)
+    folder = pipeline_folder(identity)
+    snapshot = folder_of("2025-10-01", "a")
+    try:
+        put(root, folder, snapshot, "_data/a.parquet", A)
+    except OSError:
+        pytest.skip("this disk does not take a folder of this name")
+    record_at(root, folder, identity, "2025-10-01", "a", [("_data/a.parquet", A, None, None)])
+    older = record_at(root, folder, identity, "2025-09-01", "b", [("_data/a.parquet", A, snapshot, None)], made_by="pin")
+    found = migrate_0_5.plan(root)
+    assert found.not_pipelines == [] and (found.pipelines, found.snapshots, found.set_aside) == (1, 2, [])
+    done = migrate_0_5.run(root)
+    assert done.not_pipelines == [] and done.set_aside == [] and done.missing == []
+    assert {key: got[0] for key, got in reads_after(root).items()} == {(folder, snapshot, "_data/a.parquet"): sha(A), (folder, older, "_data/a.parquet"): sha(A)}
+
+
+def test_the_folder_of_any_id_drawn_is_named_as_a_pipelines_folder_is():
+    """Widely: 20,000 IDs drawn from the grammar's letters, with the names Windows keeps and dots at the ends among them."""
+    drawn = random.Random(20261120)
+    letters = string.ascii_letters + string.digits + "._-"
+    special = ["con", "CON", "nul", "aux", "prn", "com1", "lpt9", "a.", ".", "..", "...", "Con.x"]
+
+    def component() -> str:
+        if drawn.random() < 0.15:
+            return drawn.choice(special)
+        return "".join(drawn.choice(letters) for _ in range(drawn.randint(1, 12)))
+
+    passed_over = []
+    for _ in range(20000):
+        identity = component() if drawn.random() < 0.4 else f"{component()}/{component()}"
+        try:
+            validate_pipeline_id(identity)
+        except ValueError:
+            continue
+        if not migrate_0_5._is_pipeline_folder(pipeline_folder(identity)):
+            passed_over.append(identity)
+    assert passed_over == []
+
+
+def test_a_first_move_that_put_only_a_note_aside_did_not_make_the_store_a_moved_one(work):
+    """The sign of a moved store is a folder in what went aside under the old folder's name. A person's README put aside, the mark of the move from 0.2, and a note of a lockfile put aside are none."""
+    root = empty_store(work)
+    s = folder_of("2025-10-01", "a")
+    put(root, "acme+p", s, "_data/a.parquet", A)
+    record(root, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None)])
+    (root / "README.txt").write_text("Ours. Ask Dana.\n", encoding="utf-8", newline="\n")
+    (root / "snapshots" / ("0" * 40)).mkdir(parents=True)
+    (root / "snapshots" / ("0" * 40) / "MOVED.txt").write_text("moved\n", encoding="utf-8", newline="\n")
+    (root / "roots" / ("ab" * 16 + ".json")).write_text("{}\n", encoding="utf-8", newline="\n")
+    steps = migrate_0_5.plan(root).steps
+    last_before_the_old_folder = max(number for number, step in enumerate(steps, 1) if step.op != "aside" or step.source != "pipelines")
+    with pytest.raises(Stop):
+        migrate_0_5.run(root, after_step=lambda done: (_ for _ in ()).throw(Stop()) if done == last_before_the_old_folder else None)
+    (root / migrate_0_5.JOURNAL).unlink()
+    assert (root / ASIDE / "README.txt").is_file() and (root / ASIDE / "snapshots").is_dir() and not migrate_0_5.is_moved(root)
+    # And what arrives now is moved in, as on any store of 0.5
+    put(root, "acme+p", folder_of("2025-11-01", "b"), "_data/b.parquet", B)
+    newer = record(root, "acme/p", "2025-11-01", "b", [("_data/b.parquet", B, None, None), ("_data/a.parquet", A, s, None)])
+    _clear()
+    done = migrate_0_5.run(root)
+    _clear()
+    assert done.set_aside == [] and {key[1] for key in reads_after(root)} == {s, newer} and store_module.FolderStore(root).verify() == []
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5])
+def test_what_a_machine_still_on_0_5_writes_again_into_a_moved_store_goes_aside_and_nothing_in_the_store_changes(work, seed, monkeypatch):
+    """A store is moved; a machine that had not been brought the move then syncs its own copy of ``pipelines/`` back, whole, with a snapshot more. The second run puts it aside, removes nothing, and names only the new snapshot to be made again."""
+    root = empty_store(work)
+    wide_store(root, seed, 2)
+    stale = work / "stale"
+    shutil.copytree(root / "pipelines", stale)
+    migrate_0_5.run(root)
+    moved = {path: value for path, value in tree_of(root).items() if path.startswith(("snapshots/", "increments/"))}
+    shutil.copytree(stale, root / "pipelines")
+    put(root, "acme+p", folder_of("2025-12-24", "k"), "_data/new.parquet", B)
+    newer = record(root, "acme/p", "2025-12-24", "k", [("_data/new.parquet", B, None, None)])
+    _clear()
+    records = len(list((root / "pipelines").glob("*/*/_chartbook/snapshot.json")))
+    gone: list = []
+    with monkeypatch.context() as patch:
+        watch(patch, root, gone)
+        done = migrate_0_5.run(root)
+    assert not_its_own(gone) == [] and not (root / "pipelines").exists()
+    assert {path: value for path, value in tree_of(root).items() if path.startswith(("snapshots/", "increments/"))} == moved
+    assert done.set_aside == [("acme+p", newer)] and len(done.second) == records - 1
+    assert (root / ASIDE / "pipelines (2)" / "acme+p" / newer / "_data" / "new.parquet").read_bytes() == B
+
+
+def test_a_hard_link_is_a_file(work):
+    """A file of the store that is a hard link to one outside it is a plain file: it is renamed, and the other name keeps its bytes."""
+    root = empty_store(work)
+    outside = work / "outside.parquet"
+    outside.write_bytes(K)
+    s = folder_of("2025-10-01", "a")
+    (root / "pipelines" / "acme+p" / s / "_data").mkdir(parents=True)
+    try:
+        os.link(outside, root / "pipelines" / "acme+p" / s / "_data" / "k.parquet")
+    except (OSError, NotImplementedError):
+        pytest.skip("this disk makes no hard link")
+    record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", K, None, None)])
+    pin = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, s, None)], made_by="pin")
+    done = migrate_0_5.run(root)
+    assert done.missing == [] and outside.read_bytes() == K
+    assert {key: got[0] for key, got in reads_after(root).items()} == {("acme+p", s, "_data/k.parquet"): sha(K), ("acme+p", pin, "_data/k.parquet"): sha(K)}
+
+
+@needs_symlinks
+def test_a_link_to_another_folder_of_the_store_stops_the_move_like_one_that_leads_outside(work):
+    """A snapshot's folder that is a link to another snapshot's folder of the same store."""
+    root = empty_store(work)
+    s = folder_of("2025-10-01", "a")
+    put(root, "acme+p", s, "_data/k.parquet", K)
+    record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", K, None, None)])
+    os.symlink(root / "pipelines" / "acme+p" / s, root / "pipelines" / "acme+p" / folder_of("2025-09-01", "h"), target_is_directory=True)
+    record(root, "acme/p", "2025-12-01", "c", [("_data/k.parquet", K, folder_of("2025-09-01", "h"), None)])
+    before = sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
+    with pytest.raises(migrate_0_5.MoveError, match="is a link to another place"):
+        migrate_0_5.run(root)
+    assert sorted(path.relative_to(root).as_posix() for path in root.rglob("*")) == before
+
+
+class TestWhatIsInTheNewTreesIsTakenByItsSize:
+    """Known, and left: the move reads nothing, so a file of the right size in the new trees is the file to it, as one that a move cut short put there is. Where its bytes are others (a copy that set the file's length first and stopped), what the move does with it is said, and nothing is removed."""
+
+    def test_a_copy_of_other_bytes_is_named_and_the_right_bytes_are_still_in_the_store(self, work):
+        """An older snapshot has K in its own folder. The newest and a pin's name K in a folder that does not hold it, and where the pin's file goes there is a file of K's size and other bytes.
+
+        The newest is given a copy of that file, which is hashed as it is
+        written and named in the last lines; the older one's K goes aside
+        with the old folder, where the last lines say to look.
+        """
+        root = empty_store(work)
+        c0 = folder_of("2025-09-01", "h")
+        older = folder_of("2025-10-01", "a")
+        put(root, "acme+p", older, "_data/k.parquet", K)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", K, None, None)])
+        newest = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, c0, None)])
+        pin = record(root, "acme/p", "2025-11-15", "c", [("_data/k.parquet", K, c0, None)], made_by="pin")
+        put(root, "acme+p", pin, "_data/k.parquet", bytes(len(K)), tree="snapshots")
+        done = migrate_0_5.run(root)
+        assert done.copied_as_is == [f"snapshots/acme+p/{newest}/_data/k.parquet"]
+        held = {hashlib.sha256(path.read_bytes()).hexdigest() for path in root.rglob("*") if path.is_file()}
+        assert hashlib.sha256(K).hexdigest() in held  # nothing is removed: aside, or in the older one's own folder
+        _clear()
+        assert len(store_module.FolderStore(root).verify()) >= 2  # and `store verify` says which files are not what their records say

@@ -828,6 +828,13 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
             # these places first: a record arrived since, or the one the others build on had no folder yet), or a part
             # of it is there, as a sync left it. A place that has the file at its size is first, for the copies
             targets.sort(key=lambda target: look(target[0])[1] != target[2])
+        else:
+            # The file is at its old place. Where its own place in the new trees is taken (its own snapshot's folder,
+            # under its own name: brought by a sync of a move made elsewhere), it stays here and goes aside, and the
+            # others are copied from it. It is never renamed into another snapshot, which a plan made half way
+            # would do and an uninterrupted move does not: that place is first
+            own_place = source.split("/", 1)[1]
+            targets.sort(key=lambda target: not (target[0].split("/", 1)[1] == own_place and look(target[0])[0]))
         first_target, first_size = targets[0][0], targets[0][2]
         # What the rename leaves at the first place: the file, by its size, or nothing
         first = will(source, first_target)
