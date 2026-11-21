@@ -4882,7 +4882,7 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         if left:
             failures.append((
                 f"the object {content_hash}",
-                f"Cannot remove the object {content_hash} at {store}/{left[0]}: {stuck[left[0]]}",
+                f"Cannot remove the object {content_hash} at {store.shown(left[0])}: {stuck[left[0]]}",
             ))
             continue
         files = plan.files.get(content_hash)

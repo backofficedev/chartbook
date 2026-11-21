@@ -3425,7 +3425,6 @@ def snapshot(project_dir, deep, store_names, complete, as_is, no_gc_reminder):
 
     project_dir = resolve_project_dir(project_dir)
     here = _in_its_folder(project_dir)
-    _refuse_a_folder_spelled_otherwise(project_dir, "chartbook snapshot")
     ran_by_chartbook = False if as_is else _held_against_its_build(project_dir, here, deep, store_names, complete)
     try:
         report = snapshots.make(
@@ -3501,45 +3500,6 @@ def _held_against_its_build(project_dir, here: str, deep: bool, store_names, com
         for line in rest:
             click.echo(line, err=True)
         raise SystemExit(1) from None
-
-
-def _refuse_a_folder_spelled_otherwise(project_dir, again: str) -> None:
-    """Stop a command that is about to make a snapshot of a folder reached by another letter case than the disk's own, on a disk that takes either.
-
-    A run's last line may have handed such a spelling over
-    (``--project-dir mono/PIPES/A``, of ``pipes/a``). Where the
-    repository's own folder is the one spelled otherwise, where the
-    pipeline is in it cannot be told, and pathlib's words for that help
-    nobody. Where a folder inside it is, the snapshot would record that
-    spelling as the pipeline's place, and a pipeline that reads the folder
-    by its real name would not find the snapshot and would pin an older
-    one without a word. Only a difference of letter case is refused: git
-    and the system may write one name in two of Unicode's forms, and that
-    is no mistake of whoever typed it.
-
-    :param again: The command to type again, once in the folder.
-    """
-    import unicodedata
-
-    from chartbook import snapshot as snapshots
-
-    try:
-        recorded = snapshots.code_of(project_dir).subdirectory
-        named = snapshots._git(Path(project_dir), "rev-parse", "--show-prefix").strip().rstrip("/")
-        recorded, named = (unicodedata.normalize("NFC", "" if one in ("", ".") else one) for one in (recorded, named))
-        otherwise = recorded != named and recorded.casefold() == named.casefold()
-    except ValueError:
-        otherwise = True
-    except Exception:  # noqa: BLE001 - whatever else is wrong with the folder is said by what meets it next
-        return
-    if otherwise:
-        click.echo(
-            click.style("Error: ", fg="red", bold=True)
-            + f"{project_dir} is named otherwise than the disk names it, so where it is in its repository cannot be "
-            f"told. `cd` into the folder, and `{again}` again.",
-            err=True,
-        )
-        raise SystemExit(1)
 
 
 def _a_store_to_send_it_to(project_dir):
@@ -3842,8 +3802,6 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
 
     # Not for arguments the run refuses anyway: it says why, and nothing is recorded
     refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
-    if make_snapshot and not refused:
-        _refuse_a_folder_spelled_otherwise(project_dir, "chartbook run --snapshot")
     if not refused:
         _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
     _run_script(
@@ -4244,6 +4202,10 @@ def store_ls(pipeline, store_name):
     are in that one's folder. A snapshot is removed with `chartbook store
     gc`, never by hand.
 
+    The size is the one a snapshot's record gives. Where files its record
+    names are not in the store, or not at their size, its line says how
+    many of how many it lacks, and `chartbook store verify` names each.
+
     A store that ChartBook 0.5 laid out keeps each file once:
     there an increment's other files may be in several snapshots' folders.
 
@@ -4261,7 +4223,7 @@ def store_ls(pipeline, store_name):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     shown = unreachable = unread = 0
-    said_complete = said_shared = False
+    said_complete = said_shared = said_lacking = False
     for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
@@ -4297,6 +4259,7 @@ def store_ls(pipeline, store_name):
             click.echo(f"  not listed: {why}", err=True)
             unread += 1
         current = None
+        asked: dict = {}  # what the disk said of each file of this store: one that several snapshots name is asked about once
         for record in found:
             if record.pipeline != current:
                 current = record.pipeline
@@ -4316,6 +4279,12 @@ def store_ls(pipeline, store_name):
             note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
+            # The size is its record's. What its record names and is not where it says, by sizes as every
+            # ordinary question of the store is asked, is said in the same words of either kind
+            lacking = _files_it_lacks(the_store, record, asked)
+            if lacking:
+                note += f", lacks {lacking[0]:,} of its {lacking[1]:,} file(s)"
+                said_lacking = True
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
             click.echo(f"  {record.folder.name}  {made}  {record.commit[:7]}  {kind:<10} {_format_bytes(here)} here{note}")
             shown += 1
@@ -4336,6 +4305,55 @@ def store_ls(pipeline, store_name):
     if said_complete or said_shared:
         # One line: the store's README says how snapshots are removed
         click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
+    if said_lacking:
+        click.echo("What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.")
+
+
+def _files_it_lacks(the_store, record, asked: dict):
+    """For `store ls`: how many files a snapshot's record names that are not where it says, and how many it names in all; None where it lacks none.
+
+    By sizes, with nothing read (:meth:`chartbook.store.Store.holes_of`),
+    of a complete snapshot and of an increment alike: an increment's
+    files are in two folders, and one missing from either is one it lacks.
+    A store that cannot say (another kind, or a record it cannot follow
+    now) says nothing here, and `store verify` is what checks a store.
+
+    Both numbers are of the names the snapshot's record lists: a
+    snapshot's files are its names. The store asks about a place once and
+    says it once, under one of the names the record has for it; where a
+    record keeps two names at one place (a store of ChartBook 0.5 kept
+    two files of the same bytes once) and that place is missing, the
+    snapshot lacks two files, and that is the number here. `store verify`
+    says the place once, since its lines are of places in the store.
+
+    :param asked: What the disk has said of each file of this store so
+        far in the listing, which the store adds to: twenty snapshots
+        that name the same files ask about each file once, not twenty
+        times, and on a synced folder each question is a trip.
+    """
+    from chartbook.store import StoreError
+
+    holes_of = getattr(the_store, "holes_of", None)
+    try:
+        holes = list(holes_of(record.path, asked)) if callable(holes_of) else []
+    except (OSError, ValueError, StoreError):
+        return None
+    if not holes:
+        return None
+    names_at: dict = {}  # each place the record keeps a file at, with every name it has for the file there
+    places_of: dict = {}  # and where each name is kept
+    for asset in record.assets:
+        for file in asset.files:
+            names_at.setdefault(file.location, set()).add(file.path)
+            places_of.setdefault(file.path, set()).add(file.location)
+    lacked: set = set()
+    for hole in holes:
+        if hole in places_of:
+            for place in places_of[hole]:
+                lacked |= names_at[place]
+        else:
+            lacked.add(hole)  # what its record names without saying where it is: no place, and one file
+    return len(lacked), len(lacked | set(places_of))
 
 
 def _stores_to_list(store_name):
@@ -4578,29 +4596,113 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
     from chartbook import migrate_0_5
     from chartbook.store import FOLDER_SCHEMA, StoreError, this_machine
 
-    def counts(found, verb: str) -> list:
-        are = "are" if verb == "become" else "were"
+    def said_under(folders, most: int = 5) -> str:
+        """Where files are, for a line: the folders they are under with how many each holds, the largest first, at most five, and how many folders more (:func:`chartbook.migrate_0_5.under`)."""
+        folders = list(folders)
+        named = ", ".join(f"{folder} ({count:,})" for folder, count in folders[:most])
+        return named + (f" and {len(folders) - most} more" if len(folders) > most else "")
+
+    def in_its_snapshot(path: str, before: int) -> str:
+        """A file's path in its snapshot, from its path in the store: without the *before* folders that lead to the snapshot's own."""
+        return path.split("/", before)[-1]
+
+    def counts(found, verb: str) -> tuple:
+        """What a move would do, or did, as lines in three lists: what is missing, which is said first; what is moved in; and the rest."""
+        now = verb == "become"
+        are = "are" if now else "were"
         aside = f"{migrate_0_5.LEFT_ASIDE}/"
-        lines = [
+        first = []
+        if found.missing:
+            # By snapshot, and before the other counts: folders that a sync never brought whole are one line each, not
+            # thousands of names; and a person is to ask whether a sync is still at work before saying yes
+            first.append(
+                f"  {len(found.missing)} file(s) that a record names are missing or of another size, as before the move, in "
+                f"{len(found.missing_in)} snapshot(s):"
+            )
+            first += [f"    {pipeline}/{snapshot}: {lacks} of {of} file(s)" for pipeline, snapshot, lacks, of in found.missing_in[:5]]
+            if len(found.missing_in) > 5:
+                first.append(f"    and {len(found.missing_in) - 5} more")
+            # And which they are, by the folders they are under: three names of 58,325 said nothing, and less where a
+            # file's name is a hash
+            first.append(f"    under {said_under(migrate_0_5.under(path for _, _, path in found.missing))}")
+            first.append(
+                "  If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives "
+                "afterwards goes aside, and does not reach its snapshot. `chartbook store verify` lists every one."
+                if now
+                else "  `chartbook store verify` lists every one. A file that a sync brings now goes aside when `chartbook store "
+                "migrate` is run again, and does not reach its snapshot."
+            )
+        moved_in = [
             f"  {found.complete} snapshot(s) {verb} complete ({found.by_pins} of them made by a pin), {found.increments} "
             f"{verb} increments on the newest of their pipeline.",
             f"  {found.renamed} file(s), {_format_bytes(found.renamed_bytes)}, {are} moved inside the store by rename: "
             f"nothing is copied or uploaded again for these.",
-            f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {are} copied: each is in two folders that must each hold it.",
+            f"  {found.copied} file(s), {_format_bytes(found.copied_bytes)}, {are} copied: each is in two folders that must each hold it."
+            + (" In a synced folder every copied byte is uploaded again." if found.copied else ""),
+        ]
+        # Where the copies are much (a hundredth of the store, or 100 MB): what the store takes with them, and which
+        # snapshots are given them, since one that is removed before the move is not copied
+        if found.copied and (found.copied_bytes >= 100 * 1024 * 1024 or found.copied_bytes * 100 >= found.store_bytes):
+            moved_in.append(
+                f"  The store {'takes' if now else 'took'} {_format_bytes(found.store_bytes)} {'now' if now else 'before the move'}, "
+                f"and {'will take' if now else 'takes'} {_format_bytes(found.store_after)}{'' if now else ' now'}. The copies "
+                f"{'go' if now else 'went'} to {len(found.copied_into)} snapshot(s), the largest first:"
+            )
+            moved_in += [f"    {pipeline}/{snapshot}: {_format_bytes(size)} in {files} file(s)" for pipeline, snapshot, files, size in found.copied_into[:5]]
+            if len(found.copied_into) > 5:
+                moved_in.append(f"    and {len(found.copied_into) - 5} more")
+            if now:
+                moved_in.append(
+                    "  A snapshot that is removed before the move is not copied: `chartbook store gc` of ChartBook 0.5 removes "
+                    "old ones (this version removes nothing from a store of 0.5)."
+                )
+        lines = [
             f"  What is left of pipelines/ {'goes' if verb == 'become' else 'went'} aside whole, under {aside}: its old records and "
             f"notes, and {found.aside} file(s) that no record names. Nothing is removed.",
         ]
-        if found.missing:
-            first = ", ".join(f"{path} ({snapshot})" for snapshot, path in found.missing[:3])
+        if found.doubled:
             lines.append(
-                f"  {len(found.missing)} file(s) a record names are missing or of another size, as before the move: {first}"
-                f"{' and more' if len(found.missing) > 3 else ''}. "
+                f"  {found.doubled} file(s) that a record names {'go' if verb == 'become' else 'went'} aside with the old folder "
+                f"too: each is a second copy, or part of one, of bytes that {are} moved in from another place a record names."
+            )
+        if found.elsewhere:
+            lines.append(
+                f"  {found.elsewhere} file(s) {are} not where their record says, and {are} taken from where another "
+                f"snapshot of their pipeline keeps the same bytes: under {said_under(found.elsewhere_under)}."
+            )
+        if found.no_record:
+            named = ", ".join(f"{pipeline}/{folder} ({files} file(s))" for pipeline, folder, files in found.no_record[:3])
+            lines.append(
+                f"  {len(found.no_record)} folder(s) {'hold' if verb == 'become' else 'held'} files and "
+                f"{'have' if verb == 'become' else 'had'} no record: {named}{' and more' if len(found.no_record) > 3 else ''}. "
+                f"The files in such a folder that a record names {are} moved with that record, and the rest "
+                f"{'goes' if verb == 'become' else 'went'} aside. "
                 + (
-                    "If a sync is still bringing them, wait and run again."
+                    "If a sync may still be bringing a folder's record, wait for it and run this again: a record that "
+                    "arrives after the move goes aside, and that snapshot has to be made again."
                     if verb == "become"
-                    else "`chartbook store verify` names each. One that a sync brings later is not moved in: it goes aside "
-                    "with the rest when `chartbook store migrate` is run again."
+                    else "A record that a sync brings for one now goes aside when `chartbook store migrate` is run again, "
+                    "and that snapshot has to be made again."
                 )
+            )
+        if found.second_folders:
+            # Named for a snapshot the store has the record of, in another folder: no record of its own is to be waited for
+            named = ", ".join(
+                f"{pipeline}/{folder} ({files} file(s); its record {'is' if verb == 'become' else 'was'} in {other})"
+                for pipeline, folder, files, other in found.second_folders[:3]
+            )
+            lines.append(
+                f"  {len(found.second_folders)} folder(s) {'hold' if verb == 'become' else 'held'} files and no record, and {are} "
+                f"named for a snapshot whose record {'is' if verb == 'become' else 'was'} in another folder: {named}"
+                f"{' and more' if len(found.second_folders) > 3 else ''}. The files in such a folder that a record names {are} "
+                f"moved with that record, and the rest {'goes' if verb == 'become' else 'went'} aside."
+            )
+        if found.not_pipelines:
+            lines.append(
+                f"  {len(found.not_pipelines)} folder(s) under pipelines/ {are} named as no pipeline's folder is, and "
+                f"{'go' if verb == 'become' else 'went'} aside whole with it: {', '.join(found.not_pipelines[:3])}"
+                f"{' and more' if len(found.not_pipelines) > 3 else ''}. ChartBook 0.5 read no record in such a folder, and "
+                f"nothing in it {'is' if verb == 'become' else 'was'} moved in."
             )
         if found.set_aside:
             named = ", ".join(f"{pipeline}/{snapshot}" for pipeline, snapshot in found.set_aside[:3])
@@ -4608,34 +4710,38 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                 f"  {len(found.set_aside)} snapshot(s) {'go' if verb == 'become' else 'went'} aside without being moved in: {named}"
                 f"{' and more' if len(found.set_aside) > 3 else ''}. Run that pipeline again with this ChartBook."
             )
-        arrived = [path for path in found.late if path not in {pair[0] for pair in found.in_place}]
+        if found.second:
+            named = ", ".join(f"{pipeline}/{folder}" for pipeline, folder in found.second[:3])
+            lines.append(
+                f"  {len(found.second)} second record(s) of a snapshot that {'is' if verb == 'become' else 'was'} moved in "
+                f"{'go' if verb == 'become' else 'went'} aside: {named}{' and more' if len(found.second) > 3 else ''}."
+            )
+        in_place = {pair[0] for pair in found.in_place}  # once: a set made for each file is the square of the files
+        arrived = [path for path in found.late if path not in in_place]
         if arrived:
+            # Each is where the old folder is kept, under its pipeline's and its snapshot's folders: five folders deep
+            where = said_under(migrate_0_5.under(in_its_snapshot(path, 5) for path in arrived))
             lines.append(
                 f"  {len(arrived)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
-                f"aside: {', '.join(arrived[:3])}{' and more' if len(arrived) > 3 else ''}. `chartbook store verify` "
-                f"names the snapshot that lacks each."
+                f"aside with the old folder: under {where}. `chartbook store verify` names the snapshot that lacks each."
             )
         if found.in_place:
-            def size(of) -> str:
-                return "no plain file" if of is None else _format_bytes(of)
-
-            named = ", ".join(
-                place + (f" ({size(here)} in place, {size(there)} at the old place)" if here != there else "")
-                for _, place, there, here in found.in_place[:3]
-            )
+            where = said_under(migrate_0_5.under(in_its_snapshot(place, 3) for _, place, _, _ in found.in_place))
+            other_size = sum(1 for _, _, there, here in found.in_place if here != there)
             lines.append(
-                f"  {len(found.in_place)} file(s) a record names {are} not moved, a file being where each goes already: {named}"
-                f"{' and more' if len(found.in_place) > 3 else ''}. What is in place stays, and the file at the old place "
-                f"{'goes' if verb == 'become' else 'went'} aside with the old folder. `chartbook store verify` says whether what "
-                f"is in place is right."
+                f"  {len(found.in_place)} file(s) a record names {are} not moved, a file being where each goes already: under "
+                f"{where}."
+                + (f" {other_size} of them {are} not of the size of the file at the old place." if other_size else "")
+                + f" What is in place stays, and the file at the old place {'goes' if verb == 'become' else 'went'} aside with "
+                f"the old folder. `chartbook store verify` says whether what is in place is right."
             )
         if found.copied_as_is:
+            where = said_under(migrate_0_5.under(in_its_snapshot(place, 3) for place in found.copied_as_is))
             lines.append(
                 f"  {len(found.copied_as_is)} file(s) were copied as they are, though their bytes are not what their records "
-                f"say: {', '.join(found.copied_as_is[:3])}{' and more' if len(found.copied_as_is) > 3 else ''}. "
-                f"`chartbook store verify` says more."
+                f"say: under {where}. `chartbook store verify` says more."
             )
-        return lines
+        return first, moved_in, lines
 
     root = the_store.root
     synced = "In a synced folder, let the sync finish before another machine uses the store."
@@ -4644,26 +4750,73 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         found = migrate_0_5.plan(root)
         migrate_0_5.check(root, found)
         moved = migrate_0_5.marker_of(root) == FOLDER_SCHEMA
+        # Its old folder is aside, and store.json does not say so yet: a move cut short at its end, which is planned as a moved store is
+        ended = not moved and migrate_0_5.is_moved(root)
         # The question is skipped only where this machine's own journal says a move is under way
         mine = started is not None and started.get("machine") == this_machine(create=False)
-        if mine:
+        if moved and started is None and not found.steps:
+            # A moved store with nothing of 0.5 at its top and no journal: what is left to do is the move's own folder of
+            # temporaries, which a run killed as it ended left. It is the move's own, and no question is asked
+            click.echo(
+                f"The store at {the_store} has this version's layout, and the folder a move keeps its own temporary files in "
+                f"is still there ({migrate_0_5.MOVING}/): a move was cut short as it ended. "
+                + ("It would be removed: nothing in it is a file of the store's." if dry_run else "It is removed: nothing in it is a file of the store's.")
+            )
+            if dry_run:
+                click.echo("Nothing was moved.")
+            else:
+                migrate_0_5.run(root)
+            return
+        again = ", ".join(name + "/" for name in migrate_0_5.old_left(root))
+        # No journal of this machine says whose move left its signs in a store of 0.5. One made on another machine and
+        # finished there has none either, and a sync may have brought its folders before its store.json: said before
+        # the question, as every other command says of such a store
+        wait = "If another machine moved it, a sync may still be bringing the rest: wait for the sync to finish, and move nothing here."
+        if mine and ended:
+            click.echo(
+                f"A move of the store at {the_store} to this version's layout was cut short at its end, its old folder "
+                f"aside already: it is finished now."
+                + (
+                    f" What ChartBook 0.5 keeps at a store's top is there again ({again}): its notes are moved under "
+                    f"_chartbook/, and pipelines/ goes aside whole: nothing under it is moved in."
+                    if again else ""
+                )
+            )
+        elif mine:
             click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
         elif moved:
             click.echo(
                 f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
-                f"({', '.join(name + '/' for name in migrate_0_5.old_left(root))}). Its notes are moved under _chartbook/, and "
+                f"({again}). Its notes are moved under _chartbook/, and "
                 f"pipelines/ goes aside whole: nothing under it is moved in."
+            )
+        elif ended:
+            # The old folder is aside and store.json does not say the new layout: this machine's own move, cut short at
+            # its end, where its journal says so (above). Without one it may as well be what a sync has brought so far
+            # of another machine's move, and then what is at the top is this machine's whole store: the line does not
+            # say that a move is finished, and says what a yes does
+            click.echo(
+                f"The store at {the_store} has the layout of ChartBook 0.5, and what a move to this version's layout puts "
+                f"aside is there already ({migrate_0_5.LEFT_ASIDE}/), with no journal of a move on this machine. {wait} "
+                f"If a move on this machine was cut short at its end, this finishes it."
+                + (
+                    f" What ChartBook 0.5 keeps at a store's top is there ({again}): a yes moves its notes under "
+                    f"_chartbook/ and puts pipelines/ aside whole. Nothing under it is moved in, and a file there that a "
+                    f"snapshot lacks does not reach it."
+                    if again else ""
+                )
             )
         elif migrate_0_5.new_there(root):
             click.echo(
                 f"The store at {the_store} has the layout of ChartBook 0.5, and folders of this version's beside it: it "
-                f"looks half moved, and the move goes on from the folders as they are. {found.pipelines} pipeline(s), "
-                f"{found.snapshots} snapshot(s)."
+                f"looks half moved, and the move goes on from the folders as they are. {wait} "
+                f"{found.pipelines} pipeline(s), {found.snapshots} snapshot(s)."
             )
         else:
             click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: {found.pipelines} pipeline(s), {found.snapshots} snapshot(s).")
         if not mine:
-            for line in counts(found, "become")[0 if not moved else 3:]:
+            first, moved_in, rest = counts(found, "become")
+            for line in first + ([] if moved or ended else moved_in) + rest:
                 click.echo(line)
         if dry_run:
             click.echo("Nothing was moved.")
@@ -4689,10 +4842,31 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         )
         raise SystemExit(1)
     click.echo(f"The store at {the_store} has this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
-    for line in counts(done, "became")[0 if not moved else 3:]:
+    first, moved_in, rest = counts(done, "became")
+    # Where files are missing, the old folder is where to look before it goes: a sync's second copy of a snapshot's
+    # folder (`<name> 2`) may hold what the first lacked, and the move reads no record of such a folder
+    look_first = (
+        f" {len(done.missing)} file(s) are missing, and one may be in that folder (in a second copy of its snapshot's "
+        f"folder, as a sync names one: `<name> 2`): look there first."
+        if done.missing else ""
+    )
+    if not done.counted:
+        # The journal carried what the move came to, and is gone (removed by hand, as two messages say to, once the old
+        # folder was aside): the snapshots are counted from the folders, and what went with the journal is left out,
+        # not said as 0
+        lines = first + moved_in[:1] + [
+            f"  How many files the move renamed, copied and put aside went with its journal, which is gone. The old folder "
+            f"is under {migrate_0_5.LEFT_ASIDE}/: it may be removed once the move has been checked.{look_first}"
+        ]
+    else:
+        # What this move moved in, by what its journal carries: a run that goes on after store.json was written says
+        # the same as the one that was cut short would have. And after a move that ended before this run and left no
+        # journal, the snapshots, renames and copies are not this run's to say
+        lines = first + (moved_in if done.moved_in or not (moved or ended) else []) + rest
+    for line in lines:
         click.echo(line)
     if done.kept:
-        click.echo(f"The old folder, with its records, is kept at {done.kept}: it may be removed once the move has been checked.")
+        click.echo(f"The old folder, with its records, is kept at {done.kept}: it may be removed once the move has been checked.{look_first}")
     click.echo(synced)
 
 
@@ -4707,32 +4881,23 @@ def store_migrate(dry_run, yes):
     newest snapshot its owner made becomes complete under `snapshots/`,
     the others it made become increments on it under `increments/`, and
     a snapshot a pin made becomes complete. Files change folder by rename,
-    so a store in a synced folder uploads nothing again; only a file that
-    two folders must each hold is copied. What no record names is moved
-    aside under `_chartbook/left-by-0.5/`, never removed. Nothing else
-    may use the store while it runs, and afterwards every machine that
-    uses it needs this ChartBook. Cut short, it is run again and goes on.
+    and a synced folder uploads nothing again for them. A file that two
+    folders must each hold is copied, and uploaded again: that is much
+    where older snapshots share files the newest does not have, so
+    `--dry-run` says what the store will take, and a snapshot removed
+    first (with `chartbook store gc` of ChartBook 0.5) is not copied. A
+    file that is not where its record says is taken from where another
+    snapshot of its pipeline keeps the same bytes; one that is missing is
+    said first, by snapshot. What is not moved in goes aside under
+    `_chartbook/left-by-0.5/`, never removed. Nothing else may use the
+    store while it runs, and afterwards every machine that uses it needs
+    this ChartBook. Cut short, it is run again and goes on.
 
-    A store made by ChartBook 0.2 is moved to the layout of 0.3 to 0.5
-    first, as before; run the command again to move that one on.
+    A store made by ChartBook 0.2 is moved to the layout of 0.5 by the
+    first run of this command, and on to this version's by a second.
 
-    ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
-    for each snapshot in it named by when it was made and its commit, and
-    each file once, under its own name. A store of 0.2 is refused until it
-    is moved, once, on one machine.
-
-    Upgrade every machine that uses the store to ChartBook 0.3 first: a
-    machine still on 0.2 cannot read the store once it is moved, and says
-    so. Then run this on one of them; in a store a sync service keeps, the
-    others wait for the sync.
-
-    Files are moved by renaming, so a store in a synced folder uploads
-    nothing again; bytes two pipelines' snapshots share are copied for the
-    second. The files of a glob, whose records give no hash for each file,
-    are read once to hash them: in a folder that streams its files (Google
-    Drive's), that downloads them. A migrate cut short is run again and
-    goes on where it stopped. A store in a bucket is not moved: it is not
-    available in this version, and a command that meets one says so.
+    A store in a bucket is not moved: it is not available in this
+    version, and a command that meets one says so.
 
     \b
     Examples:
@@ -4939,6 +5104,15 @@ def store_verify():
     once, under the name it has there, with that snapshot's name and how
     many of them keep it there.
 
+    Ahead of the lines for each file comes what they add up to: how many
+    files of how many snapshots, and one line for each such snapshot,
+    with its pipeline, its folder's name and how many files. A folder
+    files are missing from that has no record is said to be that, not a
+    snapshot: `chartbook store ls` names the snapshots that lack them.
+
+    A record that cannot be read is named on a line of its own, with why:
+    nothing of its snapshot is checked.
+
     Examples:
         chartbook store verify
         CHARTBOOK_STORE=/shared/store chartbook store verify
@@ -4953,18 +5127,82 @@ def store_verify():
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
+    # A count for each snapshot first: the lines for each file run to thousands where a store has lost many,
+    # and what they add up to was only to be had by counting them
+    for line in _wrong_by_snapshot(the_store, problems):
+        click.echo(line)
     for problem in problems:
         click.echo(problem.format())
     if problems:
-        # By object: one that two snapshots have each lost a file of is said twice above, and is one object
-        wrong = len({problem.content_hash for problem in problems})
-        click.echo(
-            f"\n{wrong} of {total} object(s) in {the_store} are "
-            f"not what their names say.",
-            err=True,
-        )
+        # A record that cannot be read is no object, and its snapshot's objects are not among those counted: said by itself
+        unread = sum(1 for problem in problems if getattr(problem, "of_record", False))
+        closing = []
+        if unread < len(problems):
+            # By object: one that two snapshots have each lost a file of is said twice above, and is one object
+            wrong = len({problem.content_hash for problem in problems if not getattr(problem, "of_record", False)})
+            closing.append(f"{wrong} of {total} object(s) in {the_store} are not what their names say.")
+        if unread:
+            closing.append(f"{unread} snapshot record(s) in {the_store} cannot be read.")
+        click.echo("\n" + " ".join(closing), err=True)
         raise SystemExit(1)
     click.echo(f"{the_store}: OK ({total} object(s))")
+
+
+def _wrong_by_snapshot(the_store, problems) -> list:
+    """For `store verify`: how many files are wrong in how many snapshots, and one line for each such snapshot, to print ahead of the lines for each file.
+
+    The first line counts every line below that is of a file of a
+    snapshot (:attr:`chartbook.store.StoreProblem.of_snapshot`), each
+    under the snapshot in whose folder the file is, or is missing from
+    (:attr:`~chartbook.store.StoreProblem.path`): for a file that
+    increments keep in the complete snapshot they build on, that one. Such
+    a folder may have no record now, as one cleared in a store of
+    ChartBook 0.5, or a complete snapshot that has gone and that
+    increments still name: its files are counted under its name all the
+    same, its pipeline is the one whose folder it is in, and its line says
+    that it is a folder with no record, as each of its files' lines does
+    (``store ls`` names the snapshots whose records name those files, and
+    this folder is none of them). Each line has the pipeline, the folder's
+    name and how many files, a pipeline's folders together, oldest first.
+    What is wrong outside any snapshot (a record that cannot be read, an
+    object no pipeline owns, a folder that is not read) has its own line
+    below and none here; with nothing wrong in any snapshot there is
+    nothing to say.
+    """
+    from chartbook.store import StoreError
+
+    counts: dict = {}
+    no_record: set = set()
+    for problem in problems:
+        if getattr(problem, "of_snapshot", False):
+            counts[problem.path] = counts.get(problem.path, 0) + 1
+            if getattr(problem, "no_record", False):
+                no_record.add(problem.path)
+    if not counts:
+        return []
+    # A pipeline's ID is in its records: a folder that has none is named by a record in a folder of its pipeline
+    by_snapshot: dict = {}  # the pipeline of each snapshot that has a record, by its folder
+    by_pipeline_folder: dict = {}  # and of each pipeline's folder, by its name (the same under snapshots/ and increments/)
+    records = getattr(the_store, "records", None)
+    try:
+        for record in records() if callable(records) else ():
+            if record.readable:
+                by_snapshot[record.folder] = record.pipeline
+                by_pipeline_folder.setdefault(record.folder.parent.name, record.pipeline)
+    except (OSError, ValueError, StoreError):
+        pass
+
+    def pipeline(folder) -> str:
+        return by_snapshot.get(folder) or by_pipeline_folder.get(folder.parent.name) or folder.parent.name
+
+    lines = [
+        f"{sum(counts.values()):,} file(s) of {len(counts):,} snapshot(s) are missing or are not what their records say. "
+        f"By snapshot, and then each file:"
+    ]
+    for folder in sorted(counts, key=lambda folder: (pipeline(folder), folder.name)):
+        named = f"{folder.name} (a folder with no record)" if folder in no_record else folder.name
+        lines.append(f"  {_printable(pipeline(folder))}  {named}  {counts[folder]:,} file(s)")
+    return lines
 
 
 def _printable(text) -> str:

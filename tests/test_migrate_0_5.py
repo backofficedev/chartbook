@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import stat
+import types
 from pathlib import Path
 
 import polars as pl
@@ -18,12 +19,12 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import config, data, lock, migrate_0_5, snapshot
+from chartbook import config, data, lock, migrate_0_5, replacing, snapshot
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.gitcache import GitCache
 from chartbook.store import FolderStore, StoreError
-from tests.fixtures import _git
+from tests.fixtures import _git, needs_symlinks, symlinks_work
 from tests.rich_store_of_0_5 import not_its_own, watch
 from tests.store_of_0_5 import cleared_as_0_5, laid_out_as_0_5
 
@@ -413,8 +414,14 @@ class TestBeforeAnythingMoves:
         os.chmod(lost, stat.S_IWRITE | stat.S_IREAD)
         lost.unlink()
         dry = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
-        assert dry.exit_code == 0 and "1 file(s) a record names are missing or of another size, as before the move: _output/curve.html (" in dry.output
-        assert "If a sync is still bringing them, wait and run again." in dry.output
+        said = dry.output.splitlines()
+        # Said first, by snapshot, with what to ask oneself before saying yes
+        assert dry.exit_code == 0 and said[1] == "  1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):"
+        assert said[2].startswith("    acme+once/") and said[2].endswith(": 1 of 7 file(s)") and said[3] == "    under _output/ (1)"
+        assert said[4] == (
+            "  If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards "
+            "goes aside, and does not reach its snapshot. `chartbook store verify` lists every one."
+        )
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert result.exit_code == 0, result.output
         (problem,) = FolderStore(root).verify()  # its record goes on naming it
@@ -428,14 +435,19 @@ class TestTheQuestion:
         dry = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
         assert dry.exit_code == 0 and dry.output.splitlines()[-1] == "Nothing was moved." and _tree(root) == before
         said = dry.output.splitlines()[:-1]
+        left = "  What is left of pipelines/ goes aside whole, under _chartbook/left-by-0.5/: its old records and notes, and 4 file(s) that no record names. Nothing is removed."
+        advice = "  A snapshot that is removed before the move is not copied: `chartbook store gc` of ChartBook 0.5 removes old ones (this version removes nothing from a store of 0.5)."
         assert said[0] == f"The store at {FolderStore(root)} has the layout of ChartBook 0.5: 4 pipeline(s), 7 snapshot(s)."
         assert said[1] == "  5 snapshot(s) become complete (2 of them made by a pin), 2 become increments on the newest of their pipeline."
         assert "moved inside the store by rename: nothing is copied or uploaded again for these." in said[2]
-        assert said[4] == "  What is left of pipelines/ goes aside whole, under _chartbook/left-by-0.5/: its old records and notes, and 4 file(s) that no record names. Nothing is removed."
+        assert said[3].endswith("are copied: each is in two folders that must each hold it. In a synced folder every copied byte is uploaded again.")
+        # The copies are more than a hundredth of this small store: what it will take, and which snapshots are given them
+        assert said[4].startswith("  The store takes ") and " now, and will take " in said[4] and said[4].endswith(" snapshot(s), the largest first:")
+        assert said[-2:] == [advice, left] and all(line.startswith("    acme+") and " file(s)" in line for line in said[5:-2]) and len(said) > 7
         no = CliRunner().invoke(main, ["store", "migrate"], input="n\n")
         assert no.exit_code == 0 and no.output.splitlines()[-1] == "Nothing was moved." and _tree(root) == before
         asked = no.output.splitlines()
-        assert asked[5:8] == [
+        assert asked[: len(said)] == said and asked[len(said):len(said) + 3] == [
             "Nothing else may use the store while this runs, on this machine or another.",
             "Afterwards every machine that uses it needs this ChartBook: an earlier one will not read it.",
             "In a synced folder, let the sync finish before another machine uses the store.",
@@ -443,9 +455,13 @@ class TestTheQuestion:
         yes = CliRunner().invoke(main, ["store", "migrate"], input="y\n")
         assert yes.exit_code == 0, yes.output
         done = yes.output.splitlines()
-        # The same counts, in the past, and the last of the three again
-        past = lambda line: line.replace(" became ", " become ").replace(" were ", " are ").replace(" went ", " goes ")  # noqa: E731
-        assert [past(line) for line in done[-6:-2]] == said[1:5]
+        # The same counts, in the past, but for the one line that was to be acted on before; and the last of the three again
+        past = lambda line: (  # noqa: E731
+            line.replace(" became ", " become ").replace(" were ", " are ").replace(" went aside ", " goes aside ").replace(" went to ", " go to ")
+            .replace("The store took ", "The store takes ").replace(" before the move, and takes ", " now, and will take ").replace(" now. The copies", ". The copies")
+        )
+        last = done[done.index(f"The store at {FolderStore(root)} has this version's layout: 4 pipeline(s), 7 snapshot(s).") + 1:-2]
+        assert [past(line) for line in last] == [line for line in said[1:] if line != advice] and advice not in done[len(asked):]
         assert done[-2] == "The old folder, with its records, is kept at _chartbook/left-by-0.5/pipelines: it may be removed once the move has been checked."
         assert done[-1] == "In a synced folder, let the sync finish before another machine uses the store."
         again = CliRunner().invoke(main, ["store", "migrate"])
@@ -567,15 +583,6 @@ class TestFoundBeforeAnythingMoves:
         record.write_text(kept, encoding="utf-8", newline="\n")  # the way out: the record put right
         self._moves(root)
 
-    def test_a_folder_with_files_and_no_record_yet(self, of_0_5):
-        root, _ = of_0_5
-        arriving = root / "pipelines" / "acme+once" / "2026-06-01T091500Z_aaaaaaaaaaaa"
-        (arriving / "_data").mkdir(parents=True)
-        (arriving / "_data" / "t.parquet").write_bytes(b"a sync brings the record last")
-        self._refused(root, f"The folder {arriving} holds files and has no record")
-        _rmtree(arriving)  # left from a snapshot that was never finished: removed, as the message says
-        self._moves(root)
-
     def test_a_folder_this_user_may_not_write(self, of_0_5):
         root, _ = of_0_5
         if os.name == "nt" or os.geteuid() == 0:
@@ -588,14 +595,15 @@ class TestFoundBeforeAnythingMoves:
             os.chmod(locked, stat.S_IRWXU)
         self._moves(root)
 
+    @needs_symlinks
     def test_a_pipelines_folder_that_is_a_link(self, of_0_5, work):
         root, _ = of_0_5
         real = root / "pipelines" / "acme+once"
-        real.rename(work / "elsewhere")
+        replacing.replace_when_let(real, work / "elsewhere")
         real.symlink_to(work / "elsewhere", target_is_directory=True)
         self._refused(root, f"{real} is a link to another place, and a move does not follow one")
         real.unlink()
-        (work / "elsewhere").rename(real)
+        replacing.replace_when_let(work / "elsewhere", real)
         self._moves(root)
 
     def test_two_names_this_disk_does_not_tell_apart(self, of_0_5, monkeypatch):
@@ -610,6 +618,25 @@ class TestFoundBeforeAnythingMoves:
 
 
 class TestWhatDoesNotStopAMove:
+    def test_a_folder_with_files_and_no_record_is_taken_as_a_cleared_one_and_counted_and_named(self, of_0_5):
+        """It stopped the move, which said to move the folder out, until a real store had one that a later record kept its files in (2026-11-20): tests/test_migrate_0_5_found.py."""
+        root, _ = of_0_5
+        arriving = root / "pipelines" / "acme+once" / "2026-06-01T091500Z_aaaaaaaaaaaa"
+        (arriving / "_data").mkdir(parents=True)
+        (arriving / "_data" / "t.parquet").write_bytes(b"a sync brings the record last")
+        before = _listing(root)
+        dry = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
+        said = dry.output.replace("\n", " ")
+        assert dry.exit_code == 0 and _listing(root) == before, dry.output
+        # The one folder: the one `store gc` cleared, which has no record either, is not named
+        assert f"  1 folder(s) hold files and have no record: acme+once/{arriving.name} (1 file(s)). The files in such a folder that a record names are moved with that record, and the rest goes aside." in said
+        assert "If a sync may still be bringing a folder's record, wait for it and run this again: a record that arrives after the move goes aside, and that snapshot has to be made again." in said
+        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        assert result.exit_code == 0 and f"  1 folder(s) held files and had no record: acme+once/{arriving.name} (1 file(s))." in result.output, result.output
+        assert (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+once" / arriving.name / "_data" / "t.parquet").read_bytes() == b"a sync brings the record last"
+        store_module._read_records.clear()
+        assert not (root / "pipelines").exists() and FolderStore(root).verify() == []
+
     def test_a_file_that_was_missing_and_arrives_before_its_step_is_put_where_its_record_names_it(self, of_0_5):
         root, _ = of_0_5
         late = next(root.glob("pipelines/acme+once/*/_output/curve.html"))
@@ -637,7 +664,8 @@ class TestWhatDoesNotStopAMove:
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert result.exit_code == 0 and not (root / "pipelines").exists(), result.output
         assert (root / copy.target).read_bytes() == (root / copy.source).read_bytes()
-        assert f"file(s) were copied as they are, though their bytes are not what their records say: {copy.target}" in result.output
+        folder = migrate_0_5.under([copy.target.split("/", 3)[3]])[0][0]  # the folder it is under in its snapshot
+        assert f"1 file(s) were copied as they are, though their bytes are not what their records say: under {folder} (1). `chartbook store verify` says more." in result.output.replace("\n", " ")
         assert "`chartbook store verify` says more." in result.output
 
     def test_a_desktops_own_file_is_never_in_the_way(self, of_0_5):
@@ -710,15 +738,17 @@ class TestTheMoverRemovesNothingOfAnyones:
         assert (steps[-1].op, steps[-1].source, steps[-1].target) == ("aside", "pipelines", "_chartbook/left-by-0.5/pipelines")
 
     def test_a_read_only_temporary_left_by_a_copy_cut_short_is_chartbooks_to_replace(self, of_0_5):
+        """A copy is written first in the move's own folder, under a name made from where it goes: one left there, read-only as its source was, is the move's."""
         root, _ = of_0_5
         copy = next(step for step in migrate_0_5.plan(root).steps if step.op == "copy")
-        left = root / (copy.target + ".moving")
+        left = migrate_0_5._temporary_of(root, root / copy.target)
+        assert left.parent == root / "_chartbook" / "moving" and len(left.name) == 24
         left.parent.mkdir(parents=True)
         left.write_bytes(b"half")
         os.chmod(left, stat.S_IREAD)
         migrate_0_5.run(root)
         store_module._read_records.clear()
-        assert not left.exists() and FolderStore(root).verify() == []
+        assert not left.exists() and not left.parent.exists() and FolderStore(root).verify() == []
 
 
 class TestOnlyWhatTheStoresReaderTookIsFollowed:
@@ -761,22 +791,25 @@ class TestAHiddenFileIsContent:
 
 
 class TestTheWaysOutNeverSayToRemoveWhatARecordMayName:
-    def test_a_folder_with_files_and_no_record_and_a_link_are_waited_for_or_moved_out(self, of_0_5, work):
+    def test_a_folder_with_files_and_no_record_is_never_to_be_moved_out_and_a_link_is_waited_for_or_moved_out(self, of_0_5, work):
+        """A later record may keep files in a folder with no record, so no line says to take one out of the store: it stops nothing, and is named (tests/test_migrate_0_5_found.py)."""
         root, _ = of_0_5
         arriving = root / "pipelines" / "acme+once" / "2026-06-01T091500Z_aaaaaaaaaaaa"
         (arriving / "_data").mkdir(parents=True)
         (arriving / "_data" / "t.parquet").write_bytes(b"x")
-        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        result = CliRunner().invoke(main, ["store", "migrate", "--dry-run"])
         said = result.output.replace("\n", " ")
-        assert result.exit_code == 1 and "wait and run this again; if not, move that folder out of the store and run this again" in said
-        assert "remove" not in said
-        arriving.rename(work / "moved-out")  # the way out, as written
-        link = root / "pipelines" / "acme+linked"
-        link.symlink_to(work, target_is_directory=True)
-        said = CliRunner().invoke(main, ["store", "migrate", "--yes"]).output.replace("\n", " ")
-        assert "is a link to another place" in said and "move the link out of the store and run this again" in said and "remove" not in said
-        link.rename(work / "the-link")
+        assert result.exit_code == 0 and f"1 folder(s) hold files and have no record: acme+once/{arriving.name} (1 file(s))." in said
+        assert "out of the store" not in said and "move that folder" not in said and "wait for it and run this again" in said
+        if symlinks_work():  # a link is this user's to make: not so on Windows without Developer Mode
+            link = root / "pipelines" / "acme+linked"
+            link.symlink_to(work, target_is_directory=True)
+            said = CliRunner().invoke(main, ["store", "migrate", "--yes"]).output.replace("\n", " ")
+            assert "is a link to another place" in said and "put that folder itself where the link is, and run this again" in said
+            assert "remove" not in said and "move the link out" not in said and "is then missing" not in said
+            replacing.replace_when_let(link, work / "the-link")  # it led to no folder of the store
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
+        assert (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+once" / arriving.name / "_data" / "t.parquet").read_bytes() == b"x"
 
 
 class TestTheQuestionIsSkippedOnlyForThisMachinesJournal:
@@ -793,13 +826,21 @@ class TestTheQuestionIsSkippedOnlyForThisMachinesJournal:
 
 
 class TestWhatGoesAsideIsSaid:
-    def test_a_record_that_arrives_during_the_move_goes_aside_with_the_old_folder_and_is_named(self, of_0_5, work):
+    @pytest.mark.parametrize("arrival", ["another snapshot", "the same snapshot under another name"])
+    def test_a_record_that_arrives_during_the_move_goes_aside_with_the_old_folder_and_is_named(self, of_0_5, work, arrival):
+        """To be made again, where the store has no snapshot of its pipeline, commit and time; as a second record of one that was moved in, where it has."""
         import shutil
 
         root, _ = of_0_5
         source = next(root.glob("pipelines/acme+once/*/_chartbook/snapshot.json")).parent.parent
         shutil.copytree(source, work / "arrival")
         name = "2026-06-01T091500Z_" + source.name.split("_")[1]
+        if arrival == "another snapshot":
+            record = work / "arrival" / "_chartbook" / "snapshot.json"
+            document = json.loads(record.read_text(encoding="utf-8"))
+            document["made_at"] = "2026-06-01T09:15:00.000000Z"  # made when its folder's name says
+            os.chmod(record, stat.S_IWRITE | stat.S_IREAD)
+            record.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
         steps = migrate_0_5.plan(root).steps
         after = max(number for number, step in enumerate(steps, 1) if step.op in ("write", "note"))
 
@@ -808,7 +849,9 @@ class TestWhatGoesAsideIsSaid:
                 shutil.copytree(work / "arrival", root / "pipelines" / "acme+once" / name)
 
         done = migrate_0_5.run(root, after_step=arrives)
-        assert ("acme+once", name) in done.set_aside and (root / done.kept / "acme+once" / name / "_chartbook" / "snapshot.json").is_file()
+        named, not_named = (done.set_aside, done.second) if arrival == "another snapshot" else (done.second, done.set_aside)
+        assert named == [("acme+once", name)] and not_named == []
+        assert (root / done.kept / "acme+once" / name / "_chartbook" / "snapshot.json").is_file()
         store_module._read_records.clear()
         assert [record.folder.name for record in FolderStore(root).records() if record.pipeline == "acme/once"] == [source.name]
 
@@ -845,7 +888,9 @@ class TestOnAMovedStore:
             listing = _tree(root / "pipelines")
             result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
             assert result.exit_code == 0 and "pipelines/ goes aside whole: nothing under it is moved in." in result.output.replace("\n", " "), result.output
-            assert "1 snapshot(s) went aside without being moved in: acme+once/" in result.output and "Run that pipeline again with this ChartBook." in result.output
+            # The store has that snapshot: its record under pipelines/ is a second one, and nothing is to be made again
+            assert "1 second record(s) of a snapshot that was moved in went aside: acme+once/" in result.output
+            assert "without being moved in" not in result.output and "Run that pipeline again" not in result.output
             kept = root / "_chartbook" / "left-by-0.5" / ("pipelines" if number == 1 and not (root / "_chartbook" / "left-by-0.5" / "pipelines (2)").exists() else "pipelines (3)" if number == 2 else "pipelines (2)")
         aside = sorted(p.name for p in (root / "_chartbook" / "left-by-0.5").iterdir() if p.name.startswith("pipelines"))
         assert aside == ["pipelines", "pipelines (2)", "pipelines (3)"]  # the first move's, and one for each run again
@@ -873,7 +918,7 @@ class TestOnAMovedStore:
         assert older.read_bytes() == kept and newer.read_text(encoding="utf-8") == '{"late": true}\n'
         assert (root / "_chartbook" / "left-by-0.5" / "roots" / older.name).is_file()  # the earlier one is aside, not removed
 
-    def test_a_file_that_arrives_late_for_a_snapshot_already_moved_is_named_with_where_it_is(self, moved):
+    def test_a_file_that_arrives_late_for_a_snapshot_already_moved_is_said_by_its_folder_and_the_old_folder_is_named(self, moved):
         root, was, _ = moved
         snapshot_folder = next(p for p in sorted(root.glob("snapshots/acme+once/*")) if p.is_dir())
         late = root / "pipelines" / "acme+once" / snapshot_folder.name / "_output" / "curve.html"
@@ -884,7 +929,8 @@ class TestOnAMovedStore:
         said = result.output.replace("\n", " ")
         # Where it is: the old folder of this run, beside the one the first move left
         where = f"_chartbook/left-by-0.5/pipelines (2)/acme+once/{snapshot_folder.name}/_output/curve.html"
-        assert f"1 file(s) arrived for a snapshot that is moved already, and went aside: {where}." in said and (root / where).read_bytes() == b"late"
+        assert "1 file(s) arrived for a snapshot that is moved already, and went aside with the old folder: under _output/ (1)." in said and (root / where).read_bytes() == b"late"
+        assert "The old folder, with its records, is kept at _chartbook/left-by-0.5/pipelines (2):" in said
         assert "`chartbook store verify` names the snapshot that lacks each." in said
 
     def test_a_persons_readme_on_a_moved_store_is_never_touched(self, moved):
@@ -893,3 +939,51 @@ class TestOnAMovedStore:
         (root / "tmp").mkdir()
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
         assert (root / "README.txt").read_text(encoding="utf-8") == "Ours. Ask Dana.\n" and not (root / "tmp").exists()
+
+
+class TestARenameWindowsRefusesForAMoment:
+    def test_every_rename_of_a_move_is_tried_again(self, of_0_5, monkeypatch):
+        """On Windows a virus scanner, the indexer or a sync client holds a file or a folder for a moment, and a rename is refused meanwhile (found on Windows 11, 2026-11-20: the move stopped part way, to be run again).
+
+        Every rename of the move is refused once here, as Windows refuses
+        one, and the move goes through in one run.
+        """
+        root, _ = of_0_5
+        refused: set = set()
+
+        def held_once(source, target):
+            if str(source) not in refused:
+                refused.add(str(source))
+                raise PermissionError(13, "Access is denied", str(source))
+            return os.replace(source, target)
+
+        # Only where the move renames (chartbook.replacing): this machine is not said to be Windows anywhere else
+        monkeypatch.setattr(replacing, "sys", types.SimpleNamespace(platform="win32"))
+        monkeypatch.setattr(replacing, "os", types.SimpleNamespace(replace=held_once))
+        monkeypatch.setattr(replacing, "_WAIT_SECONDS", 0)
+        result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+        assert result.exit_code == 0, result.output
+        kinds = {Path(source).name for source in refused}
+        # Files, the notes' folders, the old folder put aside, the journal and the marker: every kind of rename it makes
+        written_first = {migrate_0_5._temporary_of(root, root / name).name for name in ("store.json", migrate_0_5.JOURNAL)}
+        assert len(refused) > 20 and {"pipelines", "roots", "origins"} | written_first <= kinds, sorted(kinds)
+        assert not (root / migrate_0_5.MOVING).exists()
+        store_module._read_records.clear()
+        assert not (root / "pipelines").exists() and FolderStore(root).verify() == []
+
+    def test_one_that_stays_refused_is_said_as_before(self, of_0_5, monkeypatch):
+        """A folder that may not be written is refused for good: said after the two seconds, and the move is taken up by running it again."""
+        root, _ = of_0_5
+
+        def refused(source, target):
+            raise PermissionError(13, "Access is denied", str(source))
+
+        with monkeypatch.context() as patched:
+            patched.setattr(replacing, "sys", types.SimpleNamespace(platform="win32"))
+            patched.setattr(replacing, "os", types.SimpleNamespace(replace=refused))
+            patched.setattr(replacing, "_WAIT_SECONDS", 0)
+            result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+            assert result.exit_code == 1 and "Access is denied" in result.output, result.output
+        assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
+        store_module._read_records.clear()
+        assert not (root / "pipelines").exists() and FolderStore(root).verify() == []

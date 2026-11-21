@@ -261,3 +261,48 @@ class TestRemovingAStagingFolder:
         finally:
             if (staging / "locked").exists():
                 os.chmod(staging / "locked", 0o700)
+
+
+class TestAFileOfTheStoreInAMessage:
+    """A message names a file of a folder store as the system it is on writes a path: with one kind of separator.
+
+    Found on Windows, where a message read ``C:\\…\\store/snapshots/acme+rates/…``,
+    which is no path to paste. Windows' own join stands in for the system's
+    here, by the one name the store joins with.
+    """
+
+    @pytest.fixture
+    def there(self, tmp_path, monkeypatch):
+        import ntpath
+
+        monkeypatch.setattr(store, "_join", ntpath.join)
+        return store.FolderStore(tmp_path / "store")
+
+    def test_a_path_is_joined_as_the_system_joins_one(self, there):
+        record = there.root / "snapshots" / "acme+rates" / "2026-11-16T091500Z_aaaaaaaaaaaa" / "_chartbook" / "snapshot.json"
+        assert there._shown(record) == f"{there}\\snapshots\\acme+rates\\2026-11-16T091500Z_aaaaaaaaaaaa\\_chartbook\\snapshot.json"
+        assert there._shown(there.root) == str(there)
+
+    def test_so_is_a_name_under_the_store(self, there):
+        """What a removal that failed is named by: its name under the store, which is written with ``/`` wherever it is kept."""
+        assert there.shown("snapshots/acme+rates/2026-11-16T091500Z_aaaaaaaaaaaa/_data/rates.parquet") == (
+            f"{there}\\snapshots\\acme+rates\\2026-11-16T091500Z_aaaaaaaaaaaa\\_data\\rates.parquet"
+        )
+
+    def test_a_note_that_cannot_be_read_is_named_so(self, there):
+        notes = there.roots_path()
+        notes.mkdir(parents=True)
+        (notes / "half-synced.json").write_text("{", encoding="utf-8", newline="\n")
+        with pytest.raises(store.StoreError) as refused:
+            there.roots()
+        folder = "\\".join(notes.relative_to(there.root).parts)
+        assert str(refused.value).startswith(f"Cannot read {there}\\{folder}\\half-synced.json: ")
+
+    def test_a_bucket_keeps_its_address_and_the_name(self):
+        """A store that is not a folder has no system's separator: its address, a ``/`` and the name."""
+
+        class Bucket:
+            def __str__(self):
+                return "s3://bucket/store"
+
+        assert store.Store.shown(Bucket(), "snapshots/acme+rates/a.parquet") == "s3://bucket/store/snapshots/acme+rates/a.parquet"

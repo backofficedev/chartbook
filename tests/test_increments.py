@@ -29,7 +29,7 @@ from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotPinnedError
 from chartbook.store import FolderStore
-from tests.fixtures import _git
+from tests.fixtures import _git, needs_symlinks
 from tests.increments import with_increments
 
 OLDER, OLD, OLDISH = "2025-12-01T09:15:00.000000Z", "2026-01-01T09:15:00.000000Z", "2026-02-01T09:15:00.000000Z"
@@ -264,6 +264,83 @@ class TestStoreLs:
             "A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.",
         ]
 
+    #: What follows the listing where a snapshot lacks a file, once
+    VERIFY_NAMES_EACH = "What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one."
+
+    @staticmethod
+    def _names(folder: Path) -> int:
+        """How many files a snapshot's record names, in whichever folder each is."""
+        from tests.increments import _parts
+
+        document = json.loads((folder / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+        return len({entry["path"] for part in _parts(document) for entry in part["stored"]["files"]})
+
+    def test_a_snapshot_that_lacks_a_file_of_its_own_says_how_many_of_how_many(self, kept, store):
+        """Found on a real store: `complete   2.7 GB here`, of a snapshot whose folder had 8 of its 9,267 files. The size is its record's."""
+        complete, increments, taken, _ = kept
+        before = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        holed = increments[0]
+        _lose(holed / "_output" / "curve.html")
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0, result.output
+        lines = result.output.splitlines()
+        (was,) = [line for line in before if line.split()[:1] == [holed.name]]
+        assert f"{was}, lacks 1 of its {self._names(holed)} file(s)" in lines
+        # Every other line is as it was, and the command that names each file is named once, below the listing
+        assert [line for line in lines if line not in before] == [f"{was}, lacks 1 of its {self._names(holed)} file(s)", self.VERIFY_NAMES_EACH]
+        assert lines[-1] == self.VERIFY_NAMES_EACH and len(lines) == len(before) + 1
+
+    def test_a_complete_one_and_an_increment_on_it_say_it_in_the_same_words(self, kept, store):
+        """A file missing from the complete snapshot's folder is one each increment that keeps it there lacks too."""
+        complete, increments, taken, _ = kept
+        before = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        _lose(complete / "_data" / "treasury.parquet")
+        lines = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        for folder in (complete, *increments):
+            (was,) = [line for line in before if line.split()[:1] == [folder.name]]
+            (now,) = [line for line in lines if line.split()[:1] == [folder.name]]
+            assert now == f"{was}, lacks 1 of its {self._names(folder)} file(s)"
+        assert lines.count(self.VERIFY_NAMES_EACH) == 1 and lines[-1] == self.VERIFY_NAMES_EACH
+
+    def test_the_disk_is_asked_about_a_file_once_however_many_snapshots_name_it(self, kept, store, monkeypatch):
+        """Found by review: each snapshot that names a file asked the disk about it again, 60,066 questions for 3,000 files that 20 snapshots name, and on a synced folder each question is a trip.
+
+        The complete snapshot's files are named by its record and by each
+        increment's: one question for each file of the store, whoever names it."""
+        complete, increments, taken, _ = kept
+        asked = []
+        is_whole = store_module._is_whole  # the one question of the disk: a file's size, where its record says it is
+
+        def asking(file, pipeline_folder):
+            asked.append(file.location)
+            return is_whole(file, pipeline_folder)
+
+        monkeypatch.setattr(store_module, "_is_whole", asking)
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0 and "lacks" not in result.output, result.output
+        records = FolderStore(store.root).records()
+        named = [file.location for record in records for asset in record.assets for file in asset.files]
+        assert len(named) > len(set(named))  # the increments name files of the complete one
+        assert sorted(asked) == sorted(set(named))
+        # And what each lacks is still said of each: a file gone from the complete one is one all three lack
+        _lose(complete / "_data" / "treasury.parquet")
+        asked.clear()
+        lines = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert len([line for line in lines if ", lacks 1 of its " in line]) == 3 and sorted(asked) == sorted(set(named))
+
+    def test_it_is_asked_by_sizes_and_a_file_with_other_bytes_at_its_size_is_store_verifys_to_find(self, kept, store):
+        complete, increments, taken, _ = kept
+        before = CliRunner().invoke(main, ["store", "ls"]).output
+        damaged = complete / "_data" / "treasury.parquet"
+        os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
+        damaged.write_bytes(bytes(damaged.stat().st_size))
+        store_module._found_whole.clear()
+        assert CliRunner().invoke(main, ["store", "ls"]).output == before and "lacks" not in before
+        # Shorter than its record says, as a sync that has brought part of it leaves it: not there at its size
+        damaged.write_bytes(b"half")
+        lines = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert len([line for line in lines if line.endswith(" file(s)") and ", lacks 1 of its " in line]) == 3 and lines[-1] == self.VERIFY_NAMES_EACH
+
 
 class TestForAPersonWhoOpensTheFolders:
     def test_each_pipelines_folder_says_what_it_holds(self, kept, store):
@@ -320,6 +397,13 @@ class TestDamaged:
         assert [problem.message for problem in fresh.verify()] == [
             f"_data/treasury.parquet is not in the store (the snapshot {complete.name}), and 2 snapshots kept as increments on it keep it there"
         ]
+        # And counted once, ahead of that line, for the snapshot whose folder it is missing from
+        said = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
+        assert said[:2] == [
+            "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {complete.name}  1 file(s)",
+        ]
+        assert said[2].endswith(", and 2 snapshots kept as increments on it keep it there") and said[3] == ""
         for reader in readers:
             with pytest.raises(AssetNotPinnedError) as refused:
                 data.path("acme/rates:treasury", project_dir=reader)
@@ -346,7 +430,22 @@ class TestDamaged:
         with pytest.raises(AssetNotPinnedError):
             data.path("acme/rates:treasury", project_dir=readers[index])
         result = CliRunner().invoke(main, ["store", "verify"])
-        assert result.exit_code == 1 and "_data/treasury.parquet is not in the store (the snapshot " in result.output
+        assert result.exit_code == 1 and "_data/treasury.parquet is not in the store (the folder " in result.output
+        # Found by review: the first line counted the files of folders that have a record, and this one has none now,
+        # so every file the increments keep in it had a line and no count ahead of them. It counts every line of a
+        # file below it, under the folder the file is missing from, whose pipeline its folder says. And that folder
+        # is said to be one with no record, in each file's line and in its count: it is no snapshot now, and the
+        # snapshots that lack the files are the increments, which `store ls` names
+        lines = result.output.splitlines()
+        of_files = [line for line in lines if f"(the folder {complete.name}, which has no record)" in line]
+        assert all(f" is not in the store (the folder {complete.name}, which has no record), and " in line for line in of_files), of_files
+        assert lines[:2] == [
+            f"{len(of_files)} file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {complete.name} (a folder with no record)  {len(of_files)} file(s)",
+        ]
+        assert lines[2:2 + len(of_files)] == of_files and len(of_files) > 1 and "(the snapshot " not in result.output
+        listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert sorted(line.split()[0] for line in listed if ", lacks " in line) == sorted(folder.name for folder in increments)
 
     def test_a_file_there_at_its_size_with_other_bytes(self, kept, store):
         complete, increments, taken, readers = kept
@@ -626,13 +725,16 @@ class TestRestore:
 def _aged(root: Path) -> None:
     """Every file under a folder was last changed two hours ago: nothing is spared for being new."""
     then = __import__("time").time() - 7200
+    # A link's own time where the system can set one: Windows cannot, and raises NotImplementedError if asked
+    own = {"follow_symlinks": False} if os.utime in os.supports_follow_symlinks else {}
     for path in sorted(root.rglob("*")):
-        os.utime(path, (then, then), follow_symlinks=False)
+        os.utime(path, (then, then), **own)
 
 
 class TestAfterTheReviewOfIncrements:
     """What the sixth review found of increments (2026-11-20), each under the rule it broke."""
 
+    @needs_symlinks
     def test_a_folder_an_increment_builds_on_that_is_a_link_is_not_read_from(self, unpinned, work, store):
         """The folder a file is read from is checked, whichever of the two it is: an import takes nothing through a link."""
         import shutil

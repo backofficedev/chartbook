@@ -23,6 +23,7 @@ from click.testing import CliRunner
 
 from chartbook import config, migrate_0_5
 from chartbook import store as store_module
+from chartbook.replacing import replace_when_let
 from chartbook.cli import main
 from chartbook.store import StoreError
 from tests.rich_store_of_0_5 import (
@@ -365,11 +366,11 @@ class TestNothingIsRenamedOntoAFileThatIsThere:
         root, names = v2
         before = read_through(root)
         late = root / "pipelines" / "acme+r" / names["r1"] / "_data" / "f.parquet"
-        os.replace(late, tmp_path / "not-synced-yet")
+        replace_when_let(late, tmp_path / "not-synced-yet")
         cut_at(root, lambda step: step.op == "write")
         record_of = root / "increments" / "acme+r" / names["r2"] / "_chartbook" / "snapshot.json"
         earlier = record_of.read_bytes()
-        os.replace(tmp_path / "not-synced-yet", late)
+        replace_when_let(tmp_path / "not-synced-yet", late)
         made, real = [], os.replace
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(os, "replace", lambda a, b: (made.append((os.path.lexists(b), Path(b).relative_to(root).as_posix())), real(a, b))[1])
@@ -467,9 +468,9 @@ class TestAFileAlreadyWhereARenameGoes:
         place, old = f"snapshots/acme+p/{s1}/_data/f.parquet", f"{ASIDE}/pipelines/acme+p/{s1}/_data/f.parquet"
         found = migrate_0_5.plan(root)
         assert found.in_place == [(old, place, 2000, len(other))] and found.late == [old] and found.missing == []
-        sizes = "" if size == "the same size" else " (400 bytes in place, 2.0 KB at the old place)"
+        sizes = "" if size == "the same size" else " 1 of them {are} not of the size of the file at the old place."
         line = (
-            f"1 file(s) a record names {{are}} not moved, a file being where each goes already: {place}{sizes}. What is in "
+            f"1 file(s) a record names {{are}} not moved, a file being where each goes already: under _data/ (1).{sizes} What is in "
             f"place stays, and the file at the old place {{goes}} aside with the old folder. `chartbook store verify` says "
             f"whether what is in place is right."
         )
@@ -544,36 +545,48 @@ class TestAFileWhereTheMoveMakesAFolder:
             result, said = typed(*words)
             assert result.exit_code == 1 and "where the move makes a folder" in said and tree_of(root) == before
         # The way out, carried out
-        os.replace(root / in_the_way, tmp_path / "moved-out")
+        replace_when_let(root / in_the_way, tmp_path / "moved-out")
         assert typed("store", "migrate", "--yes")[0].exit_code == 0 and len(fresh(root).verify()) == 2  # the two files missing as before
 
 
 class TestWhatIsMissingIsSaidAfterTheMoveToo:
-    MISSING = "2 file(s) a record names are missing or of another size, as before the move: "
+    MISSING = "  2 file(s) that a record names are missing or of another size, as before the move, in 2 snapshot(s):"
 
-    def _line(self, said: str) -> str:
-        return said[said.index(self.MISSING):].split(". ")[0]
+    def _block(self, output: str) -> list:
+        """The block that says what is missing, the last time it is said: by snapshot, with the first names; but for its last line, which says what to do, and is another before a move than after."""
+        lines = output.splitlines()
+        first = len(lines) - 1 - lines[::-1].index(self.MISSING)
+        return lines[first:next(index for index in range(first + 1, len(lines)) if not lines[index].startswith("    "))]
 
     def test_the_last_lines_name_the_missing_files_as_the_dry_run_does(self, v2):
         root, names = v2
         found = migrate_0_5.plan(root)
-        assert found.missing == [(names["s1"], "_data/lost.parquet"), (names["s3"], "_data/gone.parquet")]
+        assert found.missing == [("acme+p", names["s1"], "_data/lost.parquet"), ("acme+p", names["s3"], "_data/gone.parquet")]
+        assert found.missing_in == [("acme+p", names["s1"], 1, 6), ("acme+p", names["s3"], 1, 4)]
         dry, said_dry = typed("store", "migrate", "--dry-run")
         result, said = typed("store", "migrate", "--yes")
-        assert result.exit_code == 0 and self._line(said) == self._line(said_dry)
-        assert self._line(said) == f"{self.MISSING}_data/lost.parquet ({names['s1']}), _data/gone.parquet ({names['s3']})"
-        assert "If a sync is still bringing them, wait and run again." in said_dry
-        assert "`chartbook store verify` names each. One that a sync brings later is not moved in: it goes aside with the rest when `chartbook store migrate` is run again." in said
+        assert result.exit_code == 0 and self._block(result.output) == self._block(dry.output)
+        assert self._block(result.output) == [
+            self.MISSING, f"    acme+p/{names['s1']}: 1 of 6 file(s)", f"    acme+p/{names['s3']}: 1 of 4 file(s)",
+            "    under _data/ (2)",
+        ]
+        # Said first, before the other counts; and with what to ask oneself before the move, and what is so after it
+        assert dry.output.splitlines()[1] == self.MISSING and "snapshot(s) become complete" in dry.output.splitlines()[6]
+        assert (
+            "If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards goes "
+            "aside, and does not reach its snapshot. `chartbook store verify` lists every one."
+        ) in said_dry
+        assert "`chartbook store verify` lists every one. A file that a sync brings now goes aside when `chartbook store migrate` is run again, and does not reach its snapshot." in said
 
     @pytest.mark.parametrize("journal", ["kept", "deleted"])
     def test_and_after_a_move_cut_short_and_gone_on_with(self, v2, journal):
         root, names = v2
-        said_dry = typed("store", "migrate", "--dry-run")[1]
+        dry = typed("store", "migrate", "--dry-run")[0]
         cut_at(root, lambda step: step.op == "write")
         if journal == "deleted":
             (root / migrate_0_5.JOURNAL).unlink()
         result, said = typed("store", "migrate", "--yes")
-        assert result.exit_code == 0 and self._line(said) == self._line(said_dry), said
+        assert result.exit_code == 0 and self._block(result.output) == self._block(dry.output), said
 
     def test_and_after_one_cut_short_just_before_the_marker_whose_journal_was_deleted(self, v2):
         root, names = v2
@@ -588,7 +601,7 @@ class TestWhatIsMissingIsSaidAfterTheMoveToo:
         """The file two pins share is not there when the move is planned, and arrives with other bytes of its size: put in place in the last look, copied as it is, and named."""
         root, names = v2
         shared = root / "pipelines" / "acme+q" / names["q1"] / "_data" / "q.parquet"
-        os.replace(shared, tmp_path / "not-synced-yet")
+        replace_when_let(shared, tmp_path / "not-synced-yet")
         found = migrate_0_5.plan(root)
         assert len(found.missing) == 4 and found.copied_as_is == []  # the two as before, and the one file of the two pins
         after = max(number for number, step in enumerate(found.steps, 1) if step.op in ("write", "note"))
@@ -598,7 +611,7 @@ class TestWhatIsMissingIsSaidAfterTheMoveToo:
                 shared.write_bytes(b"?" * len(D))
 
         done = migrate_0_5.run(root, after_step=arrives)
-        assert done.missing == [(names["s1"], "_data/lost.parquet"), (names["s3"], "_data/gone.parquet")]
+        assert done.missing == [("acme+p", names["s1"], "_data/lost.parquet"), ("acme+p", names["s3"], "_data/gone.parquet")]
         assert done.copied_as_is == [f"snapshots/acme+q/{names['q2']}/_data/q.parquet"]
         assert (root / "snapshots" / "acme+q" / names["q1"] / "_data" / "q.parquet").read_bytes() == b"?" * len(D)
 

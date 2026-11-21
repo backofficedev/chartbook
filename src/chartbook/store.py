@@ -616,11 +616,25 @@ class StoreProblem:
         content_hash: The object's name.
         path: Its directory in the store.
         message: What is wrong with it.
+        of_snapshot: Whether it is of a file of a snapshot, said with the
+            name of the folder the file is in, or is missing from, which
+            is ``path``.
+        no_record: With *of_snapshot*: whether that folder has no record,
+            and so is no snapshot (one cleared in a store of ChartBook
+            0.5, a complete snapshot that has gone and that increments
+            still name). The snapshots that lack the file are then the
+            ones whose records name it there, which ``store ls`` says.
+        of_record: Whether it is a snapshot's record that cannot be read:
+            ``path`` is then the folder the record is in, and nothing of
+            that snapshot is checked.
     """
 
     content_hash: str
     path: Path
     message: str
+    of_snapshot: bool = False
+    no_record: bool = False
+    of_record: bool = False
 
     def format(self) -> str:
         """Render as ``hash: message``, one line."""
@@ -717,6 +731,13 @@ def _read_marker(marker: Path):
             if os.name != "nt" or attempt == 19:
                 raise
             time.sleep(0.05)
+
+
+#: How this system joins the parts of a path. A message names a file of the
+#: store with it (:meth:`FolderStore._shown`), so that the path has one kind
+#: of separator and is the one the system itself would write: on Windows,
+#: backslashes from the drive to the file
+_join = os.path.join
 
 
 def link_target(path) -> str:
@@ -1017,6 +1038,33 @@ def unreadable_detail(path: Path, error: Exception) -> str:
     except OSError:
         pass
     return str(error)
+
+
+def why_not_read(path: Path) -> str:
+    """Why a snapshot's record is not one the store reads, for the line ``store verify`` says of it.
+
+    A file that cannot be opened, or is not JSON (a sync has brought part
+    of it, most likely), is said as that. One that is JSON is asked of
+    the reader of records (:func:`chartbook.snapshot.read`), which says
+    what it will not take: a schema of another version, a commit or a
+    pipeline that is not its folder's. Where that reader takes it and the
+    store's does not, no more is known than that.
+    """
+    try:
+        with open(_any_length(path), encoding="utf-8") as f:
+            json.load(f)
+    except OSError as error:
+        return f"it cannot be opened ({error.strerror or error})"
+    except ValueError as error:
+        return f"it is not JSON ({unreadable_detail(path, error)}), as a file is that a sync has brought part of"
+    from chartbook.snapshot import SnapshotError, read  # which imports this module
+
+    try:
+        read(path)
+    except SnapshotError as error:
+        said, lead = str(error), f"Cannot read the snapshot {path}: "
+        return (said[len(lead):] if said.startswith(lead) else said).rstrip(".")
+    return "it is not a record this ChartBook reads"
 
 
 def declared_name(declared: str) -> Optional[str]:
@@ -1405,7 +1453,7 @@ class Store(abc.ABC):
         """
         return self.files_of(content_hash)
 
-    def holes_of(self, record: Path) -> list[str]:
+    def holes_of(self, record: Path, asked: Optional[dict] = None) -> list[str]:
         """The files that the snapshot with this record names and does not itself have, though another snapshot may have the same bytes; by their paths in the pipeline.
 
         Absent, or of another size, where its record says each is: one
@@ -1414,6 +1462,12 @@ class Store(abc.ABC):
         of every file has any: where each file is kept once, what is
         missing is missing for every snapshot that names it, which
         :meth:`incomplete` says.
+
+        :param asked: For what asks of many snapshots at once, as a
+            listing does: an empty dictionary, handed to each call, in
+            which the store keeps what the disk said of each file. A file
+            that several snapshots name (what increments keep in the
+            complete snapshot they build on) is then asked about once.
         """
         return []
 
@@ -1494,6 +1548,15 @@ class Store(abc.ABC):
     @abc.abstractmethod
     def origins(self, commit: str, name: str) -> list[str]:
         """The repository folders a pipeline's records at a commit were made from, as noted."""
+
+    def shown(self, name: str) -> str:
+        """A file of the store by its name under the store's top (``/`` between its parts), as a message names it.
+
+        A bucket's is its address and the name. A folder's is a path of
+        the system it is on, with that system's separator all the way
+        (:meth:`FolderStore.shown`).
+        """
+        return f"{self}/{name}"
 
     def __str__(self) -> str:
         return repr(self)
@@ -2210,7 +2273,7 @@ class FolderStore(Store):
             )
         kept = read_kept_record(path)
         try:
-            path.unlink()
+            _remove_file(path)  # read-only, as the store keeps its files: Windows removes no such file as it is
         except OSError as error:
             raise StoreError(
                 f"Cannot remove the snapshot record {self._shown(path)}: {error.strerror or error}. "
@@ -2976,11 +3039,20 @@ class FolderStore(Store):
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
     def _shown(self, path: Path) -> str:
-        """A file of the store, as a message names it: under the store as :meth:`__str__` shows it, which carries no password."""
+        """A file of the store, as a message names it: under the store as :meth:`__str__` shows it, which carries no password.
+
+        The two are joined as this system joins a path (:data:`_join`), so
+        the whole has one kind of separator: what a record, a note or a
+        lockfile stores of a path is another matter, and is posix everywhere.
+        """
         try:
-            return f"{self}/{path.relative_to(self.root).as_posix()}"
+            return _join(str(self), *path.relative_to(self.root).parts)
         except ValueError:
             return str(path)
+
+    def shown(self, name: str) -> str:
+        """A file of the store by its name under the store's top, as a message names it: a path of this system (:meth:`_shown`)."""
+        return self._shown(self.root.joinpath(*name.split("/")))
 
 
     def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
@@ -3177,9 +3249,9 @@ class FolderStore(Store):
                 found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
 
-    def holes_of(self, record: Path) -> list[str]:
+    def holes_of(self, record: Path, asked: Optional[dict] = None) -> list[str]:
         """The files one snapshot's record names that are not where it says, or are there at another size, by their paths in the pipeline (:meth:`Store.holes_of`)."""
-        return _holes(read_kept_record(Path(record)))
+        return _holes(read_kept_record(Path(record)), asked=asked)
 
     def holds_whole(self, pipeline: str, content_hashes: Iterable[str]) -> bool:
         """Whether one recorded snapshot of the pipeline holds every one of these assets whole (:meth:`Store.holds_whole`): one snapshot, not a file from each."""
@@ -3300,7 +3372,7 @@ class FolderStore(Store):
             name, why = failed[0]
             more = f" (and {len(failed) - 1} more)" if len(failed) > 1 else ""
             raise TidyError(
-                f"Cannot remove {self}/{name}{more}, which no snapshot uses: {why}. {self._not_this_users_remedy()}",
+                f"Cannot remove {self.shown(name)}{more}, which no snapshot uses: {why}. {self._not_this_users_remedy()}",
                 removed,
                 [(name, f"{why}. {self._not_this_users_remedy()}") for name, why in failed],
             )
@@ -3433,19 +3505,31 @@ class FolderStore(Store):
     def _verify_every_snapshot(self) -> list[StoreProblem]:
         """Every snapshot's own files, and every object no pipeline owns, hashed again (:meth:`verify` with no hashes named)."""
         problems = []
+        unread = []
         read: dict = {}
         said: dict = {}
         held: set = set()
         #: For each place whose file is wrong, the snapshots kept as increments that keep it in the complete one they build on
         kept_there: dict = {}
-        for record in self.records():
+        records = self.records()
+        with_record = {record.folder for record in records}  # a snapshot's folder: one whose record is there, read or not
+        for record in records:
             if not record.readable:
+                # Not passed over: nothing of this snapshot is checked, and what sends a person here (a move that
+                # could not follow the record) is told which record, and why
+                unread.append(StoreProblem(
+                    "", record.folder,
+                    f"The snapshot record {self._shown(record.path)} cannot be read: {why_not_read(record.path)}. "
+                    f"Nothing of its snapshot is checked.",
+                    of_record=True,
+                ))
                 continue
             # What it names and gives no place for: a hole for a run, for gc and for a move, which send a person here
             for content_hash in _not_followed(record):
                 problems.append(StoreProblem(
                     content_hash, record.folder,
                     f"its record does not say where {content_hash[:19]}… is (the snapshot {record.folder.name})",
+                    of_snapshot=True,
                 ))
             for asset in record.assets:
                 held.add(asset.content_hash)
@@ -3478,9 +3562,15 @@ class FolderStore(Store):
                 f", and {count} snapshots kept as increments on it keep it there" if count > 1
                 else ", and 1 snapshot kept as an increment on it keeps it there"
             )
-            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}"))
+            # The folder is a snapshot's where it has a record. One that has none is said as that: the snapshots that
+            # lack the file are those whose records name it there, and `store ls` names them
+            no_record = where not in with_record
+            named = f"the folder {where.name}, which has no record" if no_record else f"the snapshot {where.name}"
+            problems.append(StoreProblem(content_hash, where, f"{message} ({named}){also}", of_snapshot=True, no_record=no_record))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
+        # Ahead of them, each record that could not be read, in the order of their paths
+        problems = sorted(unread, key=lambda problem: str(problem.path)) + problems
         # The same snapshot in both folders: the complete one is the snapshot, and the other is named
         increments = self.increments_path()
         if increments is not None and increments.is_dir():
@@ -3574,7 +3664,7 @@ def _not_followed(record: KeptRecord) -> list[str]:
     return sorted(record.named - {asset.content_hash for asset in record.assets})
 
 
-def _holes(record: KeptRecord, own: bool = False) -> list[str]:
+def _holes(record: KeptRecord, own: bool = False, asked: Optional[dict] = None) -> list[str]:
     """The files a snapshot's record names that are not whole where it says (:func:`_is_whole`), by their paths in the pipeline, each asked about once.
 
     And what it names without saying where it is (:func:`_not_followed`),
@@ -3583,12 +3673,25 @@ def _holes(record: KeptRecord, own: bool = False) -> list[str]:
     :param own: Only those its own folder is to hold: not a file that an
         increment keeps in the complete snapshot it builds on, which is
         missing from that one's folder.
+    :param asked: What the disk has said of each file so far, by where it
+        is and the size it is to have, for a caller that asks of many
+        snapshots at once (:meth:`Store.holes_of`): a file that another
+        snapshot's record named before is not asked about again.
     """
     whole = {
         file.location: file for asset in record.assets for file in asset.files
         if not own or file.location.is_relative_to(record.folder)
     }
-    return sorted({file.path for file in whole.values() if not _is_whole(file, record.folder.parent)}) + [
+
+    def is_whole(file: KeptFile) -> bool:
+        if asked is None:
+            return _is_whole(file, record.folder.parent)
+        key = (str(file.location), file.size_bytes)
+        if key not in asked:
+            asked[key] = _is_whole(file, record.folder.parent)
+        return asked[key]
+
+    return sorted({file.path for file in whole.values() if not is_whole(file)}) + [
         f"{content_hash[:19]}… (its record does not say where it is)" for content_hash in _not_followed(record)
     ]
 

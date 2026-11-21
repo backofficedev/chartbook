@@ -1,0 +1,748 @@
+"""A store of ChartBook 0.5 with the shape found in a real one that a sync service keeps, for the tests of the mover.
+
+Found on 2026-11-20, when ``chartbook store migrate`` was run on a copy of
+a store in a shared, synced folder (four pipelines, 54,715 files). The
+store was whole by the ``store verify`` of 0.5, and held what no test
+store did. Here it is in small, under invented names:
+
+- ``acme/news`` has four folders under ``pipelines/acme+news/``:
+
+  - **A**, named as a snapshot's: data files, no record and no
+    ``CLEARED.txt``;
+  - **B**, named a second later: its record says the time of A's name, and
+    keeps every one of its files in its own folder;
+  - **R**, the newest: its record says eleven files of a dataset are kept
+    in A, where five are and six are not (the same bytes are all in B),
+    and its ``chartbook.toml``, which is; and it keeps five files in its
+    own folder;
+  - **R 2** (the folder's name ends in `` 2``), a sync's second copy of R:
+    the same record byte for byte, but that it says B keeps what R's says
+    A keeps, with its own copies of the files R keeps in its own folder;
+
+- a folder named as a snapshot's that holds nothing but two
+  ``desktop.ini``, and a ``desktop.ini`` in every folder of the store, as
+  a sync client for a desktop leaves them (``.DS_Store`` is the same thing
+  elsewhere);
+- the other second copies a sync made: ``README 2.txt`` in the pipeline's
+  folder, a note of a lockfile ``roots/<id> 2.json``, and a folder
+  ``origins/<commit> 2/``;
+- ``acme/reader``, whose lockfile pins R.
+
+It is made as a store of 0.5 is made in the other tests of the mover (a
+pipeline, ``snapshot.make``, ``lock.pin``, :func:`tests.store_of_0_5.laid_out_as_0_5`),
+and A, B, R and ``R 2`` are then shaped by hand, each step saying what it
+stands for.
+"""
+
+import json
+import os
+import shutil
+import stat
+from pathlib import Path
+
+import polars as pl
+import tomli_w
+
+from chartbook import lock, snapshot
+from chartbook import store as store_module
+from chartbook.store import FolderStore, on_disk
+from tests.fixtures import _git
+from tests.store_of_0_5 import laid_out_as_0_5
+
+#: When the two snapshots of ``acme/news`` were made: the one A and B are of, and R.
+MADE = ("2026-10-30T05:34:55.000000Z", "2026-11-02T05:22:22.000000Z")
+
+#: The files of the dataset that R's record says are kept in A: those that are there, and those that are not.
+IN_A = ("00", "02", "04", "06", "09")
+NOT_IN_A = ("01", "03", "05", "07", "08", "10")
+
+#: The files in A that no record names.
+UNNAMED = ("_data/articles/half-written.tmp", "_data/left-behind.parquet", "notes.txt")
+
+DESKTOP_INI = b"[.ShellClassInfo]\r\nIconResource=C:\\Program Files\\Drive\\drive_fs.ico,23\r\n"
+
+
+def _commit(folder: Path, message: str) -> None:
+    if not (folder / ".git").exists():
+        _git(folder, "init", "--quiet", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "--quiet", "--allow-empty", "-m", message)
+
+
+def _writable(path: Path) -> Path:
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)  # the store's files are read-only
+    return path
+
+
+def _article(folder: Path, name: str, text: str) -> None:
+    pl.DataFrame({"day": [int(name)], "headline": [text]}).write_parquet(folder / "_data" / "articles" / f"{name}.parquet")
+
+
+def found(work: Path, root: Path) -> dict:
+    """Make the store at *root*, with its pipelines' folders under *work*; the names of A, B, R and ``R 2``, the reader's folder, and the files R keeps in its own folder."""
+    news = work / "news"
+    (news / "_data" / "articles").mkdir(parents=True)
+    (news / "_output").mkdir()
+    (news / "chartbook.toml").write_text(
+        tomli_w.dumps({
+            "project": {"id": "acme/news"},
+            "dataframes": {
+                "articles": {"path": "./_data/articles/", "docs": "d"},
+                "totals": {"path": "./_data/totals.parquet", "docs": "d"},
+            },
+            "charts": {"counts": {"path": "./_output/counts.html", "dataframe": "totals", "docs": "d"}},
+        }),
+        encoding="utf-8", newline="\n",
+    )
+    (news / "README.md").write_text("# acme/news\n", encoding="utf-8", newline="\n")
+    (news / ".gitignore").write_text("/_data/\n/_output/\n/chartbook.lock\n", encoding="utf-8", newline="\n")
+    for number in range(12):
+        _article(news, f"{number:02d}", f"headline {number}")
+    pl.DataFrame({"articles": [12]}).write_parquet(news / "_data" / "totals.parquet")
+    (news / "_output" / "counts.html").write_text("<p>12</p>\n", encoding="utf-8", newline="\n")
+    _commit(news, "Twelve days")
+    first = snapshot.make(news, store=FolderStore(root), made_at=MADE[0])
+    # The next snapshot: eleven files of the dataset as they were, and a few files of its own
+    _article(news, "11", "headline 11, corrected")
+    pl.DataFrame({"articles": [12], "corrected": [1]}).write_parquet(news / "_data" / "totals.parquet")
+    (news / "_output" / "counts.html").write_text("<p>12, one corrected</p>\n", encoding="utf-8", newline="\n")
+    (news / "README.md").write_text("# acme/news, corrected\n", encoding="utf-8", newline="\n")
+    _commit(news, "A correction")
+    second = snapshot.make(news, store=FolderStore(root), made_at=MADE[1])
+    reader = work / "reader"
+    reader.mkdir()
+    (reader / "chartbook.toml").write_text(
+        tomli_w.dumps({"project": {"id": "acme/reader"}, "dependencies": {"acme/news": {"path": "../news"}}}),
+        encoding="utf-8", newline="\n",
+    )
+    assert lock.pin(reader, FolderStore(root)).problems == []  # the newest, which becomes R
+    # As 0.5 left it: the second snapshot's record says the files it shares with the first are kept in the first's folder
+    laid_out_as_0_5(root)
+    pipeline = root / "pipelines" / "acme+news"
+    a, r = pipeline / first.snapshot.path.parent.parent.name, pipeline / second.snapshot.path.parent.parent.name
+    (root / "tmp").mkdir(exist_ok=True)
+
+    # B: the same snapshot made a second time, which 0.5 put in a folder named for the next second. Its record says
+    # the time of the first, and keeps every one of its files in its own folder: it is whole
+    b = pipeline / a.name.replace("T053455Z", "T053456Z")
+    shutil.copytree(a, b)
+    record = _writable(b / "_chartbook" / "snapshot.json")
+    record.write_text(record.read_text(encoding="utf-8").replace(f'"kept_in": "{a.name}"', f'"kept_in": "{b.name}"'), encoding="utf-8", newline="\n")
+
+    # A: its record never came (and `store gc` did not clear it: no CLEARED.txt), so it is a folder with files and no record
+    _writable(a / "_chartbook" / "snapshot.json").unlink()
+    # A: six of the eleven files that R's record says are kept there are not there. The same bytes are in B
+    for name in NOT_IN_A:
+        _writable(a / "_data" / "articles" / f"{name}.parquet").unlink()
+    # A: and it holds files no record names
+    for path in UNNAMED:
+        (a / path).parent.mkdir(parents=True, exist_ok=True)
+        (a / path).write_bytes(f"no record names {path}".encode())
+
+    # R: left as 0.5 wrote it. Its record keeps eleven files of the dataset in A, and its own files in its own folder
+    document = json.loads((r / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+    entries = [entry for part in _parts(document) for entry in part["stored"]["files"]]
+    in_a = sorted(entry["path"] for entry in entries if entry["kept_in"] == a.name)
+    assert [path for path in in_a if "/articles/" in path] == [f"_data/articles/{name}.parquet" for name in sorted(IN_A + NOT_IN_A)], in_a
+    own = sorted({entry["path"] for entry in entries if entry["kept_in"] == r.name})
+    assert len(own) >= 3 and all((r / path).is_file() for path in own), own
+
+    # `R 2`: a sync's second copy of R's folder. It holds its own copies of the files R keeps in its own folder, and
+    # the same record byte for byte, but that it says the others are kept in B
+    r2 = pipeline / f"{r.name} 2"
+    shutil.copytree(r, r2)
+    record = _writable(r2 / "_chartbook" / "snapshot.json")
+    record.write_text(record.read_text(encoding="utf-8").replace(f'"kept_in": "{a.name}"', f'"kept_in": "{b.name}"'), encoding="utf-8", newline="\n")
+
+    # A folder named as a snapshot's that holds nothing but what a desktop leaves: no snapshot, and no folder with files
+    nothing = pipeline / "2026-10-29T000000Z_0123456789ab"
+    (nothing / "_data").mkdir(parents=True)
+
+    # The other second copies a sync made: of the pipeline's README, of a note of a lockfile, and of a commit's origins
+    shutil.copyfile(pipeline / "README.txt", pipeline / "README 2.txt")
+    note = next(p for p in (root / "roots").iterdir() if p.suffix == ".json")
+    shutil.copyfile(note, note.with_name(f"{note.stem} 2.json"))
+    origin = next(p for p in sorted((root / "origins").iterdir()) if p.is_dir())
+    shutil.copytree(origin, origin.with_name(f"{origin.name} 2"))
+
+    # And a desktop.ini in every folder of the store, as a sync client for a desktop leaves one
+    for folder in [root] + sorted(p for p in root.rglob("*") if p.is_dir()):
+        (folder / "desktop.ini").write_bytes(DESKTOP_INI)
+    assert sorted(p.name for p in nothing.rglob("*") if p.is_file()) == ["desktop.ini", "desktop.ini"]
+
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    return dict(
+        a=a.name, b=b.name, r=r.name, r2=r2.name, nothing=nothing.name, reader=reader, own=own, in_a=in_a,
+        note=note.name, origin=origin.name,
+    )
+
+
+def place_of(root: Path, pipeline: str, snapshot: str, entry: dict) -> Path:
+    """Where a record of 0.5 says a file is, as the store's reader finds it: by the name the disk has for it (:func:`chartbook.store.on_disk`).
+
+    A sync between systems may hand a file over under its name in the
+    other of Unicode's forms. A disk that does not tell the two apart
+    (APFS) answers for either; one that does (NTFS, most of Linux) has
+    no file by the name the record writes, and the reader, and the move,
+    find it all the same. A helper that asked by the record's name
+    expected such a file among the missing, on those disks alone.
+    """
+    kept_as = entry.get("kept_as", entry["path"])
+    return on_disk(root / "pipelines" / pipeline, [entry.get("kept_in", snapshot), *kept_as.split("/")])
+
+
+def _parts(document: dict) -> list:
+    parts = [part for part in document.get("records") or [] if isinstance(part, dict)]
+    parts += [document[name] for name in ("index", "documents") if isinstance(document.get(name), dict)]
+    return [part for part in parts if isinstance(part.get("stored"), dict)]
+
+
+def elsewhere(root: Path) -> dict:
+    """Fill an empty store of 0.5, by hand, with every way a file can be somewhere other than where its record says; the snapshots' folder names.
+
+    ChartBook 0.5 found a file by its hash anywhere in its pipeline's
+    folder, so each of these read there, and each must read once moved.
+    ``acme/p`` has a folder with no record (``c0``), two snapshots that
+    become increments (``s1``, ``s2``), the newest (``s3``), which the
+    others build on, and two that a pin made (``p4``, ``p5``); ``acme/q``
+    has two that a pin made. A record that says ``c0`` keeps a file names a
+    place where the file is not, but for ``k9``; and one of ``acme/q`` names
+    a folder that is not there at all.
+
+    =====  ==========================================================  ===================================================
+    file   who names it, and where the bytes are                       what the move makes of it
+    =====  ==========================================================  ===================================================
+    k1     s3 and p5 (not there); s1 and s2 each have their own        s3 takes s1's, p5 is given a copy; s2's goes aside
+    k2     s1 (not there); s2 has its own; s3 does not name it         s1 takes s2's, and s2 is given a copy
+    k3     s3 has its own; p4 (not there)                              p4 is given a copy of s3's
+    k4     s3 and p5 (not there); s1 has its own                       s3 takes s1's, and p5 is given a copy
+    k5     s3 twice, as k5a and k5b (not there); s2 has it as k5       s3 takes s2's for k5a, and copies it for k5b
+    k6     s3 (not there); nobody else                                 missing, as it was
+    k7     s3 (not there); p4 has its own                              s3 takes p4's, and p4 is given a copy
+    k8     s3 (in c0, half of it, as a sync left it); s1 has its own   s3 takes s1's; the half goes aside
+    k9     s1, s2 and s3, in c0, where it is                           s3 takes it from c0, as before
+    q      q1 (in a folder that is not there); q2 has its own          q1 takes q2's, and q2 is given a copy
+    =====  ==========================================================  ===================================================
+
+    In k1 two older snapshots each have the bytes and two others want them:
+    a move cut short once s3 has s1's must give p5 a copy of that, and
+    leave s2's to go aside as an uninterrupted move does.
+    """
+    from tests.rich_store_of_0_5 import folder_of, put, record
+
+    k = {number: bytes([64 + number]) * (100 + 10 * number) for number in range(1, 10)}
+    q = b"q" * 400
+    c0 = folder_of("2025-09-01", "h")
+    put(root, "acme+p", c0, "_data/k9.parquet", k[9])
+    put(root, "acme+p", c0, "_data/k8.parquet", k[8][:50])  # half of it
+    put(root, "acme+p", c0, "_data/nobody.bin", b"nobody names this, in a folder with no record")
+    s1 = folder_of("2025-10-01", "a")
+    for number in (1, 4, 8):
+        put(root, "acme+p", s1, f"_data/k{number}.parquet", k[number])
+    record(root, "acme/p", "2025-10-01", "a", [
+        ("_data/k1.parquet", k[1], None, None), ("_data/k2.parquet", k[2], c0, None), ("_data/k4.parquet", k[4], None, None),
+        ("_data/k8.parquet", k[8], None, None), ("_data/k9.parquet", k[9], c0, None),
+    ])
+    s2 = folder_of("2025-11-01", "b")
+    for name, number in (("k1", 1), ("k2", 2), ("k5", 5)):
+        put(root, "acme+p", s2, f"_data/{name}.parquet", k[number])
+    record(root, "acme/p", "2025-11-01", "b", [
+        ("_data/k1.parquet", k[1], None, None), ("_data/k2.parquet", k[2], None, None), ("_data/k5.parquet", k[5], None, None),
+        ("_data/k9.parquet", k[9], c0, None),
+    ])
+    s3 = folder_of("2025-12-01", "c")
+    put(root, "acme+p", s3, "_data/k3.parquet", k[3])
+    record(root, "acme/p", "2025-12-01", "c", [
+        ("_data/k1.parquet", k[1], c0, None), ("_data/k3.parquet", k[3], None, None), ("_data/k4.parquet", k[4], c0, None),
+        ("_data/k5a.parquet", k[5], c0, None), ("_data/k5b.parquet", k[5], c0, "_data/k5a.parquet"),
+        ("_data/k6.parquet", k[6], c0, None), ("_data/k7.parquet", k[7], c0, None), ("_data/k8.parquet", k[8], c0, None),
+        ("_data/k9.parquet", k[9], c0, None),
+    ])
+    p4 = folder_of("2025-12-15", "d")
+    put(root, "acme+p", p4, "_data/k7.parquet", k[7])
+    record(root, "acme/p", "2025-12-15", "d", [("_data/k3.parquet", k[3], c0, None), ("_data/k7.parquet", k[7], None, None)], made_by="pin")
+    p5 = record(root, "acme/p", "2025-10-15", "i", [("_data/k1.parquet", k[1], c0, None), ("_data/k4.parquet", k[4], c0, None)], made_by="pin")
+    # acme/q: two that a pin made; the older says its file is kept in a folder that is not there
+    q2 = folder_of("2025-11-01", "f")
+    put(root, "acme+q", q2, "_data/q.parquet", q)
+    q1 = record(root, "acme/q", "2025-10-01", "e", [("_data/q.parquet", q, folder_of("2025-08-01", "j"), None)], made_by="pin")
+    record(root, "acme/q", "2025-11-01", "f", [("_data/q.parquet", q, None, None)], made_by="pin")
+    return dict(c0=c0, s1=s1, s2=s2, s3=s3, p4=p4, p5=p5, q1=q1, q2=q2)
+
+
+def any_store(root: Path, seed: int) -> dict:
+    """Fill an empty store of 0.5, by hand, with one pipeline drawn from a seed; for each file a record names, the hash its record says and whether some record's place holds those bytes whole.
+
+    Two to five snapshots, each made by its owner or by a pin, of up to five
+    files of their own bytes. A record says a file is kept in its own
+    folder, where an earlier record said the same bytes are (under that
+    name, as 0.5 kept each file once), in a folder with no record, or in a
+    folder that is not there. Each place a record names holds the file, or
+    half of it, or nothing. And a record may name the same bytes twice.
+
+    :returns: By ``(snapshot's folder, path)``: ``(the hash, whether 0.5
+        could read it)``.
+    """
+    import hashlib
+    import random
+
+    from tests.rich_store_of_0_5 import folder_of, put, record
+
+    drawn = random.Random(seed)
+    data = {number: bytes([97 + number]) * (60 + 9 * number) for number in range(5)}
+    no_record, not_there = folder_of("2025-01-01", "p"), folder_of("2024-12-01", "o")
+    said: dict = {}  # the places records say each file's bytes are
+    decided: set = set()
+    whole: set = set()
+    named: dict = {}
+    for index in range(drawn.randint(2, 5)):
+        day, letter = f"2025-{index + 2:02d}-01", "abcde"[index]
+        folder = folder_of(day, letter)
+        entries = []
+        for number in data:
+            if drawn.random() < 0.35 and (entries or number < 4):
+                continue
+            path = f"_data/k{number}.parquet"
+            how = drawn.choice(["its own", "its own", "an earlier one's", "an earlier one's", "no record", "not there"])
+            if how == "an earlier one's" and said.get(number):
+                place = drawn.choice(sorted(said[number]))
+            else:
+                place = {"no record": (no_record, path), "not there": (not_there, path)}.get(how, (folder, path))
+            if place not in decided and place[0] != not_there:
+                decided.add(place)
+                holds = drawn.random()
+                if holds < 0.6:
+                    put(root, "acme+p", place[0], place[1], data[number])
+                    whole.add(place)
+                elif holds < 0.72:
+                    put(root, "acme+p", place[0], place[1], data[number][:20])  # half of it
+            names = [path] + ([f"_data/k{number}b.parquet"] if drawn.random() < 0.15 else [])
+            for name in names:
+                entries.append((name, data[number], None if place[0] == folder else place[0], None if place[1] == name else place[1]))
+                named[(folder, name)] = number
+            said.setdefault(number, set()).add(place)
+        record(root, "acme/p", day, letter, entries, made_by="pin" if drawn.random() < 0.3 else "")
+    return {
+        key: ("sha256:" + hashlib.sha256(data[number]).hexdigest(), bool(said[number] & whole))
+        for key, number in named.items()
+    }
+
+
+# What must hold of any move, and stores drawn more widely: from the review of the mover after a real store (2026-11-20)
+
+
+def facts_before(root: Path) -> dict:
+    """Of a store of 0.5, for each file that a record in a folder named as a snapshot's names (the records 0.5 read): ``(pipeline's ID, snapshot's folder, path) -> (its hash, whether it is at its stated place with its bytes, whether some place a record of its pipeline names for those bytes holds them)``."""
+    import hashlib
+
+    from chartbook.store import is_snapshot_folder
+
+    def holds(path: Path, key: tuple) -> bool:
+        try:
+            if path.is_symlink() or not path.is_file() or path.stat().st_size != key[1]:
+                return False
+            return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest() == key[0]
+        except OSError:
+            return False
+
+    entries, places = [], {}
+    for file in sorted(root.glob("pipelines/*/*/_chartbook/snapshot.json")):
+        snapshot, pipeline = file.parent.parent.name, file.parent.parent.parent.name
+        if not is_snapshot_folder(snapshot):
+            continue
+        document = json.loads(file.read_text(encoding="utf-8"))
+        for part in _parts(document):
+            for entry in part["stored"].get("files") or []:
+                key = (entry["content_hash"], entry["size_bytes"])
+                place = place_of(root, pipeline, snapshot, entry)
+                entries.append((pipeline, document["root"], snapshot, entry["path"], key, place))
+                places.setdefault((pipeline, key), set()).add(place)
+    somewhere = {of: any(holds(place, of[1]) for place in at) for of, at in places.items()}
+    return {
+        (identity, snapshot, path): (key[0], holds(place, key), somewhere[(pipeline, key)])
+        for pipeline, identity, snapshot, path, key, place in entries
+    }
+
+
+def worse_after(before: dict, root: Path) -> tuple[list, list]:
+    """After a move, against :func:`facts_before`: the files that were at their stated place with their bytes and do not read so now; and those whose bytes a place a record of the pipeline named held, which do not read now."""
+    from tests.rich_store_of_0_5 import read_through
+
+    store_module._read_records.clear()
+    reads = read_through(root)
+    lost = sorted(key for key, (content_hash, at_place, _) in before.items() if at_place and "sha256:" + reads.get(key, "nothing") != content_hash)
+    not_taken = sorted(key for key, (content_hash, _, anywhere) in before.items() if anywhere and "sha256:" + reads.get(key, "nothing") != content_hash)
+    return lost, not_taken
+
+
+def stopped_then(root: Path, work: Path, arrive, numbers=None) -> list:
+    """Stop a move of a copy of *root* after each step (or after those of *numbers*), let *arrive* change the store as a sync would, and run the move again, with the journal kept and deleted; each as ``(step, journal kept, the store)``, for the caller to look at and remove."""
+    import pytest
+
+    from chartbook import migrate_0_5
+    from tests.rich_store_of_0_5 import Stop, stop_after
+
+    store_module._read_records.clear()
+    steps = len(migrate_0_5.plan(root).steps)
+    ended = []
+    for number in numbers or range(1, steps + 2):
+        for journal in (True, False):
+            cut = work / f"cut-{number}-{'kept' if journal else 'deleted'}"
+            shutil.copytree(root, cut, symlinks=True)
+            store_module._read_records.clear()
+            with pytest.raises(Stop):
+                migrate_0_5.run(cut, after_step=stop_after(number))
+            if not journal and (cut / migrate_0_5.JOURNAL).is_file():
+                (cut / migrate_0_5.JOURNAL).unlink()
+            arrive(cut)
+            store_module._read_records.clear()
+            migrate_0_5.run(cut)
+            ended.append((number, journal, cut))
+    return ended
+
+
+#: The bytes a store drawn by :func:`wide_store` is made of: two of one size, and one of no bytes at all.
+WIDE = {0: b"a" * 60, 1: b"b" * 69, 2: b"c" * 78, 3: b"d" * 78, 4: b"", 5: b"f" * 105, 6: b"g" * 114}
+
+
+def wide_store(root: Path, seed: int, pipelines: int = 1) -> None:
+    """Fill an empty store of 0.5 with pipelines drawn from a seed, of shapes :func:`any_store` cannot draw (the reviewer's generator).
+
+    Like it: two to five snapshots, each its owner's or a pin's; a record
+    says a file is in its own folder, where an earlier record said the
+    same bytes are, in a folder with no record, or in one that is not
+    there; each place holds the file, part of it, or nothing. And more: a
+    folder that ``store gc`` cleared; a record that says a file is in the
+    folder of a *later* snapshot; a file kept under another name than any
+    record's path; the same bytes named twice by one record, at two
+    places; a place that holds a file longer than its record says; a file
+    of no bytes, and two files of one size and other bytes; and a second
+    pipeline with the same folder names and the same bytes.
+    """
+    import random
+
+    from tests.rich_store_of_0_5 import folder_of, put, record
+
+    drawn = random.Random(seed)
+    for which in range(pipelines):
+        identity = f"acme/{'pq'[which]}"
+        pipeline = identity.replace("/", "+")
+        no_record, was_cleared, not_there = folder_of("2025-01-01", "p"), folder_of("2025-01-02", "n"), folder_of("2024-12-01", "o")
+        count = drawn.randint(2, 5)
+        folders = [folder_of(f"2025-{index + 2:02d}-01", "abcde"[index]) for index in range(count)]
+        said: dict = {}
+        decided: set = set()
+
+        def fill(place: tuple, number: int) -> None:
+            if place in decided or place[0] == not_there:
+                return
+            decided.add(place)
+            holds, data = drawn.random(), WIDE[number]
+            if holds < 0.55:
+                put(root, pipeline, place[0], place[1], data)
+            elif holds < 0.67:
+                put(root, pipeline, place[0], place[1], data[: len(data) // 3] if data else b"!")  # part of it
+            elif holds < 0.72:
+                put(root, pipeline, place[0], place[1], data + b"more")  # longer than its record says
+
+        for index, folder in enumerate(folders):
+            entries = []
+            for number in WIDE:
+                if drawn.random() < 0.35 and (entries or number < 6):
+                    continue
+                path = f"_data/k{number}.parquet"
+                how = drawn.choice(["its own", "its own", "an earlier one's", "an earlier one's", "a later one's", "no record", "cleared", "not there", "another name"])
+                if how == "an earlier one's" and said.get(number):
+                    place = drawn.choice(sorted(said[number]))
+                elif how == "a later one's" and index + 1 < count:
+                    place = (drawn.choice(folders[index + 1:]), path)
+                elif how == "another name":
+                    place = (drawn.choice([folder, no_record, was_cleared]), f"_data/other/k{number}-{index}.bin")
+                else:
+                    place = {"no record": (no_record, path), "cleared": (was_cleared, path), "not there": (not_there, path)}.get(how, (folder, path))
+                fill(place, number)
+                entries.append((path, WIDE[number], None if place[0] == folder else place[0], None if place[1] == path else place[1]))
+                said.setdefault(number, set()).add(place)
+                if drawn.random() < 0.2:
+                    # The same bytes a second time: kept at the same place, or at a place of its own
+                    again = f"_data/k{number}b.parquet"
+                    second = place if drawn.random() < 0.5 else (folder, again)
+                    fill(second, number)
+                    entries.append((again, WIDE[number], None if second[0] == folder else second[0], None if second[1] == again else second[1]))
+                    said[number].add(second)
+            record(root, identity, f"2025-{index + 2:02d}-01", "abcde"[index], entries, made_by="pin" if drawn.random() < 0.3 else "")
+        if (root / "pipelines" / pipeline / was_cleared).is_dir() or drawn.random() < 0.5:
+            mark = root / "pipelines" / pipeline / was_cleared / "_chartbook" / "CLEARED.txt"
+            mark.parent.mkdir(parents=True, exist_ok=True)
+            mark.write_text("Cleared by `chartbook store gc`.\n", encoding="utf-8", newline="\n")
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+
+
+# From the second review of the mover (2026-11-20): what a move is held to, by the folders 0.5 read; and stores drawn with
+# that review's shapes
+
+
+def records_0_5_read(root: Path) -> list:
+    """The records ChartBook 0.5 read, each as ``(pipeline's folder, snapshot's folder, the document)``: in a folder named as a snapshot's, in the folder of the pipeline they say."""
+    from chartbook.store import is_snapshot_folder, pipeline_folder
+
+    found = []
+    for file in sorted(root.glob("pipelines/*/*/_chartbook/snapshot.json")):
+        snapshot, pipeline = file.parent.parent.name, file.parent.parent.parent.name
+        if not is_snapshot_folder(snapshot):
+            continue
+        document = json.loads(file.read_text(encoding="utf-8"))
+        if pipeline_folder(document["root"]) != pipeline:
+            continue
+        found.append((pipeline, snapshot, document))
+    return found
+
+
+def _sha(data: bytes) -> str:
+    import hashlib
+
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def _holds(path: Path, key: tuple) -> bool:
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size != key[1]:
+            return False
+        return _sha(path.read_bytes()) == key[0]
+    except OSError:
+        return False
+
+
+def facts_by_folder(root: Path) -> dict:
+    """Of a store of 0.5, by the folders: ``(pipeline's folder, snapshot's folder, path) -> (hash, size, whether it is at its stated place with its bytes, whether some stated place of the pipeline holds them, the stated place)``, of the records 0.5 read."""
+    entries, places = [], {}
+    for pipeline, snapshot, document in records_0_5_read(root):
+        for part in _parts(document):
+            for entry in part["stored"].get("files") or []:
+                key = (entry["content_hash"], entry["size_bytes"])
+                place = place_of(root, pipeline, snapshot, entry)
+                entries.append((pipeline, snapshot, entry["path"], key, place))
+                places.setdefault((pipeline, key), set()).add(place)
+    somewhere = {of: any(_holds(place, of[1]) for place in at) for of, at in places.items()}
+    return {
+        (pipeline, snapshot, path): (key[0], key[1], _holds(place, key), somewhere[(pipeline, key)], place.relative_to(root).as_posix())
+        for pipeline, snapshot, path, key, place in entries
+    }
+
+
+def reads_after(root: Path) -> dict:
+    """Of a moved store: ``(pipeline's folder, snapshot's folder, path) -> (the hash of what the store hands out, or why not; where it is)``."""
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    found = {}
+    for kept in FolderStore(root).records():
+        if not kept.readable:
+            continue
+        for asset in kept.assets:
+            for file in asset.files:
+                where = file.location.relative_to(root).as_posix()
+                try:
+                    if file.location.is_symlink() or not file.location.is_file():
+                        raise FileNotFoundError(where)
+                    found[(kept.folder.parent.name, kept.folder.name, file.path)] = (_sha(file.location.read_bytes()), where)
+                except OSError as error:
+                    found[(kept.folder.parent.name, kept.folder.name, file.path)] = (type(error).__name__, where)
+    return found
+
+
+def record_at(root: Path, folder: str, pipeline_id: str, day: str, letter: str, entries: list, made_by: str = "") -> str:
+    """One snapshot's record as 0.5 wrote it, in the pipeline's folder as given (``tests.rich_store_of_0_5.record`` writes ``/`` as ``+`` and no more); the snapshot's folder name."""
+    from tests.rich_store_of_0_5 import COMMIT, folder_of
+
+    snapshot = folder_of(day, letter)
+    parts = []
+    for path, data, kept_in, kept_as in entries:
+        entry = {"path": path, "content_hash": _sha(data), "size_bytes": len(data), "kept_in": kept_in or snapshot}
+        if kept_as:
+            entry["kept_as"] = kept_as
+        parts.append({
+            "id": f"{pipeline_id}:dataframe:{path}", "kind": "dataframe", "content_hash": _sha(data), "size_bytes": len(data),
+            "stored": {"at": path.rpartition("/")[0], "single": True, "files": [entry]},
+        })
+    document = {
+        "schema": "chartbook/snapshot/v2", "root": pipeline_id, "made_at": f"{day}T09:15:00.000000Z",
+        "code": {"commit": COMMIT[letter], "subdirectory": ""}, "records": parts,
+    }
+    if made_by:
+        document["made_by"] = made_by
+    file = root / "pipelines" / folder / snapshot / "_chartbook" / "snapshot.json"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+    return snapshot
+
+
+#: What :func:`drawn_store` adds to the bytes of :func:`wide_store`: a file with a name of 251 characters, and one whose name the disk has in the other of Unicode's forms.
+LONG_NAME = "k" * 243 + ".parquet"
+ACCENTED = "café-ñandú.parquet"
+EXTRA = {"long": b"L" * 211, "accented": b"U" * 187}
+BY_HASH = {_sha(data): data for data in list(WIDE.values()) + list(EXTRA.values())}
+
+
+def _rewrite(record: Path, change) -> None:
+    _writable(record)
+    document = json.loads(record.read_text(encoding="utf-8"))
+    change(document)
+    record.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+
+
+def _add_entry(root: Path, pipeline: str, snapshot: str, path: str, data: bytes, kept_in: str = "", kept_as: str = "") -> None:
+    """One more file named by a record that is there."""
+    def change(document):
+        entry = {"path": path, "content_hash": _sha(data), "size_bytes": len(data), "kept_in": kept_in or snapshot}
+        if kept_as:
+            entry["kept_as"] = kept_as
+        document["records"].append({
+            "id": f"{document['root']}:dataframe:{path}", "kind": "dataframe", "content_hash": _sha(data), "size_bytes": len(data),
+            "stored": {"at": path.rpartition("/")[0], "single": True, "files": [entry]},
+        })
+
+    _rewrite(root / "pipelines" / pipeline / snapshot / "_chartbook" / "snapshot.json", change)
+
+
+def drawn_store(root: Path, seed: int, pipelines: int = 1, in_the_new_trees=True) -> dict:
+    """Fill an empty store of 0.5 from a seed, with the shapes of the second review; what was drawn: the shapes, and the files put in the new trees (path -> hash).
+
+    On top of :func:`wide_store`: a folder named for a snapshot whose
+    record is elsewhere (a second later, or in a sync's ``<name> 2``), a
+    second copy of a pipeline's folder (``acme+p 2``), a file with a name
+    of 251 characters that two snapshots must each hold, a file whose name
+    the disk has in the other of Unicode's forms, and files already in the
+    new trees: at any place a step writes to (part of one, the whole, a
+    longer one, other bytes of its size), or, with *in_the_new_trees* ``"of
+    a move made elsewhere"``, what a sync has brought so far of a move
+    that another machine made of its own copy of the store.
+    """
+    import random
+    import unicodedata
+
+    from chartbook import migrate_0_5
+    from chartbook.replacing import replace_when_let
+    from tests.rich_store_of_0_5 import put, rmtree
+
+    wide_store(root, seed, pipelines)
+    drawn = random.Random(seed * 7919 + 17)
+    shapes: list = []
+    placed: dict = {}
+    for which in range(pipelines):
+        pipeline = f"acme+{'pq'[which]}"
+        folder = root / "pipelines" / pipeline
+        with_record = sorted(p.parent.parent.name for p in folder.glob("*/_chartbook/snapshot.json"))
+        # A file with a long name that two snapshots must each hold, and one whose name the disk has in the other form
+        if drawn.random() < 0.3 and len(with_record) >= 2:
+            first, second = drawn.sample(with_record, 2)
+            try:
+                if drawn.random() < 0.8:
+                    put(root, pipeline, first, f"_data/{LONG_NAME}", EXTRA["long"] if drawn.random() < 0.8 else EXTRA["long"][:40])
+                _add_entry(root, pipeline, first, f"_data/{LONG_NAME}", EXTRA["long"])
+                _add_entry(root, pipeline, second, f"_data/{LONG_NAME}", EXTRA["long"], kept_in=first)
+                shapes.append("long name")
+            except OSError:
+                pass
+        if drawn.random() < 0.3 and with_record:
+            first = drawn.choice(with_record)
+            put(root, pipeline, first, f"_data/{unicodedata.normalize('NFD', ACCENTED)}", EXTRA["accented"])
+            _add_entry(root, pipeline, first, f"_data/{unicodedata.normalize('NFC', ACCENTED)}", EXTRA["accented"])
+            if drawn.random() < 0.5 and len(with_record) >= 2:
+                other = drawn.choice([name for name in with_record if name != first])
+                _add_entry(root, pipeline, other, f"_data/{unicodedata.normalize('NFC', ACCENTED)}", EXTRA["accented"], kept_in=first)
+            shapes.append("other form")
+        # A folder named for a snapshot whose record is elsewhere
+        if drawn.random() < 0.35 and with_record:
+            snapshot = drawn.choice(with_record)
+            record = folder / snapshot / "_chartbook" / "snapshot.json"
+            if drawn.random() < 0.5:
+                later = snapshot.replace("T091500Z", "T091501Z")
+                (folder / later / "_chartbook").mkdir(parents=True)
+                replace_when_let(record, folder / later / "_chartbook" / "snapshot.json")
+                if drawn.random() < 0.5:
+                    # And its own files with it: the record says they are kept in the folder it is in
+                    def change(document, snapshot=snapshot, later=later):
+                        for part in document["records"]:
+                            for entry in part["stored"]["files"]:
+                                if entry.get("kept_in") == snapshot and entry.get("kept_as", entry["path"]) == entry["path"]:
+                                    here = on_disk(folder, [snapshot, *entry["path"].split("/")])  # as the reader finds it
+                                    if here.is_file() and not (folder / later / entry["path"]).exists() and drawn.random() < 0.7:
+                                        (folder / later / entry["path"]).parent.mkdir(parents=True, exist_ok=True)
+                                        shutil.copyfile(here, folder / later / entry["path"])
+                                        entry["kept_in"] = later
+
+                    _rewrite(folder / later / "_chartbook" / "snapshot.json", change)
+                shapes.append("record a second later")
+            else:
+                (folder / f"{snapshot} 2" / "_chartbook").mkdir(parents=True)
+                replace_when_let(record, folder / f"{snapshot} 2" / "_chartbook" / "snapshot.json")
+                shapes.append("record in a second folder")
+            if not any(p.is_file() for p in (folder / snapshot).rglob("*")):
+                rmtree(folder / snapshot)
+        # A sync's second copy of the pipeline's whole folder
+        if drawn.random() < 0.3:
+            shutil.copytree(folder, root / "pipelines" / f"{pipeline} 2")
+            shapes.append("second pipeline folder")
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    if in_the_new_trees == "of a move made elsewhere" and drawn.random() < 0.7:
+        # What a sync has brought so far of a move that another machine made of its own copy of this store (as it is
+        # here, or with every file a record names whole: its sync had finished): some of the files that move put in
+        # the new trees, each whole or part of it (a copy in flight), and some of its records and notes
+        theirs = root.parent / f"{root.name}-theirs"
+        shutil.copytree(root, theirs)
+        if drawn.random() < 0.5:
+            for pipeline, snapshot, document in records_0_5_read(theirs):
+                for part in _parts(document):
+                    for entry in part["stored"]["files"]:
+                        place = place_of(theirs, pipeline, snapshot, entry)
+                        if not (place.is_file() and place.stat().st_size == entry["size_bytes"]):
+                            if place.is_file():
+                                _writable(place)
+                            place.parent.mkdir(parents=True, exist_ok=True)
+                            place.write_bytes(BY_HASH[entry["content_hash"]])
+        store_module._read_records.clear()
+        try:
+            migrate_0_5.run(theirs)
+        except migrate_0_5.MoveError:
+            rmtree(theirs)
+            theirs = None
+        if theirs is not None:
+            for path in sorted(p for tree in ("snapshots", "increments") for p in (theirs / tree).rglob("*") if p.is_file()):
+                if drawn.random() >= 0.2:
+                    continue
+                target = path.relative_to(theirs).as_posix()
+                data = path.read_bytes()
+                own = "_chartbook" in path.parts or path.name == "README.txt"
+                there = data if own or drawn.random() < 0.65 else (data[: len(data) // 3] if data else b"!")
+                (root / target).parent.mkdir(parents=True, exist_ok=True)
+                (root / target).write_bytes(there)
+                placed[target] = _sha(there)
+            rmtree(theirs)
+        if placed:
+            shapes.append("brought of a move made elsewhere")
+    elif in_the_new_trees is True and drawn.random() < 0.6:
+        # Any file where a step of this move would put one, whether a move could have put it there or not
+        targets = {}
+        named = {(pipeline, snapshot, entry["path"]): entry for pipeline, snapshot, document in records_0_5_read(root) for part in _parts(document) for entry in part["stored"]["files"]}
+        for step in migrate_0_5.plan(root).steps:
+            if step.op in ("rename", "copy"):
+                tree, pipeline, snapshot, path = step.target.split("/", 3)
+                targets[step.target] = named[(pipeline, snapshot, path)]
+        for target, entry in sorted(targets.items()):
+            if drawn.random() >= 0.15:
+                continue
+            data = BY_HASH[entry["content_hash"]]
+            how = drawn.choice(["part", "part", "whole", "longer", "other bytes"])
+            there = {"part": data[: len(data) // 3] if data else b"!", "whole": data, "longer": data + b"more", "other bytes": bytes(len(data)) if data else b""}[how]
+            file = root / target
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_bytes(there)
+            placed[target] = _sha(there)
+        if placed:
+            shapes.append("in the new trees")
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    return {"shapes": shapes, "placed": placed}

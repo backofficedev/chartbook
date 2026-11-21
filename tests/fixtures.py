@@ -43,6 +43,29 @@ def remove_tree(path) -> None:
     _remove_tree(path)  # as given: a test that sets os.name to "nt" cannot make a Path on POSIX
 
 
+def rmdir_when_let(folder) -> None:
+    """``os.rmdir`` of a folder a helper has just emptied, tried again for a moment where Windows refuses it.
+
+    A virus scanner or the search indexer opens a folder just written to
+    read it, and a file removed from it a moment ago may not be gone yet:
+    Windows then refuses the removal ("Access is denied", "The directory
+    is not empty"), and lets go in a moment. What a helper renames goes
+    through :func:`chartbook.replacing.rename_when_let`, for the same
+    reason; on any other system the first refusal is said at once.
+    """
+    import sys
+    import time
+
+    for attempt in range(40):
+        try:
+            os.rmdir(folder)
+            return
+        except OSError:
+            if sys.platform != "win32" or attempt == 39:
+                raise
+            time.sleep(0.05)
+
+
 @contextlib.contextmanager
 def kept_out_of_home(scratch: Path):
     """Point all that ChartBook keeps for a user at folders under *scratch*, until the block ends.

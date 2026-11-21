@@ -1025,8 +1025,9 @@ that uses the store has this ChartBook (an earlier one will not read it afterwar
 has not yet seen the new `store.json` would go on writing a `pipelines/` folder); run `chartbook
 store migrate` on one of them, with nothing else using the store; and, in a synced folder, let the
 sync finish before another machine uses it. `--dry-run` says what would happen first. Files change
-folder by rename, so nothing is uploaded again ({doc}`snapshots-and-increments`, "Moving a store to
-this layout").
+folder by rename, so nothing is uploaded again for them; a file that two snapshots must each hold in
+their own folders is copied, and uploaded again, and the dry run says how much that is
+({doc}`snapshots-and-increments`, "Moving a store to this layout").
 ## What it costs
 
 *As built (step 4), measured 2026-11-17 by the test under a memory limit, on the machine the note

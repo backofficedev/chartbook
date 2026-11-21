@@ -848,6 +848,118 @@ class TestAStoreOf05IsReadAsItIs:
         assert verify.exit_code == 0, verify.output
         assert verify.output.splitlines() == [f"{old}: OK ({len(second.hashes())} object(s))"]
 
+    def test_store_verify_counts_a_file_missing_from_a_folder_that_has_no_record(self, of_0_5):
+        """Found by review: a store of 0.5 keeps each file once, often in the folder of a snapshot its `store gc` has cleared since. A file missing from such a folder had its line, "(the snapshot <the cleared folder>)", and the count ahead of the lines left it out, since the folder has no record.
+
+        The first line counts every line of a file below it, each under
+        the folder the file is missing from: here the cleared one, whose
+        pipeline its folder says.
+
+        And that folder is said to be what it is. Found on a real store:
+        each file's line ended "(the snapshot <the cleared folder>)" and
+        the count listed that folder as a snapshot, while `store ls`
+        named the snapshot whose record names the files. Two snapshots
+        were named for the same files, and one of them is none."""
+        old, second, cleared = of_0_5
+        lost = cleared / "_data" / "treasury.parquet"
+        lost.chmod(0o644)
+        lost.unlink()
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert [line for line in listed if ", lacks " in line] == [line for line in listed if line.split()[:1] == [_folder_of(second).name]]
+        verify = CliRunner().invoke(main, ["store", "verify"])
+        assert verify.exit_code == 1 and verify.output.splitlines()[:4] == [
+            "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {cleared.name} (a folder with no record)  1 file(s)",
+            f"{second.content()['treasury']}: _data/treasury.parquet is not in the store (the folder {cleared.name}, which has no record)",
+            "",
+        ]
+        # A file missing from a folder that has its record is of that snapshot, as it was
+        own = _folder_of(second) / "_output" / "curve.html"
+        own.chmod(0o644)
+        own.unlink()
+        store_module._found_whole.clear()
+        lines = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
+        assert lines[:3] == [
+            "2 file(s) of 2 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {cleared.name} (a folder with no record)  1 file(s)",
+            f"  acme/rates  {_folder_of(second).name}  1 file(s)",
+        ]
+        assert lines[4].endswith(f": _output/curve.html is not in the store (the snapshot {_folder_of(second).name})")
+
+    def test_two_names_a_record_keeps_at_one_place_are_two_files_it_lacks(self, rates, store):
+        """Decided 2026-11-20: in `store ls`, "lacks N of its M file(s)" counts both by the names the snapshot's record lists. A snapshot's files are its names.
+
+        ChartBook 0.5 kept two files of one snapshot with the same bytes
+        once, and the second's entry names the first. With that place
+        missing the snapshot lacks two files, and the line said 1: the
+        store asks about a place once, and says it once. `store verify`
+        goes on saying the place once, since its lines are of places."""
+        shutil.copy(rates / "_data" / "treasury.parquet", rates / "_data" / "again.parquet")
+        (rates / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "acme/rates"},
+                "dataframes": {
+                    "again": {"path": "./_data/again.parquet", "docs": "d"},
+                    "treasury": {"path": "./_data/treasury.parquet", "docs": "d"},
+                },
+                "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "treasury", "docs": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        _git(rates, "add", "-A")
+        _git(rates, "commit", "--quiet", "-m", "The table, under two names")
+        snapshot.make(rates, store=store, made_at=FIRST)
+        old = laid_out_as_0_5(store.root)
+        (kept,) = old.records()
+        places = {file.path: file.location for asset in kept.assets for file in asset.files}
+        place = places["_data/again.parquet"]
+        assert places["_data/treasury.parquet"] == place and len(set(places.values())) == len(places) - 1
+        intact = CliRunner().invoke(main, ["store", "ls"]).output
+        assert "lacks" not in intact
+        place.chmod(0o644)
+        place.unlink()
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        asked = []
+        is_whole = store_module._is_whole
+
+        def asking(file, pipeline_folder):
+            asked.append(file.location)
+            return is_whole(file, pipeline_folder)
+
+        with pytest.MonkeyPatch.context() as patched:
+            patched.setattr(store_module, "_is_whole", asking)
+            listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        (line,) = [line for line in listed if line.split()[:1] == [kept.folder.name]]
+        assert line.endswith(f", lacks 2 of its {len(places)} file(s)"), line
+        assert sorted(asked) == sorted(set(places.values()))  # and the disk was asked about the place once
+        verify = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
+        assert verify[:2] == [
+            "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {kept.folder.name}  1 file(s)",
+        ]
+        assert [line.partition(": ")[2] for line in verify if "(the snapshot " in line] == [
+            f"_data/again.parquet is not in the store (the snapshot {kept.folder.name})"
+        ]
+
+    def test_store_verify_names_a_record_it_cannot_read(self, of_0_5):
+        """Found by review: `chartbook store migrate` refuses a store for a record it cannot follow and says "`chartbook store verify` says more", and verify passed such a record over without a word. It names the record, as the store shows it, and why it is not read; and ends 1."""
+        old, second, cleared = of_0_5
+        record = Path(second.path)
+        whole = record.read_text(encoding="utf-8")
+        record.chmod(0o644)
+        record.write_text(whole[:200], encoding="utf-8", newline="\n")  # as a sync that has not finished leaves it
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        verify = CliRunner().invoke(main, ["store", "verify"])
+        lines = verify.output.splitlines()
+        assert verify.exit_code == 1 and len(lines) == 3, verify.output
+        assert lines[0].startswith(f"The snapshot record {record} cannot be read: it is not JSON (")
+        assert lines[0].endswith("), as a file is that a sync has brought part of. Nothing of its snapshot is checked.")
+        assert lines[1:] == ["", f"1 snapshot record(s) in {old} cannot be read."]
+
     def test_a_pipeline_pins_from_it_and_reads_through_the_pin(self, of_0_5, reader):
         old, second, cleared = of_0_5
         before = _tree(old.root)
@@ -1149,6 +1261,23 @@ class TestStoreMigrateStillMovesAStoreOf02Alone:
             assert lines[0] == f"The store at {old} has the layout of ChartBook 0.5: 1 pipeline(s), 1 snapshot(s)."
             assert lines[-1] == "Nothing was moved."
         assert _tree(old.root) == before
+
+    def test_its_help_is_for_whoever_comes_from_0_5_and_says_of_0_2_only_that_it_takes_two_runs(self):
+        """Found by a person upgrading: after the paragraph on a store of 0.5 came four on the move from 0.2 to 0.3, "Upgrade every machine … to ChartBook 0.3 first" among them."""
+        result = CliRunner().invoke(main, ["store", "migrate", "--help"])
+        assert result.exit_code == 0, result.output
+        paragraphs = [" ".join(paragraph.split()) for paragraph in result.output.split("\n\n")]
+        assert paragraphs[1] == "Move a store to this version's layout: one that ChartBook 0.5 laid out, or one made by 0.2."
+        assert paragraphs[2].startswith("A store of 0.5 (`pipelines/` at its top) is read as it is and not written. This moves it, once, on one machine: ")
+        of_0_2 = "A store made by ChartBook 0.2 is moved to the layout of 0.5 by the first run of this command, and on to this version's by a second."
+        assert paragraphs[3] == of_0_2
+        said = " ".join(paragraphs)
+        assert said.count("0.2") == 2 and "0.3" not in said and "Upgrade every machine" not in said
+        # And the reference page says the same of it, in the same words
+        page = (Path(__file__).parent.parent / "docs_src" / "reference" / "cli.md").read_text(encoding="utf-8")
+        section = page.partition("\n### store migrate\n")[2].partition("\n### ")[0]
+        assert of_0_2.replace("A store made by ChartBook 0.2 is", "**A store made by ChartBook 0.2** is") in section
+        assert "Upgrade every machine first" not in section and "ChartBook 0.3" not in section.replace("plan-0.3.0", "")
 
 
 class TestAFolderWithPipelinesAndNoMarker:
