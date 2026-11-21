@@ -1472,12 +1472,12 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. Such a folder is no snapshot, and is said to be what it is, in its count and in each of its files' lines; the snapshots that lack those files are the ones whose records name them there, which `chartbook store ls` says:
+The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. Such a folder is no snapshot, and is said to be what it is, in its count and in each of its files' lines; the snapshots that lack those files are the ones whose records name them there, which `chartbook store ls` says, and the folder's count line names that snapshot (the newest, where several records keep files there, with how many more), so that the two commands' lines are joined:
 
 ```console
 $ chartbook store verify
 2 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:
-  acme/parted  2026-10-30T053455Z_9b1e22d7a0c4 (a folder with no record)  2 file(s)
+  acme/parted  2026-10-30T053455Z_9b1e22d7a0c4 (a folder with no record; the record of 2026-11-19T140200Z_4f2a91c0e1b2 keeps them there)  2 file(s)
 sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the folder 2026-10-30T053455Z_9b1e22d7a0c4, which has no record)
 sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the folder 2026-10-30T053455Z_9b1e22d7a0c4, which has no record)
 

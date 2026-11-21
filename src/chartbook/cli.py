@@ -5160,10 +5160,13 @@ def _wrong_by_snapshot(the_store, problems) -> list:
     ChartBook 0.5, or a complete snapshot that has gone and that
     increments still name: its files are counted under its name all the
     same, its pipeline is the one whose folder it is in, and its line says
-    that it is a folder with no record, as each of its files' lines does
-    (``store ls`` names the snapshots whose records name those files, and
-    this folder is none of them). Each line has the pipeline, the folder's
-    name and how many files, a pipeline's folders together, oldest first.
+    that it is a folder with no record, as each of its files' lines does,
+    and whose the files are: the snapshot whose record keeps them there,
+    the newest where several do, with how many more
+    (:attr:`~chartbook.store.StoreProblem.kept_by`). That is the snapshot
+    ``store ls`` says lacks them, so the two commands' lines are joined.
+    Each line has the pipeline, the folder's name and how many files, a
+    pipeline's folders together, oldest first.
     What is wrong outside any snapshot (a record that cannot be read, an
     object no pipeline owns, a folder that is not read) has its own line
     below and none here; with nothing wrong in any snapshot there is
@@ -5172,12 +5175,12 @@ def _wrong_by_snapshot(the_store, problems) -> list:
     from chartbook.store import StoreError
 
     counts: dict = {}
-    no_record: set = set()
+    no_record: dict = {}  # each folder with no record, with the snapshots whose records keep its files there
     for problem in problems:
         if getattr(problem, "of_snapshot", False):
             counts[problem.path] = counts.get(problem.path, 0) + 1
             if getattr(problem, "no_record", False):
-                no_record.add(problem.path)
+                no_record.setdefault(problem.path, set()).update(getattr(problem, "kept_by", ()))
     if not counts:
         return []
     # A pipeline's ID is in its records: a folder that has none is named by a record in a folder of its pipeline
@@ -5199,8 +5202,17 @@ def _wrong_by_snapshot(the_store, problems) -> list:
         f"{sum(counts.values()):,} file(s) of {len(counts):,} snapshot(s) are missing or are not what their records say. "
         f"By snapshot, and then each file:"
     ]
+    def whose(folder) -> str:
+        """For a folder with no record: the snapshot whose record keeps its files there, which `store ls` says lacks them; the newest of several (a snapshot's folder is named by when it was made), and how many more."""
+        keepers = sorted(no_record[folder], reverse=True)
+        if not keepers:
+            return ""
+        if len(keepers) == 1:
+            return f"; the record of {keepers[0]} keeps them there"
+        return f"; the records of {keepers[0]} and {len(keepers) - 1:,} more keep them there"
+
     for folder in sorted(counts, key=lambda folder: (pipeline(folder), folder.name)):
-        named = f"{folder.name} (a folder with no record)" if folder in no_record else folder.name
+        named = f"{folder.name} (a folder with no record{whose(folder)})" if folder in no_record else folder.name
         lines.append(f"  {_printable(pipeline(folder))}  {named}  {counts[folder]:,} file(s)")
     return lines
 

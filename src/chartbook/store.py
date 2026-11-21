@@ -624,6 +624,9 @@ class StoreProblem:
             0.5, a complete snapshot that has gone and that increments
             still name). The snapshots that lack the file are then the
             ones whose records name it there, which ``store ls`` says.
+        kept_by: With *no_record*: the folder names of those snapshots,
+            the ones whose records keep the file in that folder, newest
+            first.
         of_record: Whether it is a snapshot's record that cannot be read:
             ``path`` is then the folder the record is in, and nothing of
             that snapshot is checked.
@@ -635,6 +638,7 @@ class StoreProblem:
     of_snapshot: bool = False
     no_record: bool = False
     of_record: bool = False
+    kept_by: tuple = ()
 
     def format(self) -> str:
         """Render as ``hash: message``, one line."""
@@ -3511,6 +3515,8 @@ class FolderStore(Store):
         held: set = set()
         #: For each place whose file is wrong, the snapshots kept as increments that keep it in the complete one they build on
         kept_there: dict = {}
+        #: For each place whose file is wrong, every snapshot whose record keeps a file there: when it was made, and its folder's name
+        keepers: dict = {}
         records = self.records()
         with_record = {record.folder for record in records}  # a snapshot's folder: one whose record is there, read or not
         for record in records:
@@ -3555,6 +3561,7 @@ class FolderStore(Store):
                     if record.increment and where != record.folder and where.name == record.builds_on:
                         kept_there.setdefault(wrong, set()).add(record.folder)
                     said.setdefault(wrong, (asset.content_hash, where, message))
+                    keepers.setdefault(wrong, set()).add((record.made_at, record.folder.name))
         for wrong, (content_hash, where, message) in said.items():
             # And how many snapshots lack it with that one: those kept as increments on it, which keep the file there
             count = len(kept_there.get(wrong, ()))
@@ -3566,7 +3573,11 @@ class FolderStore(Store):
             # lack the file are those whose records name it there, and `store ls` names them
             no_record = where not in with_record
             named = f"the folder {where.name}, which has no record" if no_record else f"the snapshot {where.name}"
-            problems.append(StoreProblem(content_hash, where, f"{message} ({named}){also}", of_snapshot=True, no_record=no_record))
+            # And whose its files are, for the line that counts them: the records that keep the file there, newest first
+            kept_by = tuple(name for _, name in sorted(keepers[wrong], reverse=True)) if no_record else ()
+            problems.append(StoreProblem(
+                content_hash, where, f"{message} ({named}){also}", of_snapshot=True, no_record=no_record, kept_by=kept_by
+            ))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
         # Ahead of them, each record that could not be read, in the order of their paths

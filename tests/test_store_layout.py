@@ -871,7 +871,7 @@ class TestAStoreOf05IsReadAsItIs:
         verify = CliRunner().invoke(main, ["store", "verify"])
         assert verify.exit_code == 1 and verify.output.splitlines()[:4] == [
             "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
-            f"  acme/rates  {cleared.name} (a folder with no record)  1 file(s)",
+            f"  acme/rates  {cleared.name} (a folder with no record; the record of {_folder_of(second).name} keeps them there)  1 file(s)",
             f"{second.content()['treasury']}: _data/treasury.parquet is not in the store (the folder {cleared.name}, which has no record)",
             "",
         ]
@@ -883,7 +883,7 @@ class TestAStoreOf05IsReadAsItIs:
         lines = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
         assert lines[:3] == [
             "2 file(s) of 2 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
-            f"  acme/rates  {cleared.name} (a folder with no record)  1 file(s)",
+            f"  acme/rates  {cleared.name} (a folder with no record; the record of {_folder_of(second).name} keeps them there)  1 file(s)",
             f"  acme/rates  {_folder_of(second).name}  1 file(s)",
         ]
         assert lines[4].endswith(f": _output/curve.html is not in the store (the snapshot {_folder_of(second).name})")
