@@ -231,7 +231,7 @@ on the list reads in turn is on it too, before it:
 $ chartbook run
 Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
 ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/x/.chartbook/store.
-Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.
+Build them in this order, with the commands below, one at a time. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela

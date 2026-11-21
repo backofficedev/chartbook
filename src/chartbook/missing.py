@@ -1112,9 +1112,10 @@ def said(
             f" not in the store at {_plain(listing.stores[0])}." if len(listing.stores) == 1
             else f" not in your stores ({', '.join(_plain(shown) for shown in listing.stores)})."
         ),
-        # "With the commands below": a build by itself ends with no snapshot, and these do
-        "Build it first, with the commands below. They end with a snapshot, which is what this one reads." if one
-        else "Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.",
+        # "With the commands below": a build by itself ends with no snapshot, and these do. "One at a time": a
+        # line is one command, and typed together each runs whatever the one before it did
+        "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads." if one
+        else "Build them in this order, with the commands below, one at a time. Each ends with a snapshot, which is what the next one reads.",
         "",
     ]
     #: What the commands above a line have made or moved: clones, worktrees, and repositories now on another commit

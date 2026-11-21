@@ -129,3 +129,38 @@ settled.
 ({design}`stores-and-backends` leaves its layout open).
 
 **An MCP server,** so that an assistant can browse a catalog and read what it describes.
+
+**A build line that says which commit it is of.** The list of what is not in your store gives each
+pipeline's commands on lines of their own, which every shell reads, PowerShell among them. A line
+no longer stops the next where it fails. Typed one at a time, as the list says, a failure is seen.
+Typed together, a build runs after a `git checkout` that failed, and is of the commit its folder is
+on. What is read through a pin is safe from it, since a pin is met only by the same file or, for
+a dataframe, the same rows. An option
+that names the commit (`chartbook run --snapshot --commit 7802799a41c2`), refused anywhere else,
+would make each line safe by itself. It waits until a list is meant to be typed whole, by a class
+say, or a build of the wrong commit is met ({design}`one-command`).
+
+**Without git.** Today git is asked a good deal: the commit a snapshot is labelled with, whether
+everything is committed, a file as it was at a commit, a repository's address. The direction is to
+need no version control system in particular. A first step is the note a run leaves of what it
+built, for a snapshot to be held against ({design}`one-command`): it is kept in ChartBook's own
+folder, in plain hashes, and asks git only which files of a folder are its source. What a snapshot
+would be labelled with where there is no commit is not settled.
+
+## Smaller things, noted so they are not lost
+
+Found by reviews and by the first runs on Windows, and left for a later version:
+
+- After a run at a pinned commit, the `chartbook.lock` it wrote can stop the next `git checkout` in
+  the same clone, where that commit has no lockfile and the next one has.
+- Two lists of what is not in your store cannot be followed to their end: a pipeline that is built
+  already and another wanted at an older commit, in one repository read by `path`; and a pinned
+  `path` folder that is in no git repository.
+- The tests that type a list's lines type them in a POSIX shell. On Windows they were typed by
+  hand, into Windows PowerShell, `cmd.exe` and Git Bash.
+- On Windows the `cruft link` line that `chartbook init` prints holds JSON, which no one way of
+  quoting gives to `cmd.exe` and PowerShell alike.
+- On Windows the closing line of a run names a pipeline on a connected drive letter by its network
+  folder (`\\server\…`), where the letter was typed.
+- A pipeline that another one depends on, in a network folder with no drive letter, is refused
+  when its build is reached, and not before the run starts.
