@@ -1608,21 +1608,7 @@ The folders are the truth: every plan is made from the store as it is, so a move
 
 The command can always be run again on a moved store, and is the one remedy where a machine that had not been brought the move wrote `pipelines/`, `roots/`, `origins/` or `tmp/` at its top afterwards: every other command refuses such a store and names this one. It merges the notes under `_chartbook/`: one the store has stays and the late one goes aside, but of two notes of one lockfile the store keeps the later, and the other goes aside first. And it moves `pipelines/` aside, whole: nothing under it is moved in, an object no pipeline owns neither, and the last lines name each snapshot there, to be made again with this ChartBook, and each file that arrived for a snapshot already moved, with where it is.
 
-**A store made by ChartBook 0.2** is moved to the layout of 0.3 to 0.5 first, as before ({design}`plan-0.3.0`): a folder for each pipeline, a folder for each snapshot, each file once under its own name. Run the command again to move that one on.
-
-- **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
-  is moved, and says so. Run this on one machine; in a store a sync service keeps, the others wait
-  for the sync.
-- **Files are moved, not copied,** so a store in a synced folder uploads nothing again. Bytes two
-  pipelines' snapshots share are copied for the second. The files of a glob, whose records give no
-  hash for each file, are read once to hash them; in a folder that streams its files, as Google
-  Drive's does, that downloads them. `--dry-run` says how much.
-- **Cut short, it goes on.** What is moved is noted before it is moved, and running it again goes
-  on where it stopped.
-- **What no snapshot names**, a `git` dependency's pins in 0.2, goes to `pipelines/+unowned/`,
-  where it is kept while a lockfile names it.
-- **A store in a bucket** is not moved: it is not available in ChartBook 0.6.0 (see the
-  {doc}`roadmap <../roadmap>`), and a command that meets one stops and says so.
+**A store made by ChartBook 0.2** is moved to the layout of 0.5 by the first run of this command, and on to this version's by a second. The first is the move an earlier version made ({design}`plan-0.3.0`), and goes on where it stopped like the other. Its files are renamed too, but the files of a glob, whose records give no hash for each file, are read once to hash them: in a folder that streams its files, as Google Drive's does, that downloads them, and `--dry-run` says how much. What no snapshot names (a `git` dependency's pins in 0.2) is kept while a lockfile names it.
 
 ```console
 $ chartbook store migrate --dry-run
@@ -1631,6 +1617,8 @@ Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s)
 2.0 GB of globs and documents is read once, to hash each file.
 Nothing was moved (--dry-run).
 ```
+
+**A store in a bucket** is not moved: it is not available in ChartBook 0.6.0 (see the {doc}`roadmap <../roadmap>`), and a command that meets one stops and says so.
 
 `--store NAME` selects one catalog store; with several stores in the catalog it is required.
 

@@ -4654,26 +4654,11 @@ def store_migrate(dry_run, yes):
     may use the store while it runs, and afterwards every machine that
     uses it needs this ChartBook. Cut short, it is run again and goes on.
 
-    A store made by ChartBook 0.2 is moved to the layout of 0.3 to 0.5
-    first, as before; run the command again to move that one on.
+    A store made by ChartBook 0.2 is moved to the layout of 0.5 by the
+    first run of this command, and on to this version's by a second.
 
-    ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
-    for each snapshot in it named by when it was made and its commit, and
-    each file once, under its own name. A store of 0.2 is refused until it
-    is moved, once, on one machine.
-
-    Upgrade every machine that uses the store to ChartBook 0.3 first: a
-    machine still on 0.2 cannot read the store once it is moved, and says
-    so. Then run this on one of them; in a store a sync service keeps, the
-    others wait for the sync.
-
-    Files are moved by renaming, so a store in a synced folder uploads
-    nothing again; bytes two pipelines' snapshots share are copied for the
-    second. The files of a glob, whose records give no hash for each file,
-    are read once to hash them: in a folder that streams its files (Google
-    Drive's), that downloads them. A migrate cut short is run again and
-    goes on where it stopped. A store in a bucket is not moved: it is not
-    available in this version, and a command that meets one says so.
+    A store in a bucket is not moved: it is not available in this
+    version, and a command that meets one says so.
 
     \b
     Examples:
