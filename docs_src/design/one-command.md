@@ -498,6 +498,16 @@ What building it settled:
   A run that makes its own snapshot holds it against the note it has in hand.
 - **Tests of other things that typed `chartbook snapshot` over files written by hand type
   `--as-is`:** fifty-four of them, in seventeen files.
+- **This repository's own examples, and the upgrade notes, were scripts that snapshot.** *(Found
+  by the first full build on the branch.)* `examples/dodo.py` builds each example with that
+  example's doit and then typed `chartbook snapshot`: it types `--as-is` now, and says why.
+  It could build with `chartbook run` instead, which needs the examples trusted on the machine
+  that runs it: the maintainer's to choose. And the notes for upgrading from 0.5 sent every
+  pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
+  `--as-is`.
+- **In a repository git does not trust, a run leaves no note and says nothing of it,** since it
+  cannot ask which files are source; the snapshot there says the folder is in no repository.
+  *(Found on Windows, on a share.)* Left until `snapshot.code_of` tells the two apart.
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It
