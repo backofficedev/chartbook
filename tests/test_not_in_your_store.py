@@ -1568,6 +1568,7 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         ("\\\\.\\C:\\work\\rates", '"\\\\.\\C:\\work\\rates"'),
         ("C:\\work\\rates", '"C:\\work\\rates"'),  # a folder on a drive is as it was
         ("\\work\\rates", '"\\work\\rates"'),  # one backslash: of the drive one is on, and no share
+        ("\\\\\\server\\x", '"\\\\\\server\\x"'),  # and three name no server
     ])
     def test_a_network_path_is_written_as_all_three_shells_take_it(self, word, typed):
         """Found on Windows by typing the list's lines in Git Bash: it reads the two backslashes a network
@@ -1593,6 +1594,14 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         ])
         said = missing.said(listing, here=work / "report", windows=True)
         assert f"     chartbook run --snapshot --project-dir {written}" in said, said
+        # And where its line begins with a checkout, the folder git is given is asked of in the same way
+        pinned = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/mid", "c" * 40, folder=Path(folder)),
+        ])
+        assert _has(
+            missing.said(pinned, here=work / "report", windows=True),
+            f"git -C {written} checkout {'c' * 12}", f"chartbook run --snapshot --project-dir {written}",
+        )
         # And a drive's folder of that name is given none, as before
         assert missing._quoted("C:\\work\\$\\rates", windows=True) == missing.NOT_TEXT
         # The last line is read the same way: the pipeline's own folder, there

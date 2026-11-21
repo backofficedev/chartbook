@@ -924,7 +924,7 @@ def _quoted(text: Union[str, Path], windows: Optional[bool] = None, batch: bool 
     # cmd.exe, Windows PowerShell and Git Bash (typed there too), and is always in quotes. Not a device's
     # path (`\\?\`, `\\.\`), which Windows reads as it is written
     share = not backslashes and _is_a_network_path(text)
-    text = _as_written(text, True, backslashes)
+    text = _as_written(text, backslashes)
     # cmd.exe: inside double quotes `&`, `|`, `<`, `>`, `^` and spaces are text. A `%` stays
     # as it is: doubled it is one only in a batch file, and these lines are pasted at a prompt, where `%20` in an
     # address must stay `%20`. (A `%NAME%` that names a variable is filled in there, in quotes or out, and
@@ -952,15 +952,15 @@ def _is_a_network_path(text: str) -> bool:
     return re.match(r"\\\\[^\\?.]", text) is not None
 
 
-def _as_written(text: str, windows: bool, backslashes: bool = False) -> str:
-    """A word as a command for Windows has it, before its quotes: a network path with forward slashes; anything else, and any word elsewhere, as it is.
+def _as_written(text: str, backslashes: bool = False) -> str:
+    """A word as a command for Windows has it, before its quotes: a network path with forward slashes, and anything else as it is.
 
     What a shell would read in a word is asked of this
     (:func:`_a_windows_shell_reads`), since this is what is pasted: a
     share's folder named ``$`` is ``/$/`` there, which is text, where
     ``\\$`` is not.
     """
-    return text.replace("\\", "/") if windows and not backslashes and _is_a_network_path(text) else text
+    return text.replace("\\", "/") if not backslashes and _is_a_network_path(text) else text
 
 
 def typed(words: Iterable[Union[str, Path]], windows: Optional[bool] = None) -> str:
@@ -1160,15 +1160,15 @@ def said(
         system it runs on, by default.
     """
     windows = os.name == "nt" if windows is None else windows
-    #: The words of the line being made, as they are before they are quoted
+    #: The words of the line being made, as a command for Windows has them before they are quoted
     held: list[str] = []
 
     def word(text: Union[str, Path]) -> str:
-        held.append(_as_written(str(text), windows))
+        held.append(_as_written(str(text)))
         return _quoted(text, windows)
 
     def named(folder: Union[str, Path]) -> str:
-        held.append(_as_written(str(folder), windows))
+        held.append(_as_written(str(folder)))
         return _in(folder, windows)
 
     wanted = listing.wanted
@@ -1371,7 +1371,7 @@ def said(
             lines.append(f"     What it reads in turn is not known: {unknown}. Its own `chartbook run` says.")
     # With its folder, as every command above has its own: typed wherever those were, it builds this pipeline.
     # The pipeline's folder may be one of somebody's repository too, named as they named it
-    own = _a_windows_shell_reads([_as_written(str(listing.directory), True)]) if windows else ""
+    own = _a_windows_shell_reads([_as_written(str(listing.directory))]) if windows else ""
     lines += ["", "Then here again:", (
         f"     In this pipeline's folder, which no command can name (it holds {own}): `{again}`" if own
         else f"     {again}{_in(listing.directory, windows)}"
