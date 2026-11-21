@@ -165,6 +165,16 @@ class NotInEveryStore(SnapshotError):
     """A snapshot that was written to the first of the stores it goes to, and whose copy to another failed: making it again finishes the copies."""
 
 
+class RepositoryNotTrusted(SnapshotError):
+    """A pipeline's folder is in a repository that git will not read, because another user owns it or it is on a network share (:func:`code_of`).
+
+    The folder is in git, and git says nothing of it until it is told to
+    trust the repository: the message has the command that does that. A
+    class of its own so that what asks where a folder is in git can tell
+    this from a folder in no repository without reading the sentence.
+    """
+
+
 class StoreNotReadyError(SnapshotError):
     """Raised when the store does not have all of a snapshot's objects yet, or not all of their bytes.
 
@@ -1030,12 +1040,13 @@ def code_of(directory: Union[str, Path]) -> Code:
     typed in another letter case under a parent that may not be listed
     ends there too.
 
+    :raises RepositoryNotTrusted: If git does not trust the repository the
+        folder is in (another user's, or on a network share): the message
+        has the command that makes git trust it. A ``SnapshotError``, and
+        the one case of them with a class of its own.
     :raises SnapshotError: If there is no such folder, git could not be
-        run, the folder is not in a git repository, git does not trust
-        the repository it is in (another user's, or on a network share:
-        the message has the command that makes git trust it), the
-        repository has no commit yet, or git gives a top the folder is
-        not under.
+        run, the folder is not in a git repository, the repository has no
+        commit yet, or git gives a top the folder is not under.
     """
     directory = Path(directory).resolve()
     if not directory.is_dir():
@@ -1047,7 +1058,7 @@ def code_of(directory: Union[str, Path]) -> Code:
             raise  # not installed, or not on the PATH: that is what is known, and it is said
         not_trusted = _not_trusted_by_git(directory, str(error))
         if not_trusted is not None:
-            raise SnapshotError(not_trusted) from None
+            raise RepositoryNotTrusted(not_trusted) from None
         raise SnapshotError(
             f"{directory} is not in a git repository. A snapshot is labelled "
             f"with the commit it was built from, so only a pipeline that is in "

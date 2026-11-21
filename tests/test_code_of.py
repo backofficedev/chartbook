@@ -218,6 +218,36 @@ class TestARepositoryGitDoesNotTrust:
         )
         assert "is not in a git repository" not in str(refused.value)
 
+    def test_it_is_an_error_of_its_own_class_and_no_other_case_is(self, work, monkeypatch):
+        """For what must tell this case from the others without reading the sentence: ``snapshot.RepositoryNotTrusted``, a ``SnapshotError``. Every other case raises a ``SnapshotError`` that is not one."""
+        directory = _folder(work / "rates")
+        others = [work / "no-such-folder", directory]  # no folder there; a folder in no repository
+        begun = _folder(work / "begun")
+        _git(begun, "init", "--quiet", "-b", "main")
+        others.append(begun)  # a repository with no commit yet
+        elsewhere = _committed(_folder(work / "repo"))
+        (work / "elsewhere").mkdir()
+        _git(elsewhere, "config", "core.worktree", str(work / "elsewhere"))
+        others.append(elsewhere)  # git gives a top the folder is not under
+        for other in others:
+            with pytest.raises(SnapshotError) as refused:
+                snapshot.code_of(other)
+            assert type(refused.value) is SnapshotError, (other, refused.value)
+        for words in (
+            "fatal: not a git repository (or any of the parent directories): .git",
+            "fatal: not a git repository: /srv/safe.directory-notes/main/.git/worktrees/tree",
+            "git could not be run: [Errno 2] No such file or directory: 'git'",
+        ):
+            self._refusing(monkeypatch, words)
+            with pytest.raises(SnapshotError) as refused:
+                snapshot.code_of(directory)
+            assert type(refused.value) is SnapshotError, (words, refused.value)
+        for words in (ON_A_SHARE, ANOTHER_USERS):
+            self._refusing(monkeypatch, words)
+            with pytest.raises(snapshot.RepositoryNotTrusted) as refused:
+                snapshot.code_of(directory)
+            assert isinstance(refused.value, SnapshotError) and str(refused.value).startswith("git does not trust the repository that ")
+
     def test_the_folder_in_the_command_is_quoted_for_this_systems_shell(self, work, monkeypatch):
         """A share's folder as git writes it has a ``%`` and brackets; one with a space is one word of the command all the same."""
         from chartbook.missing import _quoted
