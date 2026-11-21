@@ -3971,6 +3971,17 @@ class _FolderPending(PendingSnapshot):
     is put, aside, where the store keeps what is being written, and moved
     into the folder with the record; and each entry :meth:`put` hands back
     is given the folder that keeps it (``kept_in``, ``kept_as``) then.
+
+    For one begun undecided, the store lacks a file's bytes when no record
+    of the pipeline names them: the disk is not asked about an earlier
+    snapshot's file for each file put, which for a table of thousands of
+    small files was thousands of questions of a store that may be a folder
+    a sync service keeps. It is asked as the kind is decided
+    (:func:`chartbook.snapshot.to_be_kept`), and of each file an increment
+    keeps where it is, once more, before its record (:meth:`_settle`).
+    Bytes a record names that the store has lost are found then; the file
+    given is at hand until the record is written (:meth:`at_hand`), and
+    they are written from it.
     """
 
     def __init__(
@@ -4254,7 +4265,13 @@ class _FolderPending(PendingSnapshot):
 
         A file that one has whole, by its bytes and its size, whatever its
         name there, is kept there. Its use is noted as it is looked at, so
-        that ``store gc`` on this machine keeps it meanwhile.
+        that ``store gc`` on this machine keeps it meanwhile. This is the
+        last look at each file the increment keeps there, a moment after
+        the look that decided its kind
+        (:func:`chartbook.snapshot.to_be_kept`), and it is what finds a
+        file lost between the two. When the file was put, the records
+        alone said whether the store has its bytes
+        (:meth:`_keep_for_later`).
 
         :raises BuiltOnGoneError: If that snapshot's record names a file of
             these bytes and the file is not there whole: it has lost it
@@ -4419,7 +4436,17 @@ class _FolderPending(PendingSnapshot):
         being written, and :attr:`placed` says so: the file it was given
         from need not stay for it, so a table written out for the snapshot
         makes room for the next. If an earlier snapshot of the pipeline
-        has them whole, nothing is written until the record is.
+        has them, nothing is written until the record is.
+
+        Whether the store has its bytes is told here by the records alone
+        (:meth:`_named_by_a_record`): the disk is not asked about a file
+        for each file put. It is asked when the snapshot's kind is
+        decided, and before its record (:meth:`_settle`), and until then
+        the file given stays at hand (:meth:`at_hand`): bytes a record
+        names and the store has lost are found then, and written from the
+        file given (:meth:`_complete`). The folder of the snapshot that
+        keeps them is noted now, so that ``store gc`` removes nothing
+        from it meanwhile.
         """
         # At the length it has in a complete snapshot, before anything of it is written; an increment's, one longer, as it is written
         nominal = self.pipeline_path.joinpath(snapshot_folder_name(self.made_at, self.commit), *path.split("/"))
@@ -4432,7 +4459,7 @@ class _FolderPending(PendingSnapshot):
             return entry
         if path in self._here:
             raise StoreError(f"{path} is in this snapshot already, with other bytes than {source}.")
-        kept = self._held_whole(content_hash, size)
+        kept = self._named_by_a_record(content_hash, size)
         if kept is None:
             aside, written, kind = self._written_aside(source, links)
             used.add(kind)
@@ -4445,6 +4472,22 @@ class _FolderPending(PendingSnapshot):
         self._here[path] = content_hash
         self._later.append((entry, kept, source))
         return entry
+
+    def _named_by_a_record(self, content_hash: str, size: int) -> Optional[Path]:
+        """Where the newest snapshot of the pipeline that names a file of these bytes, at this size, says it is; None if none names one.
+
+        By the records alone: nothing is asked of the disk. The folder of
+        the snapshot that keeps the file is noted
+        (:meth:`_note_folder_of`), once a folder, so that ``store gc``
+        removes nothing from it until this snapshot is written or let go.
+        Whether the file is there, whole, is asked before the record
+        (:meth:`_held_whole`), and found as it is copied (:meth:`_complete`).
+        """
+        for file in reversed(self._kept_files().get(content_hash, [])):
+            if file.size_bytes == size:
+                self._note_folder_of(file.location)
+                return file.location
+        return None
 
     def _held_whole(self, content_hash: str, size: int) -> Optional[Path]:
         """Where an earlier snapshot of the pipeline keeps a file of these bytes, whole by its size; None if none does.

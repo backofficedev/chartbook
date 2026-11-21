@@ -444,9 +444,12 @@ class TestOneNoteForTheFolderItTakesFilesFrom:
         for found in asked.values():
             mark = store_module.FOLDER_MARK
             assert all(line.startswith(mark) for line in found.note_lines), found.note_lines
-            folders = sorted(line[len(mark):] for line in found.note_lines)
-            assert len(folders) == 2 and folders[1] == found.built_on, folders  # its own, under increments/, and the one it builds on
-            assert folders[0].startswith("increments/acme+daily/")
+            folders = [line[len(mark):] for line in found.note_lines]
+            # The one it builds on, once; and its own, under increments/ (the next second's name too, where
+            # the first snapshot was made in the same second and has the name)
+            assert folders.count(found.built_on) == 1 and len(set(folders)) == len(folders), folders
+            own = [folder for folder in folders if folder != found.built_on]
+            assert 1 <= len(own) <= 2 and all(folder.startswith("increments/acme+daily/") for folder in own), folders
 
     def test_a_gc_while_the_note_is_fresh_removes_nothing_from_the_folder(self, tmp_path, store, monkeypatch):
         """`store gc` is carried out as the increment's own files come into its folder, and may remove the snapshot it builds on. It takes that one's record, as it always could; of its folder it removes nothing, where it used to leave only the files the increment keeps there."""
@@ -500,6 +503,188 @@ class TestOneNoteForTheFolderItTakesFilesFrom:
         _gc(store.root)
         assert _files_of(second.kept.folder) == {"_data/codes.parquet", "_chartbook/CLEARED.txt"}
         assert snapshot.all_snapshots(FolderStore(store.root)) and FolderStore(store.root).verify() == []
+
+
+def _lose(path: Path, to: bytes = None) -> None:
+    """A file of the store goes, as one a sync lost; or is of another size, as one a sync has brought part of."""
+    os.chmod(path, 0o600)  # what a store keeps is read-only
+    path.unlink() if to is None else path.write_bytes(to)
+    store_module._found_whole.clear()
+
+
+def _put(pending, scratch: Path, name: str, content: bytes):
+    """Give one file of acme/sized to a snapshot being made, as ``data/<name>.bin``; what the store handed back, and the file given."""
+    scratch.mkdir(exist_ok=True)
+    source = scratch / f"{name}.bin"
+    source.write_bytes(content)
+    return pending.put(source, place=f"data/{name}.bin"), source
+
+
+def _written(store: FolderStore, pending, puts: dict, number: int, complete: bool = False) -> Path:
+    """Decide how a snapshot of acme/sized is kept, as :func:`chartbook.snapshot.make` does once every file is put, and write its record; the record."""
+    from chartbook import snapshot
+    from chartbook.refs import AssetRef
+
+    assets, held = {}, {}
+    for name, put in puts.items():
+        local = AssetRef(kind="dataframe", name=name)
+        assets[str(local)] = snapshot.asset_record(local.in_pipeline("acme/sized"), "acme/sized", f"./data/{name}.bin", put, True)
+        held[str(local)] = put.stored
+    taken = snapshot.Snapshot("acme/sized", COMMIT, "", LONG_AGO.format(number), assets, stored={"records": held})
+    decided = snapshot.to_be_kept(store, taken, complete)
+    if decided.increment:
+        pending.keep_as_increment(decided.builds_on, decided.increments_bytes)
+    return pending.write(taken.to_document())
+
+
+def _sized(store: FolderStore, scratch: Path, files: dict, number: int, complete: bool = False) -> Path:
+    """Write one snapshot of acme/sized of *files*, each a name with its bytes; its record."""
+    pending = store.begin("acme/sized", COMMIT, LONG_AGO.format(number), undecided=True)
+    try:
+        return _written(store, pending, {name: _put(pending, scratch, name, content)[0] for name, content in files.items()}, number, complete)
+    except BaseException:
+        pending.discard()
+        raise
+
+
+class TestNoLookAtAFileAsItIsPut:
+    """The store was asked whether a file of an earlier snapshot is there, whole, three times over: as each file was put, as the rule of adding up asked of the snapshot to build on, and before the record. When a file is put, the records now say whether the store has its bytes, and the disk is not asked.
+
+    The two looks that are left are a moment apart, and both stay. The
+    first decides which snapshot is built on, and passes over one that has
+    lost a file for the one before it. The second is the last before the
+    record, and is what finds a file lost between the two
+    (``tests/test_snapshot_decides.py``, ``TestThePromise``): it could take
+    what the first was told, which :meth:`FolderStore.holes_of` hands on,
+    and that instant would then go unseen.
+
+    What going by the records leaves to find later, bytes a record names
+    that the store has lost, is found by those looks while the file given
+    is still at hand.
+    """
+
+    @counted
+    def test_a_file_of_the_snapshot_it_builds_on_is_asked_about_twice_and_not_as_it_is_put(self, asked):
+        for found in asked.values():
+            assert all(location.startswith(found.built_on + "/") for location in found.looks)
+            kept_there = [location for location in found.looks if "/parts/" in location]
+            # Each file of the table that the snapshot it builds on has: as the kind is decided, and before the record
+            assert len(kept_there) == found.files - NEW and {found.looks[location] for location in kept_there} == {2}
+            assert max(found.looks.values()) == 2, found.looks.most_common(3)
+
+    @pytest.fixture
+    def daily(self, tmp_path, store):
+        """A pipeline with a first, complete snapshot of a table of five files."""
+        from chartbook import snapshot
+
+        project = _pipeline(tmp_path.resolve() / "project", 5)
+        first = snapshot.make(project, store=store, made_at=LONG_AGO.format(0))
+        assert first.made and not first.kept.increment
+        return project, first
+
+    def _whole_and_complete(self, store, report, files: int) -> None:
+        """The snapshot is written complete: every file of it in its own folder, each what its record says."""
+        assert report.made and not report.kept.increment
+        fresh = FolderStore(store.root)
+        assert fresh.builds_on(report.snapshot.path) is None and fresh.verify_snapshot(report.snapshot.path) == []
+        assert len([name for name in _files_of(report.kept.folder) if "/parts/" in name]) == files
+        assert report.kept.folder.parent.parent.name == "snapshots"
+
+    def test_with_nothing_lost_it_is_an_increment(self, daily, store):
+        from chartbook import snapshot
+
+        project, first = daily
+        _write_days(project, 5, 1)
+        second = snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.made and second.kept.increment and second.kept.builds_on == first.kept.folder.name
+        assert FolderStore(store.root).verify_snapshot(second.snapshot.path) == []
+
+    @pytest.mark.parametrize("to", [None, b"part of it"], ids=["lost", "of another size"])
+    def test_a_file_lost_before_the_snapshot_is_begun_leaves_it_complete(self, daily, store, to):
+        from chartbook import snapshot
+
+        project, first = daily
+        _lose(first.kept.folder / "_data" / "parts" / "2019-01" / "2019-01-02.parquet", to)
+        _write_days(project, 5, 1)
+        _as_another_process()
+        self._whole_and_complete(store, snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(1)), 6)
+
+    @pytest.mark.parametrize("to", [None, b"part of it"], ids=["lost", "of another size"])
+    def test_a_file_lost_once_every_file_is_put_leaves_it_complete(self, daily, store, monkeypatch, to):
+        """Lost between the last file put and the moment the kind is decided: when it was put the records said the store had it, and the look that is left finds that it has not."""
+        from chartbook import snapshot
+
+        project, first = daily
+        _write_days(project, 5, 1)
+        real, lost = snapshot.to_be_kept, []
+
+        def deciding(*args, **kwargs):
+            if not lost:
+                lost.append(_lose(first.kept.folder / "_data" / "parts" / "2019-01" / "2019-01-02.parquet", to))
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(snapshot, "to_be_kept", deciding)
+        self._whole_and_complete(store, snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(1)), 6)
+        assert lost
+
+    @pytest.mark.parametrize("to", [None, b"part of it"], ids=["lost", "of another size"])
+    def test_a_file_lost_once_its_kind_is_decided_leaves_it_complete(self, daily, store, monkeypatch, to):
+        """Lost between the look that decided on an increment and the record: the look before the record finds it, which is why that look stays."""
+        from chartbook import snapshot
+
+        project, first = daily
+        _write_days(project, 5, 1)
+        real, decided = snapshot.to_be_kept, []
+
+        def deciding(*args, **kwargs):
+            kept = real(*args, **kwargs)
+            if not decided:
+                _lose(first.kept.folder / "_data" / "parts" / "2019-01" / "2019-01-02.parquet", to)
+            decided.append(kept.increment)
+            return kept
+
+        monkeypatch.setattr(snapshot, "to_be_kept", deciding)
+        self._whole_and_complete(store, snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(1)), 6)
+        assert decided == [True]  # by the rule it was an increment, and the file went after that was said
+
+    def test_bytes_the_store_lacks_are_written_aside_as_they_are_put_and_bytes_it_has_lost_stay_at_hand(self, tmp_path, store):
+        """Room for one table at a time: a file no record names is written into the store when it is put, and the file given need not stay. One a record names waits for the record, with the file given at hand; if the store has lost it, the look before the record finds that, and it is written from the file given."""
+        scratch = tmp_path / "files"
+        first = _sized(store, scratch, {"big": b"B" * 100, "small": b"s" * 10}, 0)
+        _lose(first.parent.parent / "data" / "big.bin")
+        second = FolderStore(store.root).begin("acme/sized", COMMIT, LONG_AGO.format(1), undecided=True)
+        new, given_new = _put(second, scratch, "new", b"n" * 5)
+        assert second.placed and second.at_hand() == set()  # the store lacked it: written aside, and not wanted at hand
+        aside = [path for path in (store.root / "_chartbook" / "tmp").iterdir() if path.suffix == ".part"]
+        assert [path.read_bytes() for path in aside] == [b"n" * 5]
+        big, given_big = _put(second, scratch, "big", b"B" * 100)
+        small, given_small = _put(second, scratch, "small", b"s" * 10)
+        # A record names both, so neither is written yet, and both files given are wanted until the record is
+        assert second.at_hand() == {os.path.realpath(given_big), os.path.realpath(given_small)}
+        assert len([path for path in (store.root / "_chartbook" / "tmp").iterdir() if path.suffix == ".part"]) == 1
+        record = _written(FolderStore(store.root), second, {"new": new, "big": big, "small": small}, 1)
+        kept = store_module.read_kept_record(record)
+        # The one it would build on has lost a file: it is complete, and the lost bytes came from the file given
+        assert kept.complete and not kept.increment and record.parent.parent.parent.parent.name == "snapshots"
+        assert (record.parent.parent / "data" / "big.bin").read_bytes() == b"B" * 100
+        assert FolderStore(store.root).verify_snapshot(record) == []
+
+    def test_a_gc_between_a_put_and_the_record_leaves_the_folder_it_was_to_copy_from(self, tmp_path, store):
+        """The file given goes meanwhile (its pipeline is building again), and `store gc` clears the only snapshot that has its bytes. The folder was noted when the file was put, by the records and with no look at the disk, so its files are there to copy when the record is written."""
+        scratch = tmp_path / "files"
+        first = _sized(store, scratch, {"big": b"B" * 100, "small": b"s" * 10}, 0)
+        _sized(FolderStore(store.root), scratch, {"big": b"C" * 100, "small": b"t" * 10}, 1)
+        third = FolderStore(store.root).begin("acme/sized", COMMIT, LONG_AGO.format(2), undecided=True)
+        big, given = _put(third, scratch, "big", b"B" * 100)
+        assert not third.placed
+        given.unlink()
+        _gc(store.root)
+        assert not first.exists() and (first.parent.parent / "data" / "big.bin").read_bytes() == b"B" * 100
+        record = _written(FolderStore(store.root), third, {"big": big}, 2)
+        assert (record.parent.parent / "data" / "big.bin").read_bytes() == b"B" * 100
+        assert FolderStore(store.root).verify_snapshot(record) == []
+        _gc(store.root)
+        assert not first.parent.parent.exists()  # its note gone, the cleared folder goes whole
 
 
 @pytest.fixture
