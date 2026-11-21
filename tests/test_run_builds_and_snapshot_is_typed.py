@@ -26,6 +26,7 @@ from chartbook import config, lock, missing, run, snapshot
 from chartbook.cli import main
 from chartbook.store import FolderStore
 from tests.fixtures import name_no_snapshot
+from tests.snapshot_lines import COMPLETE, INCREMENT, PIN_UPDATE, made_at, said_made, said_made_for_this_run
 from tests.test_lock_by_kind import _git
 
 #: A build that writes the one table the manifest declares, the same bytes every time, and says that it ran
@@ -36,7 +37,9 @@ DEMO = {
     "dataframes": {"out": {"path": "./out.csv", "docs": "d"}},
 }
 IGNORED = "/out.csv\n/build.log\n"
-MADE = "Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`."
+#: The two lines a snapshot that is made ends with are matched, not compared: the first carries a count of files and a size.
+#: Each test names the form it expects, complete for a pipeline's first snapshot (tests/snapshot_lines.py;
+#: tests/test_snapshot_decides.py holds each form to the byte)
 
 posix = pytest.mark.skipif(os.name == "nt", reason="the build script here is POSIX shell")
 
@@ -275,7 +278,7 @@ class TestARunMakesNoSnapshot:
         words = shlex.split(line[line.index("`") + 1:line.rindex("`")])
         assert words[:2] == ["chartbook", "snapshot"]
         made = CliRunner().invoke(main, [*words[1:], "--no-gc-reminder"])
-        assert made.exit_code == 0 and MADE in made.output.splitlines()
+        assert made.exit_code == 0 and said_made(made.output, COMPLETE)
         assert [taken.pipeline for taken in _snapshots(store)] == ["acme/demo"]
 
     def test_the_function_reports_what_it_built_and_did_not_snapshot(self, demo, store):
@@ -305,7 +308,7 @@ class TestARunMakesNoSnapshot:
         _depends_on_upstream(demo)
         result = _run("--upstream")
         assert result.exit_code == 0, result.output
-        assert "Snapshot made, for what depends on it in this run to pin." in result.output.splitlines()
+        assert said_made_for_this_run(result.output, COMPLETE) and PIN_UPDATE not in result.output  # the first of acme/up: complete
         assert result.output.splitlines()[-2:] == _closing()  # last of all, after what is said of the catalog
         assert [(taken.pipeline, taken.built_by_run) for taken in _snapshots(store)] == [("acme/up", True)]
 
@@ -427,7 +430,9 @@ class TestASnapshotIsTyped:
         commit = _git(demo, "rev-parse", "HEAD")
         result = _snapshot()
         assert result.exit_code == 0, result.output
-        assert result.output.splitlines()[:2] == [f"acme/demo at {commit[:7]}: 1 asset(s) in the store", MADE]
+        # First what is in the store, then the two lines that say a snapshot was made
+        assert result.output.splitlines()[0] == f"acme/demo at {commit[:7]}: 1 asset(s) in the store"
+        assert made_at(result.output.splitlines(), COMPLETE) == 1  # a pipeline's first: complete
         (taken,) = _snapshots(store)
         assert taken.commit == commit and taken.assets["out"]["content_hash"]
         # Nothing was built again, and its record does not say that ChartBook ran the build: it took the person's word
@@ -462,6 +467,16 @@ class TestASnapshotIsTyped:
             "  not built: acme/demo:out (./out.csv)",
         ]
 
+    def test_typed_from_another_folder_the_command_it_names_says_which_pipeline(self, demo, work, store, monkeypatch):
+        """`chartbook run`, typed where the person stands, would build whatever is there: the hint carries the folder it was given."""
+        monkeypatch.chdir(work)
+        result = _snapshot("--project-dir", str(demo))
+        assert result.exit_code == 1
+        assert result.output.splitlines()[0] == (
+            "Error: acme/demo has built nothing it declares, so there is nothing to take a snapshot of. "
+            f"Build it first: `chartbook run --project-dir {missing._quoted(demo)}`."
+        )
+
     def test_the_lockfile_a_run_wrote_is_one_more_file_to_commit(self, demo, store, upstream):
         """A snapshot is labelled with a commit, and whoever builds that commit again reads what its lockfile pins."""
         _snapshot_of(upstream, store)
@@ -495,7 +510,7 @@ class TestASnapshotIsTyped:
         assert f"`chartbook run --snapshot --project-dir {missing._quoted(demo)}`, which builds" in elsewhere.output.splitlines()[-1]
         _committed(demo)
         made = _snapshot()
-        assert made.exit_code == 0 and MADE in made.output.splitlines()
+        assert made.exit_code == 0 and said_made(made.output, COMPLETE)
         (taken,) = [taken for taken in _snapshots(store) if taken.pipeline == "acme/demo"]
         assert [entry["id"] for entry in taken.inputs] == ["acme/up"] and _ran(demo) == 1
 
@@ -584,6 +599,7 @@ class TestASnapshotIsTyped:
         # where the pipeline is
         made = _snapshot("--project-dir", str(a))
         assert made.exit_code == 0, made.output
+        assert os.name == "nt" or said_made(made.output, COMPLETE)  # on Windows it is the one made a moment ago
         (taken,) = _snapshots(store)
         assert taken.subdirectory == "pipes/a"
 
@@ -618,7 +634,7 @@ class TestASnapshotIsTyped:
         _depends_on_upstream(demo)
         assert "Wrote chartbook.lock." in _run().output
         made = _snapshot()
-        assert made.exit_code == 0 and MADE in made.output.splitlines()
+        assert made.exit_code == 0 and said_made(made.output, COMPLETE)
 
 
 class TestRunSnapshot:
@@ -628,12 +644,10 @@ class TestRunSnapshot:
         result = _run("--snapshot", "--no-gc-reminder")
         assert result.exit_code == 0, result.output
         commit = _git(demo, "rev-parse", "HEAD")
-        assert result.output.splitlines()[:4] == [
-            "acme/demo: build",
-            f"acme/demo at {commit[:7]}: 1 asset(s) in the store",
-            MADE,
-            "Ran build in 1 pipeline(s).",
-        ]
+        # The build, what is in the store, the two lines that say a snapshot was made, and then that the build ran
+        lines = result.output.splitlines()
+        assert lines[:2] == ["acme/demo: build", f"acme/demo at {commit[:7]}: 1 asset(s) in the store"]
+        assert made_at(lines, COMPLETE) == 2 and lines[4] == "Ran build in 1 pipeline(s)."
         assert not any(line in result.output for line in _closing())  # it has its snapshot
         (taken,) = _snapshots(store)
         assert taken.commit == commit and taken.built_by_run and taken.assets["out"]["content_hash"]
@@ -660,14 +674,14 @@ class TestRunSnapshot:
         _depends_on_upstream(demo)
         result = _run("--snapshot", "--no-gc-reminder")
         assert result.exit_code == 0, result.output
-        assert MADE in result.output.splitlines()
+        assert said_made(result.output, COMPLETE)
         assert _git(demo, "status", "--porcelain") == "?? chartbook.lock"
 
     def test_of_a_commit_checked_out_by_its_hash(self, demo, store):
         """What the list of what is not in a store says to type, in a clone at the commit a pin names."""
         _git(demo, "checkout", "--quiet", "--detach")
         asked = _run("--snapshot", "--no-gc-reminder")
-        assert asked.exit_code == 0 and MADE in asked.output.splitlines() and len(_snapshots(store)) == 1
+        assert asked.exit_code == 0 and said_made(asked.output, COMPLETE) and len(_snapshots(store)) == 1
 
     def test_it_asks_nothing_at_a_terminal(self, stores, demo, work, monkeypatch):
         """A snapshot typed by hand may ask which store a new pipeline goes to. A run does not: it writes where the catalog sends the pipeline."""
@@ -726,7 +740,7 @@ class TestAFirstStoreThatIsOnlyRead:
         )
         # The second of those, as it is given
         once = _snapshot("--store", "second")
-        assert once.exit_code == 0 and MADE in once.output.splitlines(), once.output
+        assert once.exit_code == 0 and said_made(once.output, COMPLETE), once.output
         assert _stored(work, "first") == [] and _stored(work, "second") == ["acme/demo"]
         (demo / "out.csv").write_text("c,d\n", encoding="utf-8", newline="\n")
         # Done as the first says, the snapshot is made, there
@@ -736,7 +750,8 @@ class TestAFirstStoreThatIsOnlyRead:
         )
         again = _snapshot()
         assert again.exit_code == 0, again.output
-        assert MADE in again.output.splitlines() and "Stores: second" in again.output.splitlines()
+        # The second of the pipeline there, its table another and its documents the same: an increment
+        assert said_made(again.output, INCREMENT) and "Stores: second" in again.output.splitlines()
         assert _stored(work, "first") == [] and _stored(work, "second") == ["acme/demo", "acme/demo"]
 
     def test_a_store_it_is_sent_to_that_is_only_read_is_not_told_to_be_sent(self, stores, demo, work):
@@ -771,7 +786,7 @@ class TestAFirstStoreThatIsOnlyRead:
             second={"url": str(work / "second"), "pipelines": ["acme/demo"]},
         )
         again = _run("--snapshot", "--no-gc-reminder")
-        assert again.exit_code == 0 and MADE in again.output.splitlines(), again.output
+        assert again.exit_code == 0 and said_made(again.output, COMPLETE), again.output
         assert _stored(work, "first") == [] and _stored(work, "second") == ["acme/demo"] and _ran(demo) == 1
 
     def test_with_nowhere_to_send_it_such_a_run_says_only_that(self, stores, demo, work):

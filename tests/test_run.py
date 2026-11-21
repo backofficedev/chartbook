@@ -659,11 +659,16 @@ class TestRunThenSnapshot:
         monkeypatch.chdir(work / "upstream")
         result = CliRunner().invoke(main, ["run", "--snapshot"])
         assert result.exit_code == 0, result.output
+        from chartbook.cli import _format_bytes
+
+        (record,) = default_store().records()
+        files = [file for asset in record.assets for file in asset.files]
         assert result.output.splitlines() == [
             "upstream: build",
             f"upstream at {commit[:7]}: 1 asset(s) in the store",
-            "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook pin --update`.",
+            # The first snapshot of a pipeline is complete: every file its record lists, and their size
+            f"Snapshot made: {len(files)} files, {_format_bytes(sum(file.size_bytes for file in files))}.",
+            "A pipeline that depends on this one gets it with `chartbook pin --update`.",
             "Ran build in 1 pipeline(s).",
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",

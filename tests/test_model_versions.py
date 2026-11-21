@@ -328,6 +328,12 @@ class TestNamingAVersion:
             models.path("other:m@champion", project_dir=forecast)
 
 
+def _kept(taken) -> Path:
+    """Where the store keeps the model of one snapshot, asked of the store: in the snapshot's own folder, or, for one kept as an increment, in the complete snapshot it builds on."""
+    held = default_store().files(taken.content()["model/m"], taken.pipeline, name="m.json", snapshot=(taken.commit, taken.made_at))
+    return held.one.location
+
+
 def _serve(forecast: Path, key: str = "forecast") -> Path:
     """A pipeline beside ``forecast`` that depends on it, to serve its model."""
     serve = forecast.parent / "serve"
@@ -653,14 +659,15 @@ class TestAnotherPipelinesVersion:
             assert models.path(reference, project_dir=serve).read_bytes() == b"weights-1", reference
 
     def test_the_pinned_models_path_stays_and_a_version_by_its_hash_or_label_is_in_the_newest_snapshot_holding_it(self, forecast):
-        """Each snapshot holds its own copy of every file. Which one a read is handed:
+        """Which snapshot's copy a read is handed:
 
-        the pinned snapshot's own for the model as pinned, while it is in
-        the store and whole; and for a version named by its label or by its
-        hash, the newest snapshot of the pipeline that holds it, which is
-        the one `store gc` keeps: so that path changes when a later
-        snapshot holds the version too (the second and third reviews of the
-        store's layout, 2026-11-20).
+        the pinned snapshot's for the model as pinned, while it is in the
+        store and whole; and for a version named by its label or by its
+        hash, that of the newest snapshot of the pipeline that holds it,
+        which is the one `store gc` keeps (the second and third reviews of
+        the store's layout, 2026-11-20). Where a snapshot keeps the file
+        is asked of the store: its own folder, or, for one kept as an
+        increment, the complete snapshot it builds on.
         """
         from chartbook import lock
 
@@ -668,23 +675,23 @@ class TestAnotherPipelinesVersion:
         serve = _serve(forecast)
         lock.pin(serve)
         store = default_store()
-        # The two snapshots' folders, in the order they were made (their names tell only to the second)
-        made = [taken.path.parent.parent for taken in sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)]
+        # The two snapshots, in the order they were made (their folders' names tell only to the second)
+        made = sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)
         references =("forecast:m", "forecast:m@champion", f"forecast:m@{first}", f"forecast:m@{second}")
         before = {reference: models.path(reference, project_dir=serve) for reference in references}
         assert before == {
-            "forecast:m": made[1] / "_models" / "m.json",
-            "forecast:m@champion": made[0] / "_models" / "m.json",
-            f"forecast:m@{first}": made[0] / "_models" / "m.json",
-            f"forecast:m@{second}": made[1] / "_models" / "m.json",
+            "forecast:m": _kept(made[1]),
+            "forecast:m@champion": _kept(made[0]),
+            f"forecast:m@{first}": _kept(made[0]),
+            f"forecast:m@{second}": _kept(made[1]),
         }
         # Something else of the pipeline changes, and it makes a third snapshot, which holds the second version again
         (forecast / "README.md").write_text("# Forecast, with a word more\n", encoding="utf-8", newline="\n")
         _commit(forecast)
         assert snapshot.make(forecast).made and len(store.all_snapshot_files()) == 3
-        newest = max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at).path.parent.parent
+        newest = max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)
         assert {reference: models.path(reference, project_dir=serve) for reference in references} == {
-            **before, f"forecast:m@{second}": newest / "_models" / "m.json",
+            **before, f"forecast:m@{second}": _kept(newest),
         }
 
     def test_which_reads_of_a_version_move_when_a_later_snapshot_holds_it_too(self, forecast):
@@ -699,6 +706,10 @@ class TestAnotherPipelinesVersion:
         in its own pipeline or through a lockfile; a label read in its own
         pipeline; and a label read through a lockfile whose pinned snapshot
         does not hold that version.
+
+        The copy of a snapshot is where the store keeps that snapshot's
+        file, asked of the store: one kept as an increment keeps an
+        unchanged file in the complete snapshot it builds on.
         """
         from chartbook import lock
 
@@ -715,29 +726,40 @@ class TestAnotherPipelinesVersion:
             through = ("forecast:m", "forecast:m@challenger", f"forecast:m@{second}", "forecast:m@champion", f"forecast:m@{first}")
             own = ("m@challenger", f"m@{second}", "m@champion", f"m@{first}")
             return {
-                **{reference: models.path(reference, project_dir=serve).parent.parent for reference in through},
-                **{reference: models.path(reference, project_dir=forecast).parent.parent for reference in own},
+                **{reference: models.path(reference, project_dir=serve) for reference in through},
+                **{reference: models.path(reference, project_dir=forecast) for reference in own},
             }
 
         def another(note: str) -> Path:
-            """One more snapshot of the pipeline, of a commit that changes its README; its folder."""
+            """One more snapshot of the pipeline, of a commit that changes its README; where it keeps the model.
+
+            Complete, so that it has a copy of the model of its own: which
+            snapshot's copy a read is handed is what this is about, and one
+            kept as an increment would keep the model in an earlier one's
+            folder, the very file handed out before it was made.
+            """
             (forecast / "README.md").write_text(f"# Forecast, {note}\n", encoding="utf-8", newline="\n")
             _commit(forecast)
-            assert snapshot.make(forecast).made
-            return max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at).path.parent.parent
+            assert snapshot.make(forecast, complete=True).made
+            newest = max(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)
+            assert _kept(newest).is_relative_to(Path(newest.path).parent.parent)
+            return _kept(newest)
 
-        made = [taken.path.parent.parent for taken in sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)]
+        made = [_kept(taken) for taken in sorted(snapshot.all_snapshots(store), key=lambda taken: taken.made_at)]
         oldest, pinned = made[0], made[2]
+        assert oldest != pinned  # two files: the two versions
         stays = ("forecast:m", "forecast:m@challenger")  # the pinned snapshot's own copy: it holds the second version itself
         of_the_second = (f"forecast:m@{second}", "m@challenger", f"m@{second}")
         of_the_first = ("forecast:m@champion", f"forecast:m@{first}", "m@champion", f"m@{first}")
         assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, pinned), **dict.fromkeys(of_the_first, oldest)}
         # A fourth snapshot, which holds the second version again
         fourth = another("with a word more")
+        assert fourth not in (oldest, pinned)  # its own copy, another file than the pinned snapshot's
         assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, fourth), **dict.fromkeys(of_the_first, oldest)}
         # And a fifth, in which the model is the first version again: the pinned snapshot does not hold that one
         (forecast / "_models" / "m.json").write_bytes(b"weights-1")
         fifth = another("and the model as it first was")
+        assert fifth not in (oldest, pinned, fourth)
         assert read() == {**dict.fromkeys(stays, pinned), **dict.fromkeys(of_the_second, fourth), **dict.fromkeys(of_the_first, fifth)}
         assert (serve / lock.LOCK_FILE).read_bytes() == pins  # and no pin has moved
 

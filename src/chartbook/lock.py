@@ -3233,7 +3233,12 @@ def _sync_from_snapshots(
         def ways_on() -> str:
             """What puts a lost pin back, by what this store has: a newer snapshot for `chartbook pin --update` to move to, the pinned snapshot made again where the store has it, a build of your own where it has not."""
             ways = []
-            if newer:
+            # Named only where it would work: the newest may lack the same file (two snapshots kept as increments
+            # on one complete snapshot that lost it), and a snapshot is taken whole or not at all
+            if newer and all(
+                store.has(asset["content_hash"], newest.pipeline) and not _incomplete(store, asset, newest.pipeline)
+                for asset in newest.assets.values() if asset.get("content_hash")
+            ):
                 ways.append("`chartbook pin --update` moves to the newest one")
             if has_named(was, every(), directory):
                 ways.append("`chartbook snapshot` in its folder at that commit makes it again")

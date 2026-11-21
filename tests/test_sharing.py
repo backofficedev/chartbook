@@ -25,7 +25,21 @@ def _commit(directory, message="work"):
 
 @pytest.fixture
 def two_snapshots(tmp_path, monkeypatch):
-    """acme/rates with two snapshots in this machine's store: the second adds a year to a folder and changes a file."""
+    """acme/rates with two snapshots in this machine's store: the second adds a year to a folder and changes a file.
+
+    The second is kept as the store chooses: as an increment on the first,
+    which has the year they share.
+    """
+    return _two(tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def two_complete(tmp_path, monkeypatch):
+    """The same two, the second made complete: for what is of a pipeline's folder under ``snapshots/``, copied by hand or exported, where each snapshot's folder holds every file of it."""
+    return _two(tmp_path, monkeypatch, complete=True)
+
+
+def _two(tmp_path, monkeypatch, complete: bool = False):
     monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path.resolve() / "mine"))
     rates = tmp_path.resolve() / "rates"
     (rates / "_data" / "years").mkdir(parents=True)
@@ -40,7 +54,8 @@ def two_snapshots(tmp_path, monkeypatch):
     first = snapshot.make(rates, made_at="2026-10-01T10:00:00.000000Z").snapshot
     (rates / "_data" / "years" / "2026.txt").write_bytes(b"2026")
     (rates / "_data" / "latest.txt").write_bytes(b"two")
-    second = snapshot.make(rates, made_at="2026-10-02T10:00:00.000000Z").snapshot
+    second = snapshot.make(rates, made_at="2026-10-02T10:00:00.000000Z", complete=complete).snapshot
+    assert (FolderStore(tmp_path.resolve() / "mine").builds_on(second.path) is None) is complete
     return FolderStore(tmp_path.resolve() / "mine"), first, second, rates
 
 
@@ -49,8 +64,8 @@ def _files(folder: Path) -> list:
 
 
 class TestExport:
-    def test_every_snapshot_each_complete(self, two_snapshots, tmp_path):
-        store, first, second, rates = two_snapshots
+    def test_every_snapshot_each_complete(self, two_complete, tmp_path):
+        store, first, second, rates = two_complete
         done = sharing.export(store, "acme/rates", tmp_path / "out")
         assert len(done.copied) == 2 and done.refused == []
         sent = tmp_path / "out" / "snapshots" / "acme+rates"
@@ -100,8 +115,8 @@ class TestImport:
         (entry,) = lock.read_lock(forecast).dependencies
         assert entry["location"]["commit"] == second.commit and entry["pinned_from"] == "acme/rates"
 
-    def test_a_snapshot_the_store_has_is_not_copied_again_and_a_new_one_is_written_complete(self, two_snapshots, tmp_path):
-        store, first, second, rates = two_snapshots
+    def test_a_snapshot_the_store_has_is_not_copied_again_and_a_new_one_is_written_complete(self, two_complete, tmp_path):
+        store, first, second, rates = two_complete
         sharing.export(store, "acme/rates", tmp_path / "old", [f"{first.commit}@{first.made_at}"])
         theirs = FolderStore(tmp_path.resolve() / "theirs")
         sharing.import_snapshots(theirs, tmp_path / "old")
@@ -119,8 +134,8 @@ class TestImport:
         ]
         assert theirs.verify() == []
 
-    def test_a_folder_copied_by_hand_and_a_file_not_what_its_record_says(self, two_snapshots, tmp_path):
-        store, first, second, rates = two_snapshots
+    def test_a_folder_copied_by_hand_and_a_file_not_what_its_record_says(self, two_complete, tmp_path):
+        store, first, second, rates = two_complete
         sent = tmp_path / "acme+rates"
         shutil.copytree(store.pipeline_path("acme/rates"), sent)
         changed = next(sent.rglob("2026.txt"))
@@ -149,10 +164,10 @@ class TestImport:
         done = sharing.import_snapshots(theirs, sent)
         assert done.copied == [] and all("is a link, or leads out of the folder" in why for _, why in done.refused)
 
-    def test_a_record_written_to_mislead_is_refused_and_the_rest_go(self, two_snapshots, tmp_path):
+    def test_a_record_written_to_mislead_is_refused_and_the_rest_go(self, two_complete, tmp_path):
         import json
 
-        store, first, second, rates = two_snapshots
+        store, first, second, rates = two_complete
         sent = tmp_path / "acme+rates"
         shutil.copytree(store.pipeline_path("acme/rates"), sent)
         (newer,) = [p for p in sent.iterdir() if p.name.startswith("2026-10-02")]
@@ -165,10 +180,10 @@ class TestImport:
         done = sharing.import_snapshots(theirs, sent)
         assert done.copied == [("acme/rates", first.commit, first.made_at)] and len(done.refused) == 1
 
-    def test_a_snapshot_of_another_pipeline_in_its_folder_is_refused(self, two_snapshots, tmp_path):
+    def test_a_snapshot_of_another_pipeline_in_its_folder_is_refused(self, two_complete, tmp_path):
         import json
 
-        store, first, second, rates = two_snapshots
+        store, first, second, rates = two_complete
         sent = tmp_path / "acme+rates"
         shutil.copytree(store.pipeline_path("acme/rates"), sent)
         for record in sent.glob("*/_chartbook/snapshot.json"):
@@ -188,11 +203,11 @@ class TestImport:
 
 
 class TestTheCommands:
-    def test_export_works_in_the_store_that_holds_the_pipeline(self, two_snapshots, tmp_path, monkeypatch):
+    def test_export_works_in_the_store_that_holds_the_pipeline(self, two_complete, tmp_path, monkeypatch):
         """With several stores in the catalog, export needs no --store while one store holds the pipeline."""
         from chartbook import config
 
-        store, first, second, rates = two_snapshots
+        store, first, second, rates = two_complete  # complete: each is then marked as one a pin made, which is never an increment
         monkeypatch.delenv("CHARTBOOK_STORE", raising=False)
         home = tmp_path / "home"
         home.mkdir()
@@ -241,3 +256,25 @@ class TestTheCommands:
         assert "Imported 1 snapshot(s)" in said.output
         again = CliRunner().invoke(main, ["store", "import", str(tmp_path / "out")])
         assert again.exit_code == 0 and "1 snapshot(s) were there already" in again.output
+
+    def test_an_export_that_holds_an_increment_says_to_send_the_whole_of_it(self, two_snapshots, tmp_path, monkeypatch):
+        """An increment's files are in two folders of the export, `snapshots/` and `increments/`: `snapshots/` alone, sent, would be the complete ones without it."""
+        store, first, second, rates = two_snapshots
+        out = (tmp_path / "out").resolve()
+        said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--to", str(out)])
+        assert said.exit_code == 0, said.output
+        assert said.output.splitlines()[-1] == f"Send {out}; `chartbook store import` there takes it in."
+        assert (out / "increments" / "acme+rates").is_dir() and (out / "snapshots" / "acme+rates").is_dir()
+        # Taken in as it is told to be sent, both are there, the increment on the complete one as it was
+        theirs = tmp_path.resolve() / "theirs"
+        monkeypatch.setenv("CHARTBOOK_STORE", str(theirs))
+        taken = CliRunner().invoke(main, ["store", "import", str(out)])
+        assert taken.exit_code == 0 and "Imported 2 snapshot(s)" in taken.output, taken.output
+        assert FolderStore(theirs).verify() == []
+        assert [(record.made_at, record.increment) for record in FolderStore(theirs).records()] == [(first.made_at, False), (second.made_at, True)]
+        # The newest alone is written complete, and the folder of complete snapshots is then all there is to send
+        monkeypatch.setenv("CHARTBOOK_STORE", str(store.root))
+        latest = (tmp_path / "latest").resolve()
+        said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--latest", "--to", str(latest)])
+        assert said.exit_code == 0 and said.output.splitlines()[-1] == f"Send {latest / 'snapshots'}; `chartbook store import` there takes it in."
+        assert not (latest / "increments").exists()

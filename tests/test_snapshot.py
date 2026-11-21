@@ -1053,22 +1053,26 @@ class TestClearingOldSnapshots:
         plan = _plan(default_store())
         assert (only, "it is the newest of its pipeline") in plan.keep
 
-    def test_a_pin_that_lands_while_someone_is_deciding_is_honoured(self, user, maker, work):
+    @pytest.mark.parametrize("complete", [True, False], ids=["a complete one", "an increment on the first"])
+    def test_a_pin_that_lands_while_someone_is_deciding_is_honoured(self, user, maker, work, complete):
         """Found by a reviewer: the plan was made before the yes, and run after.
 
         A `pin` in between took the old snapshot (the folder was checked out
         at that commit), and the removal then took the pin's only bytes.
+        Where the snapshot the pin took is kept as an increment on the
+        first, the first stays too: it keeps the rest of that one's files.
         """
         first = snapshot.make(maker, made_at=OLDER).snapshot
         (maker / "pull.py").write_text("print(1)\n", encoding="utf-8", newline="\n")
         second_commit = _commit(work)
         _build(maker, rates=b"rates-2")
-        second = snapshot.make(maker, made_at=OLD).snapshot
+        second = snapshot.make(maker, made_at=OLD, complete=complete).snapshot
         (maker / "pull.py").write_text("print(2)\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-3")
-        snapshot.make(maker)
+        snapshot.make(maker, complete=True)  # complete: neither of the two before it is then kept for it
         store = default_store()
+        assert (store.builds_on(second.path) is None) is complete
         plan = lock.plan_gc(store, recent_seconds=0)
         assert [t for t, _ in plan.snapshots_delete] == [first, second]
 
@@ -1078,9 +1082,10 @@ class TestClearingOldSnapshots:
         _git(work, "checkout", "--quiet", "main")
         assert report.snapshots["acme/maker"] == second
         removed_snapshots, removed = lock.run_gc(plan, store)
-        assert removed_snapshots == 1 and second.path.exists() and not first.path.exists()
+        assert removed_snapshots == (1 if complete else 0) and second.path.exists() and first.path.exists() is not complete
         for content_hash in second.hashes():
             assert store.has(content_hash)
+        assert default_store().holes_of(second.path) == []
 
     def test_the_newest_a_branch_or_tag_can_pin_from_is_kept(self, maker, work):
         """A release branch's last snapshot is what its users pin; it stays."""
@@ -1125,7 +1130,7 @@ class TestClearingOldSnapshots:
         (maker / "pull.py").write_text("print(1)\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
-        snapshot.make(maker)
+        snapshot.make(maker, complete=True)  # complete, so that the first is one gc removes, and not one the newest builds on
         store = default_store()
         being_made = store.pipeline_path("acme/maker") / "2026-10-28T120000Z_0123456789ab"
         (being_made / "_data").mkdir(parents=True)
@@ -1216,10 +1221,13 @@ class TestCommands:
         monkeypatch.chdir(maker)
         result = self._run("snapshot")
         assert result.exit_code == 0, result.output
+        (record,) = default_store().records()
+        size = sum(file.size_bytes for asset in record.assets for file in asset.files)
         assert result.output.splitlines() == [
             f"acme/maker at {commit[:7]}: 2 asset(s) in the store",
-            "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook pin --update`.",
+            # The first of a pipeline is complete: its two assets, its manifest and its index
+            f"Snapshot made: 4 files, {_format_bytes(size)}.",
+            "A pipeline that depends on this one gets it with `chartbook pin --update`.",
             # By default a store and a catalog are one unit: the first snapshot makes the catalog that shows it
             f"Made {config.get_global_catalog_path()}: a catalog over your store at {config.get_store_url()}.",
             "`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.",
@@ -1394,7 +1402,7 @@ class TestNamesAndAggressiveGc:
         (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
-        snapshot.make(maker)
+        snapshot.make(maker, complete=True)  # complete, so that it does not build on the release, which gc then keeps for it
         monkeypatch.chdir(maker)
         listed = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--aggressive"])
         assert listed.exit_code == 0 and release.commit[:7] in listed.output, listed.output

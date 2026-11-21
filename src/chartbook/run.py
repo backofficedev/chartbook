@@ -1175,6 +1175,7 @@ def run(
     remake: bool = False,
     remake_command: str = "chartbook run --remake",
     upstream: bool = False,
+    complete: bool = False,
 ) -> RunReport:
     """Run a script in a pipeline, or in every pipeline of a catalog.
 
@@ -1232,6 +1233,10 @@ def run(
         (``--upstream``). Each must be trusted to run and have everything
         committed, as a snapshot needs, and its build must leave it so; the
         first that fails stops the run, before anything that depends on it.
+    :param complete: With *snapshot*: keep the snapshot of a pipeline that
+        was asked for complete in the store, whatever the store would
+        choose (:func:`chartbook.snapshot.make`). A pipeline built first
+        for *upstream* is kept as the store chooses.
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, the one
         asked for has no such script, a pipeline it builds depends, through
@@ -1637,7 +1642,8 @@ def run(
                             f"snapshot was made: the label would not say which code ran"
                         )
                     made = snapshots.make(
-                        step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,), ask=False
+                        step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,), ask=False,
+                        complete=complete and snapshot and step.source == "asked",
                     )
                 except snapshots.SnapshotError as error:
                     report.failed, report.exit_code = step, 1

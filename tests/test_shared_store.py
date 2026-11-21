@@ -84,11 +84,17 @@ def _with_a_build(project: Path) -> None:
     )
 
 
-def _snapshot_again(rates: Path, value: float, made_at=None) -> snapshot.Snapshot:
+def _snapshot_again(rates: Path, value: float, made_at=None, complete: bool = False) -> snapshot.Snapshot:
+    """Another snapshot of rates, at another value.
+
+    :param complete: Make it complete. Left to the store it is an increment
+        on the one before it, which `store gc` then keeps for it: a test
+        of that older one going asks for this.
+    """
     _rates(rates, value)
     (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
     _commit(rates, f"At {value}")
-    return snapshot.make(rates, made_at=made_at).snapshot
+    return snapshot.make(rates, made_at=made_at, complete=complete).snapshot
 
 
 def _object_file(taken: snapshot.Snapshot) -> Path:
@@ -953,7 +959,7 @@ class TestACloneThatKeptItsIdentity:
 
 class TestTheStoreShrinks:
     @staticmethod
-    def _rates(rates: Path, value: float, when) -> snapshot.Snapshot:
+    def _rates(rates: Path, value: float, when, complete: bool = False) -> snapshot.Snapshot:
         import polars as pl
 
         pl.DataFrame({"d": ["2024-01-01"], "r": [value]}).write_parquet(rates / "_data" / "treasury.parquet")
@@ -964,7 +970,7 @@ class TestTheStoreShrinks:
         }}), encoding="utf-8", newline="\n")
         (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
         _commit(rates, f"At {value}")
-        return snapshot.make(rates, made_at=when).snapshot
+        return snapshot.make(rates, made_at=when, complete=complete).snapshot
 
     def test_an_asset_that_never_changes_keeps_no_old_snapshot(self, drive):
         work, machine, rates = drive
@@ -986,10 +992,12 @@ class TestTheStoreShrinks:
         from chartbook.store import root_name
 
         work, machine, rates = drive
+        # Each complete: which snapshot a note keeps is asked of ones that are each held for nothing else. (Left to
+        # the store, the second and the fourth are increments, and gc keeps the first and the third for them.)
         s1 = self._rates(rates, 1.0, "2020-01-01T00:00:00.000000Z")
-        s2 = self._rates(rates, 2.0, "2020-02-01T00:00:00.000000Z")
-        s3 = self._rates(rates, 3.0, "2020-03-01T00:00:00.000000Z")
-        self._rates(rates, 4.0, None)
+        s2 = self._rates(rates, 2.0, "2020-02-01T00:00:00.000000Z", complete=True)
+        s3 = self._rates(rates, 3.0, "2020-03-01T00:00:00.000000Z", complete=True)
+        self._rates(rates, 4.0, None, complete=True)
         store = default_store()
         old_note = store.root / "_chartbook" / "roots" / root_name("/gone/chartbook.lock")
         old_note.parent.mkdir(parents=True, exist_ok=True)
@@ -1351,7 +1359,8 @@ class TestOneMachineWhoseHostNameMoves:
         project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         scratch = _forecast(work / "a" / "scratch", {"acme/rates": {}})
         assert lock.pin(project).problems == [] and lock.pin(scratch).problems == []
-        _snapshot_again(rates, 4.2, made_at="2020-02-01T00:00:00.000000Z")
+        # Complete, so that the first is built on by nothing and may go once nothing pins it
+        _snapshot_again(rates, 4.2, made_at="2020-02-01T00:00:00.000000Z", complete=True)
         monkeypatch.setattr(socket, "gethostname", lambda: "dhcp-10-1-2-3.corp.example.com")  # at the office
         assert lock.update(project).problems == []
         remove_tree(scratch)  # the scratch project is deleted
@@ -1477,7 +1486,7 @@ class TestAnOldNoteInThisUsersOwnStore:
     def test_is_this_machines_and_forgotten_when_its_lockfile_is_gone(self, own):
         work, machine, rates = own
         old = snapshot.make(rates, made_at=LONG_AGO).snapshot
-        _snapshot_again(rates, 4.2)
+        _snapshot_again(rates, 4.2, complete=True)  # complete, so that the old one is built on by nothing and may go
         project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
         assert lock.pin(project).problems == []
         older = self._old_note(project)
@@ -1596,7 +1605,7 @@ class TestAnOldNoteGivesWay:
         old = snapshot.make(rates, made_at=LONG_AGO).snapshot
         project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
         assert lock.pin(project).problems == []
-        _snapshot_again(rates, 4.2)
+        _snapshot_again(rates, 4.2, complete=True)  # complete, so that the old one is built on by nothing and may go
         _forecast(project, {"acme/rates": {}})
         assert lock.update(project).problems == []
         default_store().remove_root(project / lock.LOCK_FILE)

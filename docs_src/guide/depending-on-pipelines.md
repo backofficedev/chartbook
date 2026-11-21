@@ -78,7 +78,8 @@ $ chartbook run                 # build it
 …
 $ chartbook snapshot            # copy what it built into the store, labelled with the commit
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 6 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 That is a snapshot, and it is what of theirs you read. Their folder is never read, and a build
@@ -88,7 +89,8 @@ describes. (`chartbook run --snapshot` is the two in one command.)
 Snapshot again and nothing new is written: a snapshot is the hash of every file the build made, and
 the same bytes and the same pins at the same commit are the snapshot already there (`No new
 snapshot: the same bytes and the same pins as the one made …`). New data at the same commit makes a
-new one, holding only the files that changed.
+new one, which the store may keep in less room, with only the files that changed
+({ref}`below <snapshots-in-the-store>`).
 
 ## You pin it, read it, and update when you choose
 
@@ -150,23 +152,55 @@ snapshot yet. It never moves a pin; `chartbook pin --update` does that. A depend
 repository, `{ git = "https://…", rev = "v1.2" }`: `chartbook pin` pins the files it commits, and
 `chartbook run` builds the rest once, in ChartBook's own clean copy of that commit.
 
+(snapshots-in-the-store)=
 ## What a snapshot is in the store
 
-Every snapshot is a complete version: its record lists every file of every asset, and its folder
-in the store holds every one of them, each in its own place. `chartbook store ls` lists the
-snapshots and what each one's folder holds:
+Every snapshot is a whole version: its record lists every file of every asset. The first snapshot
+of a pipeline is **complete**: its folder in the store holds every one of those files, each in its
+own place, and can be read or copied as it is.
+
+**A later snapshot may be kept as an increment.** Where little has changed, the store keeps the new
+snapshot in less room: its folder holds only the files that differ from the complete snapshot
+before it, and the rest are read from that one. `chartbook snapshot` decides by itself, and its
+last lines say which it made:
+
+```console
+$ chartbook snapshot
+acme/news_headlines at e5f6a7b: 3 asset(s) in the store
+Snapshot made, kept as an increment: 2 of 43 files, 310.2 MB. The rest is in the snapshot made 2026-05-01 12:00 UTC.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
+```
+
+This changes nothing for whoever reads or pins it. A pin names a snapshot, and one kept as an
+increment is pinned and read as any other. When the increments since the last complete snapshot
+have added up to the size of a complete one, the next one is complete again, with nobody asking.
+
+**`--complete` when you want a folder that stands by itself.** `chartbook snapshot --complete`
+makes a complete snapshot whatever the store would choose, and says where its folder is: to look
+at, to copy, or to hand to somebody. `chartbook run --snapshot --complete` does the same after a
+build. In a script it copies every file each time; without it, the store decides.
+
+**A large table that grows by date is better written as a folder partitioned by year.** The store
+compares files, and knows nothing of rows. A table in one file changes whole when a day is added,
+so every snapshot of it holds the whole table again. In a folder with a file for each year, only
+the newest part changes, and an increment holds that part and nothing else: a 1 GB table of sixty
+years is 1 GB at each snapshot as one file, and about 17 MB as a folder by year. Keep the real
+date column in the data, and name it as the dataframe's `date_col`. Partition by day only where a
+day is large; a small table gains nothing from parts.
+
+`chartbook store ls` lists the snapshots and what each one's folder holds:
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (2 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  complete   2.4 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
+A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
 ```
 
-So a snapshot's folder can be read or copied as it is, and a dataset costs its whole size at each
-snapshot. A snapshot's folder is not deleted by hand: a lockfile may pin it.
-`chartbook store gc` removes snapshots safely, and after a snapshot or a catalog build one line says
-what it would clear. {doc}`catalogs-and-data` has the store side of this.
+A snapshot's folder is not deleted by hand: a lockfile may pin it, and an increment may keep its
+files in it. `chartbook store gc` removes snapshots safely, and after a snapshot or a catalog build
+one line says what it would clear. {doc}`catalogs-and-data` has the store side of this.
 
 ## What a pin holds
 

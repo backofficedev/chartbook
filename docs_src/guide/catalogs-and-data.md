@@ -50,14 +50,21 @@ chartbook-store-team/
       2026-05-01T120000Z_a1b2c3d4e5f6/     a snapshot: when it was made _ its commit
         _data/articles/year=2023/...       the pipeline's files, in their own places
         _chartbook/snapshot.json           the record: every file, and its hash
-      2026-06-01T120000Z_e5f6a7b8c9d0/     a later one: every file of it again
+  increments/
+    acme+news_headlines/
+      2026-06-01T120000Z_e5f6a7b8c9d0/     a later one, kept as an increment:
+        _data/articles/year=2024/...       only the files the one above does not have
+        _chartbook/snapshot.json
+        _chartbook/INCREMENT.txt           one line: the snapshot the rest is in
   _chartbook/                              ChartBook's own notes; nothing here is for a person
   store.json                               which layout this is
   README.txt                               what the folder is, for whoever opens it
 ```
 
-Every snapshot's folder is complete: it holds every file of that version, and can be read, copied
-or sent as it is. A store that ChartBook 0.5 laid out has `pipelines/` at the top and keeps each
+A folder under `snapshots/` is a complete snapshot: it holds every file of that version, and can be
+read, copied or sent as it is. A folder under `increments/` is a snapshot too, kept in less room:
+it holds only the files that differ from one complete snapshot, and says which. To anything that
+reads or pins, it is a snapshot like any other ({ref}`snapshots-in-the-store`). A store that ChartBook 0.5 laid out has `pipelines/` at the top and keeps each
 file once; this ChartBook reads such a store as it is, makes no snapshot in it and removes nothing
 from it, and says so.
 
@@ -109,20 +116,26 @@ snapshot`; the catalog runs no pipeline's code.
 
 ## Keeping the store small
 
-Every snapshot is **complete**: its folder holds every file of its version. `chartbook store ls`
-lists them and what each one's folder holds:
+The store keeps a snapshot **complete**, every file of its version in its own folder, or, where
+little changed since an earlier one, as an **increment**, whose folder holds only the files that
+differ. `chartbook snapshot` decides which by itself, so that a pipeline that changes a little
+copies a little ({ref}`snapshots-in-the-store`). `chartbook store ls` lists them and what each
+one's folder holds:
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (3 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  complete   2.4 GB here
-  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  complete   2.7 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  increment  611.9 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
+A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
 ```
 
-A snapshot's folder is not deleted by hand: a lockfile may pin it.
+A snapshot's folder is not deleted by hand: a lockfile may pin it, and an increment may keep its
+files in it.
 `chartbook store gc` removes snapshots safely: it keeps the newest of each pipeline, everything a
-lockfile pins, a snapshot a model's label points into, and anything made in the last seven days,
+lockfile pins, a snapshot a model's label points into, a complete snapshot that an increment it
+keeps builds on, and anything made in the last seven days,
 lists what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
 says what gc would clear and how much it would free, so a store nobody clears is at least a store
 whose owner was told; `--no-gc-reminder` silences it, and `chartbook catalog build --gc` runs gc
@@ -136,7 +149,8 @@ $ chartbook catalog build
 
 To give someone a version, `chartbook store export acme/news_headlines --latest
 --to FOLDER` writes its snapshot, complete, wherever you say. `chartbook store import FOLDER` takes one
-in.
+in. And `chartbook snapshot --complete` makes a complete snapshot in the store itself, and says
+where its folder is.
 
 ## Reading data through a catalog
 

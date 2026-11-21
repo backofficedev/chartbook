@@ -34,6 +34,7 @@ from chartbook.__about__ import __version__
 from chartbook.cli import main
 from chartbook.store import FolderStore
 from tests.fixtures import commit_pipeline
+from tests.snapshot_lines import COMPLETE, INCREMENT, made_at, said_made
 from tests.test_lock_by_kind import _as_version_1, _git
 from tests.test_run import _commit, _with_data
 from tests.test_standins import MANIFEST, _write_manifest, _yields
@@ -538,7 +539,7 @@ class TestABuildAndAReadNeverWriteAManifest:
         assert result.exit_code == 0, result.output
         said = result.output.splitlines()
         assert TOLD in said and any(line.startswith("chartbook.lock was in an earlier form") for line in said)
-        assert "Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`." in said
+        assert made_at(said, COMPLETE) is not None  # the two lines a snapshot ends with, the report's first (tests/snapshot_lines.py)
         # The manifest is as its commit has it; the lockfile is the one file a run may write
         assert _git(report, "status", "--porcelain") == "M chartbook.lock"
         # And the run after it is not refused for a manifest that changed
@@ -777,7 +778,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         assert len(said) == 1 and said[0].endswith(
             "UTC, which says nothing of the rows of 2 dataframes: this one records them, so that a rebuild can meet a pin of them."
         )
-        assert "Snapshot made." in again.output
+        assert said_made(again.output, INCREMENT)  # the same files as the one before it, which is whole: nothing of it is copied
         # Once: a third finds a snapshot that says its rows, and makes none
         assert "No new snapshot" in _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).output
 
@@ -849,7 +850,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         again = _run("snapshot", "--no-gc-reminder", "--project-dir", str(nested))
         assert again.exit_code == 0, again.output
         assert "  rows not hashed: acme/rates:nested (column 'l' is List" in again.output
-        assert "The same files" not in again.output and "Snapshot made." in again.output
+        assert "The same files" not in again.output and said_made(again.output, INCREMENT)
 
         moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
@@ -880,7 +881,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         snapshot.make(rates, store=store)
         _git(rates, "tag", "v1")
         result = _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates))
-        assert result.exit_code == 0 and "Snapshot made." in result.output
+        assert result.exit_code == 0 and said_made(result.output, INCREMENT)  # the same files: an increment
         assert "The same files" not in result.output
 
     def test_a_snapshot_of_other_files_says_nothing_of_it(self, rates, store):
