@@ -821,6 +821,40 @@ right bytes. The copy is hashed as it is written and the last lines name it, the
 old place goes aside and not away, and `chartbook store verify` says which files are not what
 their records say.
 
+A third reviewer, and a trial on copies of two real stores on Windows, which went as hoped (one
+moved whole with nothing to repair), gave these:
+
+- **A store of 0.5 that shows a sign of a move, and has no journal of this machine, is told to
+  wait for a sync before it is asked anything.** The command took a store whose old folder was
+  aside already for this machine's own move, cut short at its end, said "it is finished now",
+  and asked. It may as well be what a sync has brought so far of a move another machine made
+  and finished (the folder that machine put aside is the last thing its move renamed, and a
+  sync makes a folder before it has the files). With this machine's journal the line is what it
+  was; without one it says to wait, and what a yes does. *Known and left:* a yes there still
+  puts this machine's `pipelines/` aside whole, as the third rule says, and the snapshots are
+  then what the sync has brought so far. A rule that moved this machine's files in there would
+  move a late snapshot in where a machine still on 0.5 wrote one, which is the case the third
+  rule is for, and the folders do not tell the two apart. The lines say it before the question
+  and name the files after it, and every file is still in the store.
+- **The move removes a file of its own as the store removes one:** first the file, and a mode
+  only where that is refused. Changing the mode first stopped the move, at the same step every
+  time, on a leftover that another user of a shared store had written, and changed the mode of
+  a file outside the store that had a second name in the move's own folder.
+- **A moved store that still has the move's own folder has something for the command to do.**
+  Killed once `store.json` said the new layout, with its journal then removed, the folder stayed
+  for good, and the command said there was nothing to move.
+- **The last lines go by what the journal carries.** A run that goes on after `store.json` was
+  written said nothing of the snapshots, the renames and the copies. And where the journal is
+  gone, what went with it is left out and said to have gone: the lines said 0 files.
+- **The end of a move asks the disk about a file once,** however many snapshots name it: an
+  increment's files are in the snapshot it builds on, and each was asked about three times for
+  each snapshot.
+- **Files are said by the folders they are under, with counts, and never by three names.** On
+  the real stores the three names of the files taken from another snapshot were cut in the
+  middle and came out the same three times, and those of 58,325 missing files were three hashes
+  of 64 digits. A folder is the first two parts of a path in its snapshot, where a pipeline
+  keeps one dataset: `_data/llm_cache/ (58,196), _data/optionm/ (116), _output/ (7)`.
+
 - **A file changes folder by a rename and is not read; a file that two folders must each hold is
   copied.** The copies are a file that several older snapshots share and the newest lacks, a
   file a snapshot kept once under two names, and what a pin-made snapshot shared. They are few

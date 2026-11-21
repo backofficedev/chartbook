@@ -467,6 +467,12 @@ def is_moved(root: Path) -> bool:
     the first of a new move, with its files in the snapshots that took
     them. The folder aside is known for the old one by a folder in it: a
     desktop leaves its own files anywhere, and no folder.
+
+    The folders do not say whose move put the old folder aside. Where no
+    journal of this machine does, it may be what a sync has brought so far
+    of a move another machine made and finished, and what is at the top is
+    then this machine's whole store: the plan is the same, and the command
+    says to wait for the sync, and what a yes does, before it asks.
     """
     root = Path(root)
     if marker_of(root) == FOLDER_SCHEMA:
