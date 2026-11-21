@@ -1,5 +1,17 @@
 """Root dodo.py - Orchestrates builds across all pipelines and generates catalog docs for GitHub Pages.
 
+Two ways of building a pipeline and declaring its build ready are shown:
+
+- yield_curve and rate_forecast are built with `chartbook run`, and then
+  `chartbook snapshot`, with no option: the two commands a person types.
+  A run leaves a note of what it built from and what it left, and the
+  snapshot is held against it. `chartbook run` runs a build script only in
+  a folder you have said is yours to run: once, `chartbook trust .` here.
+- fred_charts is built some other way, by its own doit, as a job elsewhere
+  or a Makefile would build it. No run built those files, so there is
+  nothing to hold them against, and its snapshot is typed with `--as-is`:
+  take what is on disk as it is.
+
 Every task here runs another build: a pipeline's own doit, or a chartbook
 command. doit cannot see into those, so each task declares what that build
 reads and makes, and a second run with nothing changed runs nothing:
@@ -11,7 +23,10 @@ reads and makes, and a second run with nothing changed runs nothing:
   declares with a path (`made_by`); a missing one brings the build back;
 - what is not a file and still decides what a build does is compared with
   what it was after the task last ran (`unchanged`): the commit, the store
-  and the snapshots in it, and the lockfiles that say what a pipeline reads.
+  and the snapshots in it, and the lockfiles that say what a pipeline reads;
+- a build by `chartbook run` is up to date only while the note of it is
+  there (`built_by_a_run`): the note is kept in ChartBook's cache, not in
+  the folder, and the snapshot that follows needs it.
 
 The project's own dodo.py runs this whole build as one task, and takes what
 it reads and makes from `sources`, `outputs` and `context` here.
@@ -122,6 +137,26 @@ IN_STORE = unchanged("store", store_and_snapshots)
 PINNED = unchanged("lockfiles", lockfiles)
 
 
+def built_by_a_run(pipeline_dir):
+    """An uptodate check: whether what is in a pipeline's folder is what `chartbook run` last built there.
+
+    `chartbook run` leaves a note of each build, in ChartBook's cache on
+    this machine and not in the folder, and `chartbook snapshot` holds the
+    folder against it. With the built files all there and the note gone (a
+    cache that was cleared; files copied in from another machine) doit
+    would call the build up to date, and the snapshot after it would be
+    refused. So the build is run again: the pipeline's own doit finds
+    nothing to do, and the run leaves its note.
+    """
+
+    def check(task, values):
+        from chartbook import built
+
+        return built.would_hold(pipeline_dir, built.pipeline_of(pipeline_dir))
+
+    return check
+
+
 def context():
     """The uptodate checks on everything that is not a file and still decides what this build does."""
     return [AT_COMMIT, IN_STORE, PINNED]
@@ -162,18 +197,24 @@ def copy_docs_action():
 
 
 def task_build_yield_curve():
-    """Run doit in yield_curve directory"""
+    """Build yield_curve with `chartbook run`"""
     return {
-        "actions": [f"doit -f {YIELD_CURVE_DIR / 'dodo.py'}"],
+        # `chartbook run` runs the `build` script yield_curve's chartbook.toml
+        # names, which is `doit`, in its folder, and leaves a note of the
+        # build for the snapshot below
+        "actions": [f"chartbook run --project-dir {YIELD_CURVE_DIR}"],
         "file_dep": git_files(YIELD_CURVE_DIR),
         "targets": made_by(YIELD_CURVE_DIR),
+        "uptodate": [built_by_a_run(YIELD_CURVE_DIR)],
         "verbosity": 2,
     }
 
 
 def task_build_fred_charts():
-    """Run doit in fred_charts directory"""
+    """Run doit in fred_charts directory: the example that is not built by `chartbook run`"""
     return {
+        # Built as a job elsewhere, a Makefile or a habit of years would
+        # build it: no note of this build is left, and none is looked for
         "actions": [f"doit -f {FRED_CHARTS_DIR / 'dodo.py'}"],
         "file_dep": git_files(FRED_CHARTS_DIR),
         "targets": made_by(FRED_CHARTS_DIR),
@@ -190,11 +231,10 @@ def task_snapshot_yield_curve():
         # at, in the store: with none of those changed there is nothing to
         # declare, and chartbook would make no new snapshot either.
         #
-        # `--as-is`: these files are built by this file's own doit, above,
-        # and not by `chartbook run`, which is what a snapshot is held
-        # against. By hand, in one pipeline, the two commands are
-        # `chartbook run` and then `chartbook snapshot`, with no option.
-        "actions": [f"chartbook snapshot --as-is --project-dir {YIELD_CURVE_DIR}"],
+        # No option: `chartbook run` built these files, above, and the
+        # snapshot is held against the note that run left. A file changed
+        # since, by hand or by another tool, stops it, naming the file.
+        "actions": [f"chartbook snapshot --project-dir {YIELD_CURVE_DIR}"],
         "file_dep": [*git_files(YIELD_CURVE_DIR), *made_by(YIELD_CURVE_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],
         "task_dep": ["build_yield_curve"],
@@ -203,23 +243,28 @@ def task_snapshot_yield_curve():
 
 
 def task_build_rate_forecast():
-    """Run doit in rate_forecast directory, which reads yield_curve's data"""
+    """Build rate_forecast, which reads yield_curve's data, with `chartbook run`"""
     return {
-        # Its own first task is `chartbook pin`, which pins yield_curve's
-        # snapshot the first time and leaves the pin alone after that; a pin
-        # `chartbook pin --update` moved is what its model is trained on next
-        "actions": [f"doit -f {RATE_FORECAST_DIR / 'dodo.py'}"],
+        # `chartbook run` pins yield_curve's snapshot the first time and
+        # leaves the pin alone after that, and then runs rate_forecast's
+        # `build` script, which is `doit`; a pin `chartbook pin --update`
+        # moved is what its model is trained on next
+        "actions": [f"chartbook run --project-dir {RATE_FORECAST_DIR}"],
         "file_dep": [*git_files(RATE_FORECAST_DIR), YIELD_CURVE_DIR / "docs" / "index.html"],
         "targets": [*made_by(RATE_FORECAST_DIR), RATE_FORECAST_DIR / "chartbook.lock"],
-        "uptodate": [PINNED],
+        "uptodate": [PINNED, built_by_a_run(RATE_FORECAST_DIR)],
         "task_dep": ["snapshot_yield_curve"],
         "verbosity": 2,
     }
 
 
 def task_snapshot_fred_charts():
-    """Publish the FRED pipeline for the store catalog."""
+    """Publish the FRED pipeline for the store catalog, taking its files as they are."""
     return {
+        # `--as-is`: fred_charts' own doit built these files, above, and
+        # not `chartbook run`, so there is no note to hold them against.
+        # Without the option this stops, and says to build with
+        # `chartbook run` or to type `--as-is`.
         "actions": [f"chartbook snapshot --as-is --project-dir {FRED_CHARTS_DIR}"],
         "file_dep": [*git_files(FRED_CHARTS_DIR), *made_by(FRED_CHARTS_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],
@@ -231,7 +276,8 @@ def task_snapshot_fred_charts():
 def task_snapshot_rate_forecast():
     """Publish the consumer after its upstream pin and model are built."""
     return {
-        "actions": [f"chartbook snapshot --as-is --project-dir {RATE_FORECAST_DIR}"],
+        # No option, as for yield_curve: `chartbook run` built it
+        "actions": [f"chartbook snapshot --project-dir {RATE_FORECAST_DIR}"],
         "file_dep": [*git_files(RATE_FORECAST_DIR), *made_by(RATE_FORECAST_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],
         "task_dep": ["build_rate_forecast"],
