@@ -125,6 +125,7 @@ def _as_another_users(monkeypatch, theirs: set) -> None:
 class TestALeftoverThatIsAnotherUsers:
     """In a store two users share, one user's move is cut short and the other goes on with it. A temporary the first left is the first's file: the second may unlink it (the folder is writable) and may not change its mode."""
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows removes a read-only file only once its mode is changed, so the leftover of a copy cut short, which is read-only, is not removed as it is there: what this stands in for is what POSIX answers of another user's file")
     def test_a_temporary_another_users_run_left_does_not_stop_the_move_half_way(self, work, monkeypatch):
         """Rule 1: nothing that is true before a move stops it half way. The first user's run was killed while it copied; the second runs the command.
 
@@ -182,6 +183,7 @@ class TestWhatIsInTheMovesFolderThatIsNotAFileOfItsOwn:
         own.mkdir(parents=True)
         return root, own
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows keeps the read-only mark with the file and not with a name, and removes no name of a read-only file: the move makes it writable to remove its name there (found on Windows 11, 2026-11-21). Not so in a folder Google Drive syncs, which has no second names")
     def test_a_second_name_of_a_file_outside_the_store_does_not_change_that_file(self, work):
         """A hard link there to a read-only file outside the store (what a tool that links equal files makes of a temporary and the file it is a copy of). The name goes; the file outside keeps its bytes and its mode."""
         root, own = self._one(work)

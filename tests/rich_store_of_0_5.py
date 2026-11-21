@@ -243,8 +243,13 @@ def watch(monkeypatch, root: Path, gone: list) -> None:
 
 
 def not_its_own(gone: list) -> list:
-    """What was removed or written over that is not the move's own. A file is the move's by where it is, never by its name: one named ``x.moving`` in a pipeline's folder is anyone's."""
-    return sorted({(name, path) for name, path in gone if path != MOVING and not path.startswith(MOVING + "/") and path not in OWN and "/pytest-" not in path})
+    """What was removed or written over that is not the move's own. A file is the move's by where it is, never by its name: one named ``x.moving`` in a pipeline's folder is anyone's.
+
+    A path outside the store is no part of this reading: the watch records
+    one whole (:func:`watch`), and it is told by that, on any system, and
+    not by how pytest names its folders.
+    """
+    return sorted({(name, path) for name, path in gone if path != MOVING and not path.startswith(MOVING + "/") and path not in OWN and not os.path.isabs(path)})
 
 
 
