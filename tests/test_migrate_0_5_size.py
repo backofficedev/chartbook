@@ -147,7 +147,7 @@ def _second_run_once_the_files_have_come(tmp_path, count: int, monkeypatch) -> f
     store_module._read_records.clear()
     assert len(migrate_0_5.plan(root).late) == count
     result, took = _typed(root, monkeypatch)
-    assert result.exit_code == 0 and f"{count} file(s) arrived for a snapshot that is moved already, and went aside" in result.output, result.output[-600:]
+    assert result.exit_code == 0 and f"{count:,} file(s) arrived for a snapshot that is moved already, and went aside" in result.output, result.output[-600:]
     return took
 
 
@@ -162,7 +162,7 @@ def _first_run_with_every_file_in_place_too(tmp_path, count: int, monkeypatch) -
     store_module._read_records.clear()
     assert len(migrate_0_5.plan(root).in_place) == count
     result, took = _typed(root, monkeypatch)
-    assert result.exit_code == 0 and f"{count} file(s) a record names were not moved, a file being where each goes already" in result.output, result.output[-600:]
+    assert result.exit_code == 0 and f"{count:,} file(s) a record names were not moved, a file being where each goes already" in result.output, result.output[-600:]
     return took
 
 

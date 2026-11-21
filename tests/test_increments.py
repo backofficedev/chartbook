@@ -439,9 +439,12 @@ class TestDamaged:
         lines = result.output.splitlines()
         of_files = [line for line in lines if f"(the folder {complete.name}, which has no record)" in line]
         assert all(f" is not in the store (the folder {complete.name}, which has no record), and " in line for line in of_files), of_files
+        # And whose the files are: the newest of the snapshots whose records keep them there, and how many more. Those
+        # are the ones `store ls` says lack them, so a reader who goes from the one command to the other finds the name
+        newest = max(folder.name for folder in increments)
         assert lines[:2] == [
             f"{len(of_files)} file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
-            f"  acme/rates  {complete.name} (a folder with no record)  {len(of_files)} file(s)",
+            f"  acme/rates  {complete.name} (a folder with no record; the records of {newest} and 1 more keep them there)  {len(of_files)} file(s)",
         ]
         assert lines[2:2 + len(of_files)] == of_files and len(of_files) > 1 and "(the snapshot " not in result.output
         listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()

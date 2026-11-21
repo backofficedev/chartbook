@@ -351,6 +351,11 @@ class RunReport:
             something a snapshot holds. A run makes no snapshot unless it
             is told to (``docs_src/design/one-command.md``), and
             ``chartbook run`` ends by naming the command that makes one.
+        not_noted: Of those, by ID, the ones of whose build no note could
+            be kept because git does not trust the repository they are in,
+            with what :func:`chartbook.snapshot.code_of` says of it: the
+            command that makes git trust it. A snapshot of one would be
+            refused, so ``chartbook run`` ends by saying this instead.
         not_in_store: Where the pipeline asked for could not be pinned for
             want of pipelines to build: what it reads that is not in the
             store, each after everything it reads
@@ -363,6 +368,7 @@ class RunReport:
     skipped: list[tuple[Step, str]] = field(default_factory=list)
     snapshots: list = field(default_factory=list)
     to_snapshot: list[Step] = field(default_factory=list)
+    not_noted: dict[str, str] = field(default_factory=dict)
     undeclared: list[str] = field(default_factory=list)
     not_in_store: Optional[object] = None
     failed: Optional[Step] = None
@@ -1162,7 +1168,8 @@ def _as_cmd_takes_it(directory: Union[str, Path]) -> Union[str, Path]:
         raise RunError(
             f"{text} is a network folder with no drive letter, and cmd.exe, which runs a script on Windows, takes "
             f"no such folder as its own: it would have run the script in C:\\Windows. Connect the share to a drive "
-            f"letter (`net use Q: {_quoted(share, windows=True)}`, with a letter that is free), and run this again."
+            f"letter (`net use Q: {_quoted(share, windows=True, backslashes=True)}`, with a letter that is free; in Git Bash, "
+            f"with the share in single quotes), and run this again."
         )
     return lettered
 
@@ -1795,6 +1802,18 @@ def run(
                 # command that makes one. One that declares nothing a snapshot could hold is told nothing
                 if _declares_what_a_snapshot_holds(step.directory):
                     report.to_snapshot.append(step)
+                    if noted is None:
+                        # No note was begun: which files are source could not be asked. In no git repository
+                        # there is no snapshot to hold against one, and nothing to say. In one git does not
+                        # trust (on Windows, any on a network share) there is, once git is told to trust it:
+                        # the run's last lines say so, in place of the command that makes a snapshot, which
+                        # would be refused twice
+                        try:
+                            snapshots.code_of(step.directory)
+                        except snapshots.RepositoryNotTrusted as error:
+                            report.not_noted[step.id] = str(error)
+                        except snapshots.SnapshotError:
+                            pass
 
             if (snapshot and step.source == "asked") or step.snapshot_first:
                 # A build that changes a committed file, or that commits, leaves
