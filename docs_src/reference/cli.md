@@ -1625,6 +1625,11 @@ The folders are the truth: every plan is made from the store as it is, so a move
 
 The command can always be run again on a moved store, and is the one remedy where a machine that had not been brought the move wrote `pipelines/`, `roots/`, `origins/` or `tmp/` at its top afterwards: every other command refuses such a store and names this one. It merges the notes under `_chartbook/`: one the store has stays and the late one goes aside, but of two notes of one lockfile the store keeps the later, and the other goes aside first. And it moves `pipelines/` aside, whole: nothing under it is moved in, an object no pipeline owns neither, and the last lines name each snapshot there, to be made again with this ChartBook, and each file that arrived for a snapshot already moved, with where it is.
 
+Two things to know before a move from 0.5:
+
+- **A store that 0.5's `store verify` called OK may fail this version's `store verify` before it is moved.** ChartBook 0.5 found a file by its hash anywhere in its pipeline's folder, and this version asks each snapshot for its own files. `chartbook store migrate` takes such a file from where another snapshot of the pipeline keeps the same bytes, and says how many it took.
+- **On a synced folder the move takes longer.** Measured on Google Drive for desktop on Windows, it took 40 to 55 ms a file, against 3 ms on a local disk: minutes for a store of a few thousand files, and up to an hour for one of 50,000 to 75,000. If it stops, type the command again, and it goes on where it stopped.
+
 **A store made by ChartBook 0.2** is moved to the layout of 0.5 by the first run of this command, and on to this version's by a second. The first is the move an earlier version made ({design}`plan-0.3.0`), and goes on where it stopped like the other. Its files are renamed too, but the files of a glob, whose records give no hash for each file, are read once to hash them: in a folder that streams its files, as Google Drive's does, that downloads them, and `--dry-run` says how much. What no snapshot names (a `git` dependency's pins in 0.2) is kept while a lockfile names it.
 
 ```console
