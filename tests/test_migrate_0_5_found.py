@@ -28,6 +28,7 @@ from click.testing import CliRunner
 
 from chartbook import config, data, lock, migrate_0_5
 from chartbook import store as store_module
+from chartbook.replacing import replace_when_let
 from chartbook.cli import main
 from tests.found_store_of_0_5 import IN_A, MADE, UNNAMED, _parts, any_store, elsewhere, found
 from tests.rich_store_of_0_5 import (
@@ -518,7 +519,7 @@ class TestARecordThatGoesAside:
         s2 = folder_of("2025-11-01", "b")
         put(root, "acme+p", s2, "_data/b.parquet", b"b" * 100)
         record(root, "acme/p", "2025-11-01", "b", [("_data/b.parquet", b"b" * 100, None, None)])
-        os.replace(root / "pipelines" / "acme+p" / s2, root / "pipelines" / "acme+p" / f"{s2} 2")
+        replace_when_let(root / "pipelines" / "acme+p" / s2, root / "pipelines" / "acme+p" / f"{s2} 2")
         found_ = migrate_0_5.plan(root)
         assert found_.set_aside == [("acme+p", f"{s2} 2")] and found_.second == [] and found_.snapshots == 1
         line = f"1 snapshot(s) {{go}} aside without being moved in: acme+p/{s2} 2. Run that pipeline again with this ChartBook."
@@ -589,7 +590,7 @@ class TestNoLineSaysToMoveOutAFolderThatARecordMayNameFilesIn:
             ) in said
             assert "move its folder out" not in said and "remove" not in said
         # The way out, carried out: the folder is then one with files and no record, and the other snapshot has its file
-        os.replace(broken, work / "moved-out.json")
+        replace_when_let(broken, work / "moved-out.json")
         result, said = typed("store", "migrate", "--yes")
         assert result.exit_code == 0 and f"1 folder(s) held files and had no record: acme+p/{s1} (1 file(s))." in said and "missing" not in said
         assert fresh(root).verify() == [] and (root / "snapshots" / "acme+p" / s2 / "_data" / "a.parquet").read_bytes() == b"a" * 100
@@ -603,7 +604,7 @@ class TestNoLineSaysToMoveOutAFolderThatARecordMayNameFilesIn:
             "if it is no snapshot of yours, move its folder out of the store: no other snapshot's record names a file in it. "
             "`chartbook store verify` says more."
         ) in said
-        os.replace(root / "pipelines" / "acme+p" / s2, work / "moved-out")  # the way out, carried out
+        replace_when_let(root / "pipelines" / "acme+p" / s2, work / "moved-out")  # the way out, carried out
         result, said = typed("store", "migrate", "--yes")
         assert result.exit_code == 0 and "missing" not in said and fresh(root).verify() == []
 

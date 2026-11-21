@@ -599,11 +599,11 @@ class TestFoundBeforeAnythingMoves:
     def test_a_pipelines_folder_that_is_a_link(self, of_0_5, work):
         root, _ = of_0_5
         real = root / "pipelines" / "acme+once"
-        real.rename(work / "elsewhere")
+        replacing.replace_when_let(real, work / "elsewhere")
         real.symlink_to(work / "elsewhere", target_is_directory=True)
         self._refused(root, f"{real} is a link to another place, and a move does not follow one")
         real.unlink()
-        (work / "elsewhere").rename(real)
+        replacing.replace_when_let(work / "elsewhere", real)
         self._moves(root)
 
     def test_two_names_this_disk_does_not_tell_apart(self, of_0_5, monkeypatch):
@@ -806,7 +806,7 @@ class TestTheWaysOutNeverSayToRemoveWhatARecordMayName:
             said = CliRunner().invoke(main, ["store", "migrate", "--yes"]).output.replace("\n", " ")
             assert "is a link to another place" in said and "put that folder itself where the link is, and run this again" in said
             assert "remove" not in said and "move the link out" not in said and "is then missing" not in said
-            link.rename(work / "the-link")  # it led to no folder of the store
+            replacing.replace_when_let(link, work / "the-link")  # it led to no folder of the store
         assert CliRunner().invoke(main, ["store", "migrate", "--yes"]).exit_code == 0
         assert (root / "_chartbook" / "left-by-0.5" / "pipelines" / "acme+once" / arriving.name / "_data" / "t.parquet").read_bytes() == b"x"
 

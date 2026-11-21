@@ -23,6 +23,7 @@ from click.testing import CliRunner
 
 from chartbook import config, migrate_0_5
 from chartbook import store as store_module
+from chartbook.replacing import replace_when_let
 from chartbook.cli import main
 from chartbook.store import StoreError
 from tests.rich_store_of_0_5 import (
@@ -365,11 +366,11 @@ class TestNothingIsRenamedOntoAFileThatIsThere:
         root, names = v2
         before = read_through(root)
         late = root / "pipelines" / "acme+r" / names["r1"] / "_data" / "f.parquet"
-        os.replace(late, tmp_path / "not-synced-yet")
+        replace_when_let(late, tmp_path / "not-synced-yet")
         cut_at(root, lambda step: step.op == "write")
         record_of = root / "increments" / "acme+r" / names["r2"] / "_chartbook" / "snapshot.json"
         earlier = record_of.read_bytes()
-        os.replace(tmp_path / "not-synced-yet", late)
+        replace_when_let(tmp_path / "not-synced-yet", late)
         made, real = [], os.replace
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(os, "replace", lambda a, b: (made.append((os.path.lexists(b), Path(b).relative_to(root).as_posix())), real(a, b))[1])
@@ -544,7 +545,7 @@ class TestAFileWhereTheMoveMakesAFolder:
             result, said = typed(*words)
             assert result.exit_code == 1 and "where the move makes a folder" in said and tree_of(root) == before
         # The way out, carried out
-        os.replace(root / in_the_way, tmp_path / "moved-out")
+        replace_when_let(root / in_the_way, tmp_path / "moved-out")
         assert typed("store", "migrate", "--yes")[0].exit_code == 0 and len(fresh(root).verify()) == 2  # the two files missing as before
 
 
@@ -600,7 +601,7 @@ class TestWhatIsMissingIsSaidAfterTheMoveToo:
         """The file two pins share is not there when the move is planned, and arrives with other bytes of its size: put in place in the last look, copied as it is, and named."""
         root, names = v2
         shared = root / "pipelines" / "acme+q" / names["q1"] / "_data" / "q.parquet"
-        os.replace(shared, tmp_path / "not-synced-yet")
+        replace_when_let(shared, tmp_path / "not-synced-yet")
         found = migrate_0_5.plan(root)
         assert len(found.missing) == 4 and found.copied_as_is == []  # the two as before, and the one file of the two pins
         after = max(number for number, step in enumerate(found.steps, 1) if step.op in ("write", "note"))

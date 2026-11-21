@@ -40,6 +40,7 @@ from click.testing import CliRunner
 from chartbook import config, migrate_0_5, replacing
 from chartbook import store as store_module
 from chartbook.cli import main
+from tests.fixtures import needs_symlinks, symlinks_work
 from tests.found_store_of_0_5 import WIDE, facts_before, stopped_then, wide_store, worse_after
 from tests.rich_store_of_0_5 import (
     OWN,
@@ -204,7 +205,7 @@ class TestEveryTryOfARenameLooksFirst:
         (tmp_path / "b").write_bytes(b"b")
         assert replacing.replace_when_free(tmp_path / "a", tmp_path / "b") is False and (tmp_path / "b").read_bytes() == b"b"
         assert replacing.replace_when_free(tmp_path / "a", tmp_path / "c") is True and (tmp_path / "c").read_bytes() == b"a"
-        if os.name != "nt":
+        if symlinks_work():  # a link is this user's to make: not so on Windows without Developer Mode
             (tmp_path / "link").symlink_to(tmp_path / "nowhere")
             assert replacing.replace_when_free(tmp_path / "b", tmp_path / "link") is False  # a link that leads nowhere is there too
 
@@ -253,7 +254,7 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         assert not list((root / "snapshots").rglob("notes.txt"))
         assert (root / ASIDE / "pipelines" / "acme+p" / C0 / "_data" / "k.parquet" / "notes.txt").read_bytes() == b"nobody names this"
 
-    @pytest.mark.skipif(os.name == "nt", reason="a link needs a privilege on Windows")
+    @needs_symlinks
     def test_a_file_is_not_taken_out_of_a_folder_outside_the_store_through_a_linked_folder(self, work):
         """``c0/_data`` is a link to a folder outside the store: three folders deep, where ``check`` looked two."""
         root = empty_store(work)
@@ -262,7 +263,7 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         (outside / "k.parquet").write_bytes(K)
         put(root, "acme+p", C0, "plain.bin", b"a plain file, so the folder holds one")
         link = root / "pipelines" / "acme+p" / C0 / "_data"
-        os.symlink(outside, link)
+        os.symlink(outside, link, target_is_directory=True)
         s2 = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, C0, None)])
         before = tree_of(root)
         with pytest.raises(migrate_0_5.MoveError) as stopped:
@@ -271,11 +272,11 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         assert tree_of(root) == before and (outside / "k.parquet").read_bytes() == K and not (root / migrate_0_5.JOURNAL).exists()
         # The way out, as the line says: the folder itself where the link is
         os.unlink(link)
-        os.replace(outside, link)
+        replacing.replace_when_let(outside, link)
         migrate_0_5.run(root)
         assert read_through(root) == {("acme/p", s2, "_data/k.parquet"): sha(K)}
 
-    @pytest.mark.skipif(os.name == "nt", reason="a link needs a privilege on Windows")
+    @needs_symlinks
     def test_a_link_where_a_record_names_a_file_stays_out_of_the_snapshots(self, work):
         """``c0/_data/k.parquet`` is a link to a file elsewhere: no file the store keeps, before or after. It is counted missing, and goes aside as it is."""
         root = empty_store(work)
@@ -292,14 +293,14 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         assert not os.path.lexists(root / "snapshots" / "acme+p" / s2 / "_data" / "k.parquet")
         assert (root / ASIDE / "pipelines" / "acme+p" / C0 / "_data" / "k.parquet").is_symlink()
 
-    @pytest.mark.skipif(os.name == "nt", reason="a link needs a privilege on Windows")
+    @needs_symlinks
     def test_the_folder_itself_being_a_link_stops_the_move_before_anything(self, work):
         root = empty_store(work)
         outside = work / "not-the-store"
         (outside / "_data").mkdir(parents=True)
         (outside / "_data" / "k.parquet").write_bytes(K)
         (root / "pipelines" / "acme+p").mkdir(parents=True)
-        os.symlink(outside, root / "pipelines" / "acme+p" / C0)
+        os.symlink(outside, root / "pipelines" / "acme+p" / C0, target_is_directory=True)
         record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, C0, None)])
         before = tree_of(root)
         with pytest.raises(migrate_0_5.MoveError, match="is a link to another place"):
@@ -768,7 +769,7 @@ class TestAFolderThatIsNoPipelines:
         other = record(store, "acme/p", "2025-12-01", "c", [("_data/c.parquet", C, None, None)])
         put(store, "acme+p", other, "_data/c.parquet", C)
         (store / "pipelines" / "acme+p 2").mkdir()
-        os.replace(store / "pipelines" / "acme+p" / other, store / "pipelines" / "acme+p 2" / other)  # the only record of it
+        replacing.replace_when_let(store / "pipelines" / "acme+p" / other, store / "pipelines" / "acme+p 2" / other)  # the only record of it
         found = migrate_0_5.plan(store)
         assert found.not_pipelines == ["acme+p 2"] and found.set_aside == [("acme+p 2", other)] and found.second == []
         done = migrate_0_5.run(store)
@@ -781,7 +782,7 @@ class TestAFolderThatIsNoPipelines:
     def test_what_is_named_as_a_pipelines_folder(self, name, is_one):
         assert bool(migrate_0_5._is_pipeline_folder(name)) is is_one
 
-    @pytest.mark.skipif(os.name == "nt", reason="a link needs a privilege on Windows")
+    @needs_symlinks
     def test_the_line_about_a_link_says_to_put_the_folder_itself_where_the_link_is(self, store, work):
         """The snapshot folder that keeps a file of the newest is a link to a folder on another disk (a person made room). 0.5 read through it. The line said to move the link out, "a file a record names through it is then missing, as it would have been": it was not missing."""
         elsewhere = work / "another-disk" / C0
@@ -789,7 +790,7 @@ class TestAFolderThatIsNoPipelines:
         (elsewhere / "_data" / "k.parquet").write_bytes(K)
         (store / "pipelines" / "acme+p").mkdir(parents=True)
         link = store / "pipelines" / "acme+p" / C0
-        os.symlink(elsewhere, link)
+        os.symlink(elsewhere, link, target_is_directory=True)
         s = record(store, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, C0, None)])
         assert read_through(store) == {("acme/p", s, "_data/k.parquet"): sha(K)}  # whole, to 0.5
         stopped, said = typed("store", "migrate", "--yes")
@@ -802,7 +803,7 @@ class TestAFolderThatIsNoPipelines:
         assert "move the link out" not in said and "is then missing" not in said
         # As told
         os.unlink(link)
-        shutil.move(str(elsewhere), str(link))
+        replacing.replace_when_let(elsewhere, link)
         result, said = typed("store", "migrate", "--yes")
         assert result.exit_code == 0 and read_through(store) == {("acme/p", s, "_data/k.parquet"): sha(K)}
 
