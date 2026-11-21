@@ -192,8 +192,9 @@ def rich(root: Path) -> dict:
     return dict(c0=c0, s1=s1, s2=s2, s3=s3, p4=p4, p5=p5, q1=q1, q2=q2, r1=r1, r2=r2, r3=r3)
 
 
-#: What a move may remove or write over: its own journal, the store's marker, and its own temporary files
+#: What a move may remove or write over: its own journal, the store's marker, and what is in its own folder of temporaries
 OWN = ("_chartbook/move-to-v3.jsonl", "store.json")
+MOVING = "_chartbook/moving"
 
 
 def watch(monkeypatch, root: Path, gone: list) -> None:
@@ -242,6 +243,7 @@ def watch(monkeypatch, root: Path, gone: list) -> None:
 
 
 def not_its_own(gone: list) -> list:
-    return sorted({(name, path) for name, path in gone if not path.endswith(".moving") and path not in OWN and "/pytest-" not in path})
+    """What was removed or written over that is not the move's own. A file is the move's by where it is, never by its name: one named ``x.moving`` in a pipeline's folder is anyone's."""
+    return sorted({(name, path) for name, path in gone if path != MOVING and not path.startswith(MOVING + "/") and path not in OWN and "/pytest-" not in path})
 
 

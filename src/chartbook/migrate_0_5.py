@@ -74,6 +74,14 @@ since what holds the file may write there meanwhile: what has come to be
 there stays (:func:`chartbook.replacing.replace_when_free`). Only the
 journal and ``store.json``, which are the move's own, are written over.
 
+A file the move writes (a copy, a record, a note, its journal,
+``store.json``) is written first in a folder of the move's own,
+``_chartbook/moving/``, under a name made from a hash of where it goes,
+and one rename puts it in place. What is in that folder is the move's to
+remove, whoever's run wrote it: when its step is done or found done, and
+all of it when the move ends. Nothing anywhere else is ever taken for a
+temporary of the move's, whatever its name.
+
 And the move takes a file only as the store's reader would find it: by the
 name the disk has for it where a sync wrote the name in the other of
 Unicode's forms (:func:`chartbook.store.on_disk`), only a plain file, and
@@ -128,6 +136,10 @@ JOURNAL_SCHEMA = "chartbook/store/move-to-v3"
 
 #: Where what is left of the old layout is moved, whole: nothing is removed that ChartBook did not write.
 LEFT_ASIDE = f"{OWN_DIR}/left-by-0.5"
+
+#: The folder of a move's own temporary files: in the store, so that putting one in place is one rename on one disk.
+#: Whatever is in it is a move's to remove, whoever's run wrote it; and nothing anywhere else is ever taken for one.
+MOVING = f"{OWN_DIR}/moving"
 
 #: The mark the move from the layout of 0.2 left for ChartBook 0.2 to trip over; the name is now the snapshots' own.
 OLD_MARK = "0" * 40
@@ -939,8 +951,8 @@ def check(root: Path, found: Plan) -> None:
             f"it to finish, see that nothing else uses the store, and run this again."
         )
     # A file, or a link, where the move makes a folder: each folder of each place a step writes to, the folders a
-    # merge makes, and where things go aside
-    made = {root / OWN_DIR}
+    # merge makes, where things go aside, and the move's own folder of temporaries
+    made = {root / OWN_DIR, root / MOVING}
     for step in found.steps:
         if step.target:
             made.add((root / step.target).parent)
@@ -958,7 +970,10 @@ def check(root: Path, found: Plan) -> None:
                     f"the store, and run this again."
                 )
             seen_clear.add(place)
-    folders = {root}
+    own = root / MOVING  # every file the move writes is written there first
+    while not own.is_dir() and own != root:
+        own = own.parent
+    folders = {root, own}
     for step in found.steps:
         for place in (step.source, step.target):
             if place and step.op != "note":
@@ -987,12 +1002,10 @@ def check(root: Path, found: Plan) -> None:
                 f"{held} is locked, and this system renames nothing that is: the store is not moved. Unlock it (in the "
                 f"Finder: Get Info, and untick Locked; in a terminal: chflags nouchg, and the path), and run this again."
             )
-    # Each place a step writes to, and the name a copy or a record is written under first, beside it
-    long = next((
-        why for step in found.steps if step.target
-        for path in [root / step.target] + ([_temporary_of(root / step.target)] if step.op in ("copy", "write", "note") else [])
-        for why in [too_long(path)] if why
-    ), None)
+    # Each place a step writes to; and where a file is written first, which is as long for every file and shorter
+    # than the path of any file of a snapshot
+    long = next((why for step in found.steps if step.target for why in [too_long(root / step.target)] if why), None)
+    long = long or too_long(_temporary_of(root, root / "store.json"))
     if long is not None:
         raise MoveError(f"The store is not moved: {long}")
     if not _tells_case_apart(root):
@@ -1060,7 +1073,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
             "schema": JOURNAL_SCHEMA, "machine": this_machine(), "so_far": so_far,
             "started": (started or {}).get("started") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
-        _write_journal(journal, header, found.steps)
+        _write_journal(root, header, found.steps)
         for step in found.steps:
             if step.op == "aside" and step.source == V2_LAYOUT.pipelines:
                 # Once more, just before the old folder goes aside: a file that arrived since its step is put in its place,
@@ -1086,13 +1099,14 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
             elif said:
                 so_far["kept"] = said
             if said:
-                _write_journal(journal, header, found.steps)
+                _write_journal(root, header, found.steps)
             number += 1
             after_step(number)
     # The marker last, and the journal after it
     marker = root / "store.json"
     if marker_of(root) != FOLDER_SCHEMA:
-        temporary = marker.with_name("store.json.moving")
+        temporary = _own_temporary(root, marker)
+        temporary.parent.mkdir(parents=True, exist_ok=True)
         temporary.write_text(json.dumps({"schema": FOLDER_SCHEMA}) + "\n", encoding="utf-8", newline="\n")
         replace_when_let(temporary, marker)
     after_step(number + 1)
@@ -1100,9 +1114,11 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
         so_far = (journal_of(root) or {}).get("so_far") or {}
     except MoveError:
         so_far = {}
+    # The move's own folder of temporaries, with whatever a run cut short left in it; and the journal after it, so
+    # that a run cut short between the two is still told to run again, and removes it then
+    _clear_temporaries(root)
     if journal.is_file():
         journal.unlink()
-    _own_temporary(journal)  # and the one a journal was being written under, where a run was cut short there
     for key in _COUNTS + ("elsewhere",):
         setattr(done, key, so_far.get(key, 0))
     for key in ("set_aside", "in_place", "second", "no_record", "second_folders", "elsewhere_first"):
@@ -1141,10 +1157,11 @@ def _add(carried: list, items) -> None:
             carried.append(item)
 
 
-def _write_journal(journal: Path, header: dict, steps: list) -> None:
+def _write_journal(root: Path, header: dict, steps: list) -> None:
     """Write a journal in the place of the last one: there is never a move under way and no journal."""
-    journal.parent.mkdir(parents=True, exist_ok=True)
-    temporary = journal.with_name(journal.name + ".moving")
+    journal = root / JOURNAL
+    temporary = _own_temporary(root, journal)
+    temporary.parent.mkdir(parents=True, exist_ok=True)
     with open(temporary, "w", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(header, ensure_ascii=False) + "\n")
         for step in steps:
@@ -1184,27 +1201,48 @@ def _locked(path: Path) -> bool:
         return False
 
 
-def _temporary_of(path: Path) -> Path:
-    """The name a file of ChartBook's own is written under before it is put in place: beside it, and the same every time for the same file, so that one left by a move cut short is known for the move's.
+def _temporary_of(root: Path, target: Path) -> Path:
+    """Where a file the move writes is written first, before one rename puts it in place: in the move's own folder (:data:`MOVING`), under a name made from a hash of where the file goes.
 
-    It is the file's name and ``.moving``; and for a name so long that
-    seven characters more would not fit in a folder (255 is the limit of
-    most disks), a hash of the name and ``.moving``, which no name's length
-    makes longer.
+    The same every time for the same place, so one left by a move cut
+    short is found by the step that left it; and nothing to do with the
+    file's own name, so that no file of a pipeline is ever taken for a
+    temporary, and a name's length adds nothing to its own. The path is
+    shorter than that of any file of a snapshot (42 characters under the
+    store's top, against 45 at the least), so it fits wherever the moved
+    store does. Steps are done one at a time, so two places that had one
+    name here (24 hex digits of a SHA-256) would only write it in turn.
     """
-    name = path.name
-    if len(name.encode("utf-8")) > 200:
-        name = hashlib.sha256(name.encode("utf-8")).hexdigest()[:32]
-    return path.with_name(name + ".moving")
+    return root / MOVING / hashlib.sha256(target.relative_to(root).as_posix().encode("utf-8")).hexdigest()[:24]
 
 
-def _own_temporary(path: Path) -> Path:
-    """The temporary name a file of ChartBook's own is written under (:func:`_temporary_of`); one left by a move that was cut short is ChartBook's to remove."""
-    temporary = _temporary_of(path)
+def _remove_own(temporary: Path) -> None:
+    """Remove a file in the move's own folder, where there is one: read-only as a copy cut short left it, or not."""
     if os.path.lexists(temporary):
-        os.chmod(temporary, 0o644)
+        if not temporary.is_symlink():
+            os.chmod(temporary, 0o644)
         temporary.unlink()
+
+
+def _own_temporary(root: Path, target: Path) -> Path:
+    """The temporary of a file the move writes (:func:`_temporary_of`), free to be written: one left there by a move that was cut short is the move's to remove."""
+    temporary = _temporary_of(root, target)
+    _remove_own(temporary)
     return temporary
+
+
+def _clear_temporaries(root: Path) -> None:
+    """Remove the move's own folder of temporaries with what is left in it, at the end of a move."""
+    folder = root / MOVING
+    if folder.is_symlink() or not folder.is_dir():
+        return
+    for left in sorted(folder.iterdir()):
+        if left.is_symlink() or not left.is_dir():
+            _remove_own(left)
+    try:
+        folder.rmdir()
+    except OSError:
+        pass  # a folder somebody made in it: not a file the move wrote, and left
 
 
 def _do(root: Path, step: Step) -> Optional[str]:
@@ -1248,10 +1286,13 @@ def _do(root: Path, step: Step) -> Optional[str]:
     elif step.op == "copy":
         if os.path.lexists(target) or _size(source) != step.size:
             # Done; or the file was never there, and its record goes on naming it; or what is there is not the file
-            # (a part of it, another file in its place): a copy is made only from a file at its size
+            # (a part of it, another file in its place): a copy is made only from a file at its size. And what a
+            # copy that was cut short left in the move's own folder goes, the file having come by itself or not at all
+            _own_temporary(root, target)
             return None
         target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = _own_temporary(target)
+        temporary = _own_temporary(root, target)
+        temporary.parent.mkdir(parents=True, exist_ok=True)
         hashed = hashlib.sha256()
         with open(source, "rb") as read, open(temporary, "wb") as write:
             for block in iter(lambda: read.read(1 << 20), b""):
@@ -1261,7 +1302,7 @@ def _do(root: Path, step: Step) -> Optional[str]:
             os.fsync(write.fileno())
         shutil.copymode(source, temporary)
         if not replace_when_free(temporary, target):
-            _own_temporary(target)  # a file came to be there meanwhile, and stays: the move's own temporary goes
+            _own_temporary(root, target)  # a file came to be there meanwhile, and stays: the move's own temporary goes
             return None
         if step.content_hash and f"sha256:{hashed.hexdigest()}" != step.content_hash:
             return "as it is"  # it was wrong before: two copies of it are no worse, and the last lines name it
@@ -1269,12 +1310,13 @@ def _do(root: Path, step: Step) -> Optional[str]:
         while True:
             if os.path.lexists(target):
                 if step.op == "note" or _text(target) == step.text:
-                    _own_temporary(target)  # one left by a try that found its place taken
+                    _own_temporary(root, target)  # one left by a try that found its place taken, or by a run cut short
                     return None  # a note that is there stays, whoever wrote it; and a record written already is written
                 # A record of other words than this plan's (an earlier plan's, before a file arrived): aside, never written over
                 _aside(root, target)
             target.parent.mkdir(parents=True, exist_ok=True)
-            temporary = _own_temporary(target)
+            temporary = _own_temporary(root, target)
+            temporary.parent.mkdir(parents=True, exist_ok=True)
             temporary.write_text(step.text, encoding="utf-8", newline="\n")
             if replace_when_free(temporary, target):
                 return None  # else something came to be there meanwhile: looked at as what was there before

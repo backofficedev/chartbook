@@ -737,15 +737,17 @@ class TestTheMoverRemovesNothingOfAnyones:
         assert (steps[-1].op, steps[-1].source, steps[-1].target) == ("aside", "pipelines", "_chartbook/left-by-0.5/pipelines")
 
     def test_a_read_only_temporary_left_by_a_copy_cut_short_is_chartbooks_to_replace(self, of_0_5):
+        """A copy is written first in the move's own folder, under a name made from where it goes: one left there, read-only as its source was, is the move's."""
         root, _ = of_0_5
         copy = next(step for step in migrate_0_5.plan(root).steps if step.op == "copy")
-        left = root / (copy.target + ".moving")
+        left = migrate_0_5._temporary_of(root, root / copy.target)
+        assert left.parent == root / "_chartbook" / "moving" and len(left.name) == 24
         left.parent.mkdir(parents=True)
         left.write_bytes(b"half")
         os.chmod(left, stat.S_IREAD)
         migrate_0_5.run(root)
         store_module._read_records.clear()
-        assert not left.exists() and FolderStore(root).verify() == []
+        assert not left.exists() and not left.parent.exists() and FolderStore(root).verify() == []
 
 
 class TestOnlyWhatTheStoresReaderTookIsFollowed:
@@ -961,7 +963,9 @@ class TestARenameWindowsRefusesForAMoment:
         assert result.exit_code == 0, result.output
         kinds = {Path(source).name for source in refused}
         # Files, the notes' folders, the old folder put aside, the journal and the marker: every kind of rename it makes
-        assert len(refused) > 20 and {"pipelines", "roots", "origins", "store.json.moving"} <= kinds, sorted(kinds)
+        written_first = {migrate_0_5._temporary_of(root, root / name).name for name in ("store.json", migrate_0_5.JOURNAL)}
+        assert len(refused) > 20 and {"pipelines", "roots", "origins"} | written_first <= kinds, sorted(kinds)
+        assert not (root / migrate_0_5.MOVING).exists()
         store_module._read_records.clear()
         assert not (root / "pipelines").exists() and FolderStore(root).verify() == []
 

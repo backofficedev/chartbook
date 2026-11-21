@@ -163,7 +163,7 @@ class TestEveryTryOfARenameLooksFirst:
         brought = b"k" * 399 + b"!"  # of its size, and other bytes
         refused = self._refused_once(monkeypatch, lambda to: to == place, lambda to: to.write_bytes(brought))
         migrate_0_5.run(root)
-        assert refused and place.read_bytes() == brought and not list(root.rglob("*.moving"))
+        assert refused and place.read_bytes() == brought and not (root / migrate_0_5.MOVING).exists()
         assert (root / "snapshots" / "acme+q" / q1 / "_data" / "k.parquet").read_bytes() == K
 
     def test_a_record_that_came_to_be_there_is_put_aside_and_never_written_over(self, work, monkeypatch):
@@ -173,7 +173,7 @@ class TestEveryTryOfARenameLooksFirst:
         refused = self._refused_once(monkeypatch, lambda to: to == place, lambda to: to.write_text('{"of": "other words"}\n', encoding="utf-8", newline="\n"))
         migrate_0_5.run(root)
         assert refused and (root / ASIDE / "snapshots" / "acme+q" / q1 / "_chartbook" / "snapshot.json").read_text(encoding="utf-8") == '{"of": "other words"}\n'
-        assert fresh(root).verify() == [] and not list(root.rglob("*.moving"))
+        assert fresh(root).verify() == [] and not (root / migrate_0_5.MOVING).exists()
 
     def test_a_note_that_came_to_be_there_stays(self, work, monkeypatch):
         root = empty_store(work)
@@ -181,7 +181,7 @@ class TestEveryTryOfARenameLooksFirst:
         place = root / "README.txt"
         refused = self._refused_once(monkeypatch, lambda to: to == place, lambda to: to.write_text("Ours. Ask Dana.\n", encoding="utf-8", newline="\n"))
         migrate_0_5.run(root)
-        assert refused and place.read_text(encoding="utf-8") == "Ours. Ask Dana.\n" and not list(root.rglob("*.moving"))
+        assert refused and place.read_text(encoding="utf-8") == "Ours. Ask Dana.\n" and not (root / migrate_0_5.MOVING).exists()
 
     def test_the_notes_are_merged_into_a_folder_that_came_to_be_there(self, work, monkeypatch):
         root = empty_store(work)
@@ -436,12 +436,12 @@ class TestCheckAsksTheDiskWhatAStepWillAsk:
         return name, s2, p3
 
     def test_a_file_two_snapshots_must_each_hold_whose_name_leaves_no_room_for_the_movers_temporary_name(self, work):
-        """A copy was written as ``<name>.moving`` first: seven characters more than a name the disk took."""
+        """A copy was written as ``<name>.moving`` first: seven characters more than a name the disk took. It is written in the move's own folder now, under a name that has nothing of the file's."""
         root = empty_store(work)
         name, s2, p3 = self._long(root)
         before = facts_before(root)
-        temporary = migrate_0_5._temporary_of(root / "snapshots" / "acme+p" / p3 / "_data" / name)
-        assert temporary.name.endswith(".moving") and len(temporary.name) == 39 and temporary.parent.name == "_data"
+        temporary = migrate_0_5._temporary_of(root, root / "snapshots" / "acme+p" / p3 / "_data" / name)
+        assert temporary.parent == root / "_chartbook" / "moving" and len(temporary.name) == 24 and set(temporary.name) <= set("0123456789abcdef")
         migrate_0_5.run(root)
         assert worse_after(before, root) == ([], []) and (root / "snapshots" / "acme+p" / p3 / "_data" / name).read_bytes() == K
 
@@ -452,17 +452,19 @@ class TestCheckAsksTheDiskWhatAStepWillAsk:
         assert first.exit_code == 0, said[-400:]
         assert read_through(store) == {("acme/p", s2, f"_data/{name}"): sha(K), ("acme/p", p3, f"_data/{name}"): sha(K)}
 
-    def test_a_temporary_left_under_the_short_name_by_a_move_cut_short_is_known_and_replaced(self, work):
+    def test_a_temporary_left_by_a_move_cut_short_is_known_and_replaced(self, work):
         root = empty_store(work)
         name, s2, p3 = self._long(root)
-        left = migrate_0_5._temporary_of(root / "snapshots" / "acme+p" / p3 / "_data" / name)
+        target = root / "snapshots" / "acme+p" / p3 / "_data" / name
+        left = migrate_0_5._temporary_of(root, target)
         left.parent.mkdir(parents=True)
         left.write_bytes(b"half")
         os.chmod(left, stat.S_IREAD)
         migrate_0_5.run(root)
-        assert not left.exists() and not list(root.rglob("*.moving")) and fresh(root).verify() == []
-        # The same name every time, and an ordinary name's is the name and ".moving", as it was
-        assert migrate_0_5._temporary_of(left.with_name(name)) == left and migrate_0_5._temporary_of(Path("x") / "snapshot.json").name == "snapshot.json.moving"
+        assert not left.exists() and not (root / migrate_0_5.MOVING).exists() and fresh(root).verify() == []
+        # The same name every time for the same place, another for another place, and each as long as any other
+        other = migrate_0_5._temporary_of(root, root / "snapshots" / "acme+p" / p3 / "_chartbook" / "snapshot.json")
+        assert migrate_0_5._temporary_of(root, target) == left and other != left and len(other.name) == len(left.name) == 24
 
     @pytest.mark.skipif(not hasattr(os, "chflags") or not hasattr(stat, "UF_IMMUTABLE"), reason="a file is locked this way on macOS and BSD")
     def test_a_locked_file_that_a_record_names_is_found_before_the_first_step(self, work):

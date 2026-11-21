@@ -464,3 +464,271 @@ def wide_store(root: Path, seed: int, pipelines: int = 1) -> None:
             mark.write_text("Cleared by `chartbook store gc`.\n", encoding="utf-8", newline="\n")
     store_module._read_records.clear()
     store_module._found_whole.clear()
+
+
+# From the second review of the mover (2026-11-20): what a move is held to, by the folders 0.5 read; and stores drawn with
+# that review's shapes
+
+
+def records_0_5_read(root: Path) -> list:
+    """The records ChartBook 0.5 read, each as ``(pipeline's folder, snapshot's folder, the document)``: in a folder named as a snapshot's, in the folder of the pipeline they say."""
+    from chartbook.store import is_snapshot_folder, pipeline_folder
+
+    found = []
+    for file in sorted(root.glob("pipelines/*/*/_chartbook/snapshot.json")):
+        snapshot, pipeline = file.parent.parent.name, file.parent.parent.parent.name
+        if not is_snapshot_folder(snapshot):
+            continue
+        document = json.loads(file.read_text(encoding="utf-8"))
+        if pipeline_folder(document["root"]) != pipeline:
+            continue
+        found.append((pipeline, snapshot, document))
+    return found
+
+
+def _sha(data: bytes) -> str:
+    import hashlib
+
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def _holds(path: Path, key: tuple) -> bool:
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size != key[1]:
+            return False
+        return _sha(path.read_bytes()) == key[0]
+    except OSError:
+        return False
+
+
+def facts_by_folder(root: Path) -> dict:
+    """Of a store of 0.5, by the folders: ``(pipeline's folder, snapshot's folder, path) -> (hash, size, whether it is at its stated place with its bytes, whether some stated place of the pipeline holds them, the stated place)``, of the records 0.5 read."""
+    entries, places = [], {}
+    for pipeline, snapshot, document in records_0_5_read(root):
+        for part in _parts(document):
+            for entry in part["stored"].get("files") or []:
+                key = (entry["content_hash"], entry["size_bytes"])
+                place = root / "pipelines" / pipeline / entry.get("kept_in", snapshot) / entry.get("kept_as", entry["path"])
+                entries.append((pipeline, snapshot, entry["path"], key, place))
+                places.setdefault((pipeline, key), set()).add(place)
+    somewhere = {of: any(_holds(place, of[1]) for place in at) for of, at in places.items()}
+    return {
+        (pipeline, snapshot, path): (key[0], key[1], _holds(place, key), somewhere[(pipeline, key)], place.relative_to(root).as_posix())
+        for pipeline, snapshot, path, key, place in entries
+    }
+
+
+def reads_after(root: Path) -> dict:
+    """Of a moved store: ``(pipeline's folder, snapshot's folder, path) -> (the hash of what the store hands out, or why not; where it is)``."""
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    found = {}
+    for kept in FolderStore(root).records():
+        if not kept.readable:
+            continue
+        for asset in kept.assets:
+            for file in asset.files:
+                where = file.location.relative_to(root).as_posix()
+                try:
+                    if file.location.is_symlink() or not file.location.is_file():
+                        raise FileNotFoundError(where)
+                    found[(kept.folder.parent.name, kept.folder.name, file.path)] = (_sha(file.location.read_bytes()), where)
+                except OSError as error:
+                    found[(kept.folder.parent.name, kept.folder.name, file.path)] = (type(error).__name__, where)
+    return found
+
+
+def record_at(root: Path, folder: str, pipeline_id: str, day: str, letter: str, entries: list, made_by: str = "") -> str:
+    """One snapshot's record as 0.5 wrote it, in the pipeline's folder as given (``tests.rich_store_of_0_5.record`` writes ``/`` as ``+`` and no more); the snapshot's folder name."""
+    from tests.rich_store_of_0_5 import COMMIT, folder_of
+
+    snapshot = folder_of(day, letter)
+    parts = []
+    for path, data, kept_in, kept_as in entries:
+        entry = {"path": path, "content_hash": _sha(data), "size_bytes": len(data), "kept_in": kept_in or snapshot}
+        if kept_as:
+            entry["kept_as"] = kept_as
+        parts.append({
+            "id": f"{pipeline_id}:dataframe:{path}", "kind": "dataframe", "content_hash": _sha(data), "size_bytes": len(data),
+            "stored": {"at": path.rpartition("/")[0], "single": True, "files": [entry]},
+        })
+    document = {
+        "schema": "chartbook/snapshot/v2", "root": pipeline_id, "made_at": f"{day}T09:15:00.000000Z",
+        "code": {"commit": COMMIT[letter], "subdirectory": ""}, "records": parts,
+    }
+    if made_by:
+        document["made_by"] = made_by
+    file = root / "pipelines" / folder / snapshot / "_chartbook" / "snapshot.json"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+    return snapshot
+
+
+#: What :func:`drawn_store` adds to the bytes of :func:`wide_store`: a file with a name of 251 characters, and one whose name the disk has in the other of Unicode's forms.
+LONG_NAME = "k" * 243 + ".parquet"
+ACCENTED = "café-ñandú.parquet"
+EXTRA = {"long": b"L" * 211, "accented": b"U" * 187}
+BY_HASH = {_sha(data): data for data in list(WIDE.values()) + list(EXTRA.values())}
+
+
+def _rewrite(record: Path, change) -> None:
+    _writable(record)
+    document = json.loads(record.read_text(encoding="utf-8"))
+    change(document)
+    record.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+
+
+def _add_entry(root: Path, pipeline: str, snapshot: str, path: str, data: bytes, kept_in: str = "", kept_as: str = "") -> None:
+    """One more file named by a record that is there."""
+    def change(document):
+        entry = {"path": path, "content_hash": _sha(data), "size_bytes": len(data), "kept_in": kept_in or snapshot}
+        if kept_as:
+            entry["kept_as"] = kept_as
+        document["records"].append({
+            "id": f"{document['root']}:dataframe:{path}", "kind": "dataframe", "content_hash": _sha(data), "size_bytes": len(data),
+            "stored": {"at": path.rpartition("/")[0], "single": True, "files": [entry]},
+        })
+
+    _rewrite(root / "pipelines" / pipeline / snapshot / "_chartbook" / "snapshot.json", change)
+
+
+def drawn_store(root: Path, seed: int, pipelines: int = 1, in_the_new_trees=True) -> dict:
+    """Fill an empty store of 0.5 from a seed, with the shapes of the second review; what was drawn: the shapes, and the files put in the new trees (path -> hash).
+
+    On top of :func:`wide_store`: a folder named for a snapshot whose
+    record is elsewhere (a second later, or in a sync's ``<name> 2``), a
+    second copy of a pipeline's folder (``acme+p 2``), a file with a name
+    of 251 characters that two snapshots must each hold, a file whose name
+    the disk has in the other of Unicode's forms, and files already in the
+    new trees: at any place a step writes to (part of one, the whole, a
+    longer one, other bytes of its size), or, with *in_the_new_trees* ``"of
+    a move made elsewhere"``, what a sync has brought so far of a move
+    that another machine made of its own copy of the store.
+    """
+    import random
+    import unicodedata
+
+    from chartbook import migrate_0_5
+    from chartbook.replacing import replace_when_let
+    from tests.rich_store_of_0_5 import put, rmtree
+
+    wide_store(root, seed, pipelines)
+    drawn = random.Random(seed * 7919 + 17)
+    shapes: list = []
+    placed: dict = {}
+    for which in range(pipelines):
+        pipeline = f"acme+{'pq'[which]}"
+        folder = root / "pipelines" / pipeline
+        with_record = sorted(p.parent.parent.name for p in folder.glob("*/_chartbook/snapshot.json"))
+        # A file with a long name that two snapshots must each hold, and one whose name the disk has in the other form
+        if drawn.random() < 0.3 and len(with_record) >= 2:
+            first, second = drawn.sample(with_record, 2)
+            try:
+                if drawn.random() < 0.8:
+                    put(root, pipeline, first, f"_data/{LONG_NAME}", EXTRA["long"] if drawn.random() < 0.8 else EXTRA["long"][:40])
+                _add_entry(root, pipeline, first, f"_data/{LONG_NAME}", EXTRA["long"])
+                _add_entry(root, pipeline, second, f"_data/{LONG_NAME}", EXTRA["long"], kept_in=first)
+                shapes.append("long name")
+            except OSError:
+                pass
+        if drawn.random() < 0.3 and with_record:
+            first = drawn.choice(with_record)
+            put(root, pipeline, first, f"_data/{unicodedata.normalize('NFD', ACCENTED)}", EXTRA["accented"])
+            _add_entry(root, pipeline, first, f"_data/{unicodedata.normalize('NFC', ACCENTED)}", EXTRA["accented"])
+            if drawn.random() < 0.5 and len(with_record) >= 2:
+                other = drawn.choice([name for name in with_record if name != first])
+                _add_entry(root, pipeline, other, f"_data/{unicodedata.normalize('NFC', ACCENTED)}", EXTRA["accented"], kept_in=first)
+            shapes.append("other form")
+        # A folder named for a snapshot whose record is elsewhere
+        if drawn.random() < 0.35 and with_record:
+            snapshot = drawn.choice(with_record)
+            record = folder / snapshot / "_chartbook" / "snapshot.json"
+            if drawn.random() < 0.5:
+                later = snapshot.replace("T091500Z", "T091501Z")
+                (folder / later / "_chartbook").mkdir(parents=True)
+                replace_when_let(record, folder / later / "_chartbook" / "snapshot.json")
+                if drawn.random() < 0.5:
+                    # And its own files with it: the record says they are kept in the folder it is in
+                    def change(document, snapshot=snapshot, later=later):
+                        for part in document["records"]:
+                            for entry in part["stored"]["files"]:
+                                if entry.get("kept_in") == snapshot and entry.get("kept_as", entry["path"]) == entry["path"]:
+                                    here = folder / snapshot / entry["path"]
+                                    if here.is_file() and not (folder / later / entry["path"]).exists() and drawn.random() < 0.7:
+                                        (folder / later / entry["path"]).parent.mkdir(parents=True, exist_ok=True)
+                                        shutil.copyfile(here, folder / later / entry["path"])
+                                        entry["kept_in"] = later
+
+                    _rewrite(folder / later / "_chartbook" / "snapshot.json", change)
+                shapes.append("record a second later")
+            else:
+                (folder / f"{snapshot} 2" / "_chartbook").mkdir(parents=True)
+                replace_when_let(record, folder / f"{snapshot} 2" / "_chartbook" / "snapshot.json")
+                shapes.append("record in a second folder")
+            if not any(p.is_file() for p in (folder / snapshot).rglob("*")):
+                rmtree(folder / snapshot)
+        # A sync's second copy of the pipeline's whole folder
+        if drawn.random() < 0.3:
+            shutil.copytree(folder, root / "pipelines" / f"{pipeline} 2")
+            shapes.append("second pipeline folder")
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    if in_the_new_trees == "of a move made elsewhere" and drawn.random() < 0.7:
+        # What a sync has brought so far of a move that another machine made of its own copy of this store (as it is
+        # here, or with every file a record names whole: its sync had finished): some of the files that move put in
+        # the new trees, each whole or part of it (a copy in flight), and some of its records and notes
+        theirs = root.parent / f"{root.name}-theirs"
+        shutil.copytree(root, theirs)
+        if drawn.random() < 0.5:
+            for pipeline, snapshot, document in records_0_5_read(theirs):
+                for part in _parts(document):
+                    for entry in part["stored"]["files"]:
+                        place = theirs / "pipelines" / pipeline / entry.get("kept_in", snapshot) / entry.get("kept_as", entry["path"])
+                        if not (place.is_file() and place.stat().st_size == entry["size_bytes"]):
+                            if place.is_file():
+                                _writable(place)
+                            place.parent.mkdir(parents=True, exist_ok=True)
+                            place.write_bytes(BY_HASH[entry["content_hash"]])
+        store_module._read_records.clear()
+        try:
+            migrate_0_5.run(theirs)
+        except migrate_0_5.MoveError:
+            rmtree(theirs)
+            theirs = None
+        if theirs is not None:
+            for path in sorted(p for tree in ("snapshots", "increments") for p in (theirs / tree).rglob("*") if p.is_file()):
+                if drawn.random() >= 0.2:
+                    continue
+                target = path.relative_to(theirs).as_posix()
+                data = path.read_bytes()
+                own = "_chartbook" in path.parts or path.name == "README.txt"
+                there = data if own or drawn.random() < 0.65 else (data[: len(data) // 3] if data else b"!")
+                (root / target).parent.mkdir(parents=True, exist_ok=True)
+                (root / target).write_bytes(there)
+                placed[target] = _sha(there)
+            rmtree(theirs)
+        if placed:
+            shapes.append("brought of a move made elsewhere")
+    elif in_the_new_trees is True and drawn.random() < 0.6:
+        # Any file where a step of this move would put one, whether a move could have put it there or not
+        targets = {}
+        named = {(pipeline, snapshot, entry["path"]): entry for pipeline, snapshot, document in records_0_5_read(root) for part in _parts(document) for entry in part["stored"]["files"]}
+        for step in migrate_0_5.plan(root).steps:
+            if step.op in ("rename", "copy"):
+                tree, pipeline, snapshot, path = step.target.split("/", 3)
+                targets[step.target] = named[(pipeline, snapshot, path)]
+        for target, entry in sorted(targets.items()):
+            if drawn.random() >= 0.15:
+                continue
+            data = BY_HASH[entry["content_hash"]]
+            how = drawn.choice(["part", "part", "whole", "longer", "other bytes"])
+            there = {"part": data[: len(data) // 3] if data else b"!", "whole": data, "longer": data + b"more", "other bytes": bytes(len(data)) if data else b""}[how]
+            file = root / target
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_bytes(there)
+            placed[target] = _sha(there)
+        if placed:
+            shapes.append("in the new trees")
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    return {"shapes": shapes, "placed": placed}
