@@ -1882,7 +1882,10 @@ class TestTheReminderAsksNothingOfASnapshotsFiles:
                 assert "would clear" not in silent.output
                 # No file of a snapshot is looked at for the line: every look is the snapshot's own
                 assert (sum(said.looks.values()), len(said.looks)) == (sum(silent.looks.values()), len(silent.looks))
-                assert said.sweeps == 0 and said.table_reads == silent.table_reads == {}
+                # The line reads no file of the table: what is read with it is what is read without it. (That is nothing
+                # where the disk clones a file, as on macOS; where it does not, as on Linux, putting a file the store
+                # lacks reads it once, with the line or without: found by the first run on a hosted Linux runner.)
+                assert said.sweeps == 0 and said.table_reads == silent.table_reads
                 extra[files, there] = said.of_the_store() - silent.of_the_store()
         small, large = SIZES
         for there in self.THERE:
