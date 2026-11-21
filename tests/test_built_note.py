@@ -76,32 +76,68 @@ class TestTheExamplesShowBothWays:
         examples = _examples()
         assert {folder.name for folder in examples.PIPELINE_DIRS} == {*self.BY_A_RUN, "fred_charts"}
 
-    def test_a_build_by_a_run_is_up_to_date_only_while_its_snapshot_would_be_made(self, demo, store):
-        """doit sees the built files and knows nothing of the note: with the files all there and the note
-        gone, or of other files, it would call the build up to date and the snapshot after it would be
-        refused."""
+    def test_a_build_by_a_run_is_run_again_where_its_note_is_gone_or_of_other_source(self, demo, store):
+        """doit sees the built files and knows nothing of the note: with the files all there it would call
+        the build up to date, and the snapshot after it would be refused."""
         up_to_date = _examples().built_by_a_run(demo)
         assert up_to_date(None, {}) is False  # no run has built it
         assert _run().exit_code == 0
         assert up_to_date(None, {}) is True and _snapshot().exit_code == 0
-        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")  # written over by hand: the snapshot would stop
-        assert up_to_date(None, {}) is False and _snapshot().exit_code == 1
+        _change(demo / "load.py", "x = 1\n")  # source the build did not run on
+        assert up_to_date(None, {}) is False
         assert _run().exit_code == 0 and up_to_date(None, {}) is True
         built.note_path(demo).unlink()  # a cache that was cleared
         assert up_to_date(None, {}) is False
 
-    def test_each_build_by_a_run_asks_whether_its_own_folder_would_be_held(self, monkeypatch):
+    def test_a_built_file_written_over_is_left_for_the_snapshot_to_stop_at(self, demo, store):
+        """Found by the review, by typing it: the check sent the build back to `chartbook run`, the
+        build found nothing to do and noted the file as it now was, and `doit` then made the snapshot of
+        it with nothing said, its record saying that ChartBook ran the build."""
+        up_to_date = _examples().built_by_a_run(demo)
+        assert _run().exit_code == 0
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+        assert up_to_date(None, {}) is True  # no build is sent for it
+        result = _snapshot()
+        assert result.exit_code == 1 and _snapshots(store) == []
+        assert result.output.splitlines()[0] == "Error: acme/demo: these differ from what its build left: out.csv."
+        # With source changed too, the build is to run: what it then leaves is its own
+        _change(demo / "load.py", "x = 1\n")
+        assert up_to_date(None, {}) is False
+
+    def test_a_manifest_that_cannot_be_read_sends_the_build_to_the_run_which_says_so(self, demo, store):
+        up_to_date = _examples().built_by_a_run(demo)
+        assert _run().exit_code == 0
+        _change(demo / "chartbook.toml", "[project\n")
+        assert up_to_date(None, {}) is False
+        (demo / "chartbook.toml").unlink()  # and one that is not there
+        assert up_to_date(None, {}) is False
+
+    def test_each_build_by_a_run_asks_of_its_own_folder_and_pipeline(self, monkeypatch):
         from types import SimpleNamespace
 
         examples = _examples()
         asked = []
-        monkeypatch.setattr(built, "would_hold", lambda directory, pipeline: asked.append((directory, pipeline)) or True)
+        monkeypatch.setattr(built, "check", lambda directory, pipeline: asked.append((directory, pipeline)) or True)
         for name in self.BY_A_RUN:
             for check in getattr(examples, f"task_build_{name}")()["uptodate"]:
                 check(SimpleNamespace(value_savers=[]), {})
         assert asked == [(examples.BASE_DIR / name, f"backofficedev/{name}") for name in self.BY_A_RUN]
         # And the one that no run builds asks for no note
         assert not examples.task_build_fred_charts().get("uptodate")
+
+    def test_the_project_is_not_asked_for_a_note(self, monkeypatch):
+        """The project's own dodo runs the examples' build as one task, up to date by `context()`. With
+        the commit, the store and the lockfiles as they were, no snapshot is to be made, so a note that
+        is gone needs nothing: asked there, a cleared cache would run the whole of the examples for two
+        builds with nothing to do."""
+        examples = _examples()
+        assert [id(check) for check in examples.context()] == [id(examples.AT_COMMIT), id(examples.IN_STORE), id(examples.PINNED)]
+
+    def test_each_snapshot_follows_its_own_build_and_a_moved_pin_builds_again(self):
+        examples = _examples()
+        for folder in examples.PIPELINE_DIRS:
+            assert getattr(examples, f"task_snapshot_{folder.name}")()["task_dep"] == [f"build_{folder.name}"]
+        assert any(check is examples.PINNED for check in examples.task_build_rate_forecast()["uptodate"])
 
 
 class TestTheUsualWay:

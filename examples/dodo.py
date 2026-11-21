@@ -25,8 +25,9 @@ reads and makes, and a second run with nothing changed runs nothing:
   what it was after the task last ran (`unchanged`): the commit, the store
   and the snapshots in it, and the lockfiles that say what a pipeline reads;
 - a build by `chartbook run` is up to date only while the note of it is
-  there (`built_by_a_run`): the note is kept in ChartBook's cache, not in
-  the folder, and the snapshot that follows needs it.
+  there, and is of the source that is in the folder (`built_by_a_run`):
+  the note is kept in ChartBook's cache, not in the folder, and the
+  snapshot that follows needs it.
 
 The project's own dodo.py runs this whole build as one task, and takes what
 it reads and makes from `sources`, `outputs` and `context` here.
@@ -138,24 +139,34 @@ PINNED = unchanged("lockfiles", lockfiles)
 
 
 def built_by_a_run(pipeline_dir):
-    """An uptodate check: whether what is in a pipeline's folder is what `chartbook run` last built there.
+    """An uptodate check: whether `chartbook run` has built a pipeline's folder from the source that is in it.
 
     `chartbook run` leaves a note of each build, in ChartBook's cache on
     this machine and not in the folder, and `chartbook snapshot` holds the
     folder against it. doit knows nothing of that note: with the built
     files all there it calls the build up to date, and the snapshot after
     it would be refused where the note is gone (a cache that was cleared;
-    files copied in from another machine) or is of other files (a run by
-    hand at another commit; a built file written over). So the build is
-    run again there, which is what the refusal would say to do: the
+    files copied in from another machine) or is of other source (a run by
+    hand at another commit). So the build is run again there: the
     pipeline's own doit rebuilds what it finds out of date, which may be
     nothing, and the run leaves its note.
+
+    A built file that is not as the build left it (written over by hand,
+    or by another tool) is no reason to build: a run sent back for it
+    would find nothing to do, and note the file as it now is. That is the
+    snapshot's to say, which stops and names the file.
     """
 
     def check(task, values):
         from chartbook import built
 
-        return built.would_hold(pipeline_dir, built.pipeline_of(pipeline_dir))
+        try:
+            built.check(pipeline_dir, built.pipeline_of(pipeline_dir))
+        except built.NotHeld as refusal:
+            return refusal.why == "differ" and not refusal.source
+        except (OSError, ValueError):
+            return False  # a chartbook.toml that cannot be read: the run says what is wrong with it
+        return True
 
     return check
 
@@ -235,7 +246,9 @@ def task_snapshot_yield_curve():
         # declare, and chartbook would make no new snapshot either.
         #
         # No option: `chartbook run` built these files, above, and the
-        # snapshot is held against the note that run left.
+        # snapshot is held against the note that run left. A built file
+        # changed since, by hand or by another tool, stops it, naming the
+        # file.
         "actions": [f"chartbook snapshot --project-dir {YIELD_CURVE_DIR}"],
         "file_dep": [*git_files(YIELD_CURVE_DIR), *made_by(YIELD_CURVE_DIR)],
         "uptodate": [AT_COMMIT, IN_STORE],

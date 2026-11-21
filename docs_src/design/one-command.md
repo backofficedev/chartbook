@@ -505,9 +505,13 @@ What building it settled:
   that runs it. The maintainer chose, on 2026-11-20: "Yes, but also show an 'as is' example as
   well." So `yield_curve` and `rate_forecast` are built with `chartbook run` and their snapshots
   take no option, and `fred_charts` is still built by its own doit and taken with `--as-is`
-  (`docs_src/examples.md`). A build by `chartbook run` is up to date there only while its snapshot
-  would be made, since doit sees the built files and knows nothing of the note. And the notes
-  for upgrading from 0.5 sent every
+  (`docs_src/examples.md`). doit sees the built files and knows nothing of the note, so a build
+  by `chartbook run` is run again there where its note is gone, or is of other source than the
+  folder has. A built file that is not as the build left it is left to the snapshot, which
+  stops and names it. *(Found by the review: sent back to `chartbook run` for such a file, the
+  build found nothing to do and noted the file as it now was, and the snapshot was made of it
+  with nothing said, its record saying that ChartBook ran the build.)* And the notes for
+  upgrading from 0.5 sent every
   pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
   `--as-is`.
 - **In a repository git does not trust, a run leaves no note and says nothing of it,** since it
