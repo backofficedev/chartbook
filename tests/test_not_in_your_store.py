@@ -2541,6 +2541,18 @@ class TestAFolderGitWillNotRead:
         ), said
         assert sum("worktree add" in line for line in said) == 1
 
+    def test_a_line_that_waits_says_that_and_nothing_of_a_worktree_it_would_have_built_in(self, work, monkeypatch):
+        commit = "c" * 40
+        top = work / "mono"
+        tree = top / f"mono-at-{commit[:12]}"
+        monkeypatch.setattr(missing, "_waits_for_trust", lambda folder: "git config --global --add safe.directory /x" if folder == tree else None)
+        listing = missing.Listing("acme/report", top / "report", stores=[str(work / "mine")], top=top, wanted=[
+            missing.Wanted("acme/y", commit, folder=work / "y", not_trusted="git does not trust …", trust="git config --global --add safe.directory /srv/y"),
+            missing.Wanted("acme/a", commit, folder=top / "a", top=top, reads=[1]),
+        ])
+        said = missing.said(listing, here=top / "report")
+        assert said[6:9] == [f"2. acme/a at ccccccc    {_up('a')} (a folder of this repository, at another commit); reads 1 above", self.WAITS, ""], said
+
     def test_on_windows_a_line_that_waits_keeps_its_words_whatever_its_folder_is_named(self, work):
         """Its folder is in no command, so no sign in its name is in one: the line that gives no command for a sign is not its line."""
         trust = 'git config --global --add safe.directory "%(prefix)///fileserver/home/y"'
