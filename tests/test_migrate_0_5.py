@@ -417,7 +417,7 @@ class TestBeforeAnythingMoves:
         said = dry.output.splitlines()
         # Said first, by snapshot, with what to ask oneself before saying yes
         assert dry.exit_code == 0 and said[1] == "  1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):"
-        assert said[2].startswith("    acme+once/") and said[2].endswith(": 1 of 7 file(s)") and said[3] == "    the first: _output/curve.html"
+        assert said[2].startswith("    acme+once/") and said[2].endswith(": 1 of 7 file(s)") and said[3] == "    under _output/ (1)"
         assert said[4] == (
             "  If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards "
             "goes aside, and does not reach its snapshot. `chartbook store verify` lists every one."
@@ -664,7 +664,8 @@ class TestWhatDoesNotStopAMove:
         result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
         assert result.exit_code == 0 and not (root / "pipelines").exists(), result.output
         assert (root / copy.target).read_bytes() == (root / copy.source).read_bytes()
-        assert f"file(s) were copied as they are, though their bytes are not what their records say: {copy.target}" in result.output
+        folder = migrate_0_5.under([copy.target.split("/", 3)[3]])[0][0]  # the folder it is under in its snapshot
+        assert f"1 file(s) were copied as they are, though their bytes are not what their records say: under {folder} (1). `chartbook store verify` says more." in result.output.replace("\n", " ")
         assert "`chartbook store verify` says more." in result.output
 
     def test_a_desktops_own_file_is_never_in_the_way(self, of_0_5):
@@ -917,7 +918,7 @@ class TestOnAMovedStore:
         assert older.read_bytes() == kept and newer.read_text(encoding="utf-8") == '{"late": true}\n'
         assert (root / "_chartbook" / "left-by-0.5" / "roots" / older.name).is_file()  # the earlier one is aside, not removed
 
-    def test_a_file_that_arrives_late_for_a_snapshot_already_moved_is_named_with_where_it_is(self, moved):
+    def test_a_file_that_arrives_late_for_a_snapshot_already_moved_is_said_by_its_folder_and_the_old_folder_is_named(self, moved):
         root, was, _ = moved
         snapshot_folder = next(p for p in sorted(root.glob("snapshots/acme+once/*")) if p.is_dir())
         late = root / "pipelines" / "acme+once" / snapshot_folder.name / "_output" / "curve.html"
@@ -928,7 +929,8 @@ class TestOnAMovedStore:
         said = result.output.replace("\n", " ")
         # Where it is: the old folder of this run, beside the one the first move left
         where = f"_chartbook/left-by-0.5/pipelines (2)/acme+once/{snapshot_folder.name}/_output/curve.html"
-        assert f"1 file(s) arrived for a snapshot that is moved already, and went aside: {where}." in said and (root / where).read_bytes() == b"late"
+        assert "1 file(s) arrived for a snapshot that is moved already, and went aside with the old folder: under _output/ (1)." in said and (root / where).read_bytes() == b"late"
+        assert "The old folder, with its records, is kept at _chartbook/left-by-0.5/pipelines (2):" in said
         assert "`chartbook store verify` names the snapshot that lacks each." in said
 
     def test_a_persons_readme_on_a_moved_store_is_never_touched(self, moved):

@@ -469,9 +469,9 @@ class TestAMissingFileIsToldByItsPipelineItsSnapshotAndItsPath:
         assert [lacks[2:] for lacks in found.missing_in] == [(1, 2), (1, 2)]
         said = typed("store", "migrate", "--dry-run").output.splitlines()
         assert said[1] == "  2 file(s) that a record names are missing or of another size, as before the move, in 2 snapshot(s):"
-        assert said[2:6] == [
+        assert said[2:5] == [
             f"    acme+p/{snapshot}: 1 of 2 file(s)", f"    acme+q/{snapshot}: 1 of 2 file(s)",
-            "    the first: _data/b.parquet", "               _data/b.parquet",
+            "    under _data/ (2)",
         ]
 
     def test_the_last_lines_count_the_missing_files_of_two_pipelines_too(self, store):
@@ -484,16 +484,16 @@ class TestAMissingFileIsToldByItsPipelineItsSnapshotAndItsPath:
         assert len(store_module.FolderStore(store).verify()) == 2  # `store verify` lists every one: two
         assert "  2 file(s) that a record names are missing or of another size" in last and " 2 file(s) are missing, and one may be in that folder" in last, last[:900]
 
-    def test_the_first_names_are_those_of_the_snapshots_that_lack_most_whichever_pipeline_they_are_of(self, store):
-        """The lines by snapshot are in the order of how many each lacks, and the three names under them follow that order, by pipeline and snapshot."""
+    def test_the_folders_they_are_under_are_counted_over_every_pipeline(self, store):
+        """The lines by snapshot are in the order of how many each lacks; the line under them counts the files by the folder they are under, whichever pipeline they are of."""
         snapshot = folder_of("2025-10-01", "a")
         record(store, "acme/p", "2025-10-01", "a", [("_data/p.parquet", A, None, None)])
         record(store, "acme/q", "2025-10-01", "a", [("_data/q1.parquet", A, None, None), ("_data/q2.parquet", B, None, None)])
         said = typed("store", "migrate", "--dry-run").output.splitlines()
         assert said[1].startswith("  3 file(s) that a record names are missing")
-        assert said[2:7] == [
+        assert said[2:5] == [
             f"    acme+q/{snapshot}: 2 of 2 file(s)", f"    acme+p/{snapshot}: 1 of 1 file(s)",
-            "    the first: _data/q1.parquet", "               _data/q2.parquet", "               _data/p.parquet",
+            "    under _data/ (3)",
         ]
 
 

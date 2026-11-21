@@ -468,9 +468,9 @@ class TestAFileAlreadyWhereARenameGoes:
         place, old = f"snapshots/acme+p/{s1}/_data/f.parquet", f"{ASIDE}/pipelines/acme+p/{s1}/_data/f.parquet"
         found = migrate_0_5.plan(root)
         assert found.in_place == [(old, place, 2000, len(other))] and found.late == [old] and found.missing == []
-        sizes = "" if size == "the same size" else " (400 bytes in place, 2.0 KB at the old place)"
+        sizes = "" if size == "the same size" else " 1 of them {are} not of the size of the file at the old place."
         line = (
-            f"1 file(s) a record names {{are}} not moved, a file being where each goes already: {place}{sizes}. What is in "
+            f"1 file(s) a record names {{are}} not moved, a file being where each goes already: under _data/ (1).{sizes} What is in "
             f"place stays, and the file at the old place {{goes}} aside with the old folder. `chartbook store verify` says "
             f"whether what is in place is right."
         )
@@ -568,10 +568,10 @@ class TestWhatIsMissingIsSaidAfterTheMoveToo:
         assert result.exit_code == 0 and self._block(result.output) == self._block(dry.output)
         assert self._block(result.output) == [
             self.MISSING, f"    acme+p/{names['s1']}: 1 of 6 file(s)", f"    acme+p/{names['s3']}: 1 of 4 file(s)",
-            "    the first: _data/lost.parquet", "               _data/gone.parquet",
+            "    under _data/ (2)",
         ]
         # Said first, before the other counts; and with what to ask oneself before the move, and what is so after it
-        assert dry.output.splitlines()[1] == self.MISSING and "snapshot(s) become complete" in dry.output.splitlines()[7]
+        assert dry.output.splitlines()[1] == self.MISSING and "snapshot(s) become complete" in dry.output.splitlines()[6]
         assert (
             "If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards goes "
             "aside, and does not reach its snapshot. `chartbook store verify` lists every one."

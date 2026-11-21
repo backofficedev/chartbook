@@ -4576,15 +4576,15 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
     from chartbook import migrate_0_5
     from chartbook.store import FOLDER_SCHEMA, StoreError, this_machine
 
-    def cut(path: str, width: int = 72) -> str:
-        """A path cut in the middle to fit a line of a terminal, its end kept: the file's own name, which tells it from the others; and of a name that is too long by itself, its start and its end."""
-        folders, slash, name = path.rpartition("/")
-        if len(path) <= width:
-            return path
-        if len(name) + 2 <= width:
-            return f"{folders[:width - len(name) - 2]}…/{name}"
-        head = (width - 1) // 2
-        return f"{name[:head]}…{name[-(width - 1 - head):]}"
+    def said_under(folders, most: int = 5) -> str:
+        """Where files are, for a line: the folders they are under with how many each holds, the largest first, at most five, and how many folders more (:func:`chartbook.migrate_0_5.under`)."""
+        folders = list(folders)
+        named = ", ".join(f"{folder} ({count:,})" for folder, count in folders[:most])
+        return named + (f" and {len(folders) - most} more" if len(folders) > most else "")
+
+    def in_its_snapshot(path: str, before: int) -> str:
+        """A file's path in its snapshot, from its path in the store: without the *before* folders that lead to the snapshot's own."""
+        return path.split("/", before)[-1]
 
     def counts(found, verb: str) -> tuple:
         """What a move would do, or did, as lines in three lists: what is missing, which is said first; what is moved in; and the rest."""
@@ -4602,9 +4602,9 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
             first += [f"    {pipeline}/{snapshot}: {lacks} of {of} file(s)" for pipeline, snapshot, lacks, of in found.missing_in[:5]]
             if len(found.missing_in) > 5:
                 first.append(f"    and {len(found.missing_in) - 5} more")
-            order = {(pipeline, snapshot): index for index, (pipeline, snapshot, _, _) in enumerate(found.missing_in)}
-            names = sorted(found.missing, key=lambda lacked: (order.get(lacked[:2], len(order)), lacked[2]))[:3]
-            first += [("    the first: " if index == 0 else "               ") + cut(path) for index, (_, _, path) in enumerate(names)]
+            # And which they are, by the folders they are under: three names of 58,325 said nothing, and less where a
+            # file's name is a hash
+            first.append(f"    under {said_under(migrate_0_5.under(path for _, _, path in found.missing))}")
             first.append(
                 "  If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives "
                 "afterwards goes aside, and does not reach its snapshot. `chartbook store verify` lists every one."
@@ -4646,10 +4646,9 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                 f"too: each is a second copy, or part of one, of bytes that {are} moved in from another place a record names."
             )
         if found.elsewhere:
-            first_taken = ", ".join(f"{cut(path)} ({snapshot})" for snapshot, path in found.elsewhere_first[:3])
             lines.append(
                 f"  {found.elsewhere} file(s) {are} not where their record says, and {are} taken from where another "
-                f"snapshot of their pipeline keeps the same bytes: {first_taken}{' and more' if found.elsewhere > 3 else ''}."
+                f"snapshot of their pipeline keeps the same bytes: under {said_under(found.elsewhere_under)}."
             )
         if found.no_record:
             named = ", ".join(f"{pipeline}/{folder} ({files} file(s))" for pipeline, folder, files in found.no_record[:3])
@@ -4700,30 +4699,27 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         in_place = {pair[0] for pair in found.in_place}  # once: a set made for each file is the square of the files
         arrived = [path for path in found.late if path not in in_place]
         if arrived:
+            # Each is where the old folder is kept, under its pipeline's and its snapshot's folders: five folders deep
+            where = said_under(migrate_0_5.under(in_its_snapshot(path, 5) for path in arrived))
             lines.append(
                 f"  {len(arrived)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
-                f"aside: {', '.join(arrived[:3])}{' and more' if len(arrived) > 3 else ''}. `chartbook store verify` "
-                f"names the snapshot that lacks each."
+                f"aside with the old folder: under {where}. `chartbook store verify` names the snapshot that lacks each."
             )
         if found.in_place:
-            def size(of) -> str:
-                return "no plain file" if of is None else _format_bytes(of)
-
-            named = ", ".join(
-                place + (f" ({size(here)} in place, {size(there)} at the old place)" if here != there else "")
-                for _, place, there, here in found.in_place[:3]
-            )
+            where = said_under(migrate_0_5.under(in_its_snapshot(place, 3) for _, place, _, _ in found.in_place))
+            other_size = sum(1 for _, _, there, here in found.in_place if here != there)
             lines.append(
-                f"  {len(found.in_place)} file(s) a record names {are} not moved, a file being where each goes already: {named}"
-                f"{' and more' if len(found.in_place) > 3 else ''}. What is in place stays, and the file at the old place "
-                f"{'goes' if verb == 'become' else 'went'} aside with the old folder. `chartbook store verify` says whether what "
-                f"is in place is right."
+                f"  {len(found.in_place)} file(s) a record names {are} not moved, a file being where each goes already: under "
+                f"{where}."
+                + (f" {other_size} of them {are} not of the size of the file at the old place." if other_size else "")
+                + f" What is in place stays, and the file at the old place {'goes' if verb == 'become' else 'went'} aside with "
+                f"the old folder. `chartbook store verify` says whether what is in place is right."
             )
         if found.copied_as_is:
+            where = said_under(migrate_0_5.under(in_its_snapshot(place, 3) for place in found.copied_as_is))
             lines.append(
                 f"  {len(found.copied_as_is)} file(s) were copied as they are, though their bytes are not what their records "
-                f"say: {', '.join(found.copied_as_is[:3])}{' and more' if len(found.copied_as_is) > 3 else ''}. "
-                f"`chartbook store verify` says more."
+                f"say: under {where}. `chartbook store verify` says more."
             )
         return first, moved_in, lines
 

@@ -615,7 +615,7 @@ class TestOnAMovedStoreASecondRecordComesWithTheFileItsSnapshotLacks:
         was = work / "was"
         shutil.copytree(root, was)
         first, said = typed("store", "migrate", "--yes")
-        assert first.exit_code == 0 and f"1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{s}: 1 of 2 file(s)     the first: _data/b.parquet " in said
+        assert first.exit_code == 0 and f"1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{s}: 1 of 2 file(s)     under _data/ (1) " in said
         store_module._read_records.clear()
         put(root, "acme+p", s, "_data/b.parquet", B)  # the file the snapshot lacks, at the place its record of 0.5 says
         if with_record:
@@ -627,7 +627,8 @@ class TestOnAMovedStoreASecondRecordComesWithTheFileItsSnapshotLacks:
         s = self._moved_and_then(store, work, with_record=False)
         again, said = typed("store", "migrate", "--yes")
         assert again.exit_code == 0
-        assert f"1 file(s) arrived for a snapshot that is moved already, and went aside: {ASIDE}/pipelines (2)/acme+p/{s}/_data/b.parquet." in said
+        assert "1 file(s) arrived for a snapshot that is moved already, and went aside with the old folder: under _data/ (1)." in said
+        assert (store / ASIDE / "pipelines (2)" / "acme+p" / s / "_data" / "b.parquet").read_bytes() == B and f"is kept at {ASIDE}/pipelines (2):" in said
 
     def test_with_its_record_beside_it_the_file_is_still_said(self, store, work):
         s = self._moved_and_then(store, work, with_record=True)
@@ -637,7 +638,7 @@ class TestOnAMovedStoreASecondRecordComesWithTheFileItsSnapshotLacks:
         assert read_through(store)[("acme/p", s, "_data/b.parquet")] == "FileNotFoundError"  # the snapshot still lacks it
         # The one its snapshot lacks is said as any late file is; the one it has is not
         assert (
-            f"1 file(s) arrived for a snapshot that is moved already, and went aside: {ASIDE}/pipelines (2)/acme+p/{s}/_data/b.parquet. "
+            "1 file(s) arrived for a snapshot that is moved already, and went aside with the old folder: under _data/ (1). "
             f"`chartbook store verify` names the snapshot that lacks each."
         ) in said
         assert "a.parquet" not in said
@@ -822,9 +823,9 @@ class TestTheCountOfFilesTakenFromAnotherSnapshot:
         before = facts_before(store)
         assert before[("acme/p", s1, "_data/k.parquet")][1:] == (False, True)
         found = migrate_0_5.plan(store)
-        assert found.elsewhere == 1 and found.elsewhere_first == [(s1, "_data/k.parquet")]
+        assert found.elsewhere == 1 and found.elsewhere_under == [("_data/", 1)]
         dry, said = typed("store", "migrate", "--dry-run")
-        assert f"  1 file(s) are not where their record says, and are taken from where another snapshot of their pipeline keeps the same bytes: _data/k.parquet ({s1})." in said
+        assert f"  1 file(s) are not where their record says, and are taken from where another snapshot of their pipeline keeps the same bytes: under _data/ (1)." in said
         done = migrate_0_5.run(store)
         assert worse_after(before, store) == ([], []) and done.missing == [] and done.elsewhere == 1
 
@@ -871,7 +872,7 @@ class TestASecondRecordIsNotAskedWhereBytesAre:
         dry, _ = typed("store", "migrate", "--dry-run")
         result, said = typed("store", "migrate", "--yes")
         assert result.exit_code == 0
-        assert f"1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{r}: 1 of 2 file(s)     the first: _data/b.parquet " in said
+        assert f"1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{r}: 1 of 2 file(s)     under _data/ (1) " in said
         assert f"1 second record(s) of a snapshot that was moved in went aside: acme+p/{r2}." in said
         assert f"The old folder, with its records, is kept at {ASIDE}/pipelines: {self.LOOK}" in said
         assert (store / ASIDE / "pipelines" / "acme+p" / r2 / "_data" / "b.parquet").read_bytes() == B
@@ -1272,7 +1273,8 @@ class TestWhatIsMissingIsSaidFirstAndBySnapshot:
         record(root, "acme/p", "2025-11-01", "b", [("_data/a.parquet", A, None, None), ("_data/b.parquet", B, None, None)])
         return s1, s2
 
-    def test_the_dry_run_says_it_first_by_snapshot_with_three_names_that_fit_a_line(self, store):
+    def test_the_dry_run_says_it_first_by_snapshot_with_the_folders_they_are_under(self, store):
+        """Three names of the files were there before: cut from the left, they came out on a real store as three hashes of 64 digits, which say nothing. The folders the files are under, with how many, say where to look."""
         s1, s2 = self._many_missing(store)
         found = migrate_0_5.plan(store)
         assert len(found.missing) == 37 and found.missing_in == [("acme+p", s1, 36, 40), ("acme+p", s2, 1, 2)]
@@ -1280,19 +1282,16 @@ class TestWhatIsMissingIsSaidFirstAndBySnapshot:
         said = dry.output.splitlines()
         print(dry.output)
         assert said[0].endswith("has the layout of ChartBook 0.5: 1 pipeline(s), 2 snapshot(s).")
-        name = "part-{:05d}-0123456789abcdef01234567…0123456789abcdef.c000.snappy.parquet"  # its start and its end: the name is 79 characters
-        assert said[1:8] == [
+        assert said[1:6] == [
             "  37 file(s) that a record names are missing or of another size, as before the move, in 2 snapshot(s):",
             f"    acme+p/{s1}: 36 of 40 file(s)",
             f"    acme+p/{s2}: 1 of 2 file(s)",
-            "    the first: " + name.format(0),
-            "               " + name.format(1),
-            "               " + name.format(2),
+            "    under _data/articles/ (36), _data/ (1)",
             self.WAIT_FOR_THEM,
         ]
-        assert "snapshot(s) become complete" in said[8]  # before the other counts
-        # Each line of a snapshot or a name fits a terminal; the sentences are longer, as every sentence of the command is
-        assert all(len(line) <= 88 for line in said[2:7]) and len(name.format(0)) == 72
+        assert "snapshot(s) become complete" in said[6]  # before the other counts
+        # Each line of a snapshot or of the folders fits a terminal; the sentences are longer, as every sentence of the command is
+        assert all(len(line) <= 88 for line in said[2:5]) and "part-0" not in dry.output
 
     def test_nothing_of_it_is_a_refusal_and_the_last_lines_say_it_again(self, store):
         s1, s2 = self._many_missing(store)
@@ -1302,19 +1301,38 @@ class TestWhatIsMissingIsSaidFirstAndBySnapshot:
         done = result.output.splitlines()
         print(result.output)
         last = done[done.index(next(line for line in done if "has this version's layout" in line)):]
-        assert last[1:7] == no.output.splitlines()[1:7] and last[7] == self.AFTERWARDS and "snapshot(s) became complete" in last[8]
+        assert last[1:5] == no.output.splitlines()[1:5] and last[5] == self.AFTERWARDS and "snapshot(s) became complete" in last[6]
         assert len(fresh(store).verify()) == 37  # and `store verify` lists every one
 
-    def test_a_name_that_fits_is_whole_and_of_a_long_path_the_folders_are_cut(self, store):
-        deep = "_data/" + "/".join(f"level-{number:02d}-of-a-deep-folder" for number in range(4)) + "/part-0001.parquet"
-        s1 = record(store, "acme/p", "2025-10-01", "a", [("_data/short.parquet", A, None, None), (deep, B, None, None)])
+    def test_a_folder_is_the_first_two_parts_of_a_path_and_five_are_said_the_largest_first(self, store):
+        """A dataset is a folder two parts deep (``_data/a/``), whatever is under it; a file one folder deep is under that folder; a file at the top of a snapshot is counted under its own name. The paths are short: none is ever on the disk, and each fits any machine."""
+        missing = (
+            [f"_data/a/x{number}.parquet" for number in range(4)] + [f"_data/b/deep/er/y{number}.parquet" for number in range(3)]
+            + ["_output/c1.html", "_output/c2.html", "chartbook.toml", "README.md", "docs/one.md", "_data/z.parquet"]
+        )
+        record(store, "acme/p", "2025-10-01", "a", [(path, path.encode(), None, None) for path in missing])
         dry, _ = typed("store", "migrate", "--dry-run")
         said = dry.output.splitlines()
-        assert said[3:5] == [
-            "    the first: _data/level-00-of-a-deep-folder/level-01-of-a-deep-fo…/part-0001.parquet",
-            "               _data/short.parquet",
+        assert said[1].startswith("  13 file(s) that a record names are missing") and said[2].endswith(": 13 of 13 file(s)")
+        assert said[3] == "    under _data/a/ (4), _data/b/ (3), _output/ (2), README.md (1), _data/ (1) and 2 more"
+        assert migrate_0_5.under(missing) == [("_data/a/", 4), ("_data/b/", 3), ("_output/", 2), ("README.md", 1), ("_data/", 1), ("chartbook.toml", 1), ("docs/", 1)]
+
+    def test_thousands_of_files_whose_names_are_hashes_are_one_folder_and_a_number(self, store):
+        """The real store's shape: a cache of files each named by a hash, in folders by its first letters. Every one is missing (an upload that never finished)."""
+        import hashlib
+
+        names = [hashlib.sha256(str(number).encode()).hexdigest() for number in range(1200)]
+        entries = [(f"_data/llm_cache/{name[:2]}/{name}.json", name.encode(), None, None) for name in names]
+        put(store, "acme+p", folder_of("2025-10-01", "a"), "_output/chart.html", A)
+        s1 = record(store, "acme/p", "2025-10-01", "a", entries + [("_output/chart.html", A, None, None), ("_output/lost.html", B, None, None)])
+        dry, _ = typed("store", "migrate", "--dry-run")
+        said = dry.output.splitlines()
+        assert said[1:4] == [
+            "  1201 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):",
+            f"    acme+p/{s1}: 1201 of 1202 file(s)",
+            "    under _data/llm_cache/ (1,200), _output/ (1)",
         ]
-        assert len(said[3]) - len("    the first: ") == 72
+        assert not any(name in dry.output for name in names)
 
     def test_five_snapshots_are_named_and_the_rest_counted(self, store):
         """Seven snapshots a pin made, each lacking its one file: the one that lacks most would be first, and of these the first by name."""
@@ -1328,7 +1346,7 @@ class TestWhatIsMissingIsSaidFirstAndBySnapshot:
         said = dry.output.splitlines()
         assert said[1] == "  7 file(s) that a record names are missing or of another size, as before the move, in 7 snapshot(s):"
         assert said[2:7] == [f"    acme+p/{folder}: 1 of 1 file(s)" for folder in folders[:5]] and said[7] == "    and 2 more"
-        assert said[8:12] == ["    the first: _data/k0.parquet", "               _data/k1.parquet", "               _data/k2.parquet", self.WAIT_FOR_THEM]
+        assert said[8:10] == ["    under _data/ (7)", self.WAIT_FOR_THEM]
 
     def test_with_nothing_missing_nothing_is_said_of_it(self, store):
         put(store, "acme+p", folder_of("2025-10-01", "a"), "_data/a.parquet", A)

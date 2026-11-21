@@ -222,8 +222,8 @@ class Plan:
             is told by all three.
         elsewhere: How many files were not where their record says, and
             are read after the move from where another record of their
-            pipeline had the same bytes; *elsewhere_first* is the first
-            three, each as ``(snapshot's folder, path)``.
+            pipeline had the same bytes; *elsewhere_under* is the folders
+            they are under, each with how many (:func:`under`).
         no_record: The folders named as a snapshot's that hold files and
             have no record, were not cleared, and are named for no
             snapshot the store has a record of: each as ``(pipeline's
@@ -281,7 +281,7 @@ class Plan:
     missing: list = field(default_factory=list)
     missing_in: list = field(default_factory=list)
     elsewhere: int = 0
-    elsewhere_first: list = field(default_factory=list)
+    elsewhere_under: list = field(default_factory=list)
     no_record: list = field(default_factory=list)
     second_folders: list = field(default_factory=list)
     not_pipelines: list = field(default_factory=list)
@@ -294,6 +294,27 @@ class Plan:
     moved_in: int = 0
     counted: bool = True
     steps: list = field(default_factory=list)
+
+
+def under(paths, so_far: Optional[dict] = None) -> list:
+    """The folders that files are under, for a line a person reads: each with how many of the files it holds, the largest first.
+
+    A folder is the first two parts of a file's path in its snapshot
+    (``_data/prices/``), which is where a pipeline keeps one dataset;
+    a file one folder deep is under that folder (``_output/``), and a
+    file at the top of a snapshot is counted under its own name. Names of
+    files say little where there are thousands, and nothing where a
+    file's name is a hash: on a real store three of 58,325 missing files
+    were named, each by 64 hex digits.
+
+    :param so_far: Folders counted already, to add these to.
+    """
+    counted = dict(so_far or {})
+    for path in paths:
+        parts = path.split("/")
+        folder = path if len(parts) == 1 else "/".join(parts[: min(2, len(parts) - 1)]) + "/"
+        counted[folder] = counted.get(folder, 0) + 1
+    return sorted(counted.items(), key=lambda one: (-one[1], one[0]))
 
 
 def marker_of(root: Path) -> Optional[str]:
@@ -862,7 +883,7 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
         if place not in wanted and look(place)[1] != key[1] and not look(target_of(base, V3_LAYOUT.pipelines, base_has[key]))[0]:
             elsewhere.add((snapshot, path))
     found.elsewhere += len(elsewhere)
-    found.elsewhere_first = sorted(found.elsewhere_first + sorted(elsewhere)[:3])[:3]
+    found.elsewhere_under = under([path for _, path in elsewhere], dict(found.elsewhere_under))
     lacking: set = set()
     given: dict = {}  # the copies each snapshot is given: how many files, and their bytes
     for source, targets in sorted(wanted.items()):
@@ -1131,7 +1152,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
         # where their record says (a place the move has emptied since is not told from one that was empty), and
         # each folder with no record with the files it held then
         so_far["elsewhere"] = carried["elsewhere"] if "elsewhere" in carried else found.elsewhere
-        so_far["elsewhere_first"] = list(carried["elsewhere_first"] if "elsewhere" in carried else [list(pair) for pair in found.elsewhere_first])
+        so_far["elsewhere_under"] = list(carried["elsewhere_under"] if "elsewhere" in carried else [list(pair) for pair in found.elsewhere_under])
         for key in ("no_record", "second_folders"):
             so_far[key] = list(carried.get(key, []))
             known = {(item[0], item[1]) for item in so_far[key]}
@@ -1198,7 +1219,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
         journal.unlink()
     for key in _COUNTS + ("elsewhere",):
         setattr(done, key, so_far.get(key, 0))
-    for key in ("set_aside", "in_place", "second", "no_record", "second_folders", "elsewhere_first"):
+    for key in ("set_aside", "in_place", "second", "no_record", "second_folders", "elsewhere_under"):
         setattr(done, key, [tuple(item) for item in so_far.get(key, [])])
     done.late, done.copied_as_is, done.kept = list(so_far.get("late", [])), list(so_far.get("copied_as_is", [])), so_far.get("kept", "")
     done.not_pipelines = list(so_far.get("not_pipelines", []))

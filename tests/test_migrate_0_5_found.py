@@ -49,7 +49,7 @@ from tests.rich_store_of_0_5 import (
 )
 
 ASIDE = "_chartbook/left-by-0.5"
-TAKEN = "file(s) {are} not where their record says, and {are} taken from where another snapshot of their pipeline keeps the same bytes: "
+TAKEN = "file(s) {are} not where their record says, and {are} taken from where another snapshot of their pipeline keeps the same bytes: under "
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ class TestTheStoreFound:
         root, names = found_store
         before = tree_of(root)
         in_a = sum(1 for path in (root / "pipelines" / "acme+news" / names["a"]).rglob("*") if path.is_file() and path.name != "desktop.ini")
-        first = ", ".join(f"_data/articles/{name}.parquet ({names['r']})" for name in ("01", "03", "05"))
+        first = "_data/articles/ (6)."  # the folder they are under, with how many: no names
         dry, said = typed("store", "migrate", "--dry-run")
         print(dry.output)
         assert dry.exit_code == 0 and tree_of(root) == before and dry.output.splitlines()[-1] == "Nothing was moved."
@@ -113,7 +113,7 @@ class TestTheStoreFound:
         )
         assert of_a.format(hold="hold", are="are", isw="is", goes="goes") in said
         assert "have no record" not in said and "wait for it" not in said and "has to be made again" not in said
-        assert "  6 " + TAKEN.format(are="are") + first + " and more." in said
+        assert "  6 " + TAKEN.format(are="are") + first in said
         # What B has of the files that R takes from A goes aside though B's record names it: counted apart from what no record names
         assert f"  {len(IN_A) + 1} file(s) that a record names go aside with the old folder too: each is a second copy, or part of one, of bytes that are moved in from another place a record names." in said
         # A folder that holds nothing but what a desktop leaves is no folder with files; and nothing is missing
@@ -128,7 +128,7 @@ class TestTheStoreFound:
         assert result.exit_code == 0, result.output
         assert f"has this version's layout: 1 pipeline(s), 2 snapshot(s)." in said
         assert "1 snapshot(s) became complete (0 of them made by a pin), 1 became increments on the newest of their pipeline." in said
-        assert "  6 " + TAKEN.format(are="were") + first + " and more." in said
+        assert "  6 " + TAKEN.format(are="were") + first in said
         assert f"  {len(IN_A) + 1} file(s) that a record names went aside with the old folder too: each is a second copy, or part of one, of bytes that were moved in from another place a record names." in said
         assert of_a.format(hold="held", are="were", isw="was", goes="went") in said
         assert "missing or of another size" not in said and "out of the store" not in said and "has to be made again" not in said and "look there first" not in said
@@ -338,11 +338,11 @@ class TestAFileThatIsNotWhereItsRecordSays:
         lacking = [("acme+p", names["s3"], "_data/k6.parquet")]
         found_ = migrate_0_5.plan(root)
         assert found_.missing == lacking  # only the one that no record's place holds
-        assert found_.elsewhere == 11 and found_.elsewhere_first == [(names["q1"], "_data/q.parquet"), (names["s1"], "_data/k2.parquet"), (names["p5"], "_data/k1.parquet")]
+        assert found_.elsewhere == 11 and found_.elsewhere_under == [("_data/", 11)]
         assert found_.no_record == [("acme+p", names["c0"], 3)]
         assert found_.doubled == 2  # the second copy of k1 that s2 has, and the half of k8
         done = migrate_0_5.run(root)
-        assert done.missing == lacking and (done.elsewhere, done.elsewhere_first, done.no_record) == (found_.elsewhere, found_.elsewhere_first, found_.no_record)
+        assert done.missing == lacking and (done.elsewhere, done.elsewhere_under, done.no_record) == (found_.elsewhere, found_.elsewhere_under, found_.no_record)
         reads = read_through(root)
         assert {key: "sha256:" + value for key, value in reads.items() if len(value) == 64} == {
             (pipeline.replace("+", "/"), folder, path): content_hash for (pipeline, folder, path), content_hash in said.items() if (pipeline, folder, path) not in lacking
@@ -388,8 +388,8 @@ class TestAFileThatIsNotWhereItsRecordSays:
 
     def test_the_lines_count_them_with_the_first_and_the_missing_line_is_as_true_after_as_before(self, elsewhere_store):
         root, names = elsewhere_store
-        first = f"_data/q.parquet ({names['q1']}), _data/k2.parquet ({names['s1']}), _data/k1.parquet ({names['p5']}) and more."
-        missing = f"  1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{names['s3']}: 1 of 9 file(s)     the first: _data/k6.parquet "
+        first = "_data/ (11)."
+        missing = f"  1 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):     acme+p/{names['s3']}: 1 of 9 file(s)     under _data/ (1) "
         dry, said = typed("store", "migrate", "--dry-run")
         print(dry.output)
         assert dry.exit_code == 0 and "  11 " + TAKEN.format(are="are") + first in said and missing in said
@@ -679,7 +679,7 @@ class TestAnyStoreOfThisKind:
         # was, and the dry run and the last lines say the same of it
         assert {key[1:]: "sha256:" + value == said[key[1:]][0] for key, value in reads.items()} == {key: could for key, (_, could) in said.items()}
         assert set(done.missing) == {("acme+p", *key) for key, (_, could) in said.items() if not could} and planned.missing == done.missing
-        assert (planned.elsewhere, planned.elsewhere_first, planned.doubled, planned.aside) == (done.elsewhere, done.elsewhere_first, done.doubled, done.aside)
+        assert (planned.elsewhere, planned.elsewhere_under, planned.doubled, planned.aside) == (done.elsewhere, done.elsewhere_under, done.doubled, done.aside)
         # And nothing that was in the store is gone from it
         after = contents(whole)
         assert [paths for key, paths in before.items() if key not in after and not any(path in OWN for path in paths)] == []
