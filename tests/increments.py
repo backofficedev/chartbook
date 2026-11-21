@@ -31,8 +31,10 @@ import stat
 from pathlib import Path
 
 from chartbook import store as store_module
+from chartbook.replacing import rename_when_let
+from tests.fixtures import rmdir_when_let
 
-INCREMENT_LINE = "The rest of this snapshot's files are in snapshots/{pipeline}/{snapshot}\n"
+INCREMENT_LINE ="The rest of this snapshot's files are in snapshots/{pipeline}/{snapshot}\n"
 
 
 def _writable(path: Path) -> None:
@@ -78,7 +80,7 @@ def as_increment(root: Path, pipeline_folder: str, snapshot: str, builds_on: str
             file.unlink()
     for folder in sorted((p for p in source.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
         if folder.name != "_chartbook" and not any(folder.iterdir()):
-            folder.rmdir()
+            rmdir_when_let(folder)
     document["stored"] = {"builds_on": builds_on}
     _writable(record)
     record.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
@@ -89,7 +91,7 @@ def as_increment(root: Path, pipeline_folder: str, snapshot: str, builds_on: str
     target = root / "increments" / pipeline_folder / snapshot
     target.parent.mkdir(parents=True, exist_ok=True)
     store_module.write_readme(target.parent, store_module.INCREMENTS_README)  # for a person who finds the folder
-    source.rename(target)
+    rename_when_let(source, target)  # a folder written a moment ago: Windows refuses that for as long as a scanner holds it
     store_module._read_records.clear()
     store_module._found_whole.clear()
     return target

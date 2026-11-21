@@ -25,7 +25,9 @@ import os
 import stat
 from pathlib import Path
 
+from chartbook.replacing import rename_when_let
 from chartbook.store import PIPELINE_README_OF_0_5, FolderStore, is_snapshot_folder
+from tests.fixtures import rmdir_when_let
 
 #: What the ``store.json`` of a store of ChartBook 0.5 says.
 MARKER_OF_0_5 = {"schema": "chartbook/store/v2"}
@@ -77,14 +79,15 @@ def laid_out_as_0_5(root, share: bool = True) -> FolderStore:
     root = Path(root)
     own = root / "_chartbook"
     _increments_among_the_rest(root, share)
-    (root / "snapshots").rename(root / "pipelines")
+    # Each folder renamed here was written a moment ago: Windows refuses that for as long as a scanner holds it
+    rename_when_let(root / "snapshots", root / "pipelines")
     for name in ("roots", "origins", "tmp"):
         if (own / name).is_dir():
-            (own / name).rename(root / name)
+            rename_when_let(own / name, root / name)
     if (own / "unowned").is_dir():
-        (own / "unowned").rename(root / "pipelines" / "+unowned")
+        rename_when_let(own / "unowned", root / "pipelines" / "+unowned")
     if own.is_dir():
-        own.rmdir()  # nothing else of this layout's was in it
+        rmdir_when_let(own)  # nothing else of this layout's was in it
     if (root / "README.txt").is_file():
         (root / "README.txt").unlink()  # 0.5 left none at the top
     (root / "store.json").write_text(json.dumps(MARKER_OF_0_5) + "\n", encoding="utf-8", newline="\n")
@@ -117,12 +120,12 @@ def _increments_among_the_rest(root: Path, share: bool) -> None:
         record.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
         if (folder / "_chartbook" / "INCREMENT.txt").is_file():
             _remove(folder / "_chartbook" / "INCREMENT.txt")
-        folder.rename(root / "snapshots" / folder.parent.name / folder.name)
+        rename_when_let(folder, root / "snapshots" / folder.parent.name / folder.name)
     for pipeline in sorted(p for p in increments.iterdir() if p.is_dir()):
         if (pipeline / "README.txt").is_file():
             _remove(pipeline / "README.txt")
-        pipeline.rmdir()
-    increments.rmdir()
+        rmdir_when_let(pipeline)
+    rmdir_when_let(increments)
 
 
 def _keep_each_file_once(pipeline: Path) -> None:
@@ -156,7 +159,7 @@ def _keep_each_file_once(pipeline: Path) -> None:
         # A folder this emptied is not left behind: 0.5 never made one
         for directory, _, _ in sorted(os.walk(folder), key=lambda walked: -len(walked[0])):
             if not os.listdir(directory):
-                os.rmdir(directory)
+                rmdir_when_let(directory)
 
 
 def cleared_as_0_5(record) -> Path:
@@ -192,5 +195,5 @@ def cleared_as_0_5(record) -> Path:
                 _remove(file)
     for directory, _, _ in sorted(os.walk(folder), key=lambda walked: -len(walked[0])):
         if not os.listdir(directory):
-            os.rmdir(directory)
+            rmdir_when_let(directory)
     return folder
