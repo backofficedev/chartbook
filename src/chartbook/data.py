@@ -100,6 +100,12 @@ def path(
     :class:`~chartbook.errors.NoSinglePathError`; :func:`load` and
     :func:`sql` read it where it is, and :func:`files` lists the files.
 
+    Where the store does not have the pinned file and a build of yours
+    stands in for it, the path is that build's file as it is, newer rows
+    and all. :func:`load` and :func:`sql` leave the rows after the pin's
+    last date out; a reader of your own keeps them up to :func:`as_of`.
+    Stderr says so once per dataframe in the process.
+
     The rest of the reference grammar, ``asset#part`` and ``@rev``, is
     reserved and raises "not yet supported".
 
