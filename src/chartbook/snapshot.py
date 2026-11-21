@@ -3221,7 +3221,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         A snapshot is of the bytes, and is made whatever becomes of this:
         where the rows could not be hashed, for want of room for the
         scratch files say, the record says nothing of them and the report
-        says why.
+        says why. So too where the folder no longer holds the files the
+        dataframe was put from once its rows are hashed there: they are
+        not known to be the rows of the bytes the snapshot holds.
         """
         from chartbook import rowhash
 
@@ -3235,8 +3237,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         if made_of_an_index:
             index_columns.append(record.get("id") or name)
             index_names[record.get("id") or name] = made_of_an_index
+        put = put_from.get(name)
         try:
-            return _rows_of(name, record, path, entry, reading, earlier[0])
+            return _rows_of(name, record, path, entry, reading, earlier[0], put if put is not None and put[0] == path else None)
         except rowhash.NotNow as error:
             not_now.append((record.get("id") or name, str(error)))
             return {}
@@ -3500,17 +3503,30 @@ def _at_hand(put: Optional[tuple]):
     """
     if put is None or put[2] is None:
         return None
-    path, reading, as_put = put
+    path, reading, _ = put
 
     def table():
         from chartbook import rowhash
 
-        found = hashing.find_files(path)
-        if found is None or _as_they_are(found.files) != as_put:
+        if not _still_as_put(put):
             return None
         return rowhash.Table(path, (reading or {}).get("format"), (reading or {}).get("read_options"))
 
     return table
+
+
+def _still_as_put(put: tuple) -> bool:
+    """Whether the folder holds the files a dataframe was put from, no more and no fewer, each at the size and the time it had just before it was put.
+
+    :param put: As :func:`_make` notes it: where its files are, how they
+        are read, and each as it was (:func:`_as_they_are`), which is None
+        where one could not be asked about, and then nothing is known.
+    """
+    path, _, as_put = put
+    if as_put is None:
+        return False
+    found = hashing.find_files(path)
+    return found is not None and _as_they_are(found.files) == as_put
 
 
 def _rows_since(directory: Path, taken: Snapshot, store: Store, put_from: Optional[dict] = None) -> tuple:
@@ -3568,7 +3584,7 @@ def _not_hashed(taken: Snapshot) -> list:
     ]
 
 
-def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict], earlier: list) -> dict:
+def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict], earlier: list, put: Optional[tuple] = None) -> dict:
     """What a dataframe's record says of its rows: their hash by period, up to its last date (:mod:`chartbook.rowhash`).
 
     ``date_col``, ``as_of``, ``rows`` and ``row_count``; or ``not_hashed``,
@@ -3583,13 +3599,30 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
     is hashed again, and one that names a column of numbers is not hashed
     again at every snapshot.
 
+    **The rows are hashed in the pipeline's folder, once its files are
+    put, and are said only where the folder still holds those files.**
+    *put* says each as it was just before it was put, and the folder is
+    looked at again when the rows are hashed: the same files, no more and
+    no fewer, each at that size and time, and the rows are those of the
+    bytes the snapshot holds. A build that writes the table again while
+    the snapshot is made gave the record the rows of a file it does not
+    hold; now nothing is said of the rows this time, with why, and a
+    snapshot of the same bytes made again says them. (Reading them from
+    what the store was given instead is not built: before the record, the
+    store has the files under other names, or in an earlier snapshot's
+    folder that nothing has looked at.)
+
     :param record: Its record so far, with its ``content_hash``.
     :param path: Its file, glob or folder, on disk.
     :param entry: Its entry in the manifest, for its ``date_col``.
     :param reading: Its ``format`` and ``read_options``, if it has them.
     :param earlier: This pipeline's snapshots, oldest first.
+    :param put: Its files as they were just before they were put
+        (:func:`_make` notes them); None for a table put from no file of
+        the folder, which is hashed without the look.
     :raises chartbook.rowhash.NotNow: If its rows could not be hashed this
-        time, for no fault of the table's.
+        time, for no fault of the table's, or were hashed from a folder
+        that no longer holds the files put.
     """
     from chartbook import rowhash
 
@@ -3615,7 +3648,10 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
         said = {key: before[key] for key in rowhash.FIELDS if key in before}
         if ("rows" in said or "not_hashed" in said) and said.get("date_col") == dated:
             return said
-    return rowhash.fields_of(table, declared)
+    said = rowhash.fields_of(table, declared)
+    if put is not None and not _still_as_put(put):
+        raise rowhash.NotNow("its files in the pipeline's folder changed while the snapshot was made")
+    return said
 
 
 #: The one file in a snapshot's index object.

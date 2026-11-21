@@ -381,6 +381,17 @@ built, and *proposed by Claude, 2026-11-16,* where the page had not said:
   machine that made it. *(Proposed by Claude, 2026-11-17, after a review found four ways a
   snapshot that used to be made was stopped, and a second that a failed read was recorded for
   good.)*
+- **The rows said are those of the files that were put.** A dataframe's files are put, which
+  hashes their bytes, and its rows are then hashed in the pipeline's folder. Each file is noted
+  with its size and time just before it is put, and the folder is looked at again once the rows
+  are hashed: the same files, no more and no fewer, each as it was. Where that is not so (a
+  build writing the table again while the snapshot is made), the rows hashed may be those of a
+  file the snapshot does not hold, so the record says nothing of them, and the command says
+  `rows not hashed this time (its files in the pipeline's folder changed while the snapshot was
+  made)`. *Found by review, 2026-11-21; before, the record said the rows of whatever the folder
+  held then.* **Not built:** reading the rows from what the store was given instead. Before the
+  record is written the store has the files under other names, or in an earlier snapshot's
+  folder that nothing has looked at, and reading a table there is more than a look.
 - **Beside a record, a period that holds more than is held at a time is not compared.** No
   record of this version has such a period, but one of a later version may; so the rows are not
   said to differ, and the check says it could not compare them.

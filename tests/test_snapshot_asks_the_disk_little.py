@@ -97,10 +97,10 @@ def _write_days(folder: Path, first: int, count: int, revised: float = 0.0) -> N
         _day_frame(number, revised).write_parquet(file, compression="uncompressed")
 
 
-def _pipeline(folder: Path, files: int) -> Path:
+def _pipeline(folder: Path, files: int, manifest: dict = None) -> Path:
     """A pipeline in a repository of its own, built: the table in *files* parts, a small table, a chart and a README."""
     (folder / "_data").mkdir(parents=True)
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(MANIFEST), encoding="utf-8", newline="\n")
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest or MANIFEST), encoding="utf-8", newline="\n")
     (folder / "README.md").write_text("# Daily\n\nOne file a day.\n", encoding="utf-8", newline="\n")
     (folder / ".gitignore").write_text("_data/\n_output/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _write_days(folder, 0, files)
@@ -1172,6 +1172,86 @@ class TestAPinMetByABuildOfYours:
     def test_nor_where_the_folder_had_the_unrevised_table_back_when_its_line_was_told(self, report, rates, student, monkeypatch):
         good, _ = self._builds(rates, student, monkeypatch, put_back=True)
         self._the_pin_is_met_by_the_build_with_the_pinned_rows(report, student, good)
+
+
+class TestTheRecordsOwnRows:
+    """The rows a record says are hashed in the pipeline's folder once its files are put, and are said only where the folder still holds those files (found by review, 2026-11-21; it was so before this change too).
+
+    A build that wrote the table again between the put and the hashing of
+    its rows gave the record the rows of a file the snapshot does not
+    hold. The review asked that the record then say the rows of the file
+    it does hold, read from the store's copy. That half is not built:
+    before the record, the store has the files under other names, or in an
+    earlier snapshot's folder that nothing has looked at. What is built is
+    the look: the record says nothing of the rows this time, the command
+    says why, and a snapshot of the same bytes made again says them.
+    """
+
+    @pytest.fixture
+    def one_file(self, tmp_path) -> Path:
+        """A pipeline whose table is one file, of five days."""
+        table = {"path": "./_data/daily.parquet", "date_col": "ds", "docs": "One file."}
+        project = _pipeline(tmp_path.resolve() / "project", 1, dict(MANIFEST, dataframes=dict(MANIFEST["dataframes"], daily=table)))
+        self._days(5).write_parquet(project / "_data" / "daily.parquet")
+        return project
+
+    def _days(self, count: int) -> pl.DataFrame:
+        return pl.concat([_day_frame(number) for number in range(count)])
+
+    def test_a_table_as_it_was_put_has_its_rows_said(self, one_file, store):
+        from chartbook import snapshot
+
+        first = snapshot.make(one_file, store=store, made_at=LONG_AGO.format(0))
+        record = first.snapshot.assets["daily"]
+        assert first.made and first.not_hashed_now == []
+        assert (record.get("row_count"), record.get("as_of")) == (15, "2019-01-05")
+
+    def test_one_written_again_as_its_rows_are_hashed_has_none_said_this_time(self, one_file, store, monkeypatch):
+        from chartbook import snapshot
+
+        file = one_file / "_data" / "daily.parquet"
+        real, done = snapshot._rows_of, []
+
+        def a_build_writes_it_again(name, *arguments, **options):
+            if name == "daily" and not done:
+                done.append(self._days(9).write_parquet(file))  # between the put and the hashing of its rows
+            return real(name, *arguments, **options)
+
+        monkeypatch.setattr(snapshot, "_rows_of", a_build_writes_it_again)
+        first = snapshot.make(one_file, store=store, made_at=LONG_AGO.format(0))
+        assert done and first.made
+        record = first.snapshot.assets["daily"]
+        held = pl.read_parquet(FolderStore(store.root).files(record["content_hash"], "acme/daily").one.location)
+        assert held.height == 15, "the snapshot holds the file that was put"
+        # The rows hashed were those of nine days, which the snapshot does not hold: the record says none
+        assert not any(key in record for key in rowhash.FIELDS)
+        assert first.not_hashed_now == [("acme/daily:daily", "its files in the pipeline's folder changed while the snapshot was made")]
+
+        # The same bytes built again, and a snapshot made again: it is made for what the first does not say
+        self._days(5).write_parquet(file)
+        again = snapshot.make(one_file, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        said = again.snapshot.assets["daily"]
+        assert again.made and again.not_hashed_now == [] and said["content_hash"] == record["content_hash"]
+        assert (said.get("row_count"), said.get("as_of")) == (15, "2019-01-05")
+
+    def test_the_command_says_why(self, one_file, store, monkeypatch):
+        from chartbook import snapshot
+
+        file = one_file / "_data" / "daily.parquet"
+        real, done = snapshot._rows_of, []
+
+        def a_build_writes_it_again(name, *arguments, **options):
+            if name == "daily" and not done:
+                done.append(self._days(9).write_parquet(file))
+            return real(name, *arguments, **options)
+
+        monkeypatch.setattr(snapshot, "_rows_of", a_build_writes_it_again)
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(one_file)])
+        assert result.exit_code == 0, result.output
+        assert (
+            "rows not hashed this time: acme/daily:daily (its files in the pipeline's folder changed while the snapshot was made). "
+            "Its bytes are in the snapshot; `chartbook snapshot` again hashes its rows." in result.output
+        )
 
 
 @pytest.fixture
