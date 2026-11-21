@@ -923,7 +923,8 @@ def _name_on_disk(parent: Path, name: str, listings: dict) -> str:
         return unicodedata.normalize("NFC", text).casefold()
 
     # The likeliest first: the same name in another letter case, or the other of Unicode's forms
-    for entry in sorted(listed, key=lambda entry: folded(entry) != folded(name)):
+    alike = folded(name)
+    for entry in sorted(listed, key=lambda entry: folded(entry) != alike):
         try:
             if os.path.samefile(parent / entry, wanted):
                 return entry

@@ -87,7 +87,10 @@ class TestAnotherLetterCase:
         monkeypatch.setattr(os.path, "samefile", samefile)
         assert snapshot.code_of(mono).subdirectory == "pipes/a" and asked == []
         assert snapshot.code_of(other).subdirectory == "pipes/a"
-        assert set(asked) == {work / "mono" / "PIPES"}  # the one part that is spelled otherwise
+        # The one part that is spelled otherwise, where resolving the path kept the spelling that was typed
+        # (macOS). Windows hands back the disk's names as it resolves, and then nothing is looked for at all
+        kept_as_typed = str(other.resolve()) == str(other)
+        assert {str(path) for path in asked} == ({str(work / "mono" / "PIPES")} if kept_as_typed else set())
 
     def test_where_the_disk_has_both_each_is_its_own(self, work):
         """A disk that tells letter cases apart may hold ``rates`` and ``RATES``: the name that is listed is the one."""
