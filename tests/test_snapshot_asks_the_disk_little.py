@@ -71,15 +71,30 @@ MANIFEST = {
 # --- A pipeline whose table is a file a day -----------------------------------------
 
 
-def _write_days(folder: Path, first: int, count: int) -> None:
-    """Write *count* days of the table from day *first*, each a file of three rows in the folder of its month."""
+def _day_frame(number: int, revised: float = 0.0) -> pl.DataFrame:
+    """One day of the table: three rows; with *revised*, the same rows with other values."""
+    day = FIRST_DAY + timedelta(days=number)
+    return pl.DataFrame(
+        {"ds": [day] * 3, "unique_id": ["T0", "T1", "T2"], "y": [4.0 + number * 0.01 + i + revised for i in range(3)]}
+    )
+
+
+def _day_file(folder: Path, number: int) -> Path:
+    """The file of one day, in the folder of its month."""
+    day = FIRST_DAY + timedelta(days=number)
+    return folder / "_data" / "parts" / day.strftime("%Y-%m") / f"{day.isoformat()}.parquet"
+
+
+def _write_days(folder: Path, first: int, count: int, revised: float = 0.0) -> None:
+    """Write *count* days of the table from day *first*, each a file of three rows in the folder of its month.
+
+    Not packed, so that a day written again with other values is a file
+    of the size it was.
+    """
     for number in range(first, first + count):
-        day = FIRST_DAY + timedelta(days=number)
-        file = folder / "_data" / "parts" / day.strftime("%Y-%m") / f"{day.isoformat()}.parquet"
+        file = _day_file(folder, number)
         file.parent.mkdir(parents=True, exist_ok=True)
-        pl.DataFrame(
-            {"ds": [day] * 3, "unique_id": ["T0", "T1", "T2"], "y": [4.0 + number * 0.01 + i for i in range(3)]}
-        ).write_parquet(file)
+        _day_frame(number, revised).write_parquet(file, compression="uncompressed")
 
 
 def _pipeline(folder: Path, files: int) -> Path:
@@ -815,11 +830,16 @@ class TestTheRowsLineReadsTheFolder:
     """The line a snapshot says of a dataframe's rows beside the snapshot before it (``60 new rows, through 2019-04-30; earlier rows unchanged``) was told by reading the new table back from the store: every file of it asked about and opened there, though the same bytes had been read and hashed in the pipeline's folder a moment before. It is told from the folder.
 
     From the folder only while each of its files has the size and the time
-    it had when it was put, and the folder has gained and lost none: they
-    are then the snapshot's bytes, and what is found is remembered as what
-    the snapshot's file gives. Where the folder has changed since, the
-    line is what the store's copy gives, as before: never a line about
-    bytes that are not in the snapshot.
+    it had when it was put, and the folder has gained and lost none. Where
+    the folder has changed since, the line is what the store's copy gives,
+    as before.
+
+    What is read in the folder is said and is not remembered (found by
+    review, 2026-11-21). A file's size and time do not say that its bytes
+    are the snapshot's, and what a comparison finds is remembered under
+    the snapshot's hash, for a later `pin --update` and a later check of a
+    pin to take as what the snapshot's file gives. Only what the store's
+    copy gave is remembered.
     """
 
     @counted
@@ -872,23 +892,106 @@ class TestTheRowsLineReadsTheFolder:
 
         monkeypatch.setattr(snapshot, "_rows_since", telling)
 
-    def test_the_table_is_read_in_the_folder_and_what_is_found_is_remembered(self, daily, store, read):
-        from chartbook import snapshot
+    def test_the_table_is_read_in_the_folder_and_what_is_found_is_not_remembered(self, daily, store, read):
+        from chartbook import snapshot, standins
 
         second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
         assert second.rows_said == list(self.SAID.items()) and read == ["folder"]
-        assert len(self._remembered(store)) == 1
+        assert self._remembered(store) == [] and standins._compared == {}
 
-    def test_it_is_the_line_the_stores_copy_gives(self, daily, store, read):
+    def test_it_is_the_line_the_stores_copy_gives_which_is_what_is_remembered(self, daily, store, read):
+        """The next to ask, a `pin --update` say, finds nothing remembered, reads the store's copy, and remembers that."""
         from chartbook import snapshot, standins
 
         second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
         before, after = second.rows_beside.assets["daily"], second.snapshot.assets["daily"]
-        standins._compared.clear()
-        for remembered in self._remembered(store):
-            remembered.unlink()  # nothing remembered of it, as on another machine
+        assert standins.since(before, after, second.snapshot, FolderStore(store.root)) == self.SAID["acme/daily:daily"]
+        assert read == ["folder", "store"] and len(self._remembered(store)) == 1
+        standins._compared.clear()  # and the one after that, in another process, reads nothing
         assert standins.since(before, after, second.snapshot, FolderStore(store.root)) == self.SAID["acme/daily:daily"]
         assert read == ["folder", "store"]
+
+    @staticmethod
+    def _back_as_it_was(file: Path, frame: pl.DataFrame) -> None:
+        """Write a file again with other rows, and put it back at the size and the time it had: nothing the disk says of it has changed."""
+        seen = file.stat()
+        frame.write_parquet(file, compression="uncompressed")
+        assert file.stat().st_size == seen.st_size, "the test needs the two files to be of one size"
+        os.utime(file, ns=(seen.st_atime_ns, seen.st_mtime_ns))
+
+    def test_nothing_is_remembered_of_a_folder_that_shows_no_sign_of_its_change(self, daily, store, read, monkeypatch):
+        """The folder's first day is written again with other values, at the size and the time it had, once the snapshot has its bytes.
+
+        Nothing the disk says tells that file from the one that was put,
+        so the folder is read for the line, and the line printed may be of
+        the folder: here it says the earlier rows changed, where the
+        snapshot's are as they were. That is the limit of a look at sizes
+        and times, and it is a line of output. What must hold is that
+        nothing remembered is of the folder: whoever asks later reads the
+        store's copy and is told what the snapshot's rows are.
+        """
+        from chartbook import snapshot, standins
+
+        self._before_the_line(monkeypatch, lambda: self._back_as_it_was(_day_file(daily, 0), _day_frame(0, 5.0)))
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.made and read == ["folder"]
+        assert FolderStore(store.root).verify_snapshot(second.snapshot.path) == []
+        assert self._remembered(store) == [] and standins._compared == {}
+        before, after = self._the_one_before(daily, store, second).assets["daily"], second.snapshot.assets["daily"]
+        assert standins.since(before, after, second.snapshot, FolderStore(store.root)) == self.SAID["acme/daily:daily"]
+        assert read == ["folder", "store"]
+
+    @staticmethod
+    def _the_one_before(project: Path, store, report):
+        """The snapshot of the pipeline before the one a report is of."""
+        from chartbook import snapshot
+
+        return [one for one in snapshot.history(project, FolderStore(store.root)) if one.made_at < report.snapshot.made_at][-1]
+
+    def test_what_is_remembered_is_of_the_snapshots_bytes(self, daily, store, monkeypatch):
+        """The other way about, which is the one that matters later: the snapshot holds a revised first day, and the folder has the unrevised one back, at the same size and time, when the line is told.
+
+        What the line printed says is not held here, for the reason the
+        test above gives. What is remembered, and so what a later command
+        is told, is that the snapshot's earlier rows are not the first
+        snapshot's.
+        """
+        from chartbook import snapshot, standins
+
+        _write_days(daily, 0, 1, revised=5.0)  # the build revised the first day, and the snapshot is of that
+        self._before_the_line(monkeypatch, lambda: self._back_as_it_was(_day_file(daily, 0), _day_frame(0)))
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        first = self._the_one_before(daily, store, second)
+        assert FolderStore(store.root).verify_snapshot(second.snapshot.path) == []
+        # As another process asks later, of the same two records: a pin of the first one's rows beside the second one's file
+        standins._compared.clear()
+        asked_later = standins.rows_compared(first.assets["daily"], second.snapshot.assets["daily"], second.snapshot, FolderStore(store.root))
+        for file in self._remembered(store):
+            file.unlink()
+        standins._compared.clear()
+        read_again = standins.rows_compared(first.assets["daily"], second.snapshot.assets["daily"], second.snapshot, FolderStore(store.root))
+        assert not read_again.same  # the snapshot's first day is not the first snapshot's
+        assert asked_later.same == read_again.same and list(asked_later.differ) == list(read_again.differ)
+
+    def test_pin_update_in_a_pipeline_that_pins_it_says_what_the_snapshots_rows_are(self, daily, store, monkeypatch, tmp_path):
+        """The same, as the next command meets it on this machine: a pipeline pinned to the first snapshot runs `chartbook pin --update`, which says of the table it moves to what the snapshot's rows are, and not what the folder had when the snapshot's line was told."""
+        from chartbook import lock, snapshot, standins
+
+        report = tmp_path.resolve() / "report"
+        report.mkdir()
+        (report / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/report"}, "dependencies": {"acme/daily": {"path": "../project"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        assert not lock.pin(report, FolderStore(store.root)).problems
+        _write_days(daily, 0, 1, revised=5.0)  # the build revised the first day, and the snapshot is of that
+        self._before_the_line(monkeypatch, lambda: self._back_as_it_was(_day_file(daily, 0), _day_frame(0)))
+        second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
+        assert second.made and FolderStore(store.root).verify_snapshot(second.snapshot.path) == []
+        standins._compared.clear()  # the update is another process
+        updated = lock.update(report, store=FolderStore(store.root))
+        assert not updated.problems
+        assert "earlier rows changed" in updated.rows_said["acme/daily:daily"], updated.rows_said
 
     def _revised(self, project: Path) -> None:
         """The first day's file is written again with other values, as a build under way would: read, it would say that earlier rows changed."""
@@ -941,6 +1044,134 @@ class TestTheRowsLineReadsTheFolder:
         second = snapshot.make(daily, store=FolderStore(store.root), made_at=LONG_AGO.format(1))
         assert second.made and second.rows_said == [("acme/daily:daily", "the same rows, in other bytes")]
         assert read == []
+
+
+def _yields(days: int, revised: date = None) -> pl.DataFrame:
+    """Two series a day from 2025-12-01; *revised* changes one value on that day."""
+    when = [date(2025, 12, 1) + timedelta(days=i) for i in range(days) for _ in range(2)]
+    frame = pl.DataFrame({"ds": when}).with_columns(
+        unique_id=pl.format("T{}", pl.int_range(pl.len()) % 2),
+        y=(4.0 + pl.int_range(pl.len()) * 0.01),
+    )
+    if revised is not None:
+        frame = frame.with_columns(
+            pl.when((pl.col("ds") == revised) & (pl.col("unique_id") == "T1")).then(pl.col("y") + 0.5).otherwise(pl.col("y")).alias("y")
+        )
+    return frame
+
+
+class TestAPinMetByABuildOfYours:
+    """What the rows line remembered is what a check of a pin takes a build's rows to be (found by review, 2026-11-21).
+
+    A class with no shared store: the author pins a snapshot of an
+    upstream, and a student builds that upstream at the pinned commit. A
+    build of theirs with the pinned rows stands in for the pin, and one
+    with a revised value does not. The check reads what is remembered of
+    a build's rows beside the pin's, under the build's hash; remembered
+    from a folder that had the unrevised table back when the build's line
+    was told, it took the revised build for the pinned rows, and a read
+    through the pin handed out rows that were never pinned.
+    """
+
+    @pytest.fixture
+    def work(self, tmp_path):
+        return tmp_path.resolve()
+
+    @pytest.fixture
+    def rates(self, work):
+        from tests.fixtures import commit_pipeline
+
+        directory = work / "rates"
+        (directory / "_data").mkdir(parents=True)
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "acme/rates"},
+                "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "date_col": "ds", "docs": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        _yields(40).write_parquet(directory / "_data" / "treasury.parquet")
+        commit_pipeline(directory)
+        return directory
+
+    @pytest.fixture
+    def report(self, work, rates, monkeypatch):
+        """A report that depends on it, pinned by its author in the author's own store."""
+        from chartbook import config, lock, snapshot
+
+        directory = work / "report"
+        directory.mkdir()
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/report"}, "dependencies": {"acme/rates": {"path": "../rates"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "author"))
+        monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "author-cache"))
+        author = FolderStore(work / "author")
+        snapshot.make(rates, store=author, made_at="2026-02-01T00:00:00.000000Z")
+        assert not lock.pin(directory, author).problems
+        return directory
+
+    @pytest.fixture
+    def student(self, work, report, monkeypatch):
+        """The student's machine: another store, with nothing of the author's in it."""
+        from chartbook import config, standins
+        from chartbook import resolve as resolve_module
+
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "student"))
+        monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "student-cache"))
+        resolve_module._said_stand_ins.clear()
+        standins._compared.clear()
+        return FolderStore(work / "student")
+
+    def _builds(self, rates: Path, student, monkeypatch, put_back: bool):
+        """The student's two builds at the pinned commit: one with the pinned rows in other bytes; then one with eight days more and a value of 2025-12-10 revised."""
+        from chartbook import snapshot, standins
+        from chartbook import resolve as resolve_module
+
+        file = rates / "_data" / "treasury.parquet"
+        _yields(40).write_parquet(file, compression="uncompressed")
+        good = snapshot.make(rates, store=student, made_at="2026-02-02T00:00:00.000000Z")
+        _yields(48, revised=date(2025, 12, 10)).write_parquet(file, compression="uncompressed")
+
+        def unrevised_again():
+            # Once the snapshot has the revised file: the folder has the unrevised one, at the size and time the revised one had
+            seen = file.stat()
+            _yields(48).write_parquet(file, compression="uncompressed")
+            assert file.stat().st_size == seen.st_size, "the test needs the two files to be of one size"
+            os.utime(file, ns=(seen.st_atime_ns, seen.st_mtime_ns))
+
+        if put_back:
+            real = snapshot._rows_since
+            monkeypatch.setattr(snapshot, "_rows_since", lambda *arguments, **options: (unrevised_again(), real(*arguments, **options))[1])
+        revised = snapshot.make(rates, store=FolderStore(student.root), made_at="2026-02-03T00:00:00.000000Z")
+        assert good.made and revised.made
+        assert FolderStore(student.root).verify_snapshot(revised.snapshot.path) == []
+        standins._compared.clear()  # the check is another process
+        resolve_module._said_stand_ins.clear()
+        return good, revised
+
+    def _the_pin_is_met_by_the_build_with_the_pinned_rows(self, report: Path, student, good) -> None:
+        from chartbook import assets, lock
+
+        checked = lock.verify(report, FolderStore(student.root))
+        stood = checked.stood_in.get("acme/rates")
+        assert stood is not None and stood.snapshot is not None
+        # The newest build has a revised value on 2025-12-10: it does not meet the pin, and the one before it does
+        assert stood.snapshot.made_at == good.snapshot.made_at, (
+            f"the pin is said to be met by the build made {stood.snapshot.made_at}, whose table has a value of 2025-12-10 that the pin does not"
+        )
+        read = pl.read_parquet(assets.path("acme/rates:treasury", project_dir=report))
+        pinned = _yields(40)
+        assert read.filter(pl.col("ds") <= date(2026, 1, 9)).sort(["ds", "unique_id"]).equals(pinned.sort(["ds", "unique_id"]).select(read.columns))
+
+    def test_a_revised_build_does_not_stand_in(self, report, rates, student, monkeypatch):
+        good, _ = self._builds(rates, student, monkeypatch, put_back=False)
+        self._the_pin_is_met_by_the_build_with_the_pinned_rows(report, student, good)
+
+    def test_nor_where_the_folder_had_the_unrevised_table_back_when_its_line_was_told(self, report, rates, student, monkeypatch):
+        good, _ = self._builds(rates, student, monkeypatch, put_back=True)
+        self._the_pin_is_met_by_the_build_with_the_pinned_rows(report, student, good)
 
 
 @pytest.fixture

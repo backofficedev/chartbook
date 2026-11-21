@@ -596,12 +596,20 @@ page had only the two phrases:*
 - **What `snapshot` reads for it.** Nothing, where the two records already say it. Otherwise the
   new table, every file of it: in the pipeline's folder, where its rows were hashed a moment
   before, for as long as each file there has the size and the time it had when it was put and
-  the folder has gained and lost none. They are then the snapshot's bytes, and what is found is
-  remembered as what its file gives. Where the folder has changed since (a build under way
-  again), the store's copy is read, as `update` reads it: the line is never of bytes that are
-  not in the snapshot. *Decided 2026-11-21, after a measurement:* read back from a store in a
-  synced folder, the table was the largest part of what a snapshot of a table in many files
-  waited for ({doc}`snapshots-and-increments`, "What it costs").
+  the folder has gained and lost none. Where the folder has changed since (a build under way
+  again), the store's copy is read, as `update` reads it. *Decided 2026-11-21, after a
+  measurement:* read back from a store in a synced folder, the table was the largest part of
+  what a snapshot of a table in many files waited for ({doc}`snapshots-and-increments`, "What it
+  costs").
+- **What is read in the folder is said, and is not remembered.** *Found by review, 2026-11-21.*
+  A file's size and time do not say that its bytes are the snapshot's: one written again and put
+  back as it was has both, and the line is then of the folder. That is a line of output. But
+  what a comparison finds is remembered under the snapshot's own hash (`rows/met`), and taken
+  later for what the snapshot's file gives, by `pin --update` in a pipeline that pinned the
+  snapshot before it and by the check of a pin against a build of one's own. For a day it was
+  remembered from the folder, and a revised table was then said to have its earlier rows
+  unchanged for as long as the answer lived. Only what the store's copy gave is remembered, so
+  the first command that asks reads the table there, once.
 - **A table with no `date_col`** has nothing to tell a new row from a changed one by: `its rows
   changed (2 rows before, 3 now); it has no date column to tell new rows by`. Its two records, of
   one hash each, say that between them, and nothing is read.

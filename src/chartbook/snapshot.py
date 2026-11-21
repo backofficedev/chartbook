@@ -3486,9 +3486,14 @@ def _at_hand(put: Optional[tuple]):
     Asked, it gives the table to read (:class:`chartbook.rowhash.Table`)
     where the folder holds the files the dataframe was put from, no more
     and no fewer, each at the size and the time it had just before it was
-    put: they are then the bytes the snapshot holds. It gives None once
-    any of that is no longer so (a build under way again while the
-    snapshot is made), and whoever asks reads the store's copy.
+    put. It gives None once any of that is no longer so (a build under
+    way again while the snapshot is made), and whoever asks reads the
+    store's copy.
+
+    A look, and no proof: a file written again and put back at the size
+    and the time it had passes it with other bytes. So it chooses where a
+    line of output is read, and what is read there is remembered as the
+    snapshot's by nobody (:func:`chartbook.standins.rows_compared`).
 
     :param put: Where its files are, how they are read, and each as it was
         (:func:`_as_they_are`), as :func:`_make` notes them.
@@ -3526,9 +3531,10 @@ def _rows_since(directory: Path, taken: Snapshot, store: Store, put_from: Option
     may be a folder a sync service keeps, where reading the table back was
     more than a dozen questions of the disk for each of its files, and
     every byte of it. Where the folder has changed since, the store's
-    copy is read, as it always was: the line is of the snapshot's bytes
-    or it is not said. A table written out of a DuckDB file has no file in
-    the folder, and is read in the store.
+    copy is read, as it always was. What is read in the folder is said and
+    is not remembered: only what the store's copy gave is taken later for
+    what the snapshot's rows are. A table written out of a DuckDB file has
+    no file in the folder, and is read in the store.
 
     :param put_from: The dataframes put from files of the folder, by name,
         each as :func:`_make` notes it.

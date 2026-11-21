@@ -157,14 +157,26 @@ class TestUpdate:
         assert found.rows_said == {} and not found.problems
 
     def test_only_the_last_period_is_read_and_once(self, rates, report, store, monkeypatch):
-        """What the two records already show to be the same is not hashed again; and what the snapshot found, the update on this machine does not find again."""
+        """What the two records already show to be the same is not hashed again; and what an update found in the store's copy, the next on this machine does not find again.
+
+        The snapshot read the table in the pipeline's folder for its line,
+        and that is not remembered (a file's size and time do not say its
+        bytes are the snapshot's): the first update reads the store's
+        copy, once, and that is what is remembered.
+        """
+        other = report.parent / "other"  # another pipeline that pins the same snapshot of it
+        _write_manifest(other, {"project": {"id": "acme/other"}, "dependencies": {"acme/rates": {"path": "../rates"}}})
+        assert not lock.pin(other, store).problems
         asked = []
         real = rowhash.hash_in
         monkeypatch.setattr(rowhash, "hash_in", lambda *arguments, **options: asked.append(sorted(options.get("known", ()))) or real(*arguments, **options))
         _again(rates, store, _yields(48))
         assert asked == [["2025-12-01/2025-12-31"]]
         found = lock.update(report, store=store)
-        assert found.rows_said and len(asked) == 1
+        assert found.rows_said and asked == [["2025-12-01/2025-12-31"]] * 2
+        standins._compared.clear()  # the next update is another process: what it knows is in the cache folder
+        again = lock.update(other, store=store)
+        assert again.rows_said == found.rows_said and len(asked) == 2
 
 
 class TestSnapshot:

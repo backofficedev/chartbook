@@ -390,11 +390,19 @@ def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = T
 
     The table is read in the store, where the snapshot's file is. For a
     snapshot just made, *at_hand* gives the table where it was put from,
-    and it is read there: the same bytes, on the disk the pipeline is
-    built on, where the store may be a folder a sync service keeps. What
-    is found there is taken, and remembered, only where the files are
-    still as they were put once they have been read; else the store's
-    copy is read after all (:func:`_read_at_hand`).
+    and it is read there: on the disk the pipeline is built on, where the
+    store may be a folder a sync service keeps. What is found there is
+    taken for the line where the files are still as they were put once
+    they have been read; else the store's copy is read after all
+    (:func:`_read_at_hand`).
+
+    **Only what the snapshot's own bytes gave is remembered.** What was
+    read where the snapshot was put from is said, and is not remembered,
+    in this process or in the cache folder: a file's size and its time
+    do not say that its bytes are the snapshot's (one written again and
+    put back as it was has both), and what is remembered is taken later
+    for what the snapshot's file gives, by a check of a pin and by a read
+    through one. So the first of those reads the store's copy, once.
 
     :param read: Whether the table may be read. With False, what is
         remembered and what the two records say is all that is used.
@@ -426,10 +434,11 @@ def rows_compared(pinned: Mapping, theirs: Mapping, taken, store, read: bool = T
     elif not read:
         raise _NotRead()
     else:
-        compared = _read_at_hand(at_hand, date_col, rows, as_of, known) if at_hand is not None else None
-        if compared is None:
-            table = rowhash.Table.at(_held(store, dict(theirs), taken.pipeline))
-            compared = rowhash.hash_in(table, date_col, rows, as_of, known=known)
+        beside = _read_at_hand(at_hand, date_col, rows, as_of, known) if at_hand is not None else None
+        if beside is not None:
+            return beside  # of the files it was put from: said, and not remembered as what the snapshot's file gives
+        table = rowhash.Table.at(_held(store, dict(theirs), taken.pipeline))
+        compared = rowhash.hash_in(table, date_col, rows, as_of, known=known)
     _compared[answers] = compared
     _write(remembered, answers, compared)
     return compared
@@ -440,8 +449,12 @@ def _read_at_hand(at_hand, date_col, rows: Mapping, as_of, known) -> Optional["r
 
     They are looked at before the table is read and again after: a file
     that changes while it is read gave rows that are not the snapshot's,
-    and nothing is said or remembered of them. What reading raises is the
-    table's own where the files are still as they were put, and is raised.
+    and nothing is said of them. That chooses between the folder and the
+    store's copy for a line of output, and no more: a file at the size
+    and the time it had may still hold other bytes, so what is read here
+    is never remembered (:func:`rows_compared`). What reading raises is
+    the table's own where the files are still as they were put, and is
+    raised.
     """
     table = at_hand()
     if table is None:
