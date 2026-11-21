@@ -1168,7 +1168,8 @@ def _as_cmd_takes_it(directory: Union[str, Path]) -> Union[str, Path]:
         raise RunError(
             f"{text} is a network folder with no drive letter, and cmd.exe, which runs a script on Windows, takes "
             f"no such folder as its own: it would have run the script in C:\\Windows. Connect the share to a drive "
-            f"letter (`net use Q: {_quoted(share, windows=True, backslashes=True)}`, with a letter that is free), and run this again."
+            f"letter (`net use Q: {_quoted(share, windows=True, backslashes=True)}`, with a letter that is free; in Git Bash, "
+            f"with the share in single quotes), and run this again."
         )
     return lettered
 

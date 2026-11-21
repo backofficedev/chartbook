@@ -539,7 +539,12 @@ What building it settled:
   branch, and it was built from the old commit's files with nothing said. So no command is
   made blind: the list made after the trust command is made with what git says. And a line
   that reads such a line is given no command either, since its build would end with what is
-  not in the store.)*
+  not in the store.)* A worktree the list said to add is itself a folder git does not trust
+  there, until it is told to: its build says so, and the list made again takes the worktree by
+  its name, with the command that makes git trust it before its build. *(Found on Windows by
+  typing a list to its end, three times: git read nothing of the worktree, so each list named
+  another, and three were left.)* And `net use`, which no one spelling gives to all three
+  shells, is said with what Git Bash wants.
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It

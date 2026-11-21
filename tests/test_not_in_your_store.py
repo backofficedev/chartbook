@@ -1214,6 +1214,51 @@ class TestInThePipelinesOwnRepository:
         said = _said(CliRunner().invoke(main, ["run"]))
         assert said[4] == f"     git -C {_q(top)} worktree add {_q(work / f'mono-at-{commit[:12]}-2')} {commit[:12]}"
 
+    def test_a_worktree_made_before_that_git_does_not_trust_yet_is_the_one(self, work, theirs, mine, monkeypatch):
+        """Found on Windows, on a share, by typing a list to its end three times: the worktree the list
+        said to add is a folder git does not trust until it is told to, its build was refused for that,
+        and the list made again did not find it (git reads nothing of it) and named another: -2, -3,
+        each left behind. It is taken by its name, with the command that makes git trust it first."""
+        top, commit = self._made(work, theirs, {"acme/mid": {"path": "../mid"}})
+        mine()
+        monkeypatch.chdir(top / "report")
+        tree = work / f"mono-at-{commit[:12]}"
+        _git(top, "worktree", "add", "--quiet", "--detach", str(tree), commit)  # as the list before this one said
+        _git_refuses(monkeypatch, DUBIOUS.format(at=tree.as_posix()), under=tree)
+        said = _said(CliRunner().invoke(main, ["run"]))
+        assert said[3:6] == [
+            f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder of this repository, at another commit)",
+            f"     git config --global --add safe.directory {missing._quoted(tree.as_posix(), batch=False)}",
+            f"     chartbook run --snapshot --project-dir {_q(tree / 'mid')}",
+        ], said
+        assert not any("worktree add" in line for line in said)
+
+    def test_its_command_is_given_once_for_two_pipelines_built_in_it(self, work, monkeypatch):
+        commit = "c" * 40
+        tree = work / "mono" / f"mono-at-{commit[:12]}"  # beside a pipeline that is in no repository here: in its folder's own
+        tree.mkdir(parents=True)
+        trust = "git config --global --add safe.directory /srv/mono-at"
+        monkeypatch.setattr(missing, "_waits_for_trust", lambda folder: trust if folder == tree else None)
+        listing = missing.Listing("acme/report", work / "mono" / "report", stores=[str(work / "mine")], top=work / "mono", wanted=[
+            missing.Wanted("acme/a", commit, folder=work / "mono" / "a", top=work / "mono"),
+            missing.Wanted("acme/b", commit, folder=work / "mono" / "b", top=work / "mono"),
+        ])
+        said = missing.said(listing, here=work / "mono" / "report")
+        assert said[4:8] == [
+            f"     {trust}",
+            f"     chartbook run --snapshot --project-dir {_q(tree / 'a')}",
+            f"2. acme/b at ccccccc    {_up('b')} (a folder of this repository, at another commit)",
+            f"     chartbook run --snapshot --project-dir {_q(tree / 'b')}",
+        ], said
+
+    def test_a_folder_of_that_name_that_git_reads_and_is_not_it_is_still_passed_by(self, work):
+        """Only git's refusal for trust takes a folder by its name: one that is in no repository is a leftover, as before."""
+        for folder, waits in ((work / "plain", None), (work / "nowhere" / "x", None)):
+            folder.parent.mkdir(exist_ok=True)
+            if folder.name == "plain":
+                folder.mkdir()
+            assert missing._waits_for_trust(folder) is waits
+
     def test_where_this_repository_is_the_clone_wanted_and_lacks_the_commit(self, work, theirs, mine, monkeypatch):
         """Found by the second pass: the list said `git fetch && git checkout` in the reader's own repository, and its last command built the other pipeline there."""
         rates = _pipeline(work, "rates")

@@ -298,7 +298,7 @@ Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the o
 
 `cmd.exe`, which runs a script on Windows, takes no network folder (`\\server\…`) as the folder it works in: started in one it says "UNC paths are not supported", goes to `C:\Windows`, and runs the script there. A pipeline on a drive letter that is such a folder was run so too, since ChartBook follows a folder to where it really is: a home folder on a network, by someone who never typed a `\\`. A build of one line of shell ran in the Windows folder, and the run said `Ran build in 1 pipeline(s).` It was so in every release.
 
-A script is now run from the drive letter its share is connected under, which ChartBook finds among the connected drives. Where the share has no letter, the run stops before anything is built: `… is a network folder with no drive letter … Connect the share to a drive letter (`net use Q: "\\server\share"`, with a letter that is free), and run this again. Nothing was built.`
+A script is now run from the drive letter its share is connected under, which ChartBook finds among the connected drives. Where the share has no letter, the run stops before anything is built: `… is a network folder with no drive letter … Connect the share to a drive letter (`net use Q: "\\server\share"`, with a letter that is free; in Git Bash, with the share in single quotes), and run this again. Nothing was built.`
 
 ### Fixed — on Windows, a command that a message prints can be pasted
 

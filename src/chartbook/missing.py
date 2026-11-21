@@ -1131,6 +1131,19 @@ def _worktree_at(tree: Path, commit: str) -> bool:
         return False
 
 
+def _waits_for_trust(folder: Path) -> Optional[str]:
+    """For a folder that is there, in a repository git does not trust: the command that makes git trust it, empty where there is none to give. None for any other folder."""
+    try:
+        if not folder.is_dir():
+            return None
+        snapshot.code_of(folder)
+    except snapshot.RepositoryNotTrusted as error:
+        return error.command
+    except (snapshot.SnapshotError, OSError):
+        return None
+    return None
+
+
 def said(
     listing: Listing, again: str = "chartbook run", done: str = "built", here: Optional[Union[str, Path]] = None,
     windows: Optional[bool] = None,
@@ -1199,6 +1212,8 @@ def said(
     cloned: dict = {}
     worktrees: dict = {}
     moved: set = set()
+    #: And for a worktree that is there and that git does not trust yet, by its commit: the command that makes it
+    untrusted: dict = {}
 
     def at_its_commit(top: Path, folder: Path, commit: str, make: str) -> list[str]:
         """Check a repository out and build in a folder of it: from its top, since the folder may not be there until the checkout."""
@@ -1213,6 +1228,18 @@ def said(
             # passed by, for the next name that is free
             names = _clone_folders(beside, f"{_clone_name(listing.top.name)}-at-{commit}")
             there = next((tree for tree in names if _worktree_at(tree, commit)), None)
+            if there is None:
+                # One that an earlier list made, where git trusts no folder until it is told to (on Windows, any
+                # on a network share): git reads nothing of it, so it was not found, and each list made another
+                # (found on Windows by typing a list to its end, three times). It is taken by its name, which
+                # only this list gives, and its line begins with the command that makes git trust it. Whether
+                # it is on that commit is not known until then: its build's snapshot is labelled with the
+                # commit it is on, and the list made after it looks again
+                for tree in names:
+                    trust = _waits_for_trust(tree)
+                    if trust is not None:
+                        there, untrusted[commit] = tree, trust
+                        break
             add = there is None
             worktrees[commit] = there or next((tree for tree in names if not os.path.lexists(tree)), names[-1])
         tree = worktrees[commit]
@@ -1220,6 +1247,8 @@ def said(
         commands = [make + named(tree / within if within else tree)]
         if add:
             commands.insert(0, f"git -C {word(listing.top)} worktree add {word(tree)} {commit}")
+        elif untrusted.get(commit):
+            commands.insert(0, untrusted.pop(commit))  # once, on the first line that builds in it
         if fetch:
             commands.insert(0, fetch)
         return commands
@@ -1231,7 +1260,7 @@ def said(
     for number, line in enumerate(wanted, 1):
         held.clear()
         told = ""
-        before = (dict(cloned), dict(worktrees))
+        before = (dict(cloned), dict(worktrees), dict(untrusted))
         moved_before = set(moved)
         pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
         at = f" at {line.commit[:7]}" if pinned else ""
@@ -1359,7 +1388,7 @@ def said(
             commands, unknown = [], ""
             told = "It waits for what it reads above. How to build it is said after that, by the last command here."
             held.clear()
-            for kept, was in zip((cloned, worktrees), before):
+            for kept, was in zip((cloned, worktrees, untrusted), before):
                 kept.clear()
                 kept.update(was)
             moved.clear()
@@ -1375,7 +1404,7 @@ def said(
             # Nothing of it was typed: no clone was made by it, and no worktree. A repository it would have
             # moved stays counted as moved, since by hand it may well be: a checkout too many costs nothing,
             # and a folder taken for built on a commit it is no longer on would be labelled with another's files
-            for kept, was in zip((cloned, worktrees), before):
+            for kept, was in zip((cloned, worktrees, untrusted), before):
                 kept.clear()
                 kept.update(was)
         reads = f"; reads {_counted(line.reads)} above" if line.reads else ""
