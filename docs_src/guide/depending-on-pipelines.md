@@ -235,16 +235,21 @@ Build them in this order, with the commands below. Each ends with a snapshot, wh
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
+     git -C /work/he_kelly_manela checkout 7802799a41c2
+     chartbook run --snapshot --project-dir /work/he_kelly_manela
 2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
-     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
+     git -C /work/fed_yield_curve checkout 0db8051e3f7b
+     chartbook run --snapshot --project-dir /work/fed_yield_curve
 
 Then here again:
-     cd /work/report && chartbook run
+     chartbook run --project-dir /work/report
 Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
-Each command can be pasted as it is, from any folder, in the order given. A folder on this
+Each line is one command, the same in every shell (PowerShell and `cmd.exe` among them), and can
+be typed as it is, from any folder, in the order given, one at a time. None enters a folder: you
+stay where you are, and the last line is the command you typed, with this pipeline's folder. A
+folder on this
 machine is one your `[dependencies]` names by `path`; a clone you already have beside your project
 is read and built where it is; any other repository is cloned beside your project. Nothing here
 moves your own repository to another commit. The whole of it is in the
@@ -255,8 +260,9 @@ $ chartbook pin --check
 ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/.chartbook/store, and no build of yours at 0db8051 stands in: treasury_yields
   To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
   …
-$ cd ../fed_yield_curve && git checkout 0db8051 && chartbook run --snapshot
-$ cd ../report && chartbook pin --check
+$ git -C ../fed_yield_curve checkout 0db8051
+$ chartbook run --snapshot --project-dir ../fed_yield_curve
+$ chartbook pin --check
 ftsfr/fed_yield_curve: read from your own build of 0db8051, made 2026-11-17 09:22 UTC
   treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
 1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.

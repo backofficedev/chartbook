@@ -123,14 +123,14 @@ class _Main(_Group):
         if args and args[0] == "build" and not ctx.resilient_parsing:
             raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
         if args and args[0] == "update" and not ctx.resilient_parsing:
-            import shlex
+            from chartbook import missing
 
             # Its help was asked for: that of the command it became, and not a command that moves every pin
             asked_for_help = any(word in ("--help", "-h") for word in args[1:])
             tried = ["chartbook", "pin", "--help"] if asked_for_help else ["chartbook", "pin", "--update", *args[1:]]
             raise click.UsageError(
                 "`chartbook update` is gone: `chartbook pin --update`. It moves pins to the newest snapshot, all of "
-                f"them or those of the dependencies named. Try: {shlex.join(tried)}",
+                f"them or those of the dependencies named. Try: {missing.typed(tried)}",
                 ctx,
             )
         if args and args[0] == "check" and not ctx.resilient_parsing:
@@ -1491,8 +1491,10 @@ def path_command(ref, kind, project_dir, list_files):
     try:
         found = resolver(ref, kind=kind, project_dir=project_dir or Path.cwd())
     except NoSinglePathError as e:
+        from chartbook.missing import _quoted
+
         click.echo(
-            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {ref} --files` prints them, one per line.",
+            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {_quoted(ref)} --files` prints them, one per line.",
             err=True,
         )
         raise SystemExit(1)
@@ -1990,9 +1992,11 @@ def _load_raw_catalog(catalog_toml_path):
     with open(catalog_toml_path, "rb") as f:
         data = tomli.load(f)
     if detect_v1_format(data):
+        from chartbook.missing import _quoted
+
         raise click.UsageError(
             f"{catalog_toml_path} uses the old v1 format. "
-            f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
+            f"Run: python scripts/migrate_toml_v2.py {_quoted(catalog_toml_path.parent)}"
         )
     if catalog_toml_path.name == "catalog.toml":
         data.setdefault("project", {}).setdefault("type", "catalog")
@@ -3056,18 +3060,19 @@ def pin(names, project_dir, moving, check_only):
         raise click.UsageError("--check takes no name: it says whether every pin of the pipeline can be read here, and writes nothing.")
     if names and not moving:
         import os
-        import shlex
+
+        from chartbook import missing
 
         folder = next((name for name in names if os.path.isdir(name)), None)
         if folder is not None and project_dir is None:
             # A folder where a dependency's name goes: the pipeline to pin was meant
             raise click.UsageError(
                 f"{folder} is a folder, and a pipeline is named with --project-dir: "
-                f"`{shlex.join(['chartbook', 'pin', '--project-dir', folder])}`."
+                f"`{missing.typed(['chartbook', 'pin', '--project-dir', folder])}`."
             )
         meant = ["chartbook", "pin", "--update", *names, *(["--project-dir", project_dir] if project_dir else [])]
         raise click.UsageError(
-            f"A name goes with --update: `{shlex.join(meant)}` moves the pins of what it names. "
+            f"A name goes with --update: `{missing.typed(meant)}` moves the pins of what it names. "
             f"`chartbook pin` pins what has no pin yet, of every dependency."
         )
     if check_only:
@@ -5988,8 +5993,10 @@ def catalog_migrate(catalog_path):
             f"{settings_path} if it is no longer needed as a fallback for other catalogs; "
             "it is ignored by this catalog and otherwise warns on each command."
         )
+    from chartbook.missing import _quoted
+
     for pipeline, folder in missing:
-        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {str(folder)!r}")
+        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {_quoted(folder)}")
 
 
 @ls.command("stores")

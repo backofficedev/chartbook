@@ -1113,6 +1113,10 @@ class TestCommand:
 
         from chartbook.store import default_store
 
+        def typed(path) -> str:
+            """A word of a command, as this system's shells take it."""
+            return f'"{path}"' if os.name == "nt" else shlex.quote(str(path))
+
         result = self._run()
         assert result.exit_code == 1 and commit
         # The list of what is not in the store (tests/test_not_in_your_store.py), in the pin's place
@@ -1121,10 +1125,10 @@ class TestCommand:
             "Build it first, with the commands below. They end with a snapshot, which is what this one reads.",
             "",
             f"1. upstream    {os.path.join('..', 'upstream')} (a folder on this machine)",
-            f"     cd {shlex.quote(str(work / 'upstream'))} && chartbook run --snapshot",
+            f"     chartbook run --snapshot --project-dir {typed(work / 'upstream')}",
             "",
             "Then here again:",
-            f"     cd {shlex.quote(str(reader))} && chartbook run",
+            f"     chartbook run --project-dir {typed(reader)}",
             "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
             "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has it, or wait for its sync to finish.",
         ]

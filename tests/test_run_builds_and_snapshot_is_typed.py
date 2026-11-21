@@ -550,17 +550,25 @@ class TestASnapshotIsTyped:
         assert _run().exit_code == 0
         monkeypatch.chdir(work)
         result = _snapshot("--project-dir", str(other))
-        assert result.exit_code == 1 and result.output.splitlines() == [
-            f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
-            f"`cd` into the folder, and `chartbook snapshot` again."
-        ]
-        # The run that is asked for a snapshot says the same, before it builds
-        strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
-        assert strict.exit_code == 1 and _ran(demo) == 1 and strict.output.splitlines() == [
-            f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
-            f"`cd` into the folder, and `chartbook run --snapshot` again."
-        ]
-        assert _snapshots(store) == []
+        if os.name == "nt":
+            # Found on Windows, 2026-11-20, where this test held that it was refused: the system names a folder
+            # as the disk does, whatever was typed. The snapshot is of the folder, and by its real name it is the same one
+            assert result.exit_code == 0, result.output
+            (taken,) = _snapshots(store)
+            assert taken.subdirectory == ""
+            assert "No new snapshot" in _snapshot("--project-dir", str(demo)).output and len(_snapshots(store)) == 1
+        else:
+            assert result.exit_code == 1 and result.output.splitlines() == [
+                f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
+                f"`cd` into the folder, and `chartbook snapshot` again."
+            ]
+            # The run that is asked for a snapshot says the same, before it builds
+            strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
+            assert strict.exit_code == 1 and _ran(demo) == 1 and strict.output.splitlines() == [
+                f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
+                f"`cd` into the folder, and `chartbook run --snapshot` again."
+            ]
+            assert _snapshots(store) == []
         # And from inside the folder, however it was spelled, a run's last line names no folder
         monkeypatch.chdir(demo)
         assert _after_the_run(_run("--project-dir", str(other))) == _closing()
@@ -577,17 +585,31 @@ class TestASnapshotIsTyped:
         assert _run("--project-dir", str(a)).exit_code == 0
         refused = "is named otherwise than the disk names it, so where it is in its repository cannot be told."
         typed = _snapshot("--project-dir", str(other))
-        assert typed.exit_code == 1 and typed.output.splitlines() == [
-            f"Error: {other} {refused} `cd` into the folder, and `chartbook snapshot` again."
-        ]
-        strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
-        assert strict.exit_code == 1 and f"Error: {other} {refused}" in strict.output and _ran(a) == 1
-        assert _snapshots(store) == []
-        # Named as the disk names it, the snapshot is made, and says where the pipeline is
+        if os.name == "nt":
+            # Found on Windows, 2026-11-20: the system names the folder as the disk does, and nothing is to refuse
+            assert typed.exit_code == 0, typed.output
+        else:
+            assert typed.exit_code == 1 and typed.output.splitlines() == [
+                f"Error: {other} {refused} `cd` into the folder, and `chartbook snapshot` again."
+            ]
+            strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
+            assert strict.exit_code == 1 and f"Error: {other} {refused}" in strict.output and _ran(a) == 1
+            assert _snapshots(store) == []
+        # Named as the disk names it, the snapshot is made, or is the one made already. Either way it says
+        # where the pipeline is
         made = _snapshot("--project-dir", str(a))
-        assert made.exit_code == 0 and said_made(made.output, COMPLETE)
+        assert made.exit_code == 0, made.output
+        assert os.name == "nt" or said_made(made.output, COMPLETE)  # on Windows it is the one made a moment ago
         (taken,) = _snapshots(store)
         assert taken.subdirectory == "pipes/a"
+
+    def test_a_folder_in_no_repository_is_said_as_it_was(self, work, store, monkeypatch):
+        """What is wrong with a folder is said by the command, in its own words, and not by the look at how the folder is spelled."""
+        directory = _folder(work / "loose")
+        monkeypatch.chdir(directory)
+        for result in (_snapshot(), _run("--snapshot", "--no-gc-reminder")):
+            assert result.exit_code == 1 and "is not in a git repository" in result.output, result.output
+            assert "Traceback" not in result.output and result.exception.__class__ is SystemExit
 
     def test_a_folder_in_another_of_unicodes_forms_is_no_mistake(self, work, store, monkeypatch):
         """Git and the system may write one name two ways. Whoever typed it made no mistake, and is not refused."""

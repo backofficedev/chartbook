@@ -240,10 +240,12 @@ def template_source(package_dir: Optional[Path] = None) -> TemplateSource:
         )
     top = _git(root, "rev-parse", "--show-toplevel")
     if not top or Path(top.strip()).resolve() != root.resolve():
+        from chartbook.missing import _quoted
+
         raise ScaffoldError(
             f"To render the template from the source checkout {root}, ChartBook asks git which of its files "
             f"git tracks, which are all it renders, and git cannot read the checkout. Install git; or, if git "
-            f"does not trust the folder, run `git config --global --add safe.directory {root}`."
+            f"does not trust the folder, run `git config --global --add safe.directory {_quoted(root)}`."
         )
     changed = _git(root, "status", "--porcelain", "--untracked-files=no", "--", TEMPLATE_DIRECTORY)
     if changed is None:
