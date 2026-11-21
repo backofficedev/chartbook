@@ -134,12 +134,13 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 A snapshot's folder is not deleted by hand: a lockfile may pin it, and an increment may keep its
 files in it.
 `chartbook store gc` removes snapshots safely: it keeps the newest of each pipeline, everything a
-lockfile pins, a snapshot a model's label points into, a complete snapshot that an increment it
-keeps builds on, and anything made in the last seven days,
-lists what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
-says what gc would clear and how much it would free, so a store nobody clears is at least a store
-whose owner was told; `--no-gc-reminder` silences it, and `chartbook catalog build --gc` runs gc
-after the build. Nothing is removed unless you ask.
+lockfile pins (including what every local branch and tag of a project pins, recorded in the
+store's notes under `_chartbook/roots/`), a snapshot a model's label points into, a complete
+snapshot that an increment it keeps builds on, and anything made in the last seven days; it lists
+what it would remove, says which note holds a pin, and asks. After `chartbook snapshot`, one line
+says what gc would clear of that pipeline; after `chartbook catalog build`, of the whole store.
+`--no-gc-reminder` silences it, and `chartbook catalog build --gc` runs gc after the build.
+Nothing is removed unless you ask.
 
 ```console
 $ chartbook catalog build

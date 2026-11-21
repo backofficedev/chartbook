@@ -199,8 +199,11 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 ```
 
 A snapshot's folder is not deleted by hand: a lockfile may pin it, and an increment may keep its
-files in it. `chartbook store gc` removes snapshots safely, and after a snapshot or a catalog build
-one line says what it would clear. {doc}`catalogs-and-data` has the store side of this.
+files in it. `chartbook store gc` removes snapshots safely: it keeps what every lockfile note
+names, including what each local branch and tag of a project pins, and says which note holds a
+pin (`--forget-note` forgets one of this machine's). After a snapshot, one line says what gc
+would clear of **this** pipeline; after a catalog build, of the whole store.
+{doc}`catalogs-and-data` has the store side of this.
 
 ## What a pin holds
 
