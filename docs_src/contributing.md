@@ -42,7 +42,7 @@ Thank you for your interest in contributing to chartbook!
 
 3. **Run Tests**
    ```bash
-   uv run doit test        # the suite on the default Python
+   uv run pytest -q -n 8   # the suite on eight cores: about ten minutes, where one process takes over two hours
    uv run pytest tests/test_x.py -q   # one file
    ```
 
@@ -116,7 +116,8 @@ Use consistent verb prefixes to indicate function behavior:
 ```bash
 uv run doit test          # the suite on the default Python (hatch test -v; JUnit report in _build/test-results/junit.xml)
 uv run doit test_all      # the matrix: Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13, each in parallel (hatch test --all --parallel)
-uv run pytest -q          # the suite in the uv environment itself, as CI runs it
+uv run pytest -q -n 8     # the suite in the uv environment itself, on eight cores (pytest-xdist; `-n auto` takes every core)
+uv run pytest -q          # the same in one process, as CI runs it: over two hours of tests
 uv run hatch test --cover # with coverage
 ```
 

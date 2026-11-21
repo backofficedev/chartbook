@@ -109,6 +109,9 @@ dev = [
     # The suite under `uv run pytest`: what [tool.hatch.envs.hatch-test] gives
     # each matrix environment, so the two agree (a test keeps them so)
     "pytest",
+    # The suite on several cores: `uv run pytest -n 8`. In one process it is
+    # over two hours of tests; hatch's own test environments have this already
+    "pytest-xdist",
     "ipython",
     "jsonschema>=4.18",
     "jupytext>=1.16.0",
