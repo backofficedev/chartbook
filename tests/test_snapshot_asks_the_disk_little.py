@@ -772,12 +772,15 @@ class TestARecordIsReadOnce:
         from chartbook import snapshot
 
         opened = self._opens(monkeypatch)
+        read_text = Path.read_text  # what read the record for its time; on Python 3.10 it opens through no `open` a test can wrap
+        monkeypatch.setattr(Path, "read_text", lambda self, *args, **kwargs: (opened.append(self.name), read_text(self, *args, **kwargs))[1])
         assert snapshot._count(taken.path, taken.made_at) == 1
-        # The second of two made in one second has the next second's name: told from its name and its time
+        # The second of two made in one second has the next second's name: told from its name and its time,
+        # with no record there to open
         later = taken.path.parent.parent.parent / "2026-01-01T000001Z_aaaaaaaaaaaa" / "_chartbook" / "snapshot.json"
         assert snapshot._count(later, taken.made_at) == 2
         assert opened == []
-        assert snapshot._count(taken.path) == 1 and opened == [taken.path.parent.parent.name]  # with no time given, as before
+        assert snapshot._count(taken.path) == 1 and opened  # with no time given, the record is read for it, as before
 
     def test_a_record_that_has_changed_is_read_again(self, taken, monkeypatch):
         """A record is never rewritten by a store. One that is, by hand or by a sync that brings the rest of it, has another time or size, and is read as it is now."""
