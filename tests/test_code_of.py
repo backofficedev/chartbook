@@ -254,9 +254,76 @@ class TestARepositoryGitDoesNotTrust:
         self._refusing(monkeypatch, "fatal: not a git repository (or any of the parent directories): .git")
         with pytest.raises(SnapshotError, match="is not in a git repository"):
             snapshot.code_of(directory)
-        self._refusing(monkeypatch, "git could not be run: [Errno 2] No such file or directory: 'git'")
-        with pytest.raises(SnapshotError, match="is not in a git repository"):
+
+    @pytest.mark.parametrize("words", [
+        # In German: the sentence is translated, and the command is not
+        "fatal: zweifelhafter Besitz im Repository unter '/srv/geteilt/rates' erkannt\n"
+        "Um eine Ausnahme für dieses Verzeichnis hinzuzufügen, rufen Sie auf:\n\n\tgit config --global --add safe.directory /srv/geteilt/rates",
+        # Of git 2.35, before it had the sentence
+        "fatal: unsafe repository ('/srv/geteilt/rates' is owned by someone else)\n"
+        "To add an exception for this directory, call:\n\n\tgit config --global --add safe.directory /srv/geteilt/rates",
+    ])
+    def test_gits_line_for_it_alone_says_it_in_any_language_and_of_an_older_git(self, work, monkeypatch, words):
+        self._refusing(monkeypatch, words)
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(_folder(work / "rates"))
+        assert "is in (/srv/geteilt/rates): another user owns it" in str(refused.value)
+        assert str(refused.value).endswith("run `git config --global --add safe.directory /srv/geteilt/rates`, and then this again")
+
+    def test_a_repository_whose_path_has_an_apostrophe_is_named_whole(self, work, monkeypatch):
+        """Found by review: git writes the repository between apostrophes, and a folder's name may have one (``the team's work``): the message named the path up to it. It is taken from git's command line, where git quotes it for a shell."""
+        from chartbook.missing import _quoted
+
+        at = "/srv/the team's work/rates"
+        self._refusing(monkeypatch, (
+            f"fatal: detected dubious ownership in repository at '{at}'\n"
+            "To add an exception for this directory, call:\n"
+            "\n"
+            "\tgit config --global --add safe.directory '/srv/the team'\\''s work/rates'"
+        ))
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(_folder(work / "rates"))
+        assert f"is in ({at}): another user owns it" in str(refused.value), str(refused.value)
+        assert str(refused.value).endswith(f"run `git config --global --add safe.directory {_quoted(at)}`, and then this again")
+        # And without the command line, from git's sentence, to the apostrophe that ends it
+        self._refusing(monkeypatch, f"fatal: detected dubious ownership in repository at '{at}'")
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(work / "rates")
+        assert f"is in ({at}): another user owns it" in str(refused.value), str(refused.value)
+
+    def test_a_failure_that_only_has_safe_directory_in_it_is_not_this_one(self, work):
+        """Found by review: any failure of git with ``safe.directory`` in its words was taken for git's refusal to trust the repository, and the person was told to run a ``git config`` that changes nothing.
+
+        Here git itself fails, of a worktree whose repository has been
+        moved away, under a folder of that name."""
+        from chartbook.replacing import rename_when_let
+
+        top = work / "safe.directory-notes"
+        directory = _committed(_folder(top / "main"))
+        _git(directory, "worktree", "add", "--quiet", str(top / "tree"), "-b", "other")
+        tree = top / "tree"
+        assert snapshot.code_of(tree).subdirectory == ""
+        rename_when_let(directory, top / "gone")
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(tree)
+        assert str(refused.value) == (
+            f"{tree} is not in a git repository. A snapshot is labelled with the commit it was built from, so only a "
+            f"pipeline that is in git has any"
+        )
+
+    def test_git_that_cannot_be_run_is_said_as_that(self, work, monkeypatch):
+        """Found by review: with git not installed, or not on the PATH (a new Windows machine), the folder was said to be in no git repository. Nothing is known of the folder then, and what is known is said."""
+        import subprocess
+
+        directory = _committed(_folder(work / "rates"))
+
+        def not_there(*arguments, **options):
+            raise FileNotFoundError(2, "No such file or directory", "git")
+
+        monkeypatch.setattr(subprocess, "run", not_there)
+        with pytest.raises(SnapshotError) as refused:
             snapshot.code_of(directory)
+        assert str(refused.value) == "git could not be run: [Errno 2] No such file or directory: 'git'"
 
 
 class TestARepositoryWhoseFilesAreElsewhere:
@@ -269,6 +336,43 @@ class TestARepositoryWhoseFilesAreElsewhere:
             snapshot.code_of(directory)
         assert str(refused.value) == (
             f"{directory} is not under {work / 'elsewhere'}, which is where git says the files of its repository are: "
-            f"the repository's core.worktree names another folder than its own, most likely. A snapshot records "
+            f"the repository's core.worktree names another folder than its own. A snapshot records "
             f"where a pipeline is in its repository, so it is made of a folder under that one"
         )
+
+    @pytest.mark.skipif(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="a folder's mode stops no listing here")
+    def test_that_is_said_only_where_the_repository_sets_it(self, work):
+        """Found by review: a folder typed in another letter case, under a parent that may be passed through and not listed.
+
+        The parent's listing is what gives the disk's name, so the name
+        stays as typed; git gives the disk's; and the folder is not under
+        the top. The message said "the repository's core.worktree names
+        another folder than its own, most likely", of a repository that
+        sets none. It says what is known: the two folders, and that the
+        one is not under the other."""
+        import stat
+
+        parent = work / "shared"
+        directory = _committed(_folder(parent / "Repo"))
+        typed = _other_case(parent, "repo")
+        os.chmod(parent, stat.S_IWUSR | stat.S_IXUSR)  # passed through, not listed
+        try:
+            with pytest.raises(SnapshotError) as refused:
+                snapshot.code_of(typed)
+        finally:
+            os.chmod(parent, stat.S_IRWXU)
+        assert str(refused.value) == (
+            f"{typed} is not under {directory}, which is the top of its repository as git gives it, so where the "
+            f"folder is in its repository cannot be told"
+        )
+        assert snapshot.code_of(typed).subdirectory == ""  # and listed again, it is the folder
+
+
+class TestWhatGitPrintedIsTakenWhole:
+    @pytest.mark.skipif(os.name == "nt", reason="Windows takes a space off the end of a name")
+    def test_a_repository_whose_folders_name_ends_in_a_space_is_placed(self, work):
+        """Found by review: git's answer was stripped of every space around it, so the top of ``mono `` was ``mono``, a folder that is not there, and the pipeline was "not under" it. Only the line end is cut off."""
+        mono = _committed(_folder(work / "mono " / "pipe").parent)
+        code = snapshot.code_of(mono / "pipe")
+        assert (str(code.top), code.subdirectory) == (str(work / "mono "), "pipe")
+        assert snapshot.code_of(mono).subdirectory == ""

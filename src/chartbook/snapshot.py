@@ -872,6 +872,11 @@ def local_name(record: dict) -> str:
     return str(AssetRef(kind=record["ref"]["kind"], name=record["ref"]["name"]))
 
 
+#: How :func:`_git` begins what it says where git itself could not be run (not installed, not on the PATH): nothing
+#: is known of the folder then, and what asked says that, not what git's silence would mean
+_GIT_NOT_RUN = "git could not be run"
+
+
 def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
     """Run git in a directory and return what it printed.
 
@@ -890,11 +895,16 @@ def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
             input=stdin,
         )
     except OSError as error:
-        raise SnapshotError(f"git could not be run: {error}") from None
+        raise SnapshotError(f"{_GIT_NOT_RUN}: {error}") from None
     if result.returncode != 0:
         said = result.stderr.strip() or f"git {arguments[0]} failed"
         raise SnapshotError(said)
     return result.stdout
+
+
+def _its_line(printed: str) -> str:
+    """The one line git printed, without its line end and with every other character of it: a folder's name may end in a space."""
+    return printed[:-1] if printed.endswith("\n") else printed
 
 
 def _name_on_disk(parent: Path, name: str, listings: dict) -> str:
@@ -965,23 +975,36 @@ def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
     quoted for this system's shell. Without that line, the repository git
     names; without that either, the folder asked of.
 
+    A failure is this one only by git's own sentence, or by its ``git
+    config --global --add safe.directory`` line (which git writes the
+    same in every language, and wrote before it had the sentence). One
+    that merely has ``safe.directory`` in it, as the path of a folder of
+    that name, is another failure. And the repository is named whole: git
+    writes it between apostrophes, and a path may have one of its own, so
+    it is taken from the command line, where git quotes it for a shell.
+
     :param said: What git said as it failed.
     """
-    if "dubious ownership" not in said and "safe.directory" not in said:
+    command = re.search(r"git config --global --add safe\.directory[ \t]+(\S.*)", said)
+    if "detected dubious ownership" not in said and not command:
         return None
     import shlex
 
     from chartbook.missing import _quoted  # which imports this module
 
-    found = re.search(r"detected dubious ownership in repository at '([^'\n]+)'", said)
-    repository = found.group(1) if found else str(directory)
-    folder = repository
-    command = re.search(r"git config --global --add safe\.directory[ \t]+(\S.*)", said)
+    folder = None
     if command:
         try:
             (folder,) = shlex.split(command.group(1).strip())  # as git quotes it, for a POSIX shell
         except ValueError:
-            folder = repository
+            folder = None
+    found = re.search(r"detected dubious ownership in repository at '(.+)'[ \t]*$", said, re.MULTILINE)
+    if folder is not None:
+        # A share's is written for git's own reading there: `%(prefix)/` and then the path
+        repository = folder[len("%(prefix)/"):] if folder.startswith("%(prefix)/") else folder
+    else:
+        repository = found.group(1) if found else str(directory)
+        folder = repository
     return (
         f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it "
         f"is on a network share, and git reads no such repository until it is told to. To have git trust it, run "
@@ -1000,19 +1023,28 @@ def code_of(directory: Union[str, Path]) -> Code:
     (``--show-prefix``) is not asked: it writes a name in Unicode's
     composed form whichever the disk has.
 
-    :raises SnapshotError: If there is no such folder, it is not in a git
-        repository, git does not trust the repository it is in (another
-        user's, or on a network share: the message has the command that
-        makes git trust it), the repository has no commit yet, or git
-        gives a top the folder is not under (a repository whose
-        ``core.worktree`` names another folder).
+    Each message says what is known, and no more. Git that could not be
+    run says nothing of the folder. A folder that is not under the top git
+    gives is said to be so; that the repository's ``core.worktree`` names
+    another folder is said only where git says it is set, since a folder
+    typed in another letter case under a parent that may not be listed
+    ends there too.
+
+    :raises SnapshotError: If there is no such folder, git could not be
+        run, the folder is not in a git repository, git does not trust
+        the repository it is in (another user's, or on a network share:
+        the message has the command that makes git trust it), the
+        repository has no commit yet, or git gives a top the folder is
+        not under.
     """
     directory = Path(directory).resolve()
     if not directory.is_dir():
         raise SnapshotError(f"there is no folder at {directory}")
     try:
-        top = Path(_git(directory, "rev-parse", "--show-toplevel").strip()).resolve()
+        top = Path(_its_line(_git(directory, "rev-parse", "--show-toplevel"))).resolve()
     except SnapshotError as error:
+        if str(error).startswith(_GIT_NOT_RUN):
+            raise  # not installed, or not on the PATH: that is what is known, and it is said
         not_trusted = _not_trusted_by_git(directory, str(error))
         if not_trusted is not None:
             raise SnapshotError(not_trusted) from None
@@ -1031,10 +1063,19 @@ def code_of(directory: Union[str, Path]) -> Code:
     try:
         subdirectory = directory.relative_to(top).as_posix()
     except ValueError:
+        try:
+            elsewhere = _its_line(_git(directory, "config", "--get", "core.worktree"))
+        except SnapshotError:
+            elsewhere = ""  # not set: git ends 1, and says nothing
+        if elsewhere:
+            raise SnapshotError(
+                f"{directory} is not under {top}, which is where git says the files of its repository are: the "
+                f"repository's core.worktree names another folder than its own. A snapshot records where a "
+                f"pipeline is in its repository, so it is made of a folder under that one"
+            ) from None
         raise SnapshotError(
-            f"{directory} is not under {top}, which is where git says the files of its repository are: the "
-            f"repository's core.worktree names another folder than its own, most likely. A snapshot records where "
-            f"a pipeline is in its repository, so it is made of a folder under that one"
+            f"{directory} is not under {top}, which is the top of its repository as git gives it, so where the "
+            f"folder is in its repository cannot be told"
         ) from None
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
 
