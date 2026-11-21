@@ -923,7 +923,13 @@ data in mind.
     times where the pipeline is built.
   - The writer asked whether each file was there as it was put. The records say whether the
     store has a file's bytes; one a record names and the store has lost is found by the two looks
-    that are left, while the file given is at hand, and the snapshot is written complete.
+    that are left, while the file given is at hand, and the snapshot is written complete. The
+    record gone by is the newest that names the bytes; before a snapshot stops for want of them,
+    every other copy that a record of the pipeline names is tried *(found by review,
+    2026-11-21)*. **What this costs:** bytes a record names are no longer written aside as the
+    file is put. Where the store has no whole copy of them and the file given has gone or
+    changed by the time of the record (a build under way again), the snapshot stops and says
+    `Run the command again.`, where it used to be written.
   - It noted each file it used, a line a file, twice. It notes the folder of the snapshot that
     keeps them, once ("What the store promises").
   - It set its note's time for each file, twice. Once a minute says as much: a note counts for a

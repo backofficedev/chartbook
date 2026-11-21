@@ -108,6 +108,7 @@ import errno
 import abc
 import functools
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -4200,7 +4201,12 @@ class _FolderPending(PendingSnapshot):
         has kept from ``store gc`` meanwhile, checked against its hash as it
         is written; or from the file this snapshot was given it from, if that
         copy has gone, cannot be read, or is no longer what its record says.
-        One origin that fails is no reason not to try the other.
+        One origin that fails is no reason not to try the other. And before
+        the snapshot stops for want of the bytes, every other copy of them
+        that a record of the pipeline names is tried (:meth:`_other_copies`):
+        when the file was put, the newest record that names them was gone
+        by, with no look at the disk, and the store may have them whole in
+        an older snapshot.
 
         For one begun undecided, this is where every file of it comes into
         its folder, now that its kind is known, and where each entry is
@@ -4230,7 +4236,7 @@ class _FolderPending(PendingSnapshot):
                 continue
             target = self._claim().joinpath(*entry["path"].split("/"))
             failed = []
-            for origin in (str(kept), source):
+            for origin in itertools.chain((str(kept), source), self._other_copies(entry, kept)):
                 if os.path.islink(origin) or not os.path.isfile(origin):
                     continue
                 try:
@@ -4254,6 +4260,27 @@ class _FolderPending(PendingSnapshot):
             entry.pop("kept_as", None)
             entry.update({key: first[key] for key in ("kept_in", "kept_as") if key in first})
         self._later, self._again, self._there = [], [], {}
+
+    def _other_copies(self, entry: dict, kept: Path):
+        """Each other place a record of the pipeline says a file of an entry's bytes is, at its size, the newest first: what is tried once the copy gone by and the file given have both failed.
+
+        Of every record of the pipeline, in either folder, whatever this
+        snapshot builds on: these are read, not named in its record. The
+        folder of each is noted before it is handed out
+        (:meth:`_note_folder_of`). Nothing is asked of the records or of
+        the disk until the first is asked for, which is seldom.
+        """
+        tried = {str(kept)}
+        for record in reversed(list(self.store.records())):
+            if not record.readable or record.folder.parent.name != self.pipeline_path.name:
+                continue
+            for asset in record.assets:
+                for file in asset.files:
+                    place = str(file.location)
+                    if file.content_hash == entry["content_hash"] and file.size_bytes == entry["size_bytes"] and place not in tried:
+                        tried.add(place)
+                        self._note_folder_of(file.location)
+                        yield place
 
     def _kept_where_it_is(self, entry: dict) -> bool:
         """Give an entry of a snapshot begun undecided the folder that keeps its file, now that the kind is known; whether that is the snapshot it builds on, where nothing is written for it.

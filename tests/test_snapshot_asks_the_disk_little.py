@@ -852,6 +852,53 @@ class TestNoLookAtAFileAsItIsPut:
         _gc(store.root)
         assert not first.parent.parent.exists()  # its note gone, the cleared folder goes whole
 
+    def test_before_it_stops_for_want_of_bytes_every_copy_the_records_name_is_tried(self, tmp_path, store):
+        """Found by review, 2026-11-21. The store has the bytes whole in an older snapshot; the newest record that names them, which was gone by as the file was put, has lost them; and the file given goes once it is put. A complete snapshot asked for stopped. It is written from the older copy."""
+        scratch = tmp_path / "files"
+        first = _sized(store, scratch, {"big": b"B" * 100, "small": b"s" * 10}, 0)
+        second = _sized(FolderStore(store.root), scratch, {"big": b"B" * 100, "small": b"t" * 10}, 1, complete=True)
+        _lose(second.parent.parent / "data" / "big.bin")
+        third = FolderStore(store.root).begin("acme/sized", COMMIT, LONG_AGO.format(2), undecided=True)
+        big, given_big = _put(third, scratch / "given", "big", b"B" * 100)
+        small, given_small = _put(third, scratch / "given", "small", b"u" * 10)
+        assert third.at_hand() == {os.path.realpath(given_big)}
+        given_big.unlink(), given_small.unlink()
+        record = _written(FolderStore(store.root), third, {"big": big, "small": small}, 2, complete=True)
+        assert (record.parent.parent / "data" / "big.bin").read_bytes() == b"B" * 100
+        assert (record.parent.parent / "data" / "small.bin").read_bytes() == b"u" * 10
+        store_module._found_whole.clear()
+        assert FolderStore(store.root).holes_of(record) == [] and FolderStore(store.root).verify_snapshot(record) == []
+        assert (first.parent.parent / "data" / "big.bin").read_bytes() == b"B" * 100  # the older copy is where it was
+
+    def test_with_no_whole_copy_in_the_store_and_the_file_given_gone_it_stops_and_says_to_run_the_command_again(self, tmp_path, store):
+        """The price of going by the records as a file is put: bytes a record names are not written aside then. Where the store has lost them and the file given has gone by the time of the record (its pipeline building again), there is nowhere to take them from. The snapshot stops, nothing of it is left, and the command run again makes it.
+
+        Before, the look as the file was put found the store's copy gone
+        and took the bytes then, so this snapshot was written.
+        """
+        scratch = tmp_path / "files"
+        first = _sized(store, scratch, {"big": b"B" * 100, "small": b"s" * 10}, 0)
+        _lose(first.parent.parent / "data" / "big.bin")
+        second = FolderStore(store.root).begin("acme/sized", COMMIT, LONG_AGO.format(1), undecided=True)
+        big, given = _put(second, scratch / "given", "big", b"B" * 100)
+        new, _ = _put(second, scratch / "given", "new", b"n" * 5)
+        given.unlink()
+        with pytest.raises(store_module.StoreError, match="went from the store.*is not there to take it from, or has changed.*Run the command again"):
+            try:
+                _written(FolderStore(store.root), second, {"big": big, "new": new}, 1)
+            except BaseException:
+                second.discard()  # as whatever makes a snapshot lets it go
+                raise
+        # Nothing of it is left: no record but the first's, no folder of its own, nothing aside
+        assert [kept.folder for kept in FolderStore(store.root).records()] == [first.parent.parent]
+        assert sorted(path.name for path in first.parent.parent.parent.iterdir() if path.is_dir()) == [first.parent.parent.name]
+        tmp = store.root / "_chartbook" / "tmp"
+        assert not tmp.is_dir() or list(tmp.iterdir()) == []
+        # Run again, with the file there: it is made, complete, and whole
+        record = _sized(FolderStore(store.root), scratch / "again", {"big": b"B" * 100, "new": b"n" * 5}, 2)
+        kept = store_module.read_kept_record(record)
+        assert kept.complete and not kept.increment and FolderStore(store.root).verify_snapshot(record) == []
+
 
 class TestARecordIsReadOnce:
     """A snapshot's record lists every file of the snapshot: 280 bytes a file, 36 MB for a table of 127,000 files. One `chartbook snapshot` read each record of its pipeline ten times over, twelve with the reminder, whole each time: once to put each in order beside another made in the same second, for a time the snapshot in hand already says.
