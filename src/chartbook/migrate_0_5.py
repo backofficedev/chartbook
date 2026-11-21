@@ -1349,7 +1349,18 @@ def _remove_own(temporary: Path) -> None:
     users share, is this user's to unlink where the folder may be
     written, and not to change: changing its mode first stopped the move
     at the same step every time. And a second name of a file outside the
-    store goes, and that file is as it was.
+    store goes, and that file is as it was: but on Windows, which keeps the
+    read-only mark with the file and removes no name of a read-only file,
+    such a file is made writable for its name to go (found on Windows 11,
+    2026-11-21). That takes somebody linking a read-only file into the
+    move's own folder, and never arises in a folder Google Drive syncs,
+    which has no second names.
+
+    Where two users share a store on NTFS or a network share and a copy
+    of one user's move was cut short, the leftover is read-only and the
+    other user may not change it: the move stops at that file each time
+    it is run again, and its message names the file, which is then
+    removed by hand.
     """
     if os.path.lexists(temporary):
         _remove_file(temporary)
