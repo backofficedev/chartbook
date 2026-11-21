@@ -95,3 +95,89 @@ def test_the_time_of_a_plan_grows_with_the_files_and_not_with_their_square(tmp_p
     times, ratio = SIZES[-1] / SIZES[0], seconds[SIZES[-1]] / seconds[SIZES[0]]
     print(f"\n{times:g} times the files took {ratio:.1f} times the time")
     assert ratio < 1.6 * times, f"{times:g} times the files took {ratio:.1f} times as long: {seconds}"
+
+
+# The whole command, where what it carries from one run to the next is as long as the store's files (the second review
+# of the mover, 2026-11-20)
+
+#: Four times the files should take about four times the time; sixteen times is the square
+COMMAND_SIZES = (2000, 8000)
+
+
+def _dataset(root, count: int, there: bool) -> tuple:
+    """One snapshot of a dataset of *count* files, kept in its own folder; the files there or not. Its folder, and each file's name and bytes."""
+    r = folder_of("2025-11-01", "c")
+    files, entries = [], []
+    folder = root / "pipelines" / "acme+news" / r / "_data" / "articles"
+    folder.mkdir(parents=True)
+    for number in range(count):
+        data = f"article {number:07d}".encode()
+        name = f"{number:07d}.parquet"
+        files.append((name, data))
+        entries.append((name, "sha256:" + hashlib.sha256(data).hexdigest(), len(data)))
+        if there:
+            (folder / name).write_bytes(data)
+    _record(root, r, "2025-11-01", "c", entries, r)
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+    return r, files
+
+
+def _typed(root, monkeypatch) -> tuple:
+    from click.testing import CliRunner
+
+    from chartbook import config
+    from chartbook.cli import main
+
+    monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+    began = time.process_time()
+    result = CliRunner().invoke(main, ["store", "migrate", "--yes"])
+    return result, time.process_time() - began
+
+
+def _second_run_once_the_files_have_come(tmp_path, count: int, monkeypatch) -> float:
+    """A store is moved while a snapshot's files are missing (an upload that had not finished). The files then arrive under ``pipelines/``, and the command is typed again, as its last lines say. How long the command takes."""
+    root = empty_store(tmp_path, f"late-{count}")
+    r, files = _dataset(root, count, there=False)
+    migrate_0_5.run(root)
+    folder = root / "pipelines" / "acme+news" / r / "_data" / "articles"
+    folder.mkdir(parents=True)
+    for name, data in files:
+        (folder / name).write_bytes(data)
+    store_module._read_records.clear()
+    assert len(migrate_0_5.plan(root).late) == count
+    result, took = _typed(root, monkeypatch)
+    assert result.exit_code == 0 and f"{count} file(s) arrived for a snapshot that is moved already, and went aside" in result.output, result.output[-600:]
+    return took
+
+
+def _first_run_with_every_file_in_place_too(tmp_path, count: int, monkeypatch) -> float:
+    """Every file is at its old place and where it goes too (what a sync that copies and then removes has brought so far of a move made elsewhere). How long the command takes."""
+    root = empty_store(tmp_path, f"in-place-{count}")
+    r, files = _dataset(root, count, there=True)
+    folder = root / "snapshots" / "acme+news" / r / "_data" / "articles"
+    folder.mkdir(parents=True)
+    for name, data in files:
+        (folder / name).write_bytes(data)
+    store_module._read_records.clear()
+    assert len(migrate_0_5.plan(root).in_place) == count
+    result, took = _typed(root, monkeypatch)
+    assert result.exit_code == 0 and f"{count} file(s) a record names were not moved, a file being where each goes already" in result.output, result.output[-600:]
+    return took
+
+
+@pytest.mark.parametrize("shape", [_second_run_once_the_files_have_come, _first_run_with_every_file_in_place_too], ids=["the files arrive after the move", "every file is in place and at the old place"])
+def test_the_time_of_the_command_grows_with_the_files_and_not_with_their_square(tmp_path, monkeypatch, shape):
+    """What the journal carries from one run to the next was added to lists, each item looked for in the list first, and the lines for a person built a set once for every file that arrived: each the square of the files.
+
+    With every file in place and at the old place, 4,000 files took 4.5 s
+    and 16,000 took 43.7 s, which by the square is some seven minutes for
+    the 55,000 of a real store.
+    """
+    seconds = {}
+    for count in COMMAND_SIZES:
+        seconds[count] = shape(tmp_path.resolve(), count, monkeypatch)
+        print(f"\n{shape.__name__} {count:6d} files: the whole command {seconds[count]:6.2f} s")
+    times, ratio = COMMAND_SIZES[-1] / COMMAND_SIZES[0], seconds[COMMAND_SIZES[-1]] / seconds[COMMAND_SIZES[0]]
+    print(f"\n{times:g} times the files took {ratio:.1f} times the time")
+    assert ratio < 1.6 * times, f"{times:g} times the files took {ratio:.1f} times as long: {seconds}"

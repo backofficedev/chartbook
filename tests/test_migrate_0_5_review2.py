@@ -450,3 +450,133 @@ class TestAFileThisUserMayNotReadThatMustBeCopied:
 
 def tree_of_names(root) -> list:
     return sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
+
+
+class TestAMissingFileIsToldByItsPipelineItsSnapshotAndItsPath:
+    """P4. Two pipelines of one repository, snapshots of one commit made in one second: their folders have one name. Each lacks the file of the same path, and the two were counted as one."""
+
+    def _two_pipelines(self, store) -> str:
+        for identity in ("acme/p", "acme/q"):
+            snapshot = folder_of("2025-10-01", "a")
+            put(store, identity.replace("/", "+"), snapshot, "_data/a.parquet", A)
+            record(store, identity, "2025-10-01", "a", [("_data/a.parquet", A, None, None), ("_data/b.parquet", B, None, None)])
+        return snapshot
+
+    def test_the_number_of_missing_files_is_the_sum_of_the_lines_under_it(self, store):
+        snapshot = self._two_pipelines(store)
+        found = migrate_0_5.plan(store)
+        assert found.missing == [("acme+p", snapshot, "_data/b.parquet"), ("acme+q", snapshot, "_data/b.parquet")]
+        assert [lacks[2:] for lacks in found.missing_in] == [(1, 2), (1, 2)]
+        said = typed("store", "migrate", "--dry-run").output.splitlines()
+        assert said[1] == "  2 file(s) that a record names are missing or of another size, as before the move, in 2 snapshot(s):"
+        assert said[2:6] == [
+            f"    acme+p/{snapshot}: 1 of 2 file(s)", f"    acme+q/{snapshot}: 1 of 2 file(s)",
+            "    the first: _data/b.parquet", "               _data/b.parquet",
+        ]
+
+    def test_the_last_lines_count_the_missing_files_of_two_pipelines_too(self, store):
+        """And the last line says how many "are missing" to look for in what went aside."""
+        snapshot = self._two_pipelines(store)
+        result = typed("store", "migrate", "--yes")
+        assert result.exit_code == 0
+        last = result.output[result.output.index("has this version's layout"):]
+        _clear()
+        assert len(store_module.FolderStore(store).verify()) == 2  # `store verify` lists every one: two
+        assert "  2 file(s) that a record names are missing or of another size" in last and " 2 file(s) are missing, and one may be in that folder" in last, last[:900]
+
+    def test_the_first_names_are_those_of_the_snapshots_that_lack_most_whichever_pipeline_they_are_of(self, store):
+        """The lines by snapshot are in the order of how many each lacks, and the three names under them follow that order, by pipeline and snapshot."""
+        snapshot = folder_of("2025-10-01", "a")
+        record(store, "acme/p", "2025-10-01", "a", [("_data/p.parquet", A, None, None)])
+        record(store, "acme/q", "2025-10-01", "a", [("_data/q1.parquet", A, None, None), ("_data/q2.parquet", B, None, None)])
+        said = typed("store", "migrate", "--dry-run").output.splitlines()
+        assert said[1].startswith("  3 file(s) that a record names are missing")
+        assert said[2:7] == [
+            f"    acme+q/{snapshot}: 2 of 2 file(s)", f"    acme+p/{snapshot}: 1 of 1 file(s)",
+            "    the first: _data/q1.parquet", "               _data/q2.parquet", "               _data/p.parquet",
+        ]
+
+
+class TestWhatIsCountedAsMovedByRename:
+    """P6. A file at its old place and where it goes already (brought by a sync of a move made elsewhere) was said "not moved, a file being where each goes already", which is so, and counted in the line above among the files "moved inside the store by rename"."""
+
+    def test_a_file_that_is_in_place_already_is_not_counted_as_moved_by_rename_too(self, store):
+        s = folder_of("2025-10-01", "a")
+        put(store, "acme+p", s, "_data/a.parquet", A)
+        record(store, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None)])
+        put(store, "acme+p", s, "_data/a.parquet", A, tree="snapshots")
+        said = typed("store", "migrate", "--dry-run").output
+        assert "  1 file(s) a record names are not moved, a file being where each goes already: " in said
+        assert "  0 file(s), 0 bytes, are moved inside the store by rename" in said, [line for line in said.splitlines() if "by rename" in line]
+        done = typed("store", "migrate", "--yes").output
+        assert "  0 file(s), 0 bytes, were moved inside the store by rename" in done, [line for line in done.splitlines() if "by rename" in line]
+        assert "  1 file(s) a record names were not moved, a file being where each goes already: " in done
+
+    def test_one_that_a_run_cut_short_renamed_is_counted_whatever_became_of_the_journal(self, work):
+        """The count is of the whole move: a file that is where it goes and no longer at the old place was renamed there, by this run or by the one before it."""
+        root = empty_store(work)
+        s = folder_of("2025-10-01", "a")
+        put(root, "acme+p", s, "_data/a.parquet", A)
+        put(root, "acme+p", s, "_data/b.parquet", B)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None), ("_data/b.parquet", B, None, None)])
+        assert (migrate_0_5.plan(root).renamed, migrate_0_5.plan(root).renamed_bytes) == (2, 300)
+        with pytest.raises(Stop):
+            migrate_0_5.run(root, after_step=lambda done: (_ for _ in ()).throw(Stop()) if done == 1 else None)
+        (root / migrate_0_5.JOURNAL).unlink()
+        _clear()
+        again = migrate_0_5.plan(root)
+        assert (again.renamed, again.renamed_bytes, again.in_place) == (2, 300, [])
+        done = migrate_0_5.run(root)
+        assert (done.renamed, done.renamed_bytes, done.in_place) == (2, 300, [])
+
+    def test_of_two_files_one_in_place_and_one_to_rename_the_one_is_counted(self, store):
+        s = folder_of("2025-10-01", "a")
+        put(store, "acme+p", s, "_data/a.parquet", A)
+        put(store, "acme+p", s, "_data/b.parquet", B)
+        record(store, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None), ("_data/b.parquet", B, None, None)])
+        put(store, "acme+p", s, "_data/a.parquet", A, tree="snapshots")
+        found = migrate_0_5.plan(store)
+        assert (found.renamed, found.renamed_bytes, len(found.in_place), found.missing) == (1, 200, 1, [])
+        done = migrate_0_5.run(store)
+        assert (done.renamed, done.renamed_bytes, len(done.in_place), done.missing) == (1, 200, 1, [])
+
+
+class TestAStoreThatLooksHalfMovedAndHasNoJournal:
+    """P6. Another machine moved the store and finished: its journal is gone. Here the sync has brought the new trees, and not yet ``store.json`` nor taken ``pipelines/`` away. Two machines would then move one store, which the journal is there to prevent and cannot once the first has finished."""
+
+    def test_a_store_that_another_machine_has_moved_and_a_sync_is_still_bringing_is_told_to_wait_before_the_question(self, store, work):
+        s1 = folder_of("2025-10-01", "a")
+        put(store, "acme+p", s1, "_data/a.parquet", A)
+        record(store, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None)])
+        put(store, "acme+p", folder_of("2025-11-01", "b"), "_data/b.parquet", B)
+        record(store, "acme/p", "2025-11-01", "b", [("_data/a.parquet", A, s1, None), ("_data/b.parquet", B, None, None)])
+        theirs = work / "theirs"
+        shutil.copytree(store, theirs)
+        migrate_0_5.run(theirs)
+        for tree in ("snapshots", "increments"):
+            shutil.copytree(theirs / tree, store / tree)
+        _clear()
+        with pytest.raises(store_module.StoreError, match="wait for the sync to finish"):
+            store_module.FolderStore(store).records()  # what every other command says
+        before = tree_of(store)
+        for words, answer in ((["--dry-run"], None), ([], "n\n")):
+            result = CliRunner().invoke(main, ["store", "migrate", *words], input=answer)
+            assert result.exit_code == 0, result.output
+            first = result.output.splitlines()[0]
+            assert first == (
+                f"The store at {store_module.FolderStore(store)} has the layout of ChartBook 0.5, and folders of this version's beside it: it looks "
+                f"half moved, and the move goes on from the folders as they are. If another machine moved it, a sync may still be bringing "
+                f"the rest: wait for the sync to finish, and move nothing here. 1 pipeline(s), 2 snapshot(s)."
+            )
+            assert result.output.splitlines()[-1] == "Nothing was moved." and tree_of(store) == before
+
+    def test_one_whose_own_journal_is_there_is_not_told_so(self, store):
+        """This machine's journal says whose move it is: it goes on, and no question is asked."""
+        s = folder_of("2025-10-01", "a")
+        put(store, "acme+p", s, "_data/a.parquet", A)
+        record(store, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None)])
+        with pytest.raises(Stop):
+            migrate_0_5.run(store, after_step=lambda done: (_ for _ in ()).throw(Stop()) if done == 1 else None)
+        _clear()
+        result = typed("store", "migrate")
+        assert result.exit_code == 0 and "was cut short: it goes on where it stopped." in result.output.splitlines()[0] and "sync may still be bringing" not in result.output.splitlines()[0]

@@ -560,7 +560,7 @@ class TestWhatIsMissingIsSaidAfterTheMoveToo:
     def test_the_last_lines_name_the_missing_files_as_the_dry_run_does(self, v2):
         root, names = v2
         found = migrate_0_5.plan(root)
-        assert found.missing == [(names["s1"], "_data/lost.parquet"), (names["s3"], "_data/gone.parquet")]
+        assert found.missing == [("acme+p", names["s1"], "_data/lost.parquet"), ("acme+p", names["s3"], "_data/gone.parquet")]
         assert found.missing_in == [("acme+p", names["s1"], 1, 6), ("acme+p", names["s3"], 1, 4)]
         dry, said_dry = typed("store", "migrate", "--dry-run")
         result, said = typed("store", "migrate", "--yes")
@@ -610,7 +610,7 @@ class TestWhatIsMissingIsSaidAfterTheMoveToo:
                 shared.write_bytes(b"?" * len(D))
 
         done = migrate_0_5.run(root, after_step=arrives)
-        assert done.missing == [(names["s1"], "_data/lost.parquet"), (names["s3"], "_data/gone.parquet")]
+        assert done.missing == [("acme+p", names["s1"], "_data/lost.parquet"), ("acme+p", names["s3"], "_data/gone.parquet")]
         assert done.copied_as_is == [f"snapshots/acme+q/{names['q2']}/_data/q.parquet"]
         assert (root / "snapshots" / "acme+q" / names["q1"] / "_data" / "q.parquet").read_bytes() == b"?" * len(D)
 

@@ -334,7 +334,7 @@ class TestAFileThatIsNotWhereItsRecordSays:
     def test_each_is_taken_from_where_another_record_has_the_same_bytes_and_reads_as_its_record_says(self, elsewhere_store):
         root, names = elsewhere_store
         said = said_by_the_records(root)
-        lacking = [(names["s3"], "_data/k6.parquet")]
+        lacking = [("acme+p", names["s3"], "_data/k6.parquet")]
         found_ = migrate_0_5.plan(root)
         assert found_.missing == lacking  # only the one that no record's place holds
         assert found_.elsewhere == 11 and found_.elsewhere_first == [(names["q1"], "_data/q.parquet"), (names["s1"], "_data/k2.parquet"), (names["p5"], "_data/k1.parquet")]
@@ -344,9 +344,9 @@ class TestAFileThatIsNotWhereItsRecordSays:
         assert done.missing == lacking and (done.elsewhere, done.elsewhere_first, done.no_record) == (found_.elsewhere, found_.elsewhere_first, found_.no_record)
         reads = read_through(root)
         assert {key: "sha256:" + value for key, value in reads.items() if len(value) == 64} == {
-            (pipeline.replace("+", "/"), folder, path): content_hash for (pipeline, folder, path), content_hash in said.items() if (folder, path) not in lacking
+            (pipeline.replace("+", "/"), folder, path): content_hash for (pipeline, folder, path), content_hash in said.items() if (pipeline, folder, path) not in lacking
         }
-        assert [key for key, value in reads.items() if len(value) != 64] == [("acme/p", *lacking[0])]
+        assert [key for key, value in reads.items() if len(value) != 64] == [("acme/p", *lacking[0][1:])]
         problems = [problem.format() for problem in fresh(root).verify()]
         assert len(problems) == 1 and "_data/k6.parquet is not in the store" in problems[0], problems
 
@@ -408,10 +408,10 @@ class TestAFileThatIsNotWhereItsRecordSays:
             (root / migrate_0_5.JOURNAL).unlink()
         store_module._read_records.clear()
         again = migrate_0_5.plan(root)
-        assert again.elsewhere == 0 and again.missing == [(names["s3"], "_data/k6.parquet")]
+        assert again.elsewhere == 0 and again.missing == [("acme+p", names["s3"], "_data/k6.parquet")]
         assert not [step for step in again.steps if step.op in ("rename", "copy") and os.path.lexists(root / step.source) and not os.path.lexists(root / step.target)]
         done = migrate_0_5.run(root)
-        assert done.elsewhere == (11 if journal == "kept" else 0) and done.missing == [(names["s3"], "_data/k6.parquet")]
+        assert done.elsewhere == (11 if journal == "kept" else 0) and done.missing == [("acme+p", names["s3"], "_data/k6.parquet")]
 
     def test_one_whose_place_is_taken_by_a_file_of_another_size_is_not_taken_from_elsewhere(self, work):
         """Nothing is renamed onto a file that is there: the newest one's file is said to be of another size, and the older snapshot keeps its own good copy."""
@@ -423,9 +423,9 @@ class TestAFileThatIsNotWhereItsRecordSays:
         s2 = record(root, "acme/p", "2025-11-01", "b", [("_data/a.parquet", a, folder_of("2025-09-01", "h"), None)])  # not where it says
         in_place = put(root, "acme+p", s2, "_data/a.parquet", a[:40], tree="snapshots")  # half of it, where it goes: a move elsewhere, half arrived
         found_ = migrate_0_5.plan(root)
-        assert found_.elsewhere == 0 and found_.missing == [(s2, "_data/a.parquet")]
+        assert found_.elsewhere == 0 and found_.missing == [("acme+p", s2, "_data/a.parquet")]
         done = migrate_0_5.run(root)
-        assert done.missing == [(s2, "_data/a.parquet")] and in_place.read_bytes() == a[:40]
+        assert done.missing == [("acme+p", s2, "_data/a.parquet")] and in_place.read_bytes() == a[:40]
         assert (root / "increments" / "acme+p" / s1 / "_data" / "a.parquet").read_bytes() == a  # its own, and not named in the newest
 
     def test_half_a_file_at_the_old_place_of_a_snapshot_that_has_the_whole_in_place_is_not_handed_to_another(self, work):
@@ -677,7 +677,7 @@ class TestAnyStoreOfThisKind:
         # What 0.5 could read (some record's place holds the bytes whole) reads as its record says; the rest is missing, as it
         # was, and the dry run and the last lines say the same of it
         assert {key[1:]: "sha256:" + value == said[key[1:]][0] for key, value in reads.items()} == {key: could for key, (_, could) in said.items()}
-        assert set(done.missing) == {key for key, (_, could) in said.items() if not could} and planned.missing == done.missing
+        assert set(done.missing) == {("acme+p", *key) for key, (_, could) in said.items() if not could} and planned.missing == done.missing
         assert (planned.elsewhere, planned.elsewhere_first, planned.doubled, planned.aside) == (done.elsewhere, done.elsewhere_first, done.doubled, done.aside)
         # And nothing that was in the store is gone from it
         after = contents(whole)

@@ -238,9 +238,9 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         s2 = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, C0, None)])
         before = facts_before(root)
         assert before[("acme/p", s1, "_data/k.parquet/part-0.parquet")][1] is True  # 0.5 read it where its record says
-        assert migrate_0_5.plan(root).missing == [(s2, "_data/k.parquet")]  # a folder is no file: counted, and said
+        assert migrate_0_5.plan(root).missing == [("acme+p", s2, "_data/k.parquet")]  # a folder is no file: counted, and said
         done = migrate_0_5.run(root)
-        assert worse_after(before, root) == ([], []) and done.missing == [(s2, "_data/k.parquet")]
+        assert worse_after(before, root) == ([], []) and done.missing == [("acme+p", s2, "_data/k.parquet")]
         assert sorted(path.relative_to(root).as_posix() for path in root.rglob("part-0.parquet")) == [f"increments/acme+p/{s1}/_data/k.parquet/part-0.parquet"]
         assert not os.path.lexists(root / "snapshots" / "acme+p" / s2 / "_data" / "k.parquet")
 
@@ -249,7 +249,7 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         put(root, "acme+p", C0, "_data/k.parquet/notes.txt", b"nobody names this")
         s2 = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, C0, None)])
         done = migrate_0_5.run(root)
-        assert done.missing == [(s2, "_data/k.parquet")] and done.aside == 1
+        assert done.missing == [("acme+p", s2, "_data/k.parquet")] and done.aside == 1
         assert not list((root / "snapshots").rglob("notes.txt"))
         assert (root / ASIDE / "pipelines" / "acme+p" / C0 / "_data" / "k.parquet" / "notes.txt").read_bytes() == b"nobody names this"
 
@@ -286,9 +286,9 @@ class TestOnlyAPlainFileIsTakenAndThroughNoLink:
         (root / "pipelines" / "acme+p" / C0 / "_data").mkdir()
         os.symlink(outside / "k.parquet", root / "pipelines" / "acme+p" / C0 / "_data" / "k.parquet")
         s2 = record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, C0, None)])
-        assert migrate_0_5.plan(root).missing == [(s2, "_data/k.parquet")]
+        assert migrate_0_5.plan(root).missing == [("acme+p", s2, "_data/k.parquet")]
         done = migrate_0_5.run(root)
-        assert done.missing == [(s2, "_data/k.parquet")] and (outside / "k.parquet").read_bytes() == K
+        assert done.missing == [("acme+p", s2, "_data/k.parquet")] and (outside / "k.parquet").read_bytes() == K
         assert not os.path.lexists(root / "snapshots" / "acme+p" / s2 / "_data" / "k.parquet")
         assert (root / ASIDE / "pipelines" / "acme+p" / C0 / "_data" / "k.parquet").is_symlink()
 
@@ -415,7 +415,7 @@ class TestACopyIsMadeOnlyFromAFileAtItsSize:
         record(root, "acme/q", "2025-10-01", "e", [("_data/k.parquet", K, None, None)], made_by="pin")
         q2 = record(root, "acme/q", "2025-11-01", "f", [("_data/k.parquet", K, q1, None)], made_by="pin")
         found = migrate_0_5.plan(root)
-        assert found.missing == [(q1, "_data/k.parquet"), (q2, "_data/k.parquet")] and (found.renamed, found.copied) == (1, 0)
+        assert found.missing == [("acme+q", q1, "_data/k.parquet"), ("acme+q", q2, "_data/k.parquet")] and (found.renamed, found.copied) == (1, 0)
         done = migrate_0_5.run(root)
         assert done.missing == found.missing and done.copied_as_is == []
         assert (root / "snapshots" / "acme+q" / q1 / "_data" / "k.parquet").read_bytes() == K[:150]
@@ -860,7 +860,7 @@ class TestASecondRecordIsNotAskedWhereBytesAre:
         done = migrate_0_5.run(store)
         reads = read_through(store)
         assert reads == {("acme/p", r, "_data/a.parquet"): sha(A), ("acme/p", r, "_data/b.parquet"): "FileNotFoundError"}
-        assert done.missing == [(r, "_data/b.parquet")] and done.second == [("acme+p", r2)]
+        assert done.missing == [("acme+p", r, "_data/b.parquet")] and done.second == [("acme+p", r2)]
         assert (store / ASIDE / "pipelines" / "acme+p" / r2 / "_data" / "b.parquet").read_bytes() == B
 
     def test_the_last_line_says_to_look_in_what_went_aside(self, store):
@@ -883,7 +883,7 @@ class TestASecondRecordIsNotAskedWhereBytesAre:
         record(store, "acme/p", "2025-11-01", "b", [("_data/a.parquet", A, a, None), ("_data/b.parquet", B, None, None)])
         r2 = second_folder(store, "acme+p", r, lambda text: text.replace(f'"kept_in": "{a}"', f'"kept_in": "{b}"'))
         found = migrate_0_5.plan(store)
-        assert found.second == [("acme+p", r2)] and found.set_aside == [] and found.missing == [(r, "_data/a.parquet")]
+        assert found.second == [("acme+p", r2)] and found.set_aside == [] and found.missing == [("acme+p", r, "_data/a.parquet")]
         result, said = typed("store", "migrate", "--yes")
         assert result.exit_code == 0 and read_through(store)[("acme/p", r, "_data/a.parquet")] == "FileNotFoundError"
         assert (store / ASIDE / "pipelines" / "acme+p" / b / "_data" / "a.parquet").read_bytes() == A  # the bytes, aside
@@ -1003,9 +1003,8 @@ class TestAnyStoreDrawnWide:
         after = contents(root)
         assert [paths for key, paths in held.items() if key not in after and not any(path in OWN for path in paths)] == []
         # What is said missing is what no record's place held, before and after
-        missing = {(snapshot, path) for (_, snapshot, path), (_, _, anywhere) in before.items() if not anywhere}
-        if pipelines == 1:
-            assert set(planned.missing) == missing and set(done.missing) == missing
+        missing = {(identity.replace("/", "+"), snapshot, path) for (identity, snapshot, path), (_, _, anywhere) in before.items() if not anywhere}
+        assert set(planned.missing) == missing and set(done.missing) == missing
         assert (planned.elsewhere, planned.doubled, planned.aside) == (done.elsewhere, done.doubled, done.aside)
         assert len(fresh(root).verify()) == len({key for key, (_, _, anywhere) in before.items() if not anywhere})
         # Of the files aside, those at a place a record named are the "second copies", and the rest the files "no record names"

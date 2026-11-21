@@ -4552,9 +4552,9 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
             first += [f"    {pipeline}/{snapshot}: {lacks} of {of} file(s)" for pipeline, snapshot, lacks, of in found.missing_in[:5]]
             if len(found.missing_in) > 5:
                 first.append(f"    and {len(found.missing_in) - 5} more")
-            order = {snapshot: index for index, (_, snapshot, _, _) in enumerate(found.missing_in)}
-            names = sorted(found.missing, key=lambda lacked: (order.get(lacked[0], len(order)), lacked[1]))[:3]
-            first += [("    the first: " if index == 0 else "               ") + cut(path) for index, (_, path) in enumerate(names)]
+            order = {(pipeline, snapshot): index for index, (pipeline, snapshot, _, _) in enumerate(found.missing_in)}
+            names = sorted(found.missing, key=lambda lacked: (order.get(lacked[:2], len(order)), lacked[2]))[:3]
+            first += [("    the first: " if index == 0 else "               ") + cut(path) for index, (_, _, path) in enumerate(names)]
             first.append(
                 "  If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives "
                 "afterwards goes aside, and does not reach its snapshot. `chartbook store verify` lists every one."
@@ -4647,7 +4647,8 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                 f"  {len(found.second)} second record(s) of a snapshot that {'is' if verb == 'become' else 'was'} moved in "
                 f"{'go' if verb == 'become' else 'went'} aside: {named}{' and more' if len(found.second) > 3 else ''}."
             )
-        arrived = [path for path in found.late if path not in {pair[0] for pair in found.in_place}]
+        in_place = {pair[0] for pair in found.in_place}  # once: a set made for each file is the square of the files
+        arrived = [path for path in found.late if path not in in_place]
         if arrived:
             lines.append(
                 f"  {len(arrived)} file(s) arrived for a snapshot that is moved already, and {'go' if verb == 'become' else 'went'} "
@@ -4707,10 +4708,14 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                 )
             )
         elif migrate_0_5.new_there(root):
+            # No journal says whose move this was. One made on another machine and finished there has none either,
+            # and a sync may have brought its new folders before its store.json: said before the question, as every
+            # other command says of such a store
             click.echo(
                 f"The store at {the_store} has the layout of ChartBook 0.5, and folders of this version's beside it: it "
-                f"looks half moved, and the move goes on from the folders as they are. {found.pipelines} pipeline(s), "
-                f"{found.snapshots} snapshot(s)."
+                f"looks half moved, and the move goes on from the folders as they are. If another machine moved it, a "
+                f"sync may still be bringing the rest: wait for the sync to finish, and move nothing here. "
+                f"{found.pipelines} pipeline(s), {found.snapshots} snapshot(s)."
             )
         else:
             click.echo(f"The store at {the_store} has the layout of ChartBook 0.5: {found.pipelines} pipeline(s), {found.snapshots} snapshot(s).")

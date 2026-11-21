@@ -202,9 +202,11 @@ class Plan:
             folder, snapshot's folder, how many files are missing, of how
             many its record names)``, the one that lacks most first.
         missing: The files a record names that are not at their size where
-            the moved record names them, each as ``(snapshot's folder,
-            path)``, sorted: no record of the pipeline says a place that
-            holds them at their size.
+            the moved record names them, each as ``(pipeline's folder,
+            snapshot's folder, path)``, sorted: no record of the pipeline
+            says a place that holds them at their size. Two pipelines of
+            one repository may have snapshots of one folder name, so a file
+            is told by all three.
         elsewhere: How many files were not where their record says, and
             are read after the move from where another record of their
             pipeline had the same bytes; *elsewhere_first* is the first
@@ -857,8 +859,10 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
             # Planned whether the file is there or not: one that arrives before its step is put where its record names it
             if target == first_target:
                 found.steps.append(Step("rename", source, target))
-                found.renamed += 0 if first is None else 1
-                found.renamed_bytes += first or 0
+                # Counted where a rename is to be made, or was made by a run that was cut short (the file is where it
+                # goes, and no longer at the old place). One that is at both is not moved, and is said so on its own
+                found.renamed += 0 if first is None or in_place else 1
+                found.renamed_bytes += 0 if in_place else first or 0
             else:
                 found.steps.append(Step("copy", copy_from or first_target, target, content_hash, size))
                 if not lacks:
@@ -867,7 +871,7 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
                     files, total = given.get(snapshot, (0, 0))
                     given[snapshot] = (files + 1, total + size)
                     found.store_after += 0 if look(target)[0] else size  # still to make: what the store will take more
-    found.missing += sorted(lacking)
+    found.missing += sorted((name, snapshot, path) for snapshot, path in lacking)
     lacks_by = {}
     for snapshot, _ in lacking:
         lacks_by[snapshot] = lacks_by.get(snapshot, 0) + 1
@@ -1066,9 +1070,10 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
         # move under way counts what is done with what is left, as the first did, and the larger is the whole
         carried = (started or {}).get("so_far") or {}
         so_far = {key: max(carried.get(key, 0), getattr(found, key)) for key in _COUNTS}
+        held: dict = {}  # what each list holds, for :func:`_add`
         for key in _LISTS:
             so_far[key] = list(carried.get(key, []))
-            _add(so_far[key], getattr(found, key))
+            _add(so_far, key, getattr(found, key), held)
         # What only the first plan of a move sees whole, a later one finding it part done: the files that were not
         # where their record says (a place the move has emptied since is not told from one that was empty), and
         # each folder with no record with the files it held then
@@ -1077,7 +1082,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
         for key in ("no_record", "second_folders"):
             so_far[key] = list(carried.get(key, []))
             known = {(item[0], item[1]) for item in so_far[key]}
-            _add(so_far[key], [item for item in getattr(found, key) if (item[0], item[1]) not in known])
+            _add(so_far, key, [item for item in getattr(found, key) if (item[0], item[1]) not in known], held)
         so_far["kept"] = carried.get("kept", "")
         # What the store took when the move began and will take with its copies (the first plan's, which saw it whole), and
         # the copies each snapshot is given: as the counts are, the larger of each
@@ -1099,10 +1104,10 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
                 # and what then goes aside that a snapshot may want is named: a file whose place is taken, a record that arrived
                 for earlier in found.steps:
                     if earlier.op in ("rename", "copy") and _do(root, earlier) == "as it is":
-                        _add(so_far["copied_as_is"], [earlier.target])
+                        _add(so_far, "copied_as_is", [earlier.target], held)
                 taken = _taken(root, found.steps, _aside_name(root))
-                _add(so_far["in_place"], taken)
-                _add(so_far["late"], [pair[0] for pair in taken])
+                _add(so_far, "in_place", taken, held)
+                _add(so_far, "late", [pair[0] for pair in taken], held)
                 known = {(p.parent.parent.parent.name, p.parent.parent.name) for tree in (V3_LAYOUT.pipelines, INCREMENTS_DIR) for p in (root / tree).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}")}
                 arrived = [
                     p for p in sorted((root / V2_LAYOUT.pipelines).glob(f"*/*/{OWN_DIR}/{RECORD_FILE}"))
@@ -1110,11 +1115,11 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
                 ]
                 # To be made again, but for a second record of a snapshot that was moved in
                 again, second = _told_apart(arrived, _moved_in(root))
-                _add(so_far["set_aside"], again)
-                _add(so_far["second"], second)
+                _add(so_far, "set_aside", again, held)
+                _add(so_far, "second", second, held)
             said = _do(root, step)
             if said == "as it is":
-                _add(so_far["copied_as_is"], [step.target])
+                _add(so_far, "copied_as_is", [step.target], held)
             elif said:
                 so_far["kept"] = said
             if said:
@@ -1159,7 +1164,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
             done.by_pins += 1 if kept.readable and kept.made_by == "pin" else 0
             if first_move or so_far.get("moved_in"):
                 lacks = sorted({file.path for asset in kept.assets for file in asset.files if _size(file.location) != file.size_bytes and file.location not in taken})
-                done.missing += [(kept.folder.name, path) for path in lacks]
+                done.missing += [(kept.folder.parent.name, kept.folder.name, path) for path in lacks]
                 if lacks:
                     done.missing_in.append((kept.folder.parent.name, kept.folder.name, len(lacks), len({file.path for asset in kept.assets for file in asset.files})))
     done.missing = sorted(set(done.missing))
@@ -1168,12 +1173,22 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     return done
 
 
-def _add(carried: list, items) -> None:
-    """Add to a list the journal carries what it does not hold yet, each as the journal keeps it (a list for a tuple)."""
+def _add(so_far: dict, key: str, items, held: dict) -> None:
+    """Add to a list the journal carries what it does not hold yet, each as the journal keeps it (a list for a tuple).
+
+    What each list holds is kept beside it in *held*, so that adding is no
+    search of the list: a store with every file in place and at the old
+    place too has a list as long as its files, and searching it for each
+    of them is the square of the files.
+    """
+    carried = so_far[key]
+    if key not in held:
+        held[key] = {tuple(item) if isinstance(item, list) else item for item in carried}
     for item in items:
-        item = list(item) if isinstance(item, tuple) else item
-        if item not in carried:
-            carried.append(item)
+        one = tuple(item) if isinstance(item, (list, tuple)) else item
+        if one not in held[key]:
+            held[key].add(one)
+            carried.append(list(one) if isinstance(one, tuple) else one)
 
 
 def _write_journal(root: Path, header: dict, steps: list) -> None:
