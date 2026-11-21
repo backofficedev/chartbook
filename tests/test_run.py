@@ -1122,7 +1122,7 @@ class TestCommand:
         # The list of what is not in the store (tests/test_not_in_your_store.py), in the pin's place
         assert result.output.splitlines()[2:] == [
             f"reader cannot be built yet: 1 pipeline it reads is not in the store at {default_store()}.",
-            "Build it first, with the commands below. They end with a snapshot, which is what this one reads.",
+            "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads.",
             "",
             f"1. upstream    {os.path.join('..', 'upstream')} (a folder on this machine)",
             f"     chartbook run --snapshot --project-dir {typed(work / 'upstream')}",
