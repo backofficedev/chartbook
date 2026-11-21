@@ -178,7 +178,20 @@ def _reader(depth: int = 2) -> str:
 
 
 def _counting(patch: pytest.MonkeyPatch, asked: Asked, root: Path) -> None:
-    """Wrap what asks the disk, so that each question of the store is counted; each wrapper calls through."""
+    """Wrap what asks the disk, so that each question of the store is counted; each wrapper calls through.
+
+    What it sees (``TestWhatTheCountSees`` holds each): a call of ``os``
+    that names a path of the store; a file opened by Python; a file handed
+    to pyarrow or polars by one of the ways in that are wrapped by name,
+    where a call handed several files, a folder or a pattern is as many
+    questions as it has files; and a listing of a folder, with one question
+    more for each entry that is then asked for its size and time.
+
+    What it does not see: a way into a library that is not wrapped here,
+    and one a module of ChartBook took by name when it was loaded (``from
+    polars import read_parquet``). On Python 3.10 pathlib asks through its
+    own accessor, and nothing that counts is run there (:data:`counted`).
+    """
     store = str(root)
 
     def in_store(path) -> bool:
@@ -198,38 +211,88 @@ def _counting(patch: pytest.MonkeyPatch, asked: Asked, root: Path) -> None:
     def wrapped(original, what, place=0, name="path"):
         def wrapper(*args, **kwargs):
             path = args[place] if len(args) > place else kwargs.get(name, ".")
-            if in_store(path):
+            if not quiet[0] and in_store(path):
                 asked.store[what] += 1
             return original(*args, **kwargs)
         return wrapper
 
-    resolving = [0]
+    quiet = [0]  # while realpath looks at each folder down a path, and while the count itself looks: not the command's questions
     stat, lstat, realpath = os.stat, os.lstat, os.path.realpath
 
     def counted_stat(path, *args, **kwargs):
-        if not resolving[0] and in_store(path):
+        if not quiet[0] and in_store(path):
             asked.store["stat" if kwargs.get("follow_symlinks", True) else "lstat"] += 1
         return stat(path, *args, **kwargs)
 
     def counted_lstat(path, *args, **kwargs):
-        if not resolving[0] and in_store(path):
+        if not quiet[0] and in_store(path):
             asked.store["lstat"] += 1
         return lstat(path, *args, **kwargs)
 
     def counted_realpath(filename, *args, **kwargs):
         # One question, however a system answers it: on POSIX it looks at each folder down the path
-        if in_store(filename):
+        if not quiet[0] and in_store(filename):
             asked.store["realpath"] += 1
-        resolving[0] += 1
+        quiet[0] += 1
         try:
             return realpath(filename, *args, **kwargs)
         finally:
-            resolving[0] -= 1
+            quiet[0] -= 1
 
     patch.setattr(os, "stat", counted_stat)
     patch.setattr(os, "lstat", counted_lstat)
     patch.setattr(os.path, "realpath", counted_realpath)
-    scandir = wrapped(os.scandir, "list")
+
+    class Listed:
+        """One entry of a listing of the store, as :class:`os.DirEntry` gives it. Asked for its size and time, it asks the disk on every system but Windows: a question a file, which a count of the listings alone took for one a folder. Counted once an entry."""
+
+        def __init__(self, entry):
+            self._entry, self._asked = entry, False
+
+        def __getattr__(self, name):
+            return getattr(self._entry, name)
+
+        def __fspath__(self):
+            return self._entry.path
+
+        def __repr__(self):
+            return repr(self._entry)
+
+        def stat(self, *, follow_symlinks=True):
+            if not self._asked and not quiet[0]:
+                self._asked = True
+                asked.store["stat of a listed file"] += 1
+            return self._entry.stat(follow_symlinks=follow_symlinks)
+
+    class Listing:
+        """A listing of a folder of the store, which hands out each entry as :class:`Listed`."""
+
+        def __init__(self, listing):
+            self._listing = listing
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return Listed(next(self._listing))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *error):
+            self._listing.close()
+
+        def close(self):
+            self._listing.close()
+
+    listing_of = os.scandir
+
+    def scandir(path="."):
+        if quiet[0] or not in_store(path):
+            return listing_of(path)
+        asked.store["list"] += 1
+        return Listing(listing_of(path))
+
     patch.setattr(os, "scandir", scandir)
     patch.setattr(os, "listdir", wrapped(os.listdir, "list"))
     globber = getattr(glob_module, "_StringGlobber", None)  # pathlib's glob keeps the two it uses
@@ -240,7 +303,7 @@ def _counting(patch: pytest.MonkeyPatch, asked: Asked, root: Path) -> None:
     opened = builtins.open
 
     def counted_open(file, mode="r", *args, **kwargs):
-        if in_store(file):
+        if not quiet[0] and in_store(file):
             writes = any(letter in mode for letter in "wxa+")
             asked.store["open to write" if writes else "open to read"] += 1
             if not writes and os.path.basename(os.fspath(file)) == "snapshot.json":
@@ -268,22 +331,60 @@ def _counting(patch: pytest.MonkeyPatch, asked: Asked, root: Path) -> None:
     for name in ("replace", "rename", "link", "symlink"):
         patch.setattr(os, name, wrapped(getattr(os, name), "other", place=1, name="dst"))
 
-    # What the wrappers above do not see: a file pyarrow or polars opens itself
+    # What the wrappers above do not see: a file pyarrow or polars opens itself. Each way into them that takes a
+    # file is wrapped by its name, as ChartBook calls it (`pq.read_table`, `pl.scan_parquet`); what one of them
+    # calls inside its own library is not seen again
+    import pyarrow.dataset as pads
     import pyarrow.parquet as pq
 
-    def read_by(original, what, place=0, name="file"):
+    def files_handed(source) -> list:
+        """Each file of the store that one call is handed: every one of a list, and every file that a folder or a pattern stands for."""
+        handed = []
+        for one in source if isinstance(source, (list, tuple)) else [source]:
+            if not in_store(one):
+                continue
+            text = os.fsdecode(os.fspath(one))
+            quiet[0] += 1  # the count's own looks
+            try:
+                if glob_module.has_magic(text):
+                    handed += [found for found in glob_module.glob(text, recursive=True) if os.path.isfile(found)]
+                elif os.path.isdir(text):
+                    handed += [os.path.join(folder, name) for folder, _, names in os.walk(text) for name in names]
+                else:
+                    handed.append(text)
+            finally:
+                quiet[0] -= 1
+        return handed
+
+    inside = [0]  # within one of the ways in: what it calls of another (read_table of dataset) is the same read
+
+    def read_by(original, what):
         def wrapper(*args, **kwargs):
-            source = args[place] if len(args) > place else kwargs.get(name)
-            first = source[0] if isinstance(source, (list, tuple)) and source else source
-            if of_the_table(first):
+            named = (kwargs[name] for name in ("source", "file", "where", "path_or_paths", "path") if name in kwargs)
+            for file in files_handed(args[0] if args else next(named, None)) if not inside[0] else ():
                 asked.store["opened by pyarrow or polars"] += 1
-                asked.table_reads[what] += 1
-            return original(*args, **kwargs)
+                if of_the_table(file):
+                    asked.table_reads[what] += 1
+            inside[0] += 1
+            try:
+                return original(*args, **kwargs)
+            finally:
+                inside[0] -= 1
         return wrapper
 
     patch.setattr(rowhash, "_parquet_batches", read_by(rowhash._parquet_batches, "rowhash._parquet_batches"))
-    patch.setattr(pq, "ParquetFile", read_by(pq.ParquetFile, "pyarrow.parquet.ParquetFile", name="source"))
-    patch.setattr(pl, "scan_parquet", read_by(pl.scan_parquet, "polars.scan_parquet", name="source"))
+    ways_in = (
+        (pq, "pyarrow.parquet", ("ParquetFile", "ParquetDataset", "read_table", "read_pandas", "read_metadata", "read_schema")),
+        (pads, "pyarrow.dataset", ("dataset",)),
+        (pl, "polars", (
+            "scan_parquet", "read_parquet", "read_parquet_schema", "read_parquet_metadata", "scan_csv", "read_csv",
+            "scan_ndjson", "read_ndjson", "scan_ipc", "read_ipc", "read_ipc_schema", "read_ipc_stream",
+        )),
+    )
+    for module, said, names in ways_in:
+        for name in names:
+            if hasattr(module, name):
+                patch.setattr(module, name, read_by(getattr(module, name), f"{said}.{name}"))
 
     sweep = FolderStore.sweep
 
@@ -369,6 +470,89 @@ class TestWhatAFileMoreOfTheTableAsksOfTheStore:
         """What is asked whatever the table's size: the records, the note, the twenty files copied and the record written. Measured at 465."""
         for found in asked.values():
             assert found.of_the_store() - 4 * found.files <= 600, sorted(found.store.items())
+
+
+@counted
+class TestWhatTheCountSees:
+    """The bound above holds a change back only if the count sees what the change asks (found by review, 2026-11-21).
+
+    A table's files in a store are read, and looked at, in ways a later
+    change might well use. The count saw calls of ``os``, of ``open`` and
+    of three named ways into pyarrow and polars: a file read by
+    ``pyarrow.parquet.read_table`` or ``polars.read_parquet`` was not seen
+    at all, every file handed to one call was one question, and a look at
+    each file through a listing of its folder was one question a folder.
+    """
+
+    FILES = 12
+
+    @pytest.fixture
+    def table(self, tmp_path, store) -> list:
+        """The files of a table of twelve days, where a store keeps them."""
+        from chartbook import snapshot
+
+        project = _pipeline(tmp_path.resolve() / "project", self.FILES)
+        first = snapshot.make(project, store=store, made_at=LONG_AGO.format(0))
+        files = sorted(path for path in first.kept.folder.rglob("*.parquet") if "parts" in path.parts)
+        assert len(files) == self.FILES
+        return files
+
+    def _counted(self, monkeypatch, root: Path, what) -> Asked:
+        asked = Asked(self.FILES)
+        with monkeypatch.context() as patch:
+            _counting(patch, asked, root)
+            what()
+        return asked
+
+    def test_a_file_opened_by_python(self, table, store, monkeypatch):
+        asked = self._counted(monkeypatch, store.root, lambda: [open(file, "rb").close() for file in table])
+        assert sum(asked.table_reads.values()) == self.FILES and asked.store["open to read"] == self.FILES
+
+    def test_a_table_read_file_by_file_by_pyarrow_itself(self, table, store, monkeypatch):
+        import pyarrow.parquet as pq
+
+        asked = self._counted(monkeypatch, store.root, lambda: [pq.read_table(str(file)) for file in table])
+        assert asked.table_reads == {"pyarrow.parquet.read_table": self.FILES}, dict(asked.table_reads)
+        assert asked.store["opened by pyarrow or polars"] == self.FILES
+
+    def test_a_table_read_file_by_file_by_polars_itself(self, table, store, monkeypatch):
+        asked = self._counted(monkeypatch, store.root, lambda: [pl.read_parquet(str(file)) for file in table])
+        assert asked.table_reads == {"polars.read_parquet": self.FILES}, dict(asked.table_reads)
+        assert asked.store["opened by pyarrow or polars"] == self.FILES
+
+    def test_a_call_handed_several_files_is_as_many_questions(self, table, store, monkeypatch):
+        asked = self._counted(monkeypatch, store.root, lambda: pl.scan_parquet([str(file) for file in table]).collect())
+        assert asked.table_reads == {"polars.scan_parquet": self.FILES} and asked.of_the_store() >= self.FILES, dict(asked.store)
+
+    def test_and_so_is_one_handed_a_folder_or_a_pattern(self, table, store, monkeypatch):
+        parts = next(folder for folder in table[0].parents if folder.name == "parts")
+        for handed in (str(parts / "**" / "*.parquet"), str(parts)):
+            asked = self._counted(monkeypatch, store.root, lambda: pl.scan_parquet(handed).collect())
+            assert asked.table_reads == {"polars.scan_parquet": self.FILES}, (handed, dict(asked.table_reads))
+            # The count's own look at what the folder or the pattern stands for is not the command's
+            assert asked.of_the_store() == self.FILES, (handed, dict(asked.store))
+
+    def test_every_file_looked_at_through_a_listing_of_its_folder(self, table, store, monkeypatch):
+        """A look at each file through `os.scandir` is, on a disk that is not Windows', a question a file."""
+        def looked() -> int:
+            seen = 0
+            for folder in sorted({os.path.dirname(file) for file in table}):
+                with os.scandir(folder) as listing:
+                    for entry in listing:
+                        seen += entry.stat().st_size > 0
+                        seen += entry.stat().st_size > 0  # asked again, an entry answers from what it was told: no question
+            return seen
+
+        asked = self._counted(monkeypatch, store.root, looked)
+        folders = len({os.path.dirname(file) for file in table})
+        assert asked.store == {"list": folders, "stat of a listed file": self.FILES}, dict(asked.store)
+
+    def test_a_listing_whose_entries_are_asked_only_their_names_is_one_question(self, table, store, monkeypatch):
+        def listed() -> list:
+            return [entry.name for folder in sorted({os.path.dirname(file) for file in table}) for entry in os.scandir(folder) if entry.is_file()]
+
+        asked = self._counted(monkeypatch, store.root, listed)
+        assert asked.store == {"list": len({os.path.dirname(file) for file in table})}, dict(asked.store)
 
 
 # --- The reminder of `store gc` sweeps nothing ---------------------------------------
