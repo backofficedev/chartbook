@@ -542,31 +542,34 @@ class TestASnapshotIsTyped:
         said = _snapshot().output.splitlines()
         assert said[1:] == [*(f"  not built: acme/many:t{number:02} (./_data/t{number:02}.csv)" for number in range(10)), "  and 2 more"]
 
-    def test_a_folder_named_in_another_letter_case_is_said_in_words(self, demo, store, work, monkeypatch):
-        """Found by review: a run named so handed over `chartbook snapshot --project-dir …/DEMO`, which answered in pathlib's words."""
+    def test_a_folder_named_in_another_letter_case_is_taken_by_the_name_the_disk_has(self, demo, store, work, monkeypatch):
+        """Found by review: a run named so handed over `chartbook snapshot --project-dir …/DEMO`, which answered in
+        pathlib's words; for a while it was refused, in words. A folder is placed in its repository by the name the
+        disk has for it (`snapshot.code_of`), so nothing is refused, and the snapshot is the one its real name makes."""
         other = work / "DEMO"
         if not other.is_dir():
             pytest.skip("this disk tells letter cases apart")
         assert _run().exit_code == 0
         monkeypatch.chdir(work)
         result = _snapshot("--project-dir", str(other))
-        assert result.exit_code == 1 and result.output.splitlines() == [
-            f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
-            f"`cd` into the folder, and `chartbook snapshot` again."
-        ]
-        # The run that is asked for a snapshot says the same, before it builds
+        assert result.exit_code == 0 and said_made(result.output, COMPLETE), result.output
+        (taken,) = _snapshots(store)
+        assert taken.pipeline == "acme/demo" and taken.subdirectory == ""
+        # Typed by its real name, it is that snapshot: no second one
+        again = _snapshot("--project-dir", str(demo))
+        assert again.exit_code == 0 and again.output.splitlines()[1].startswith("No new snapshot: "), again.output
+        # The run that is asked for a snapshot is not refused either: it builds
         strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
-        assert strict.exit_code == 1 and _ran(demo) == 1 and strict.output.splitlines() == [
-            f"Error: {other} is named otherwise than the disk names it, so where it is in its repository cannot be told. "
-            f"`cd` into the folder, and `chartbook run --snapshot` again."
-        ]
-        assert _snapshots(store) == []
+        assert strict.exit_code == 0 and _ran(demo) == 2 and "named otherwise" not in strict.output, strict.output
+        assert {taken.subdirectory for taken in _snapshots(store)} == {""}
         # And from inside the folder, however it was spelled, a run's last line names no folder
         monkeypatch.chdir(demo)
         assert _after_the_run(_run("--project-dir", str(other))) == _closing()
 
-    def test_a_folder_of_a_larger_repository_named_in_another_letter_case_is_refused_too(self, work, store, monkeypatch):
-        """Found by review: such a snapshot was made, and recorded the spelling as the pipeline's place. A pipeline that read the folder by its real name then pinned an older snapshot without a word."""
+    def test_a_folder_of_a_larger_repository_named_in_another_letter_case_is_recorded_under_the_disks_name(self, work, store, monkeypatch):
+        """Found by review: such a snapshot recorded the spelling as the pipeline's place, and a pipeline that read the
+        folder by its real name then pinned an older snapshot without a word; for a while it was refused. The record
+        says where the disk has the folder, however it was spelled, so both spellings are one place."""
         mono = work / "mono"
         a = _folder(mono / "pipes" / "a")
         _committed(mono)
@@ -575,19 +578,17 @@ class TestASnapshotIsTyped:
             pytest.skip("this disk tells letter cases apart")
         monkeypatch.chdir(work)
         assert _run("--project-dir", str(a)).exit_code == 0
-        refused = "is named otherwise than the disk names it, so where it is in its repository cannot be told."
         typed = _snapshot("--project-dir", str(other))
-        assert typed.exit_code == 1 and typed.output.splitlines() == [
-            f"Error: {other} {refused} `cd` into the folder, and `chartbook snapshot` again."
-        ]
-        strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
-        assert strict.exit_code == 1 and f"Error: {other} {refused}" in strict.output and _ran(a) == 1
-        assert _snapshots(store) == []
-        # Named as the disk names it, the snapshot is made, and says where the pipeline is
-        made = _snapshot("--project-dir", str(a))
-        assert made.exit_code == 0 and said_made(made.output, COMPLETE)
+        assert typed.exit_code == 0 and said_made(typed.output, COMPLETE), typed.output
         (taken,) = _snapshots(store)
         assert taken.subdirectory == "pipes/a"
+        # Named as the disk names it, it is that snapshot: no second one
+        again = _snapshot("--project-dir", str(a))
+        assert again.exit_code == 0 and again.output.splitlines()[1].startswith("No new snapshot: "), again.output
+        # The run that is asked for a snapshot is not refused either: it builds
+        strict = _run("--snapshot", "--no-gc-reminder", "--project-dir", str(other))
+        assert strict.exit_code == 0 and _ran(a) == 2 and "named otherwise" not in strict.output, strict.output
+        assert {taken.subdirectory for taken in _snapshots(store)} == {"pipes/a"}
 
     def test_a_folder_in_another_of_unicodes_forms_is_no_mistake(self, work, store, monkeypatch):
         """Git and the system may write one name two ways. Whoever typed it made no mistake, and is not refused."""

@@ -284,13 +284,16 @@ other half of step 2 stands: a run looks for what was declared (item 5).
   removed,** and its command carries `--project-dir` where the snapshot was given it. *(Found by
   the review of the code: "commit it" committed the deletion, and the command, typed where the
   person stood, built and snapshotted another pipeline.)*
-- **A folder named in another letter case than the disk's is refused, in words** (`cd` into the
-  folder), by `chartbook snapshot` and by `chartbook run --snapshot`. *(Found by the review of
-  the code: pathlib's own words had come back where the repository's folder was the one spelled
-  otherwise; and where a folder inside it was, the snapshot recorded that spelling as the
-  pipeline's place, and a pipeline that read the folder by its real name pinned an older one
-  without a word. That was older than this step, and a run's last line now hands the spelling
-  over.)*
+- **A folder named in another letter case than the disk's is taken by the name the disk has for
+  it,** by every command. A snapshot records where the disk has the folder in its repository,
+  however it was spelled, so both spellings are one place and nothing is refused. *(Found by the
+  review of the code: pathlib's own words had come back where the repository's folder was the
+  one spelled otherwise; and where a folder inside it was, the snapshot recorded that spelling
+  as the pipeline's place, and a pipeline that read the folder by its real name pinned an older
+  one without a word. That was older than this step, and a run's last line now hands the
+  spelling over. At first `chartbook snapshot` and `chartbook run --snapshot` refused such a
+  folder, in words. A `path` dependency spelled so and `chartbook run --upstream` still met
+  both faults, so the place is now told by the disk's names, where every command asks it.)*
 - **A git dependency the run builds is not told of snapshots.** *(Found by a mutant no test
   caught.)*
 

@@ -3410,7 +3410,6 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
 
     project_dir = resolve_project_dir(project_dir)
     here = _in_its_folder(project_dir)
-    _refuse_a_folder_spelled_otherwise(project_dir, "chartbook snapshot")
     try:
         report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None, complete=complete)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
@@ -3452,45 +3451,6 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
     _echo_snapshot(report)
     _say_where_a_snapshot_shows()
     _remind_of_gc(no_gc_reminder)
-
-
-def _refuse_a_folder_spelled_otherwise(project_dir, again: str) -> None:
-    """Stop a command that is about to make a snapshot of a folder reached by another letter case than the disk's own, on a disk that takes either.
-
-    A run's last line may have handed such a spelling over
-    (``--project-dir mono/PIPES/A``, of ``pipes/a``). Where the
-    repository's own folder is the one spelled otherwise, where the
-    pipeline is in it cannot be told, and pathlib's words for that help
-    nobody. Where a folder inside it is, the snapshot would record that
-    spelling as the pipeline's place, and a pipeline that reads the folder
-    by its real name would not find the snapshot and would pin an older
-    one without a word. Only a difference of letter case is refused: git
-    and the system may write one name in two of Unicode's forms, and that
-    is no mistake of whoever typed it.
-
-    :param again: The command to type again, once in the folder.
-    """
-    import unicodedata
-
-    from chartbook import snapshot as snapshots
-
-    try:
-        recorded = snapshots.code_of(project_dir).subdirectory
-        named = snapshots._git(Path(project_dir), "rev-parse", "--show-prefix").strip().rstrip("/")
-        recorded, named = (unicodedata.normalize("NFC", "" if one in ("", ".") else one) for one in (recorded, named))
-        otherwise = recorded != named and recorded.casefold() == named.casefold()
-    except ValueError:
-        otherwise = True
-    except Exception:  # noqa: BLE001 - whatever else is wrong with the folder is said by what meets it next
-        return
-    if otherwise:
-        click.echo(
-            click.style("Error: ", fg="red", bold=True)
-            + f"{project_dir} is named otherwise than the disk names it, so where it is in its repository cannot be "
-            f"told. `cd` into the folder, and `{again}` again.",
-            err=True,
-        )
-        raise SystemExit(1)
 
 
 def _a_store_to_send_it_to(project_dir):
@@ -3793,8 +3753,6 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
 
     # Not for arguments the run refuses anyway: it says why, and nothing is recorded
     refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
-    if make_snapshot and not refused:
-        _refuse_a_folder_spelled_otherwise(project_dir, "chartbook run --snapshot")
     if not refused:
         _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
     _run_script(
