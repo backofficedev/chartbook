@@ -4215,6 +4215,7 @@ def store_ls(pipeline, store_name):
             click.echo(f"  not listed: {why}", err=True)
             unread += 1
         current = None
+        asked: dict = {}  # what the disk said of each file of this store: one that several snapshots name is asked about once
         for record in found:
             if record.pipeline != current:
                 current = record.pipeline
@@ -4236,7 +4237,7 @@ def store_ls(pipeline, store_name):
                 note += ", pinned from a clone of its repository"  # not one its owner made
             # The size is its record's. What its record names and is not where it says, by sizes as every
             # ordinary question of the store is asked, is said in the same words of either kind
-            lacking = _files_it_lacks(the_store, record)
+            lacking = _files_it_lacks(the_store, record, asked)
             if lacking:
                 note += f", lacks {lacking[0]:,} of its {lacking[1]:,} file(s)"
                 said_lacking = True
@@ -4264,7 +4265,7 @@ def store_ls(pipeline, store_name):
         click.echo("What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.")
 
 
-def _files_it_lacks(the_store, record):
+def _files_it_lacks(the_store, record, asked: dict):
     """For `store ls`: how many files a snapshot's record names that are not where it says, and how many it names in all; None where it lacks none.
 
     By sizes, with nothing read (:meth:`chartbook.store.Store.holes_of`),
@@ -4272,12 +4273,17 @@ def _files_it_lacks(the_store, record):
     files are in two folders, and one missing from either is one it lacks.
     A store that cannot say (another kind, or a record it cannot follow
     now) says nothing here, and `store verify` is what checks a store.
+
+    :param asked: What the disk has said of each file of this store so
+        far in the listing, which the store adds to: twenty snapshots
+        that name the same files ask about each file once, not twenty
+        times, and on a synced folder each question is a trip.
     """
     from chartbook.store import StoreError
 
     holes_of = getattr(the_store, "holes_of", None)
     try:
-        holes = list(holes_of(record.path)) if callable(holes_of) else []
+        holes = list(holes_of(record.path, asked)) if callable(holes_of) else []
     except (OSError, ValueError, StoreError):
         return None
     if not holes:
