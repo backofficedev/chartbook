@@ -461,6 +461,8 @@ class _Walk:
         why_not = ""
         try:
             code = snapshot.code_of(folder)
+        except snapshot.NotInARepository:
+            code, why_not = None, f"{folder} is not in a git repository"  # the list's own words: what a snapshot is does not belong in a line of it
         except snapshot.SnapshotError as error:
             # Said as the folder's own commands say it, and whole: git that does not trust the repository
             # (the sentence ends with the command that makes it), git that could not be run, a repository

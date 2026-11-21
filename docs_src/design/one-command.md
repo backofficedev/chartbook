@@ -520,10 +520,12 @@ What building it settled:
 - **In a repository git does not trust, a run leaves no note, and says so,** since it cannot
   ask which files are source. *(Found on Windows, on a share: the run said nothing, and the
   snapshot typed next said the folder was in no repository.)* `snapshot.code_of` now tells the
-  two apart (`snapshot.RepositoryNotTrusted`), so the run ends with one line, `no note of this
-  build was kept:` and git's own command that makes it trust the repository, and the snapshot
-  says the same. In a folder that is in no repository the run says nothing of a note: there is
-  no snapshot to hold against one.
+  two apart (`snapshot.RepositoryNotTrusted`), so the run's last lines say `No note of this
+  build was kept:` and git's own command that makes it trust the repository, in place of the
+  command that makes a snapshot, which would be refused there twice: for git's trust, and then
+  for the note. *(The second by the review: the line was said, and the command after it.)* The
+  snapshot says the same. In a folder that is in no repository the run says nothing of a note:
+  there is no snapshot to hold against one.
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It

@@ -174,3 +174,5 @@ Found by reviews and by the first runs on Windows, and left for a later version:
   the repository runs nothing the second time.
 - The `dodo.py` in `examples/` hands its commands their folders unquoted, so the examples do not
   build in a checkout whose path has a space.
+- In a network folder that git does not trust, a clone that is beside the pipeline is not taken
+  for one, and the list of what is not in your store says to clone it again under another name.

@@ -787,9 +787,22 @@ class TestTheNotesThemselves:
         result = _run()
         assert result.exit_code == 0 and _ran(demo) == 1, result.output
         assert not built.note_path(demo).exists()
-        assert (
-            "acme/demo: no note of this build was kept: " + NOT_TRUSTED.format(folder=demo, at=at, typed=_quoted(at)) + "."
-        ) in result.output.splitlines(), result.output
+        # Said last, in place of the command that makes a snapshot: that one would be refused, for git's
+        # trust and then for the note (found by the review: the line was said, and then the command was)
+        assert result.output.splitlines()[-2:] == [
+            "acme/demo: built.",
+            "  No note of this build was kept: " + NOT_TRUSTED.format(folder=demo, at=at, typed=_quoted(at)) + ".",
+        ], result.output
+        assert "chartbook snapshot" not in result.output
+
+    def test_it_is_not_said_where_no_snapshot_comes_next(self, demo, store, monkeypatch):
+        """Under ``--frozen``, which is for CI and for a store one may only read, a run's last lines name no snapshot, and no note for one."""
+        from tests.test_not_in_your_store import DUBIOUS, _git_refuses
+
+        _git_refuses(monkeypatch, DUBIOUS.format(at=demo.as_posix()), under=demo)
+        result = _run("--frozen")
+        assert result.exit_code == 0, result.output
+        assert "note" not in result.output and "chartbook snapshot" not in result.output
 
     def test_where_git_fails_some_other_way_the_run_says_nothing_of_a_note(self, demo, store, monkeypatch):
         """In no repository there is no snapshot to hold against a note; and git that could not be run is said by what needs git."""

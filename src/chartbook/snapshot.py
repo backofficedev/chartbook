@@ -143,8 +143,8 @@ class SnapshotError(Exception):
     """Raised when a snapshot cannot be made, or a pipeline has none to find."""
 
 
-class RepositoryNotTrusted(SnapshotError):
-    """Raised where git refuses to read the repository a folder is in, because it does not trust it (another user's; on Windows, one on a network share). The message has the command that makes git trust it."""
+class NotInARepository(SnapshotError):
+    """A pipeline's folder is in no git repository (:func:`code_of`): a class of its own, as :class:`RepositoryNotTrusted` is, so that what has shorter words for it need not read the sentence."""
 
 
 class NothingToSnapshot(SnapshotError):
@@ -1046,11 +1046,13 @@ def code_of(directory: Union[str, Path]) -> Code:
 
     :raises RepositoryNotTrusted: If git does not trust the repository the
         folder is in (another user's, or on a network share): the message
-        has the command that makes git trust it. A ``SnapshotError``, and
-        the one case of them with a class of its own.
+        has the command that makes git trust it. A ``SnapshotError``
+        with a class of its own.
+    :raises NotInARepository: If the folder is not in a git repository.
+        A ``SnapshotError`` with a class of its own too.
     :raises SnapshotError: If there is no such folder, git could not be
-        run, the folder is not in a git repository, the repository has no
-        commit yet, or git gives a top the folder is not under.
+        run, the repository has no commit yet, or git gives a top the
+        folder is not under.
     """
     directory = Path(directory).resolve()
     if not directory.is_dir():
@@ -1063,7 +1065,7 @@ def code_of(directory: Union[str, Path]) -> Code:
         not_trusted = _not_trusted_by_git(directory, str(error))
         if not_trusted is not None:
             raise RepositoryNotTrusted(not_trusted) from None
-        raise SnapshotError(
+        raise NotInARepository(
             f"{directory} is not in a git repository. A snapshot is labelled "
             f"with the commit it was built from, so only a pipeline that is in "
             f"git has any"

@@ -221,7 +221,7 @@ class TestARepositoryGitDoesNotTrust:
     def test_it_is_an_error_of_its_own_class_and_no_other_case_is(self, work, monkeypatch):
         """For what must tell this case from the others without reading the sentence: ``snapshot.RepositoryNotTrusted``, a ``SnapshotError``. Every other case raises a ``SnapshotError`` that is not one."""
         directory = _folder(work / "rates")
-        others = [work / "no-such-folder", directory]  # no folder there; a folder in no repository
+        others = [work / "no-such-folder"]  # no folder there
         begun = _folder(work / "begun")
         _git(begun, "init", "--quiet", "-b", "main")
         others.append(begun)  # a repository with no commit yet
@@ -233,15 +233,19 @@ class TestARepositoryGitDoesNotTrust:
             with pytest.raises(SnapshotError) as refused:
                 snapshot.code_of(other)
             assert type(refused.value) is SnapshotError, (other, refused.value)
-        for words in (
-            "fatal: not a git repository (or any of the parent directories): .git",
-            "fatal: not a git repository: /srv/safe.directory-notes/main/.git/worktrees/tree",
-            "git could not be run: [Errno 2] No such file or directory: 'git'",
+        # A folder in no repository has a class of its own too, for the list of what is not in a store, which has shorter words for it
+        with pytest.raises(snapshot.NotInARepository) as refused:
+            snapshot.code_of(directory)
+        assert isinstance(refused.value, SnapshotError) and str(refused.value).startswith(f"{directory} is not in a git repository. ")
+        for words, kind in (
+            ("fatal: not a git repository (or any of the parent directories): .git", snapshot.NotInARepository),
+            ("fatal: not a git repository: /srv/safe.directory-notes/main/.git/worktrees/tree", snapshot.NotInARepository),
+            ("git could not be run: [Errno 2] No such file or directory: 'git'", SnapshotError),
         ):
             self._refusing(monkeypatch, words)
             with pytest.raises(SnapshotError) as refused:
                 snapshot.code_of(directory)
-            assert type(refused.value) is SnapshotError, (words, refused.value)
+            assert type(refused.value) is kind, (words, refused.value)
         for words in (ON_A_SHARE, ANOTHER_USERS):
             self._refusing(monkeypatch, words)
             with pytest.raises(snapshot.RepositoryNotTrusted) as refused:

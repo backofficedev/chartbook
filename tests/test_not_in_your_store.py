@@ -2223,4 +2223,18 @@ class TestAFolderGitWillNotRead:
     def test_a_folder_that_is_in_no_repository_is_still_said_to_be_in_none(self, work, mid, monkeypatch):
         _git_refuses(monkeypatch, "fatal: not a git repository (or any of the parent directories): .git", under=mid)
         said = _said(_run(work, monkeypatch, "run"))
-        assert any(line.startswith(f"     What it reads in turn is not known: {mid} is not in a git repository. ") for line in said), said
+        # In the list's own words, as before: what a snapshot is does not belong in a line of it
+        assert f"     What it reads in turn is not known: {mid} is not in a git repository. Its own `chartbook run` says." in said, said
+
+    @pytest.mark.parametrize("words", [
+        "the repository at {mid} has no commit yet",
+        "{mid} is not under /srv/elsewhere, which is the top of its repository as git gives it, so where the folder is in its repository cannot be told",
+    ])
+    def test_every_other_thing_code_of_says_is_said_whole(self, work, mid, monkeypatch, words):
+        """Read: each of ``code_of``'s other sentences is one line, and right between the list's words."""
+        def refuse(directory):
+            raise snapshot.SnapshotError(words.format(mid=mid))
+
+        monkeypatch.setattr(snapshot, "code_of", refuse)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert f"     What it reads in turn is not known: {words.format(mid=mid)}. Its own `chartbook run` says." in said, said
