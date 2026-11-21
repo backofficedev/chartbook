@@ -11,6 +11,7 @@ What a pin and an update do to a lockfile is in ``tests/test_lock.py``;
 this is the command.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -121,7 +122,9 @@ class TestPinUpdate:
         monkeypatch.chdir(work)
         result = CliRunner().invoke(main, ["pin", "rates", "a b", "--project-dir", "consumer"])
         assert result.exit_code == 2
-        assert "`chartbook pin --update rates 'a b' --project-dir consumer` moves the pins of what it names." in result.output
+        # A word with a space, as this system's shells take it: cmd.exe reads no single quotes
+        spaced = '"a b"' if os.name == "nt" else "'a b'"
+        assert f"`chartbook pin --update rates {spaced} --project-dir consumer` moves the pins of what it names." in result.output
 
     def test_a_folder_where_a_name_goes_is_taken_for_the_pipeline_meant(self, consumer, work, monkeypatch):
         """Found by review: `chartbook pin ../prices` was answered with `pin --update ../prices`, which names no dependency."""
@@ -131,6 +134,10 @@ class TestPinUpdate:
         assert (
             "Error: consumer is a folder, and a pipeline is named with --project-dir: `chartbook pin --project-dir consumer`."
         ) in result.output.splitlines()
+        # And one whose name a shell would split is one word of the command
+        (work / "my consumer").mkdir()
+        spaced = '"my consumer"' if os.name == "nt" else "'my consumer'"
+        assert f"`chartbook pin --project-dir {spaced}`." in CliRunner().invoke(main, ["pin", "my consumer"]).output
 
     def test_the_check_takes_no_name(self, consumer):
         """Found by review: asked for the check that writes nothing, it answered with a command that moves a pin."""
@@ -170,8 +177,13 @@ class TestTheOldCommand:
         (["update"], "chartbook pin --update"),
         (["update", "rates"], "chartbook pin --update rates"),
         (["update", "rates", "prices", "--project-dir", "x"], "chartbook pin --update rates prices --project-dir x"),
-        # Quoted as a shell takes it, so that the line can be pasted
-        (["update", "--project-dir", "../my dir", "it's"], """chartbook pin --update --project-dir '../my dir' 'it'"'"'s'"""),
+        # Quoted as this system's shells take it, so that the line can be pasted: on Windows in double quotes,
+        # which cmd.exe reads and single ones it does not (found by running this there, 2026-11-20)
+        (
+            ["update", "--project-dir", "../my dir", "it's"],
+            """chartbook pin --update --project-dir "../my dir" "it's\"""" if os.name == "nt"
+            else """chartbook pin --update --project-dir '../my dir' 'it'"'"'s'""",
+        ),
         # Its help was asked for: that of the command it became, not a line that moves every pin
         (["update", "--help"], "chartbook pin --help"),
         (["update", "rates", "-h"], "chartbook pin --help"),

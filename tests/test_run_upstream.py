@@ -247,6 +247,19 @@ class TestWhatTheReviewFound:
         assert f"chartbook restore --project-dir {up}" in str(raised.value)
         assert "chartbook run --remake --upstream" in str(raised.value)
 
+    def test_an_upstream_whose_folder_a_shell_would_split_is_one_word_of_the_command(self, work, monkeypatch):
+        import shlex
+        from types import SimpleNamespace
+
+        up = _with_data(work / "my work" / "up", {"build": LOG})
+        down = _with_data(work / "my work" / "down", {"build": LOG}, {"up": {"path": "../up"}})
+        _commit(work)
+        taken = SimpleNamespace(commit="a" * 40, made_at="2026-10-26T00:00:00.000000Z")
+        monkeypatch.setattr(run, "kept_missing", lambda folder, store=None: [("x", "./x.parquet", taken)] if folder == up else [])
+        with pytest.raises(RunError) as raised:
+            run.run(down, upstream=True, echo=lambda line: None)
+        assert f"chartbook restore --project-dir {shlex.quote(str(up))}" in str(raised.value) and shlex.quote(str(up)) != str(up)
+
     def test_a_build_that_moves_the_commit_is_not_snapshotted(self, work):
         _with_data(work / "up", {"build": 'git -c user.name=T -c user.email=t@example.org commit --quiet --allow-empty -m moved'})
         down = _with_data(work / "down", {"build": LOG}, {"up": {"path": "../up"}})

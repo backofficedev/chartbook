@@ -471,10 +471,64 @@ class TestStoreVerify:
         assert problem.message == f"_data/treasury.parquet is not in the store (the snapshot {_folder_of(second).name})"
         result = CliRunner().invoke(main, ["store", "verify"])
         assert result.exit_code == 1
-        assert result.output.splitlines()[0] == f"{table}: {problem.message}"
-        assert result.output.splitlines()[-1] == f"1 of {len(first.hashes() | second.hashes())} object(s) in {store} are not what their names say."
+        # A count for the snapshot first, then the line for each file as it was, and the count of objects last
+        assert result.output.splitlines() == [
+            self.BY_SNAPSHOT.format(files=1, snapshots=1),
+            f"  acme/rates  {_folder_of(second).name}  1 file(s)",
+            f"{table}: {problem.message}",
+            "",
+            f"1 of {len(first.hashes() | second.hashes())} object(s) in {store} are not what their names say.",
+        ]
         # Asked of the bytes alone, the store has them: a read is handed the older snapshot's copy
         assert FolderStore(store.root).verify([table]) == []
+
+    #: The first line where a snapshot has something wrong: what the lines for each file add up to
+    BY_SNAPSHOT = "{files} file(s) of {snapshots} snapshot(s) are missing or are not what their records say. By snapshot, and then each file:"
+
+    def test_a_count_for_each_snapshot_comes_before_the_lines_for_each_file(self, work, store, rates):
+        """Found on a real store: 4,222 lines, one for each file, and what they came to was to be had only by counting them.
+
+        One line for each snapshot that has something wrong, with its
+        pipeline, its folder's name and how many files: a pipeline's
+        snapshots together, oldest first. The lines for each file follow
+        as they were."""
+        folder = _parted(work / "parted", "acme/parted", (2020, 2021))
+        first = snapshot.make(folder, store=store, made_at=OLD).snapshot
+        _chart(folder, "two")
+        second = _complete(folder, store, NOW).snapshot
+        whole = snapshot.make(rates, store=store, made_at=OLD).snapshot  # nothing wrong with it: it has no line
+        _chart(rates, "the curve on the 19th")
+        holed = _complete(rates, store, NOW).snapshot
+        for year in (2020, 2021):
+            _lose(_folder_of(second) / "_data" / "parts" / f"year={year}" / "part-0.parquet")
+        _lose(_folder_of(first) / "_output" / "curve.html")
+        _lose(_folder_of(holed) / "_data" / "treasury.parquet")
+        problems = FolderStore(store.root).verify()
+        result = CliRunner().invoke(main, ["store", "verify"])
+        assert result.exit_code == 1 and len(problems) == 4
+        lines = result.output.splitlines()
+        assert lines[:4] == [
+            self.BY_SNAPSHOT.format(files=4, snapshots=3),
+            f"  acme/parted  {_folder_of(first).name}  1 file(s)",
+            f"  acme/parted  {_folder_of(second).name}  2 file(s)",
+            f"  acme/rates  {_folder_of(holed).name}  1 file(s)",
+        ]
+        assert lines[4:8] == [problem.format() for problem in problems] and lines[8] == ""
+        assert lines[9].endswith(f" object(s) in {store} are not what their names say.") and len(lines) == 10
+        assert _folder_of(whole).name not in "\n".join(lines[:4])
+
+    def test_what_is_wrong_outside_any_snapshot_has_its_own_line_and_no_count(self, work, store):
+        """An object no pipeline owns is of no snapshot: the output is as it was."""
+        file = work / "notes.txt"
+        file.write_text("as it was put\n", encoding="utf-8", newline="\n")
+        put = FolderStore(store.root).put(file)
+        kept = FolderStore(store.root).unowned_path(put.content_hash) / file.name
+        _writable(kept)
+        kept.write_text("rewritten\n", encoding="utf-8", newline="\n")
+        result = CliRunner().invoke(main, ["store", "verify"])
+        lines = result.output.splitlines()
+        assert result.exit_code == 1 and len(lines) == 3 and lines[0].startswith(f"{put.content_hash}: ")
+        assert lines[1:] == ["", f"1 of 1 object(s) in {store} are not what their names say."]
 
     def test_it_names_every_file_that_is_missing_or_damaged_a_snapshots_together(self, work, store):
         """Not the first bad file of an asset alone: both files of the dataset the newer has lost, and the one the older holds damaged."""
@@ -497,7 +551,12 @@ class TestStoreVerify:
         ]
         result = CliRunner().invoke(main, ["store", "verify"])
         assert result.exit_code == 1
-        assert result.output.splitlines()[:3] == [problem.format() for problem in problems]
+        assert result.output.splitlines()[:3] == [
+            self.BY_SNAPSHOT.format(files=3, snapshots=2),
+            f"  acme/parted  {_folder_of(first).name}  1 file(s)",
+            f"  acme/parted  {_folder_of(second).name}  2 file(s)",
+        ]
+        assert result.output.splitlines()[3:6] == [problem.format() for problem in problems]
         assert result.output.splitlines()[-1].startswith("1 of ")  # one object, three files of it
 
 

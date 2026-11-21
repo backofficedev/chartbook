@@ -18,6 +18,7 @@ snapshot`` again in the upstream, then ``chartbook pin --update``.
 import errno
 import json
 import os
+import shlex
 import stat
 import sys
 from pathlib import Path
@@ -69,6 +70,12 @@ NOT_IN_PLACE = (
     "version that began with ChartBook 0.6.0, and an earlier one cannot read it: with that line it is told to "
     "upgrade, and how. It was not written for you: its line there is not one that can be rewritten in place."
 )
+
+
+def _typed(path) -> str:
+    """A folder as a message tells to type it: on Windows in double quotes, which each of its shells reads."""
+    return f'"{path}"' if os.name == "nt" else shlex.quote(str(path))
+
 
 
 @pytest.fixture
@@ -559,7 +566,7 @@ class TestABuildAndAReadNeverWriteAManifest:
         # With the command to run, and where: the upstream's folder is not the one the run was started in
         told = (
             f'{b / "chartbook.toml"}: requires_chartbook = ">=0.5.0" admits a ChartBook that cannot read chartbook.lock, which is '
-            f"of a version that began with 0.6.0: such a one says only which version it reads. `chartbook pin --project-dir {b}` "
+            f"of a version that began with 0.6.0: such a one says only which version it reads. `chartbook pin --project-dir {_typed(b)}` "
             f'raises the line to ">=0.6.0", and it is then told to upgrade, and how.'
         )
         if ignored:
@@ -1065,11 +1072,12 @@ class TestWhatTheSecondReviewFound:
         monkeypatch.chdir(report / "notebooks")
         assert data.load("acme/rates:treasury").collect().height == 80
         said = capsys.readouterr().err
-        assert f"`chartbook pin --project-dir {report}` raises the line to \">=0.6.0\"" in said
+        assert f"`chartbook pin --project-dir {_typed(report)}` raises the line to \">=0.6.0\"" in said
 
     def test_a_folder_with_a_space_in_its_name_is_quoted(self, work):
         floor = lock.Floor(work / "my report (draft)" / "chartbook.toml", ">=0.5.0", ">=0.6.0")
-        assert lock.where_to_pin(floor) == f' --project-dir "{work / "my report (draft)"}"'
+        assert lock.where_to_pin(floor) == f' --project-dir {_typed(work / "my report (draft)")}'
+        assert _typed(work / "my report (draft)") != str(work / "my report (draft)")
         assert lock.where_to_pin(lock.Floor(Path.cwd() / "chartbook.toml", ">=0.5.0", ">=0.6.0")) == ""
 
     def test_a_build_and_a_read_say_what_to_write_where_no_command_can(self, report, rates, store, capsys):

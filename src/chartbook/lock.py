@@ -788,10 +788,10 @@ def floor_said(floor: Floor, shown: str, lockfile: str = LOCK_FILE, where: str =
 def where_to_pin(floor: Floor) -> str:
     """`` --project-dir FOLDER`` for a manifest that is not in the folder a command is run in, to follow ``chartbook pin``; else empty.
 
-    Quoted where the folder's name has anything but letters, digits and
-    the marks a path is made of, so that the command can be pasted.
+    Quoted as this system's shells take it, as every command a message
+    prints is (:func:`chartbook.missing._quoted`), so that it can be pasted.
     """
-    import re
+    from chartbook.missing import _quoted  # here: that module reads this one
 
     folder = floor.manifest.parent
     try:
@@ -799,10 +799,7 @@ def where_to_pin(floor: Floor) -> str:
             return ""
     except OSError:
         pass
-    shown = str(folder)
-    if not re.fullmatch(r"[A-Za-z0-9_@%+=:,./\\~-]+", shown):
-        shown = '"' + shown.replace('"', '\\"') + '"'
-    return f" --project-dir {shown}"
+    return f" --project-dir {_quoted(folder)}"
 
 
 def _from_before_rows(taken) -> bool:
@@ -4885,7 +4882,7 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         if left:
             failures.append((
                 f"the object {content_hash}",
-                f"Cannot remove the object {content_hash} at {store}/{left[0]}: {stuck[left[0]]}",
+                f"Cannot remove the object {content_hash} at {store.shown(left[0])}: {stuck[left[0]]}",
             ))
             continue
         files = plan.files.get(content_hash)

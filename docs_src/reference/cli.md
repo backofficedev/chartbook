@@ -1079,22 +1079,25 @@ Build them in this order, with the commands below. Each ends with a snapshot, wh
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
-     cd /work/he_kelly_manela && git checkout 7802799a41c2 && chartbook run --snapshot
+     git -C /work/he_kelly_manela checkout 7802799a41c2
+     chartbook run --snapshot --project-dir /work/he_kelly_manela
 2. ftsfr/fed_yield_curve at 0db8051    ../fed_yield_curve (a folder on this machine); reads 1 above
-     cd /work/fed_yield_curve && git checkout 0db8051e3f7b && chartbook run --snapshot
+     git -C /work/fed_yield_curve checkout 0db8051e3f7b
+     chartbook run --snapshot --project-dir /work/fed_yield_curve
 
 Then here again:
-     cd /work/report && chartbook run
+     chartbook run --project-dir /work/report
 Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
 - **What is on the list:** a dependency with no snapshot to pin, and one that is pinned where the store has neither the pinned snapshot nor a build of yours of that commit. A build of yours that is there and does not meet the pins is not on it: that is said {ref}`as it is <a-build-of-your-own>`, with `chartbook pin --update` as the way to read your build.
 - **It goes up.** For each pipeline on the list, its own `chartbook.toml` and `chartbook.lock` at the commit to build are read, and what *it* reads that the store lacks comes before it. A folder a `path` entry names is asked through git for those two files, and is not changed. A repository is fetched into ChartBook's git cache, as a `git` dependency is, and nothing of it is checked out; a fetch that receives nothing for 30 seconds is given up.
-- **A clone you already have is read where it is.** A repository whose clone sits beside this pipeline's own (a folder named as `git clone` names it, whose `origin` is that address), or that *is* this pipeline's own repository, is not fetched: its files are read from the clone at the commit to build, and its line says to build there (`../fed_yield_curve (a clone of https://…)`). A repository that wants a password cannot be fetched from here at all, and a class has its clones side by side. A folder is taken for a clone only by its `origin`, never by its name or by the ID of a pipeline in it; where nothing records a pipeline's address, a clone beside is its own when its `origin` gives that ID (`https://github.com/acme/rates` is `acme/rates`). A clone that lacks the commit gets a `git fetch` line first (`--unshallow` for a shallow one), and one with no commit yet a `git pull origin HEAD`; its folder in the clone is then taken from where the clone has the pipeline now, and the line says so.
+- **A clone you already have is read where it is.** A repository whose clone sits beside this pipeline's own (a folder named as `git clone` names it, whose `origin` is that address; in whatever letter case the disk has it, where the disk takes either), or that *is* this pipeline's own repository, is not fetched: its files are read from the clone at the commit to build, and its line says to build there (`../fed_yield_curve (a clone of https://…)`). A repository that wants a password cannot be fetched from here at all, and a class has its clones side by side. A folder is taken for a clone only by its `origin`, never by its name or by the ID of a pipeline in it; where nothing records a pipeline's address, a clone beside is its own when its `origin` gives that ID (`https://github.com/acme/rates` is `acme/rates`). A clone that lacks the commit gets a `git fetch` line first (`--unshallow` for a shallow one), and one with no commit yet a `git pull origin HEAD`; its folder in the clone is then taken from where the clone has the pipeline now, and the line says so.
 - **A pipeline is listed once for each commit of it that is wanted.** What two pipelines read is one line, and each names it (`reads 1 above`). A read with no pin is met by any line of that pipeline; and where one reader has no pin and another pins the very commit that would be built, the one line is the pinned one.
 - **A line says what is known, and no more.** It may lack its commit (never pinned: any commit of it will do), its address (`its repository is not recorded`: a snapshot made in a repository with no remote records none), or what it reads in turn (`What it reads in turn is not known: its repository could not be fetched (…)`).
-- **Every command can be pasted, from any folder, in the order given.** A folder is named whole, and a repository is cloned beside this pipeline's own, once, under a name that is free. A commit in a command is its first twelve digits. A pipeline in a folder of its repository is built in that folder, and the checkout is made from the repository's top first (`git -C REPOSITORY checkout COMMIT && cd FOLDER && …`), since the folder may not be there until then; a line with no pin, in a repository a line above has left on another commit, checks out the commit it was read at. One with no `build` script, which commits what it declares, is given `chartbook snapshot`; so is a folder that was never pinned, has nothing uncommitted and has every declared file on disk (`built already`), since a build may take an hour. On Windows the commands are written for `cmd.exe`, at its prompt: a word is in double quotes where it has to be, and a folder is entered with `cd /d`, which changes the drive too.
-- **No command moves this pipeline's own repository.** A pipeline in the same repository, wanted at another commit, is built in a worktree of that commit: `git -C REPOSITORY worktree add REPOSITORY-at-COMMIT COMMIT`, then `chartbook run --snapshot` in its folder there. Your checkout stays on its branch. A worktree of that name that is there, on that commit, is used as it is; a folder of that name that is anything else is passed by, for `REPOSITORY-at-COMMIT-2`.
+- **A line is one command, the same in every shell.** None enters a folder, and none is joined to another with `&&`: a command names the folder it works in (`git -C FOLDER …`, `chartbook run --snapshot --project-dir FOLDER`). So the lines are the same in a POSIX shell, in `cmd.exe`, in PowerShell and in Git Bash, and you stay in the folder you are in. The last line is the command you typed, with this pipeline's folder. Type them one at a time. Pasted together, each runs whatever the one before it did: a build after a checkout that failed builds the commit its folder is on, and makes a snapshot of that. What is read through a pin is safe from it, since a pin is met only by the same file or, for a dataframe, the same rows. A pipeline that was never pinned takes the snapshot that was made, and the line of its pin says of which commit. Each command runs in the environment you are in: where a pipeline has one of its own, enter its folder and type its `chartbook run --snapshot` there.
+- **Every command can be pasted, from any folder, in the order given.** A folder is named whole, and a repository is cloned beside this pipeline's own, once, under a name that is free. A commit in a command is its first twelve digits. A pipeline in a folder of its repository is built in that folder, and the checkout is made at the repository's top (`git -C REPOSITORY checkout COMMIT`, then `chartbook run --snapshot --project-dir FOLDER`); a line with no pin, in a repository a line above has left on another commit, checks out the commit it was read at. One with no `build` script, which commits what it declares, is given `chartbook snapshot`; so is a folder that was never pinned, has nothing uncommitted and has every declared file on disk (`built already`), since a build may take an hour. On Windows a folder is in double quotes, which `cmd.exe`, PowerShell and Git Bash all read. A line there is given no command, and says so, where one would hold what a shell reads even inside quotes: a `$` (but one at the end of a longer name, as in a share named `home$`), a backtick, a `!`, a `"` of the plain kind or of a word processor's, a `%` that does not begin the two digits a web address writes a sign with (`%20`) or that, with another, encloses the name of a variable, and, in a word with no space in it, a `&` or a `^`: PowerShell hands such a word on without its quotes, and a command that is a batch file reads them. An address in a lockfile is anyone's, and so is a folder's name in a repository that was cloned: `git clone "https://…/$env:TOKEN"` would send the token where the address says, and a folder named `$(…)` would be run. The line says what to make by hand, and the last line is given so too. In Git Bash a network folder (`\\server\…`) is read otherwise: type it in single quotes there.
+- **No command moves this pipeline's own repository.** A pipeline in the same repository, wanted at another commit, is built in a worktree of that commit: `git -C REPOSITORY worktree add REPOSITORY-at-COMMIT COMMIT`, then `chartbook run --snapshot --project-dir` with its folder there. Your checkout stays on its branch. A worktree of that name that is there, on that commit, is used as it is; a folder of that name that is anything else is passed by, for `REPOSITORY-at-COMMIT-2`.
 - **A repository that does not hold the pipeline is not on the list.** Where an entry's `repository` is another pipeline's, the pin's own words say so (`has no snapshot of acme/beta made in https://…`), and nothing says to build there. A manifest that cannot be read is still its folder's (the line names the folder, and that pipeline's own run says what is wrong with it), and in a repository of more than 200 manifests the line says how far the search went.
 - **Whose text it is.** A lockfile is anyone's. An address in it is printed, and fetched, only if it is a plain web address (`https://…`), which is all a snapshot records; a pipeline's name only if it is an ID; and everything is shown without control characters and quoted for the shell.
 - **Pipelines that are not in the store and read each other have no order to be built in.** That is an error, in the words of any cycle: which pipelines, and for each step the file it was read from.
@@ -1404,6 +1407,19 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 
 Every snapshot is a whole version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and says of each which folder keeps it. A snapshot is listed as **complete** where its folder holds every file of its version, each in its own place, so that the folder can be read, copied or sent as it is; and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. Which of the two `chartbook snapshot` makes, it decides by itself and says ({ref}`chartbook snapshot <snapshot-complete-or-increment>`); `chartbook snapshot --complete` makes a complete one. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it, and an increment may keep its files there: `chartbook store gc` removes snapshots, an increment with its own folder, and a complete one once no increment that stays builds on it. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
 
+The size on a line is the one the snapshot's record gives for its folder. **A snapshot that lacks files its record names** (not in the store, or not at their size: a sync that has not finished, a folder emptied by hand) says how many of how many, in the same words whether it is complete or an increment, and one line below the listing names the command that says which:
+
+```console
+$ chartbook store ls acme/news_headlines
+acme/news_headlines (2 snapshot(s))
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here, lacks 38 of its 44 file(s)
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6, lacks 38 of its 44 file(s)
+A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
+What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.
+```
+
+It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
+
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
 ### store verify
@@ -1424,15 +1440,19 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and every one that is missing there, or has other bytes, is said with the snapshot's name, a snapshot's files together, though another snapshot has the same bytes:
+In a folder store each snapshot is checked for itself. Every file its record names is read in the snapshot's own folder, and every one that is missing there, or has other bytes, is said with the snapshot's name, a snapshot's files together, though another snapshot has the same bytes. What those lines add up to comes first, since on a store that has lost many files they run to thousands: how many files of how many snapshots, and one line for each snapshot that has something wrong, with its pipeline, its folder's name and how many files, a pipeline's snapshots together and oldest first:
 
 ```console
 $ chartbook store verify
+2 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:
+  acme/parted  2026-11-19T140200Z_4f2a91c0e1b2  2 file(s)
 sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
 sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the snapshot 2026-11-19T140200Z_4f2a91c0e1b2)
 
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
+
+A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
 
 A file that snapshots kept as increments keep in the complete snapshot they build on is one place in the store: it is read once and said once, under the name it has in that folder whatever name each increment has for it, with that snapshot's name, and with how many of them keep it there:
 
@@ -1608,21 +1628,12 @@ The folders are the truth: every plan is made from the store as it is, so a move
 
 The command can always be run again on a moved store, and is the one remedy where a machine that had not been brought the move wrote `pipelines/`, `roots/`, `origins/` or `tmp/` at its top afterwards: every other command refuses such a store and names this one. It merges the notes under `_chartbook/`: one the store has stays and the late one goes aside, but of two notes of one lockfile the store keeps the later, and the other goes aside first. And it moves `pipelines/` aside, whole: nothing under it is moved in, an object no pipeline owns neither, and the last lines name each snapshot there, to be made again with this ChartBook, and each file that arrived for a snapshot already moved, with where it is.
 
-**A store made by ChartBook 0.2** is moved to the layout of 0.3 to 0.5 first, as before ({design}`plan-0.3.0`): a folder for each pipeline, a folder for each snapshot, each file once under its own name. Run the command again to move that one on.
+Two things to know before a move from 0.5:
 
-- **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
-  is moved, and says so. Run this on one machine; in a store a sync service keeps, the others wait
-  for the sync.
-- **Files are moved, not copied,** so a store in a synced folder uploads nothing again. Bytes two
-  pipelines' snapshots share are copied for the second. The files of a glob, whose records give no
-  hash for each file, are read once to hash them; in a folder that streams its files, as Google
-  Drive's does, that downloads them. `--dry-run` says how much.
-- **Cut short, it goes on.** What is moved is noted before it is moved, and running it again goes
-  on where it stopped.
-- **What no snapshot names**, a `git` dependency's pins in 0.2, goes to `pipelines/+unowned/`,
-  where it is kept while a lockfile names it.
-- **A store in a bucket** is not moved: it is not available in ChartBook 0.6.0 (see the
-  {doc}`roadmap <../roadmap>`), and a command that meets one stops and says so.
+- **A store that 0.5's `store verify` called OK may fail this version's `store verify` before it is moved.** ChartBook 0.5 found a file by its hash anywhere in its pipeline's folder, and this version asks each snapshot for its own files. `chartbook store migrate` takes such a file from where another snapshot of the pipeline keeps the same bytes, and says how many it took.
+- **On a synced folder the move takes longer.** Measured on Google Drive for desktop on Windows, it took 40 to 55 ms a file, against 3 ms on a local disk: minutes for a store of a few thousand files, and up to an hour for one of 50,000 to 75,000. If it stops, type the command again, and it goes on where it stopped.
+
+**A store made by ChartBook 0.2** is moved to the layout of 0.5 by the first run of this command, and on to this version's by a second. The first is the move an earlier version made ({design}`plan-0.3.0`), and goes on where it stopped like the other. Its files are renamed too, but the files of a glob, whose records give no hash for each file, are read once to hash them: in a folder that streams its files, as Google Drive's does, that downloads them, and `--dry-run` says how much. What no snapshot names (a `git` dependency's pins in 0.2) is kept while a lockfile names it.
 
 ```console
 $ chartbook store migrate --dry-run
@@ -1631,6 +1642,8 @@ Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s)
 2.0 GB of globs and documents is read once, to hash each file.
 Nothing was moved (--dry-run).
 ```
+
+**A store in a bucket** is not moved: it is not available in ChartBook 0.6.0 (see the {doc}`roadmap <../roadmap>`), and a command that meets one stops and says so.
 
 `--store NAME` selects one catalog store; with several stores in the catalog it is required.
 

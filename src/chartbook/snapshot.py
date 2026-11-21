@@ -92,6 +92,7 @@ import os
 import platform
 import re
 import subprocess
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -896,18 +897,125 @@ def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
     return result.stdout
 
 
+def _name_on_disk(parent: Path, name: str, listings: dict) -> str:
+    """The name the disk has for the entry of a folder that *name* opens.
+
+    The name itself where the folder lists it. Where it does not, the
+    disk took another spelling for one of its entries (another letter
+    case, the other of Unicode's forms, a short name of Windows): the
+    entry that is the same file is the one, and its name is the disk's.
+    Nothing but the folder's listing is looked at, and its entries only
+    for a name the listing does not have. A folder that cannot be listed,
+    or lists no such entry, leaves the name as it came.
+    """
+    key = str(parent)
+    if key not in listings:
+        try:
+            listings[key] = os.listdir(parent)
+        except OSError:
+            listings[key] = None
+    listed = listings[key]
+    if listed is None or name in listed:
+        return name
+    wanted = parent / name
+
+    def folded(text: str) -> str:
+        return unicodedata.normalize("NFC", text).casefold()
+
+    # The likeliest first: the same name in another letter case, or the other of Unicode's forms
+    alike = folded(name)
+    for entry in sorted(listed, key=lambda entry: folded(entry) != alike):
+        try:
+            if os.path.samefile(parent / entry, wanted):
+                return entry
+        except OSError:
+            continue
+    return name
+
+
+def _as_the_disk_names_it(path: Path, listings: dict) -> Path:
+    """An absolute path with each of its parts under the name the disk has for it (:func:`_name_on_disk`).
+
+    A disk that does not tell letter cases apart, or Unicode's two forms,
+    opens ``../RATES`` for a folder it names ``rates``, and
+    ``Path.resolve`` keeps the spelling that was typed (on macOS; Windows
+    gives the disk's). Two spellings of one folder are then two paths,
+    and one is not found under the other.
+
+    :param listings: The folders listed so far, by their path: two paths
+        that share their first parts list those once.
+    """
+    named = Path(path.anchor)
+    for part in path.parts[1:]:
+        named = named / _name_on_disk(named, part, listings)
+    return named
+
+
+def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
+    """What to say where git refuses to read a repository that is there, because it does not trust it; None for any other failure.
+
+    Git reads no repository whose folder is another user's unless it is
+    told to (``safe.directory``), and on Windows a folder on a network
+    share, or on a drive letter mapped to one, is such a folder whoever
+    made it. Git's own words say so: ``fatal: detected dubious ownership
+    in repository at '//server/share/…'``, then the ``git config`` line
+    that adds the exception. That is no folder outside any repository,
+    and the person has one command to run: git's own, with the folder as
+    git writes it there (``%(prefix)///server/share/…`` for a share),
+    quoted for this system's shell. Without that line, the repository git
+    names; without that either, the folder asked of.
+
+    :param said: What git said as it failed.
+    """
+    if "dubious ownership" not in said and "safe.directory" not in said:
+        return None
+    import shlex
+
+    from chartbook.missing import _quoted  # which imports this module
+
+    found = re.search(r"detected dubious ownership in repository at '([^'\n]+)'", said)
+    repository = found.group(1) if found else str(directory)
+    folder = repository
+    command = re.search(r"git config --global --add safe\.directory[ \t]+(\S.*)", said)
+    if command:
+        try:
+            (folder,) = shlex.split(command.group(1).strip())  # as git quotes it, for a POSIX shell
+        except ValueError:
+            folder = repository
+    return (
+        f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it "
+        f"is on a network share, and git reads no such repository until it is told to. To have git trust it, run "
+        f"`git config --global --add safe.directory {_quoted(folder)}`, and then this again"
+    )
+
+
 def code_of(directory: Union[str, Path]) -> Code:
     """Say where a pipeline's folder is in git, and at which commit.
 
+    The folder is placed in its repository by the name the disk has for
+    each part of its path, and so is the top git gives
+    (:func:`_as_the_disk_names_it`): however the folder was spelled to get
+    here, it is one place in its repository, the one a reader of the
+    folder under its own name finds. Git's own word for the place
+    (``--show-prefix``) is not asked: it writes a name in Unicode's
+    composed form whichever the disk has.
+
     :raises SnapshotError: If there is no such folder, it is not in a git
-        repository, or the repository has no commit yet.
+        repository, git does not trust the repository it is in (another
+        user's, or on a network share: the message has the command that
+        makes git trust it), the repository has no commit yet, or git
+        gives a top the folder is not under (a repository whose
+        ``core.worktree`` names another folder).
     """
     directory = Path(directory).resolve()
     if not directory.is_dir():
         raise SnapshotError(f"there is no folder at {directory}")
     try:
         top = Path(_git(directory, "rev-parse", "--show-toplevel").strip()).resolve()
-    except SnapshotError:
+    except SnapshotError as error:
+        not_trusted = _not_trusted_by_git(directory, str(error))
+        if not_trusted is not None:
+            raise SnapshotError(not_trusted) from None
         raise SnapshotError(
             f"{directory} is not in a git repository. A snapshot is labelled "
             f"with the commit it was built from, so only a pipeline that is in "
@@ -917,7 +1025,17 @@ def code_of(directory: Union[str, Path]) -> Code:
         commit = _git(directory, "rev-parse", "--verify", "--quiet", "HEAD^{commit}").strip()
     except SnapshotError:
         raise SnapshotError(f"the repository at {top} has no commit yet") from None
-    subdirectory = directory.relative_to(top).as_posix()
+    listings: dict = {}
+    top = _as_the_disk_names_it(top, listings)
+    directory = _as_the_disk_names_it(directory, listings)
+    try:
+        subdirectory = directory.relative_to(top).as_posix()
+    except ValueError:
+        raise SnapshotError(
+            f"{directory} is not under {top}, which is where git says the files of its repository are: the "
+            f"repository's core.worktree names another folder than its own, most likely. A snapshot records where "
+            f"a pipeline is in its repository, so it is made of a folder under that one"
+        ) from None
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
 
 

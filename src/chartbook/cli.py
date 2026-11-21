@@ -123,14 +123,14 @@ class _Main(_Group):
         if args and args[0] == "build" and not ctx.resilient_parsing:
             raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
         if args and args[0] == "update" and not ctx.resilient_parsing:
-            import shlex
+            from chartbook import missing
 
             # Its help was asked for: that of the command it became, and not a command that moves every pin
             asked_for_help = any(word in ("--help", "-h") for word in args[1:])
             tried = ["chartbook", "pin", "--help"] if asked_for_help else ["chartbook", "pin", "--update", *args[1:]]
             raise click.UsageError(
                 "`chartbook update` is gone: `chartbook pin --update`. It moves pins to the newest snapshot, all of "
-                f"them or those of the dependencies named. Try: {shlex.join(tried)}",
+                f"them or those of the dependencies named. Try: {missing.typed(tried)}",
                 ctx,
             )
         if args and args[0] == "check" and not ctx.resilient_parsing:
@@ -1491,8 +1491,10 @@ def path_command(ref, kind, project_dir, list_files):
     try:
         found = resolver(ref, kind=kind, project_dir=project_dir or Path.cwd())
     except NoSinglePathError as e:
+        from chartbook.missing import _quoted
+
         click.echo(
-            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {ref} --files` prints them, one per line.",
+            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {_quoted(ref)} --files` prints them, one per line.",
             err=True,
         )
         raise SystemExit(1)
@@ -1990,9 +1992,11 @@ def _load_raw_catalog(catalog_toml_path):
     with open(catalog_toml_path, "rb") as f:
         data = tomli.load(f)
     if detect_v1_format(data):
+        from chartbook.missing import _quoted
+
         raise click.UsageError(
             f"{catalog_toml_path} uses the old v1 format. "
-            f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
+            f"Run: python scripts/migrate_toml_v2.py {_quoted(catalog_toml_path.parent)}"
         )
     if catalog_toml_path.name == "catalog.toml":
         data.setdefault("project", {}).setdefault("type", "catalog")
@@ -3056,18 +3060,19 @@ def pin(names, project_dir, moving, check_only):
         raise click.UsageError("--check takes no name: it says whether every pin of the pipeline can be read here, and writes nothing.")
     if names and not moving:
         import os
-        import shlex
+
+        from chartbook import missing
 
         folder = next((name for name in names if os.path.isdir(name)), None)
         if folder is not None and project_dir is None:
             # A folder where a dependency's name goes: the pipeline to pin was meant
             raise click.UsageError(
                 f"{folder} is a folder, and a pipeline is named with --project-dir: "
-                f"`{shlex.join(['chartbook', 'pin', '--project-dir', folder])}`."
+                f"`{missing.typed(['chartbook', 'pin', '--project-dir', folder])}`."
             )
         meant = ["chartbook", "pin", "--update", *names, *(["--project-dir", project_dir] if project_dir else [])]
         raise click.UsageError(
-            f"A name goes with --update: `{shlex.join(meant)}` moves the pins of what it names. "
+            f"A name goes with --update: `{missing.typed(meant)}` moves the pins of what it names. "
             f"`chartbook pin` pins what has no pin yet, of every dependency."
         )
     if check_only:
@@ -3410,7 +3415,6 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
 
     project_dir = resolve_project_dir(project_dir)
     here = _in_its_folder(project_dir)
-    _refuse_a_folder_spelled_otherwise(project_dir, "chartbook snapshot")
     try:
         report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None, complete=complete)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
@@ -3452,45 +3456,6 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
     _echo_snapshot(report)
     _say_where_a_snapshot_shows()
     _remind_of_gc(no_gc_reminder)
-
-
-def _refuse_a_folder_spelled_otherwise(project_dir, again: str) -> None:
-    """Stop a command that is about to make a snapshot of a folder reached by another letter case than the disk's own, on a disk that takes either.
-
-    A run's last line may have handed such a spelling over
-    (``--project-dir mono/PIPES/A``, of ``pipes/a``). Where the
-    repository's own folder is the one spelled otherwise, where the
-    pipeline is in it cannot be told, and pathlib's words for that help
-    nobody. Where a folder inside it is, the snapshot would record that
-    spelling as the pipeline's place, and a pipeline that reads the folder
-    by its real name would not find the snapshot and would pin an older
-    one without a word. Only a difference of letter case is refused: git
-    and the system may write one name in two of Unicode's forms, and that
-    is no mistake of whoever typed it.
-
-    :param again: The command to type again, once in the folder.
-    """
-    import unicodedata
-
-    from chartbook import snapshot as snapshots
-
-    try:
-        recorded = snapshots.code_of(project_dir).subdirectory
-        named = snapshots._git(Path(project_dir), "rev-parse", "--show-prefix").strip().rstrip("/")
-        recorded, named = (unicodedata.normalize("NFC", "" if one in ("", ".") else one) for one in (recorded, named))
-        otherwise = recorded != named and recorded.casefold() == named.casefold()
-    except ValueError:
-        otherwise = True
-    except Exception:  # noqa: BLE001 - whatever else is wrong with the folder is said by what meets it next
-        return
-    if otherwise:
-        click.echo(
-            click.style("Error: ", fg="red", bold=True)
-            + f"{project_dir} is named otherwise than the disk names it, so where it is in its repository cannot be "
-            f"told. `cd` into the folder, and `{again}` again.",
-            err=True,
-        )
-        raise SystemExit(1)
 
 
 def _a_store_to_send_it_to(project_dir):
@@ -3793,8 +3758,6 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
 
     # Not for arguments the run refuses anyway: it says why, and nothing is recorded
     refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
-    if make_snapshot and not refused:
-        _refuse_a_folder_spelled_otherwise(project_dir, "chartbook run --snapshot")
     if not refused:
         _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
     _run_script(
@@ -4195,6 +4158,10 @@ def store_ls(pipeline, store_name):
     are in that one's folder. A snapshot is removed with `chartbook store
     gc`, never by hand.
 
+    The size is the one a snapshot's record gives. Where files its record
+    names are not in the store, or not at their size, its line says how
+    many of how many it lacks, and `chartbook store verify` names each.
+
     A store that ChartBook 0.5 laid out keeps each file once:
     there an increment's other files may be in several snapshots' folders.
 
@@ -4212,7 +4179,7 @@ def store_ls(pipeline, store_name):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     shown = unreachable = unread = 0
-    said_complete = said_shared = False
+    said_complete = said_shared = said_lacking = False
     for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
@@ -4267,6 +4234,12 @@ def store_ls(pipeline, store_name):
             note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
+            # The size is its record's. What its record names and is not where it says, by sizes as every
+            # ordinary question of the store is asked, is said in the same words of either kind
+            lacking = _files_it_lacks(the_store, record)
+            if lacking:
+                note += f", lacks {lacking[0]:,} of its {lacking[1]:,} file(s)"
+                said_lacking = True
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
             click.echo(f"  {record.folder.name}  {made}  {record.commit[:7]}  {kind:<10} {_format_bytes(here)} here{note}")
             shown += 1
@@ -4287,6 +4260,30 @@ def store_ls(pipeline, store_name):
     if said_complete or said_shared:
         # One line: the store's README says how snapshots are removed
         click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
+    if said_lacking:
+        click.echo("What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.")
+
+
+def _files_it_lacks(the_store, record):
+    """For `store ls`: how many files a snapshot's record names that are not where it says, and how many it names in all; None where it lacks none.
+
+    By sizes, with nothing read (:meth:`chartbook.store.Store.holes_of`),
+    of a complete snapshot and of an increment alike: an increment's
+    files are in two folders, and one missing from either is one it lacks.
+    A store that cannot say (another kind, or a record it cannot follow
+    now) says nothing here, and `store verify` is what checks a store.
+    """
+    from chartbook.store import StoreError
+
+    holes_of = getattr(the_store, "holes_of", None)
+    try:
+        holes = list(holes_of(record.path)) if callable(holes_of) else []
+    except (OSError, ValueError, StoreError):
+        return None
+    if not holes:
+        return None
+    named = {file.path for asset in record.assets for file in asset.files} | set(holes)
+    return len(holes), len(named)
 
 
 def _stores_to_list(store_name):
@@ -4777,26 +4774,11 @@ def store_migrate(dry_run, yes):
     may use the store while it runs, and afterwards every machine that
     uses it needs this ChartBook. Cut short, it is run again and goes on.
 
-    A store made by ChartBook 0.2 is moved to the layout of 0.3 to 0.5
-    first, as before; run the command again to move that one on.
+    A store made by ChartBook 0.2 is moved to the layout of 0.5 by the
+    first run of this command, and on to this version's by a second.
 
-    ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
-    for each snapshot in it named by when it was made and its commit, and
-    each file once, under its own name. A store of 0.2 is refused until it
-    is moved, once, on one machine.
-
-    Upgrade every machine that uses the store to ChartBook 0.3 first: a
-    machine still on 0.2 cannot read the store once it is moved, and says
-    so. Then run this on one of them; in a store a sync service keeps, the
-    others wait for the sync.
-
-    Files are moved by renaming, so a store in a synced folder uploads
-    nothing again; bytes two pipelines' snapshots share are copied for the
-    second. The files of a glob, whose records give no hash for each file,
-    are read once to hash them: in a folder that streams its files (Google
-    Drive's), that downloads them. A migrate cut short is run again and
-    goes on where it stopped. A store in a bucket is not moved: it is not
-    available in this version, and a command that meets one says so.
+    A store in a bucket is not moved: it is not available in this
+    version, and a command that meets one says so.
 
     \b
     Examples:
@@ -5003,6 +4985,10 @@ def store_verify():
     once, under the name it has there, with that snapshot's name and how
     many of them keep it there.
 
+    Ahead of the lines for each file comes what they add up to: how many
+    files of how many snapshots, and one line for each such snapshot,
+    with its pipeline, its folder's name and how many files.
+
     Examples:
         chartbook store verify
         CHARTBOOK_STORE=/shared/store chartbook store verify
@@ -5017,6 +5003,10 @@ def store_verify():
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
+    # A count for each snapshot first: the lines for each file run to thousands where a store has lost many,
+    # and what they add up to was only to be had by counting them
+    for line in _wrong_by_snapshot(the_store, problems):
+        click.echo(line)
     for problem in problems:
         click.echo(problem.format())
     if problems:
@@ -5029,6 +5019,43 @@ def store_verify():
         )
         raise SystemExit(1)
     click.echo(f"{the_store}: OK ({total} object(s))")
+
+
+def _wrong_by_snapshot(the_store, problems) -> list:
+    """For `store verify`: how many files are wrong in how many snapshots, and one line for each such snapshot, to print ahead of the lines for each file.
+
+    A problem is of the snapshot in whose folder its file is, or is
+    missing from (:attr:`chartbook.store.StoreProblem.path`), which for a
+    file that increments keep in the complete snapshot they build on is
+    that one. Each snapshot's line has its pipeline, its folder's name and
+    how many of its files are wrong, a pipeline's snapshots together,
+    oldest first. What is wrong outside any snapshot the store lists (an
+    object no pipeline owns, a folder that is not read) has its own line
+    below and none here; with nothing wrong in any snapshot, or in a store
+    that lists no snapshots, there is nothing to say.
+    """
+    from chartbook.store import StoreError
+
+    records = getattr(the_store, "records", None)
+    if not problems or not callable(records):
+        return []
+    try:
+        snapshots = {record.folder: record for record in records() if record.readable}
+    except (OSError, ValueError, StoreError):
+        return []
+    counts: dict = {}
+    for problem in problems:
+        if problem.path in snapshots:
+            counts[problem.path] = counts.get(problem.path, 0) + 1
+    if not counts:
+        return []
+    lines = [
+        f"{sum(counts.values()):,} file(s) of {len(counts):,} snapshot(s) are missing or are not what their records say. "
+        f"By snapshot, and then each file:"
+    ]
+    for folder in sorted(counts, key=lambda folder: (snapshots[folder].pipeline, snapshots[folder].made_at, folder.name)):
+        lines.append(f"  {_printable(snapshots[folder].pipeline)}  {folder.name}  {counts[folder]:,} file(s)")
+    return lines
 
 
 def _printable(text) -> str:
@@ -6101,8 +6128,10 @@ def catalog_migrate(catalog_path):
             f"{settings_path} if it is no longer needed as a fallback for other catalogs; "
             "it is ignored by this catalog and otherwise warns on each command."
         )
+    from chartbook.missing import _quoted
+
     for pipeline, folder in missing:
-        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {str(folder)!r}")
+        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {_quoted(folder)}")
 
 
 @ls.command("stores")

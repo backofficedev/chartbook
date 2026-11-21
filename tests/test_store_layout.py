@@ -1150,6 +1150,23 @@ class TestStoreMigrateStillMovesAStoreOf02Alone:
             assert lines[-1] == "Nothing was moved."
         assert _tree(old.root) == before
 
+    def test_its_help_is_for_whoever_comes_from_0_5_and_says_of_0_2_only_that_it_takes_two_runs(self):
+        """Found by a person upgrading: after the paragraph on a store of 0.5 came four on the move from 0.2 to 0.3, "Upgrade every machine … to ChartBook 0.3 first" among them."""
+        result = CliRunner().invoke(main, ["store", "migrate", "--help"])
+        assert result.exit_code == 0, result.output
+        paragraphs = [" ".join(paragraph.split()) for paragraph in result.output.split("\n\n")]
+        assert paragraphs[1] == "Move a store to this version's layout: one that ChartBook 0.5 laid out, or one made by 0.2."
+        assert paragraphs[2].startswith("A store of 0.5 (`pipelines/` at its top) is read as it is and not written. This moves it, once, on one machine: ")
+        of_0_2 = "A store made by ChartBook 0.2 is moved to the layout of 0.5 by the first run of this command, and on to this version's by a second."
+        assert paragraphs[3] == of_0_2
+        said = " ".join(paragraphs)
+        assert said.count("0.2") == 2 and "0.3" not in said and "Upgrade every machine" not in said
+        # And the reference page says the same of it, in the same words
+        page = (Path(__file__).parent.parent / "docs_src" / "reference" / "cli.md").read_text(encoding="utf-8")
+        section = page.partition("\n### store migrate\n")[2].partition("\n### ")[0]
+        assert of_0_2.replace("A store made by ChartBook 0.2 is", "**A store made by ChartBook 0.2** is") in section
+        assert "Upgrade every machine first" not in section and "ChartBook 0.3" not in section.replace("plan-0.3.0", "")
+
 
 class TestAFolderWithPipelinesAndNoMarker:
     """A store of 0.5 whose ``store.json`` has not arrived, or was removed: a store of 0.5 for every purpose, and no empty folder to make a store of this layout in."""
