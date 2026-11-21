@@ -1051,3 +1051,42 @@ class TestWhatIsInTheNewTreesIsTakenByItsSize:
         assert hashlib.sha256(K).hexdigest() in held  # nothing is removed: aside, or in the older one's own folder
         _clear()
         assert len(store_module.FolderStore(root).verify()) >= 2  # and `store verify` says which files are not what their records say
+
+
+class TestTheMovesOwnFolderAtTheEnd:
+    """P1, at the end of a move: the folder goes with what is in it; on Windows what holds a file just renamed out of it holds the folder for a moment."""
+
+    def _one(self, work):
+        root = empty_store(work)
+        s = folder_of("2025-10-01", "a")
+        put(root, "acme+p", s, "_data/a.parquet", A)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/a.parquet", A, None, None)])
+        return root
+
+    def test_a_removal_that_windows_refuses_for_a_moment_is_tried_again(self, work, monkeypatch):
+        import types
+
+        root = self._one(work)
+        real, refused = os.rmdir, []
+
+        def held_once(path, *args, **kwargs):
+            if os.fspath(path) == str(root / migrate_0_5.MOVING) and not refused:
+                refused.append(path)
+                raise PermissionError(13, "Access is denied", os.fspath(path))
+            return real(path, *args, **kwargs)
+
+        monkeypatch.setattr(os, "rmdir", held_once)
+        monkeypatch.setattr(migrate_0_5, "sys", types.SimpleNamespace(platform="win32"))
+        monkeypatch.setattr(migrate_0_5, "_EMPTY_WAIT_SECONDS", 0)
+        migrate_0_5.run(root)
+        assert refused and not (root / migrate_0_5.MOVING).exists() and not (root / migrate_0_5.JOURNAL).exists()
+
+    def test_a_folder_somebody_made_in_it_is_left_and_the_move_ends(self, work):
+        """No file the move wrote: it stays, with the folder, and nothing waits for it on a system that says at once what is in the way."""
+        root = self._one(work)
+        theirs = root / migrate_0_5.MOVING / "somebody's"
+        theirs.mkdir(parents=True)
+        (theirs / "note.txt").write_bytes(b"kept")
+        done = migrate_0_5.run(root)
+        assert (theirs / "note.txt").read_bytes() == b"kept" and not (root / migrate_0_5.JOURNAL).exists() and done.missing == []
+        assert migrate_0_5.marker_of(root) == "chartbook/store/v3"

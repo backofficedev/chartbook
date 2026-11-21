@@ -103,6 +103,7 @@ import json
 import os
 import shutil
 import stat
+import sys
 import time
 import unicodedata
 from dataclasses import dataclass, field
@@ -1292,6 +1293,11 @@ def _own_temporary(root: Path, target: Path) -> Path:
     return temporary
 
 
+#: How often, and how far apart, the move's own folder is tried again on Windows before it is left: two seconds, as a rename is.
+_EMPTY_TRIES = 40
+_EMPTY_WAIT_SECONDS = 0.05
+
+
 def _clear_temporaries(root: Path) -> None:
     """Remove the move's own folder of temporaries with what is left in it, at the end of a move."""
     folder = root / MOVING
@@ -1300,10 +1306,19 @@ def _clear_temporaries(root: Path) -> None:
     for left in sorted(folder.iterdir()):
         if left.is_symlink() or not left.is_dir():
             _remove_own(left)
-    try:
-        folder.rmdir()
-    except OSError:
-        pass  # a folder somebody made in it: not a file the move wrote, and left
+    for attempt in range(_EMPTY_TRIES):
+        try:
+            os.rmdir(folder)
+            return
+        except FileNotFoundError:
+            return
+        except OSError:
+            # On Windows what holds a file that was just renamed out of the folder, or removed from it, holds the
+            # folder for a moment: tried again, as a rename is. Anywhere else, and after that moment, a folder
+            # somebody made in it is in the way: no file the move wrote, and left with the folder
+            if sys.platform != "win32" or attempt == _EMPTY_TRIES - 1:
+                return
+            time.sleep(_EMPTY_WAIT_SECONDS)
 
 
 def _do(root: Path, step: Step) -> Optional[str]:
