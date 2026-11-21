@@ -45,7 +45,7 @@ import tomli_w
 
 from chartbook import lock, snapshot
 from chartbook import store as store_module
-from chartbook.store import FolderStore
+from chartbook.store import FolderStore, on_disk
 from tests.fixtures import _git
 from tests.store_of_0_5 import laid_out_as_0_5
 
@@ -176,6 +176,20 @@ def found(work: Path, root: Path) -> dict:
         a=a.name, b=b.name, r=r.name, r2=r2.name, nothing=nothing.name, reader=reader, own=own, in_a=in_a,
         note=note.name, origin=origin.name,
     )
+
+
+def place_of(root: Path, pipeline: str, snapshot: str, entry: dict) -> Path:
+    """Where a record of 0.5 says a file is, as the store's reader finds it: by the name the disk has for it (:func:`chartbook.store.on_disk`).
+
+    A sync between systems may hand a file over under its name in the
+    other of Unicode's forms. A disk that does not tell the two apart
+    (APFS) answers for either; one that does (NTFS, most of Linux) has
+    no file by the name the record writes, and the reader, and the move,
+    find it all the same. A helper that asked by the record's name
+    expected such a file among the missing, on those disks alone.
+    """
+    kept_as = entry.get("kept_as", entry["path"])
+    return on_disk(root / "pipelines" / pipeline, [entry.get("kept_in", snapshot), *kept_as.split("/")])
 
 
 def _parts(document: dict) -> list:
@@ -341,7 +355,7 @@ def facts_before(root: Path) -> dict:
         for part in _parts(document):
             for entry in part["stored"].get("files") or []:
                 key = (entry["content_hash"], entry["size_bytes"])
-                place = root / "pipelines" / pipeline / entry.get("kept_in", snapshot) / entry.get("kept_as", entry["path"])
+                place = place_of(root, pipeline, snapshot, entry)
                 entries.append((pipeline, document["root"], snapshot, entry["path"], key, place))
                 places.setdefault((pipeline, key), set()).add(place)
     somewhere = {of: any(holds(place, of[1]) for place in at) for of, at in places.items()}
@@ -508,7 +522,7 @@ def facts_by_folder(root: Path) -> dict:
         for part in _parts(document):
             for entry in part["stored"].get("files") or []:
                 key = (entry["content_hash"], entry["size_bytes"])
-                place = root / "pipelines" / pipeline / entry.get("kept_in", snapshot) / entry.get("kept_as", entry["path"])
+                place = place_of(root, pipeline, snapshot, entry)
                 entries.append((pipeline, snapshot, entry["path"], key, place))
                 places.setdefault((pipeline, key), set()).add(place)
     somewhere = {of: any(_holds(place, of[1]) for place in at) for of, at in places.items()}
@@ -653,7 +667,7 @@ def drawn_store(root: Path, seed: int, pipelines: int = 1, in_the_new_trees=True
                         for part in document["records"]:
                             for entry in part["stored"]["files"]:
                                 if entry.get("kept_in") == snapshot and entry.get("kept_as", entry["path"]) == entry["path"]:
-                                    here = folder / snapshot / entry["path"]
+                                    here = on_disk(folder, [snapshot, *entry["path"].split("/")])  # as the reader finds it
                                     if here.is_file() and not (folder / later / entry["path"]).exists() and drawn.random() < 0.7:
                                         (folder / later / entry["path"]).parent.mkdir(parents=True, exist_ok=True)
                                         shutil.copyfile(here, folder / later / entry["path"])
@@ -683,7 +697,7 @@ def drawn_store(root: Path, seed: int, pipelines: int = 1, in_the_new_trees=True
             for pipeline, snapshot, document in records_0_5_read(theirs):
                 for part in _parts(document):
                     for entry in part["stored"]["files"]:
-                        place = theirs / "pipelines" / pipeline / entry.get("kept_in", snapshot) / entry.get("kept_as", entry["path"])
+                        place = place_of(theirs, pipeline, snapshot, entry)
                         if not (place.is_file() and place.stat().st_size == entry["size_bytes"]):
                             if place.is_file():
                                 _writable(place)

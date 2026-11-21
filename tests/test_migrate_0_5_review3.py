@@ -779,3 +779,63 @@ class TestWhatWentWithAJournalThatIsGone:
             "(in a second copy of its snapshot's folder, as a sync names one: `<name> 2`): look there first."
         )
         assert last[-1] == "In a synced folder, let the sync finish before another machine uses the store."
+
+
+class TestTheHelpersFindAFileAsTheStoresReaderDoes:
+    """Q7a. A file whose name the disk has in the other of Unicode's forms than its record writes. On a disk that tells the two apart (NTFS, most of Linux) the helpers of these tests asked for it by the record's name, found nothing, and expected it among the missing; the mover finds it, as the store's reader does, and was right.
+
+    This Mac's disk does not tell the forms apart, so such a disk is
+    stood in for: a path whose name is not ASCII is there only where
+    its folder lists that name letter for letter.
+    """
+
+    def _a_disk_exact_about_names(self, monkeypatch) -> None:
+        def listed(path: Path) -> bool:
+            try:
+                return path.name in os.listdir(path.parent)
+            except OSError:
+                return False
+
+        for question in ("exists", "is_file", "is_dir", "is_symlink"):
+            real = getattr(Path, question)
+            monkeypatch.setattr(Path, question, lambda self, real=real: (self.name.isascii() or listed(self)) and real(self))
+
+    def test_on_a_disk_that_tells_the_two_forms_apart_the_file_is_at_its_place_to_the_helpers_as_it_is_to_the_move(self, work, monkeypatch):
+        import unicodedata
+
+        from tests.found_store_of_0_5 import _holds, facts_before
+
+        root = empty_store(work)
+        composed, decomposed = (unicodedata.normalize(form, "café-ñandú.parquet") for form in ("NFC", "NFD"))
+        s = folder_of("2025-10-01", "a")
+        put(root, "acme+p", s, f"_data/{decomposed}", K)  # as a sync from another system wrote it
+        record(root, "acme/p", "2025-10-01", "a", [(f"_data/{composed}", K, None, None)])
+        there = os.listdir(root / "pipelines" / "acme+p" / s / "_data")
+        if there != [decomposed]:
+            pytest.skip("this disk does not keep a name in the form it was written in")
+        self._a_disk_exact_about_names(monkeypatch)
+        by_the_records_name = root / "pipelines" / "acme+p" / s / "_data" / composed
+        # The stand-in holds: nothing is there by the name the record writes, which is what the helpers asked by
+        assert not by_the_records_name.exists() and not _holds(by_the_records_name, (sha(K), len(K)))
+        key = ("acme+p", s, f"_data/{composed}")
+        facts = facts_by_folder(root)
+        assert facts[key][2:4] == (True, True) and facts[key][4] == f"pipelines/acme+p/{s}/_data/{decomposed}"
+        assert facts_before(root)[("acme/p", s, f"_data/{composed}")][1:] == (True, True)
+        # And so what a test expects of the move is what the move finds: nothing is missing
+        found = migrate_0_5.plan(root)
+        assert found.missing == [] and found.missing_in == [] and found.renamed == 1
+        done = migrate_0_5.run(root)
+        assert done.missing == [] and reads_after(root)[key][0] == sha(K)
+
+    @pytest.mark.parametrize("seed", [2, 7])
+    def test_the_two_drawn_stores_that_failed_on_such_a_disk_hold_on_the_stand_in(self, work, monkeypatch, seed):
+        """``test_every_number_of_the_plan_is_true_of_the_tree_before_and_after[2-2]`` and ``[7-2]`` failed on NTFS at what the helpers expected to be missing: the same two stores, with two pipelines, on the stand-in."""
+        from tests.found_store_of_0_5 import drawn_store
+        from tests.test_migrate_0_5_review2 import test_every_number_of_the_plan_is_true_of_the_tree_before_and_after as held
+
+        probe = empty_store(work, "probe")
+        assert "other form" in drawn_store(probe, seed, 2, in_the_new_trees=False)["shapes"]  # the store has such a file
+        rmtree(probe)
+        clear()
+        self._a_disk_exact_about_names(monkeypatch)
+        held(work, seed, 2)

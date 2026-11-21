@@ -1263,7 +1263,7 @@ class TestWhatIsMissingIsSaidFirstAndBySnapshot:
         entries = []
         for number in range(40):
             data = f"part {number:03d}".encode() * 10
-            path = f"_data/articles/year=2025/month=10/part-{number:05d}-0123456789abcdef0123456789abcdef0123456789abcdef.c000.snappy.parquet"
+            path = f"_data/articles/year=2025/month=10/part-{number:05d}.c000.snappy.parquet"  # short: it fits under any temp folder
             if number >= 36:
                 put(root, "acme+p", s1, path, data)
             entries.append((path, data, None, None))
