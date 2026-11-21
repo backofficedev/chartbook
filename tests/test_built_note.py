@@ -63,7 +63,10 @@ class TestTheExamplesShowBothWays:
         examples = _examples()
         for name in self.BY_A_RUN:
             folder = examples.BASE_DIR / name
-            assert getattr(examples, f"task_build_{name}")()["actions"] == [f"chartbook run --project-dir {folder}"]
+            assert getattr(examples, f"task_build_{name}")()["actions"] == [
+                (examples.say_what_is_taken_as_it_is, [folder]),
+                f"chartbook run --project-dir {folder}",
+            ]
             assert getattr(examples, f"task_snapshot_{name}")()["actions"] == [f"chartbook snapshot --project-dir {folder}"]
 
     def test_one_is_built_some_other_way_and_taken_as_it_is(self):
@@ -76,48 +79,88 @@ class TestTheExamplesShowBothWays:
         examples = _examples()
         assert {folder.name for folder in examples.PIPELINE_DIRS} == {*self.BY_A_RUN, "fred_charts"}
 
-    def test_a_build_by_a_run_is_run_again_where_its_note_is_gone_or_of_other_source(self, demo, store):
+    def test_a_build_by_a_run_is_up_to_date_only_while_its_snapshot_would_be_made(self, demo, store):
         """doit sees the built files and knows nothing of the note: with the files all there it would call
-        the build up to date, and the snapshot after it would be refused."""
+        the build up to date, and the snapshot after it would stop. There `chartbook run` is typed again,
+        as a person types it before a snapshot."""
         up_to_date = _examples().built_by_a_run(demo)
         assert up_to_date(None, {}) is False  # no run has built it
         assert _run().exit_code == 0
         assert up_to_date(None, {}) is True and _snapshot().exit_code == 0
         _change(demo / "load.py", "x = 1\n")  # source the build did not run on
-        assert up_to_date(None, {}) is False
+        assert up_to_date(None, {}) is False and _snapshot().exit_code == 1
+        assert _run().exit_code == 0 and up_to_date(None, {}) is True
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")  # a built file written over
+        assert up_to_date(None, {}) is False and _snapshot().exit_code == 1
         assert _run().exit_code == 0 and up_to_date(None, {}) is True
         built.note_path(demo).unlink()  # a cache that was cleared
         assert up_to_date(None, {}) is False
+        _change(demo / "chartbook.toml", "[project\n")  # and what cannot be read is the run's to say
+        assert up_to_date(None, {}) is False
 
-    def test_a_built_file_written_over_is_left_for_the_snapshot_to_stop_at(self, demo, store):
-        """Found by the review, by typing it: the check sent the build back to `chartbook run`, the
-        build found nothing to do and noted the file as it now was, and `doit` then made the snapshot of
-        it with nothing said, its record saying that ChartBook ran the build."""
+    def test_after_as_is_typed_by_hand_the_build_is_typed_again_and_not_the_refusal(self, demo, store):
+        """Found by the second review: with a built file left for the snapshot to stop at, the way the
+        refusal itself prints, `--as-is`, made the snapshot, and `doit` then stopped at the same step
+        for good."""
         up_to_date = _examples().built_by_a_run(demo)
         assert _run().exit_code == 0
         _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
-        assert up_to_date(None, {}) is True  # no build is sent for it
-        result = _snapshot()
-        assert result.exit_code == 1 and _snapshots(store) == []
-        assert result.output.splitlines()[0] == "Error: acme/demo: these differ from what its build left: out.csv."
-        # With source changed too, the build is to run: what it then leaves is its own
-        _change(demo / "load.py", "x = 1\n")
-        assert up_to_date(None, {}) is False
+        assert _snapshot("--as-is").exit_code == 0
+        assert up_to_date(None, {}) is False  # so the run is typed, and the snapshot after it is made
+        assert _run().exit_code == 0 and _snapshot().exit_code == 0
 
-    def test_a_manifest_that_cannot_be_read_sends_the_build_to_the_run_which_says_so(self, demo, store):
-        up_to_date = _examples().built_by_a_run(demo)
+    def test_the_built_files_a_run_finds_changed_are_named_before_it_is_typed(self, demo, store, capsys):
+        """Found by the review, twice: typed again over a built file written over by hand, the build
+        finds nothing to do, the run notes the file as it now is, and the snapshot is made of it with
+        nothing said. Typed alone, that snapshot would have stopped and named it."""
+        say = _examples().say_what_is_taken_as_it_is
+
+        def said() -> str:
+            assert say(demo) is None  # doit takes None for an action that went well
+            return capsys.readouterr().out
+
+        assert said() == ""  # no run has built it: nothing was left to differ from
         assert _run().exit_code == 0
+        capsys.readouterr()
+        assert said() == ""  # as the run left it
+        _change(demo / "load.py", "x = 1\n")
+        assert said() == ""  # source alone: the build is what answers that
+        _change(demo / "out.csv", "a,b\n1,2\n3,4\n")
+        assert said() == (
+            "demo: not as the last `chartbook run` left them: out.csv. This run takes as it is each one its "
+            "build does not write anew.\n"
+        )
         _change(demo / "chartbook.toml", "[project\n")
-        assert up_to_date(None, {}) is False
-        (demo / "chartbook.toml").unlink()  # and one that is not there
-        assert up_to_date(None, {}) is False
+        assert said() == ""  # the run says what is wrong with it
+        (demo / "chartbook.toml").unlink()
+        assert said() == ""  # and that there is none
+
+    def test_more_than_ten_are_counted(self, demo, monkeypatch, capsys):
+        def refuse(directory, pipeline):
+            raise built.NotHeld("differ", outputs=[f"out{n}.csv" for n in range(12)])
+
+        monkeypatch.setattr(built, "check", refuse)
+        _examples().say_what_is_taken_as_it_is(demo)
+        assert capsys.readouterr().out.startswith(
+            "demo: not as the last `chartbook run` left them: out0.csv, out1.csv, out2.csv, out3.csv, out4.csv, out5.csv, "
+            "out6.csv, out7.csv, out8.csv, out9.csv, and 2 more. This run"
+        )
+
+    def test_files_that_are_not_committed_are_not_said_to_be_a_runs(self, demo, monkeypatch, capsys):
+        """A pipeline with no `build` script is refused for what it declares and has not committed: no run left those."""
+        def refuse(directory, pipeline):
+            raise built.NotHeld("not_committed", outputs=["out.csv"])
+
+        monkeypatch.setattr(built, "check", refuse)
+        _examples().say_what_is_taken_as_it_is(demo)
+        assert capsys.readouterr().out == ""
 
     def test_each_build_by_a_run_asks_of_its_own_folder_and_pipeline(self, monkeypatch):
         from types import SimpleNamespace
 
         examples = _examples()
         asked = []
-        monkeypatch.setattr(built, "check", lambda directory, pipeline: asked.append((directory, pipeline)) or True)
+        monkeypatch.setattr(built, "would_hold", lambda directory, pipeline: asked.append((directory, pipeline)) or True)
         for name in self.BY_A_RUN:
             for check in getattr(examples, f"task_build_{name}")()["uptodate"]:
                 check(SimpleNamespace(value_savers=[]), {})

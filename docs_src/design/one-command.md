@@ -506,12 +506,16 @@ What building it settled:
   well." So `yield_curve` and `rate_forecast` are built with `chartbook run` and their snapshots
   take no option, and `fred_charts` is still built by its own doit and taken with `--as-is`
   (`docs_src/examples.md`). doit sees the built files and knows nothing of the note, so a build
-  by `chartbook run` is run again there where its note is gone, or is of other source than the
-  folder has. A built file that is not as the build left it is left to the snapshot, which
-  stops and names it. *(Found by the review: sent back to `chartbook run` for such a file, the
-  build found nothing to do and noted the file as it now was, and the snapshot was made of it
-  with nothing said, its record saying that ChartBook ran the build.)* And the notes for
-  upgrading from 0.5 sent every
+  by `chartbook run` is typed again there wherever the snapshot after it would stop, as a
+  person types `chartbook run` before a snapshot. *(Found by the review, twice.)* Typed again
+  over a built file that was written over by hand, the build finds nothing to do, the run
+  notes the file as it now is, and the snapshot is made of it with nothing said: the cost
+  written above, that the build's own account is taken. So the examples' doit names such
+  files before it types the run. Leaving them for the snapshot to stop at was tried and taken
+  out: it stopped `doit` after ordinary work with an example's own doit, it did nothing where
+  source had changed too, which is the usual state before a snapshot, and after `--as-is` typed
+  by hand `doit` stopped at the same step for good. And the notes for upgrading from 0.5 sent
+  every
   pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
   `--as-is`.
 - **In a repository git does not trust, a run leaves no note and says nothing of it,** since it

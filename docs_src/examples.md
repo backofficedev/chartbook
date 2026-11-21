@@ -39,7 +39,7 @@ chartbook run --project-dir rate_forecast       # pins yield_curve's snapshot, a
 chartbook snapshot --project-dir rate_forecast
 ```
 
-The second `chartbook run` does not build `yield_curve`: a folder you depend on is its owner's to build. And a snapshot typed with no option is {ref}`held against what the run built <snapshot-held-against-a-run>`: where a file was changed after the build, it stops and names the file.
+The second `chartbook run` does not build `yield_curve`: a folder you depend on is its owner's to build. And a snapshot typed with no option is {ref}`held against what the run built <snapshot-held-against-a-run>`: where a file was changed after the build, it stops and names the file. `doit` here types `chartbook run` again before a snapshot that would stop, as you would, and first names the built files that run finds changed: a run rebuilds what its build finds out of date, and takes the rest as it is.
 
 **Built some other way, and taken as it is: `fred_charts`.** `examples/dodo.py` builds this one with the pipeline's own `doit`, as a job elsewhere or a Makefile would. No `chartbook run` built its files, so there is nothing to hold them against, and its snapshot is typed with `--as-is`:
 
