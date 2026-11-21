@@ -1076,12 +1076,12 @@ def _undeclared_reads(notes: str) -> list[dict]:
 
 def _execute(script: str, directory: Path, environment: dict) -> int:
     if os.name == "nt":
-        named = os.fspath(directory)
+        named = directory
         try:
             directory = _as_cmd_takes_it(directory)
         except RunError as error:
             raise RunError(f"{error} The script was not run.") from None
-        if directory != named and environment.get("GIT_CEILING_DIRECTORIES"):
+        if directory is not named and environment.get("GIT_CEILING_DIRECTORIES"):
             # Git in the script stands on the letter: the folder it is to look no further up than, by that name too
             environment = {
                 **environment,
@@ -1115,7 +1115,7 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
     ).returncode
 
 
-def _as_cmd_takes_it(directory: Union[str, Path]) -> str:
+def _as_cmd_takes_it(directory: Union[str, Path]) -> Union[str, Path]:
     """A folder as ``cmd.exe`` can stand in it: one that is a share (``\\\\server\\…``), by a drive letter the share is connected under.
 
     ``cmd.exe`` runs a script on Windows, and takes no share as its
@@ -1140,9 +1140,9 @@ def _as_cmd_takes_it(directory: Union[str, Path]) -> str:
     if text[:4] in ("\\\\?\\", "\\\\.\\") and text[4:8].upper() != "UNC\\":
         # The long spelling of a folder on a drive, which is that folder; and whatever else is spelled so
         # (a device, a volume) is no share, and is left as it was given
-        return text[4:] if text[5:7] == ":\\" else text
+        return text[4:] if text[5:7] == ":\\" else directory
     if not text.replace("/", "\\").startswith("\\\\"):
-        return text
+        return directory  # as it was given: nothing of it is changed
     lettered = _by_its_drive_letter(text, _connected_drives())
     if lettered is None:
         from chartbook.missing import _quoted
