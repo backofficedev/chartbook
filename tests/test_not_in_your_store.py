@@ -1535,6 +1535,36 @@ class TestWhatAShellOnWindowsReadsInQuotes:
     def test_what_is_read(self, words, said):
         assert missing._a_windows_shell_reads(words, environment=["Path", "GITHUB_TOKEN", "UserName"]) == said
 
+    @pytest.mark.parametrize("word, read, in_a_batch_file", [
+        # Git's own word for a network share, and the one git printed on the machine these were typed on
+        ("%(prefix)///fileserver/home/ab123/work/mid", "", "a `%`"),
+        ("%(prefix)///localhost/c$/cbtest/work2/rates", "", "a `%`"),
+        ("%(prefix)///fileserver/home/ab 123/work/mid", "", "a `%`"),
+        ("//fileserver/home/R&D/rates", "", "a `&`"),  # only a batch file's cmd.exe reads it
+        ("%(prefix)///fileserver/%USERNAME%/mid", "`%USERNAME%`", "`%USERNAME%`"),  # cmd.exe fills it in: typed there too
+        ("%(prefix)///fileserver/home/100% done/mid", "a `%`", "a `%`"),  # two of them may hold a name where it is pasted
+        ("%(prefix)///fileserver/$(calc)/mid", "a `$`", "a `$`"),
+        ("%(prefix)///fileserver/a`b/mid", "a backtick", "a backtick"),
+    ])
+    def test_a_word_for_a_program_and_not_a_batch_file(self, word, read, in_a_batch_file):
+        """Found by the review of what prints git's `safe.directory` command: git begins a share's folder
+        with `%(prefix)/`, the word was withheld for its `%`, and the command named no folder.
+
+        Typed on Windows 11, 2026-11-20, in cmd.exe, Windows PowerShell 5.1 and Git Bash: in double
+        quotes, the word reaches a program as it is, and the command makes git trust the folder; a
+        `%NAME%` in it is filled in by cmd.exe. `git` is a program wherever it is installed.
+        `chartbook` may be a batch file (pyenv's), and through one that uses `call` the `%` was
+        dropped in all three shells (`C:\\work\\100%\\mid` arrived as `C:\\work\\100\\mid`): for its
+        words nothing changes."""
+        assert missing._a_windows_shell_reads([word], environment=["USERNAME"], batch=False) == read
+        assert missing._a_windows_shell_reads([word], environment=["USERNAME"]) == in_a_batch_file
+
+    def test_a_shares_word_is_quoted_whole_for_git_and_withheld_for_what_may_be_a_batch_file(self):
+        word = "%(prefix)///fileserver/home/ab123/work/mid"
+        assert missing._quoted(word, windows=True, batch=False) == f'"{word}"'
+        assert missing._quoted(word, windows=True) == missing.NOT_TEXT
+        assert missing._quoted(word, windows=False, batch=False) == missing._quoted(word, windows=False) == shlex.quote(word)
+
     def test_the_variables_are_this_machines(self, monkeypatch):
         """A name that begins and is followed as a web address writes a sign (`%AB…%20`) is a variable only if this machine has it."""
         word = "https://example.org/acme/%AB_TEST_SECRET%20x"
@@ -2141,3 +2171,100 @@ class TestFilesAtACommit:
             cache.text_at(str(top), "--output=x", "chartbook.toml")
         with pytest.raises(ValueError):
             cache.paths_at(str(top), "HEAD", "chartbook.toml")
+
+
+#: What git says of a repository another user owns, and on Windows of any on a network share; it ends 128
+DUBIOUS = (
+    "fatal: detected dubious ownership in repository at '{at}'\n"
+    "To add an exception for this directory, call:\n"
+    "\n"
+    "\tgit config --global --add safe.directory {at}"
+)
+NOT_TRUSTED = (
+    "git does not trust the repository that {folder} is in ({at}): another user owns it, or it is on a network share, "
+    "and git reads no such repository until it is told to. To have git trust it, run `git config --global --add "
+    "safe.directory {typed}`, and then this again"
+)
+
+
+def _git_refuses(monkeypatch, words: str, under: Path) -> None:
+    """Git fails with *words* wherever it is run in *under*, as ``snapshot._git`` raises what git said; elsewhere it runs."""
+    real = snapshot._git
+
+    def refuse(directory, *arguments, **options):
+        if Path(directory) == under or under in Path(directory).parents:
+            raise snapshot.SnapshotError(words)
+        return real(directory, *arguments, **options)
+
+    monkeypatch.setattr(snapshot, "_git", refuse)
+
+
+class TestAFolderGitWillNotRead:
+    """The list said "… is not in a git repository" of every folder ``snapshot.code_of`` refused: one in a
+    repository git does not trust, which on Windows is any on a network share, and one on a machine where
+    git could not be run. Neither was so, and neither left anything to do.
+
+    Found by the review of ``code_of``'s own change, 2026-11-20. Each line is now what the folder's own
+    commands say.
+    """
+
+    @pytest.fixture
+    def mid(self, work, theirs, mine):
+        """report pins mid, a ``path`` dependency, at a commit; and mid is not in this machine's store."""
+        mid = _pipeline(work, "mid")
+        _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
+        mine()
+        return mid
+
+    def test_a_repository_git_does_not_trust_is_said_with_the_command_that_makes_git_trust_it(self, work, mid, monkeypatch):
+        at = mid.as_posix()  # as git writes a folder, on Windows too
+        _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert not any("is not in a git repository" in line for line in said), said
+        assert (
+            "     What it reads in turn is not known: "
+            + NOT_TRUSTED.format(folder=mid, at=at, typed=missing._quoted(at))
+            + ". Its own `chartbook run` says."
+        ) in said, said
+
+    def test_the_command_is_not_cut_where_a_line_of_the_list_otherwise_is(self, work, theirs, mine, monkeypatch):
+        """A line of the list holds 300 characters of what a file gave; this one ends with a command to type, and holds 4,096."""
+        name = "m" * 200
+        mid = _pipeline(work, name)
+        _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {f"acme/{name}": {"path": f"../{name}"}}), theirs)
+        mine()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=mid.as_posix()), under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert any(
+            line.endswith(f"safe.directory {missing._quoted(mid.as_posix())}`, and then this again. Its own `chartbook run` says.")
+            for line in said
+        ), said
+
+    def test_git_that_could_not_be_run_is_said_so(self, work, mid, monkeypatch):
+        _git_refuses(monkeypatch, f"{snapshot._GIT_NOT_RUN}: [Errno 2] No such file or directory: 'git'", under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert (
+            "     What it reads in turn is not known: git could not be run: [Errno 2] No such file or directory: 'git'. "
+            "Its own `chartbook run` says."
+        ) in said, said
+
+    def test_a_folder_that_is_in_no_repository_is_still_said_to_be_in_none(self, work, mid, monkeypatch):
+        _git_refuses(monkeypatch, "fatal: not a git repository (or any of the parent directories): .git", under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        # In the list's own words, as before: what a snapshot is does not belong in a line of it
+        assert f"     What it reads in turn is not known: {mid} is not in a git repository. Its own `chartbook run` says." in said, said
+
+    @pytest.mark.parametrize("words", [
+        "the repository at {mid} has no commit yet",
+        "{mid} is not under /srv/elsewhere, which is the top of its repository as git gives it, so where the folder is in its repository cannot be told",
+    ])
+    def test_every_other_thing_code_of_says_is_said_whole(self, work, mid, monkeypatch, words):
+        """Read: each of ``code_of``'s other sentences is one line, and right between the list's words."""
+        def refuse(directory):
+            raise snapshot.SnapshotError(words.format(mid=mid))
+
+        monkeypatch.setattr(snapshot, "code_of", refuse)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert f"     What it reads in turn is not known: {words.format(mid=mid)}. Its own `chartbook run` says." in said, said

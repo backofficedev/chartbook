@@ -517,9 +517,17 @@ What building it settled:
   every
   pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
   `--as-is`.
-- **In a repository git does not trust, a run leaves no note and says nothing of it,** since it
-  cannot ask which files are source; the snapshot there says the folder is in no repository.
-  *(Found on Windows, on a share.)* Left until `snapshot.code_of` tells the two apart.
+- **In a repository git does not trust, a run leaves no note, and says so,** since it cannot
+  ask which files are source. *(Found on Windows, on a share: the run said nothing, and the
+  snapshot typed next said the folder was in no repository.)* `snapshot.code_of` now tells the
+  two apart (`snapshot.RepositoryNotTrusted`), so the run's last lines say `No note of this
+  build was kept:` and git's own command that makes it trust the repository (the folder as
+  git writes it, in double quotes; where its name holds what a shell on Windows reads even in
+  those, no command, and a pointer to the one `git status` prints there), in place of the
+  command that makes a snapshot, which would be refused there twice: for git's trust, and then
+  for the note. *(The second by the review: the line was said, and the command after it.)* The
+  snapshot says the same. In a folder that is in no repository the run says nothing of a note:
+  there is no snapshot to hold against one.
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It
@@ -859,7 +867,13 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     web address writes a sign with (`%20`), and where no name between two of them is a variable
     of this machine or one `cmd.exe` fills in by itself (`%CD%`). What that leaves: a variable
     whose name begins, and is followed, as such digits (`%DB_PASSWORD%2F`), set in the window
-    the line is pasted into and not in the one that printed it.
+    the line is pasted into and not in the one that printed it. *(Typed on Windows later,
+    2026-11-20: a single `%` reaches a program as it is in all three shells; a batch file that
+    hands its words on through `call`, as pyenv's shims do, drops it with nothing said
+    (`C:\work\100%\mid` arrived as `C:\work\100\mid`), and doubled it is right there and
+    wrong everywhere else. So it stays withheld for `chartbook`, which may be such a file, and
+    is text for a word handed to `git`, which is a program: git's own word for a network
+    share, in the `safe.directory` command, begins with one.)*
     The function that quotes never writes such a word, whatever message asks it to:
     `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. So a run's
     closing line, `chartbook restore` and the rest hold no such word either, and say less well
