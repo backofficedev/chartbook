@@ -84,6 +84,7 @@ secrets, and a store is something to share.
 
 from __future__ import annotations
 
+import collections
 import hashlib
 import contextlib
 import dataclasses
@@ -1170,13 +1171,19 @@ def record_name(subdirectory: str) -> str:
     return name
 
 
-#: Each snapshot read, by its record's file, with the time and size the file had then: a record is never
-#: rewritten, so one read is enough (as :data:`chartbook.store._read_records` is for where its files are).
-_read_snapshots: dict = {}
+#: How many snapshots read are remembered at a time: the few records one command reads again and again.
+#: A snapshot read holds an entry for every file of it (a table of 127,000 files, as many), so a process that
+#: reads every record of a store (a catalog built, a ``store gc`` planned) is not to hold them all until it ends.
+READ_KEPT = 8
+
+#: The snapshots read last, :data:`READ_KEPT` at most, each by its record's file with the time and size the file
+#: had then: a record is never rewritten, so one read is enough while it is remembered. The least recently read
+#: goes first, and a record that is removed is forgotten (:func:`forget`).
+_read_snapshots: collections.OrderedDict = collections.OrderedDict()
 
 
 def read(path: Union[str, Path]) -> Snapshot:
-    """Read one snapshot record, once in a process while its file is unchanged.
+    """Read one snapshot record; one of the few read last is not read again while its file is unchanged.
 
     A record lists every file of its snapshot, and one command asks for
     the same record many times over (each snapshot of the pipeline's
@@ -1184,6 +1191,11 @@ def read(path: Union[str, Path]) -> Snapshot:
     the first time, and the snapshot read then is handed out again for as
     long as the file has the time and the size it had. A record that
     cannot be read is not remembered: a sync may yet bring the rest of it.
+
+    **What is remembered is small:** the :data:`READ_KEPT` snapshots read
+    last, the least recently read going first. A pipeline with more
+    snapshots than that has each record opened again at each pass over its
+    history.
 
     What is handed out is the one snapshot, to every caller: its records
     are not to be changed in place.
@@ -1193,14 +1205,24 @@ def read(path: Union[str, Path]) -> Snapshot:
     from chartbook.store import _record_stamp
 
     path = Path(path)
+    key = str(path)
     stamp = _record_stamp(path)  # taken before the file is opened: one that changes meanwhile is read again next time
-    known = _read_snapshots.get(str(path))
+    known = _read_snapshots.get(key)
     if known is not None and stamp is not None and known[0] == stamp:
+        _read_snapshots.move_to_end(key)
         return known[1]
+    _read_snapshots.pop(key, None)  # gone, or no longer the file that was read
     taken = _read(path)
     if stamp is not None:
-        _read_snapshots[str(path)] = (stamp, taken)
+        _read_snapshots[key] = (stamp, taken)
+        while len(_read_snapshots) > READ_KEPT:
+            _read_snapshots.popitem(last=False)
     return taken
+
+
+def forget(path: Union[str, Path]) -> None:
+    """Forget what was read of one record (:func:`read`): its store has removed it."""
+    _read_snapshots.pop(str(Path(path)), None)
 
 
 def _read(path: Path) -> Snapshot:

@@ -942,7 +942,14 @@ data in mind.
     about each file of every snapshot in the store. The line says nothing of what a sweep finds,
     and is planned without one.
   - Each record of the pipeline was opened and parsed ten times over. It is read once by the
-    store and once as a snapshot.
+    store and once as a snapshot, for a pipeline with up to seven snapshots in the store. What
+    is remembered of snapshots read is the eight read last *(found by review, 2026-11-21: every
+    one read was held until the process ended, each with an entry for every file of its
+    snapshot)*. **What this costs:** past eight, each pass over the pipeline's history opens
+    its records again, and a snapshot makes four passes. Counted, the records opened as
+    snapshots by one `chartbook snapshot`: 5 with 4 snapshots there, 18 with 8, 50 with 12, 82
+    with 20, where the store's own reader opens 21. Not yet decided: fewer passes, or a bound by
+    what the records hold in place of their number.
 
   The second look could take what the first was told, and be no question at all. It stays: it
   is what finds a file lost between the two.

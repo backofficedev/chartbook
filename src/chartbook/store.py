@@ -1768,6 +1768,14 @@ class KeptRecord:
 _read_records: dict = {}
 
 
+def _forget_record(path: Path) -> None:
+    """Forget what each reader of records remembers of one that is removed: this module's, and the reader of snapshots if it is loaded (:func:`chartbook.snapshot.forget`)."""
+    _read_records.pop(str(path), None)
+    reader = sys.modules.get("chartbook.snapshot")
+    if reader is not None:
+        reader.forget(path)
+
+
 def _record_stamp(path: Path) -> Optional[tuple]:
     try:
         seen = os.stat(_any_length(path))
@@ -2288,7 +2296,7 @@ class FolderStore(Store):
                 f"Cannot remove the snapshot record {self._shown(path)}: {error.strerror or error}. "
                 f"{self._not_this_users_remedy()}"
             ) from None
-        _read_records.pop(str(path), None)
+        _forget_record(path)
         try:
             (path.parent / CLEARED_FILE).write_text(
                 f"Cleared by `chartbook store gc` on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC.\n"

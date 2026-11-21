@@ -996,6 +996,89 @@ class TestARecordIsReadOnce:
         assert snapshot.read(taken.path).content() == taken.content()
 
 
+class TestWhatReadRemembersIsSmall:
+    """`snapshot.read` kept every snapshot it had read until the process ended, each with an entry for every file of its snapshot: a process that reads every record of a store (a catalog built, a `store gc` planned) held them all (found by review, 2026-11-21).
+
+    It keeps the few one command reads again and again: the eight read
+    last, the least recently read going first. And a record its store
+    removes is forgotten, as the store's own reader forgets it.
+    """
+
+    @pytest.fixture
+    def records(self, tmp_path, store) -> list:
+        """Ten complete snapshots of one pipeline, by their records, with nothing remembered of them."""
+        from chartbook import snapshot
+
+        assert snapshot.READ_KEPT == 8
+        scratch = tmp_path / "files"
+        made = [_sized(FolderStore(store.root), scratch, {"a": bytes([65 + number]) * 10}, number, complete=True) for number in range(10)]
+        snapshot._read_snapshots.clear()
+        return made
+
+    def _remembered(self) -> list:
+        from chartbook import snapshot
+
+        return [Path(record).parent.parent.name for record in snapshot._read_snapshots]
+
+    def test_the_ninth_record_read_pushes_the_first_out(self, records):
+        from chartbook import snapshot
+
+        read = [snapshot.read(record) for record in records[:8]]
+        assert self._remembered() == [record.parent.parent.name for record in records[:8]]
+        assert all(snapshot.read(record) is taken for record, taken in zip(reversed(records[:8]), reversed(read)))
+        snapshot._read_snapshots.clear()
+        for record in records[:9]:
+            snapshot.read(record)
+        assert self._remembered() == [record.parent.parent.name for record in records[1:9]]
+        again = snapshot.read(records[0])  # read again, as it is now, and the second goes for it
+        assert again.made_at == LONG_AGO.format(0)
+        assert self._remembered() == [record.parent.parent.name for record in [*records[2:9], records[0]]]
+
+    def test_one_read_again_is_not_the_next_to_go(self, records):
+        from chartbook import snapshot
+
+        first = snapshot.read(records[0])
+        for record in records[1:8]:
+            snapshot.read(record)
+        assert snapshot.read(records[0]) is first  # the least recently read is now the second
+        snapshot.read(records[8])
+        assert records[1].parent.parent.name not in self._remembered()
+        assert snapshot.read(records[0]) is first and len(self._remembered()) == 8
+
+    def test_however_many_records_a_process_reads_it_holds_eight(self, records):
+        from chartbook import snapshot
+
+        for _ in range(3):
+            for record in records:
+                snapshot.read(record)
+                assert len(snapshot._read_snapshots) <= 8
+        assert len(snapshot._read_snapshots) == 8
+        assert snapshot.all_snapshots(FolderStore(records[0].parents[4])) and len(snapshot._read_snapshots) == 8
+
+    def test_a_record_the_store_removes_is_forgotten(self, tmp_path, store):
+        from chartbook import snapshot
+
+        scratch = tmp_path / "files"
+        first = _sized(FolderStore(store.root), scratch, {"a": b"a" * 100}, 0)
+        _sized(FolderStore(store.root), scratch, {"b": b"b" * 100}, 1, complete=True)
+        snapshot.read(first), store_module.read_kept_record(first)
+        assert str(first) in snapshot._read_snapshots and str(first) in store_module._read_records
+        _gc(store.root)
+        assert not first.exists()
+        assert str(first) not in store_module._read_records and str(first) not in snapshot._read_snapshots
+
+    def test_a_record_that_has_gone_is_forgotten_when_it_is_asked_for(self, records):
+        """Removed by other hands than the store's: asked for again, it is refused, and nothing of it is held."""
+        from chartbook import snapshot
+
+        snapshot.read(records[0])
+        os.chmod(records[0], 0o600)
+        records[0].unlink()
+        with pytest.raises(snapshot.SnapshotError):
+            snapshot.read(records[0])
+        assert self._remembered() == []
+
+
 class TestTheRowsLineReadsTheFolder:
     """The line a snapshot says of a dataframe's rows beside the snapshot before it (``60 new rows, through 2019-04-30; earlier rows unchanged``) was told by reading the new table back from the store: every file of it asked about and opened there, though the same bytes had been read and hashed in the pipeline's folder a moment before. It is told from the folder.
 
