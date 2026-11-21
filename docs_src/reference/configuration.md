@@ -542,7 +542,8 @@ A model in another pipeline is read the same way as its data: `models.path("fore
 $ chartbook snapshot
 ftsfr/rate_forecast at 4f2a91c: 1 asset(s) in the store
   model/rate_forecaster: new version 7f3a9c2e41b0
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 4 files, 2.4 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 ```
 
 **A version is named by the start of its content hash**, as git names a commit. The name is worked out from the model's bytes and nothing else, so it is the same on every machine and every branch, and two branches that each retrain never fight over a number.
@@ -564,7 +565,7 @@ Promoting a model is changing one line, in a pull request like any other. There 
 | `models.path("rate_forecaster")` | The file in your folder: what you are working on |
 | `models.path("rate_forecaster@7f3a9c2e41b0")` | That version, in the store. It never changes. For a model that is a folder, see the next row but one |
 | `models.path("rate_forecaster@champion")` | The version the label points at |
-| `assets.files("model/rate_forecaster@champion")`, `with assets.gathered("model/rate_forecaster@champion") as folder:` | A model that is a folder: its files, where the store keeps them (a bucket, and a store that ChartBook 0.5 laid out, keep each file once, so a version's may sit in several snapshot folders), or laid out in a temporary folder for a loader that takes a directory. `models.path` of such a model raises `NoSinglePathError` |
+| `assets.files("model/rate_forecaster@champion")`, `with assets.gathered("model/rate_forecaster@champion") as folder:` | A model that is a folder: its files, where the store keeps them (a bucket, and a store that ChartBook 0.5 laid out, keep each file once, and a snapshot kept as an increment keeps an unchanged file in the complete snapshot it builds on, so a version's may sit in several snapshot folders), or laid out in a temporary folder for a loader that takes a directory. `models.path` of such a model raises `NoSinglePathError` |
 | `models.versions("rate_forecaster")` | Every version, oldest first, each with its commit, its scores and what it was trained on |
 
 The same names work on a command line: `chartbook path model/rate_forecaster@champion`.

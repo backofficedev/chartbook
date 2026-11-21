@@ -87,10 +87,26 @@ class TestOnAFolderStore:
         if across:
             snapshot.make(news, store=store)
         _partition(news, 2024, [1, 2])  # the same bytes as 2023's file, and a file of its own all the same
-        snapshot.make(news, store=store)
+        # Complete: it is a complete snapshot's folder that holds each file at its own path (an increment is below)
+        snapshot.make(news, store=store, complete=True)
         assert lock.pin(reader, store).problems == []
         files = data.files("news:articles", project_dir=reader)
         assert [file.parent.name for file in files] == ["year=2023", "year=2024"] and len({file.parents[3] for file in files}) == 1
+        assert _years(reader) == ([2023, 2023, 2024, 2024], {2023: 2, 2024: 2})
+
+    def test_in_a_snapshot_kept_as_an_increment_the_two_are_one_file_and_keep_their_own_keys(self, tmp_path, store):
+        """The snapshot it builds on has 2023's file, and 2024's is the same bytes: kept there once, under 2023's name."""
+        news, reader = _pipelines(tmp_path.resolve())
+        _partition(news, 2023, [1, 2])
+        commit_pipeline(news)
+        first = snapshot.make(news, store=store)
+        _partition(news, 2024, [1, 2])
+        second = snapshot.make(news, store=store)
+        assert second.kept.increment and second.kept.builds_on == first.kept.folder.name
+        assert lock.pin(reader, store).problems == []
+        files = data.files("news:articles", project_dir=reader)
+        assert len(files) == 2 and {file.parent.name for file in files} == {"year=2023"}
+        assert {file.parents[3] for file in files} == {first.kept.folder}
         assert _years(reader) == ([2023, 2023, 2024, 2024], {2023: 2, 2024: 2})
 
     def test_a_dataset_whose_files_sit_at_their_own_paths_is_read_as_before(self, tmp_path, store):

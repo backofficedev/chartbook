@@ -1,9 +1,12 @@
 """Turn a folder store of this layout into one that keeps some snapshots as increments.
 
-Nothing in ChartBook makes an increment in ordinary use yet: a run writes
-every snapshot complete. What will make them first is ``chartbook store
-migrate``, for a store of 0.5, and this helper writes what that will have
-to write (``docs_src/design/snapshots-and-increments.md``, "An increment"):
+``chartbook snapshot`` keeps a snapshot as an increment where little
+changed, on a complete snapshot older than itself, and ``chartbook store
+migrate`` leaves a store of 0.5 with the newest complete and the older ones
+increments on it. This helper takes a store whose snapshots were each made
+complete (``snapshot.make(..., complete=True)``) and writes either shape,
+as the store itself writes an increment
+(``docs_src/design/snapshots-and-increments.md``, "An increment"):
 
 - the increment's folder is ``increments/<pipeline>/<snapshot>/``, and
   holds the files that the one complete snapshot it builds on does not

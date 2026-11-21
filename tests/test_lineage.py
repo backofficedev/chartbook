@@ -323,7 +323,8 @@ class TestWhatTheMaintainerAsked:
         fred, rates, forecast = chain
         (fred / "_data" / "series.parquet").unlink()
         pl.DataFrame({"d": ["2024-02-01"], "series": [2.0]}).write_parquet(fred / "_data" / "series.parquet")
-        snapshot.make(fred)
+        # Complete: as an increment it would build on the older one, which gc then keeps for it, lineage and all
+        snapshot.make(fred, complete=True)
         lock.update(rates)
         snapshot.make(rates)
         plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)

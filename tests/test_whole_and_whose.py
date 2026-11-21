@@ -1,8 +1,11 @@
 """Two things that are no longer one: "the store has these bytes" and "this snapshot has its file".
 
-Each snapshot holds its own copy of every file
+Each complete snapshot holds its own copy of every file
 (``docs_src/design/snapshots-and-increments.md``), so the same bytes sit in
-several folders, and in several pipelines'. Two principles settle what
+several folders, and in several pipelines'. (A snapshot kept as an
+increment keeps an unchanged file in the complete one it builds on; a test
+here that is of a snapshot's own copy makes it complete, ``_complete``.)
+Two principles settle what
 every question of the store means, after three reviews of the layout:
 
 - Whole is a snapshot's own files, each where its record says it is. Where
@@ -108,6 +111,24 @@ def _reader(folder: Path, key: str, path: str) -> Path:
 
 def _folder_of(taken) -> Path:
     return Path(taken.path).parent.parent
+
+
+def _where(store, taken, asset: str, name: str) -> Path:
+    """Where the store keeps the one file of a snapshot's asset, asked of the store: its own folder, or, for one kept as an increment, the complete snapshot it builds on."""
+    held = FolderStore(store.root).files(taken.content()[asset], taken.pipeline, name=name, snapshot=(taken.commit, taken.made_at))
+    return held.one.location
+
+
+def _complete(folder: Path, store, made_at: str):
+    """Make a snapshot that is complete, with its own copy of every file.
+
+    For a test of a snapshot's own copy of a file an earlier one has too
+    (lost, damaged, or the one a read is handed), or of an older snapshot
+    going, which gc keeps while an increment that stays builds on it. Left
+    to itself the store keeps a later snapshot where little changed as an
+    increment (``tests/test_increments.py``).
+    """
+    return snapshot.make(folder, store=FolderStore(store.root), made_at=made_at, complete=True)
 
 
 def _lose(path: Path) -> None:
@@ -238,7 +259,8 @@ class TestAReadStopsAtItsPipeline:
 class TestAVersionPinnedByItsLabel:
     """gc keeps, for a label a lockfile pins, the newest snapshot of the pipeline holding the version: the copy the read is handed."""
 
-    def test_the_read_is_handed_the_copy_gc_keeps_for_it(self, work, store):
+    @pytest.mark.parametrize("complete", [True, False], ids=["kept complete", "kept as an increment"])
+    def test_the_read_is_handed_the_copy_gc_keeps_for_it(self, work, store, complete):
         forecast = work / "forecast"
         (forecast / "_models").mkdir(parents=True)
         (forecast / "README.md").write_text("# Forecast\n", encoding="utf-8", newline="\n")
@@ -259,7 +281,9 @@ class TestAVersionPinnedByItsLabel:
         ((_, version),) = first.new_versions
         (forecast / "README.md").write_text("# Forecast, a word more\n", encoding="utf-8", newline="\n")
         _commit(forecast)
-        second = snapshot.make(forecast, store=FolderStore(store.root), made_at=OLD)  # holds the first version again
+        # Holds the first version again: in its own folder, or, kept as an increment on the first, in the first one's
+        second = snapshot.make(forecast, store=FolderStore(store.root), made_at=OLD, complete=complete)
+        assert second.kept.increment is not complete
         (forecast / "_models" / "m.json").write_bytes(b"weights-2")
         manifest({"champion": version})
         _commit(forecast)
@@ -271,11 +295,14 @@ class TestAVersionPinnedByItsLabel:
         _commit(forecast)
         assert snapshot.make(forecast, store=FolderStore(store.root), made_at=NOW).made
         before = models.path("forecast:m@champion", project_dir=serve)
-        assert before == _folder_of(second.snapshot) / "_models" / "m.json" and before.read_bytes() == b"weights-1"
+        # Where the second, the newest that holds the version, keeps it
+        assert before == _where(store, second.snapshot, "model/m", "m.json") and before.read_bytes() == b"weights-1"
+        assert before.is_relative_to(_folder_of(second.snapshot) if complete else _folder_of(first.snapshot))
         assert models.path(f"forecast:m@{version}", project_dir=serve) == before
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.exit_code == 0, result.output
-        assert not _folder_of(first.snapshot).exists()  # the older holder went
+        # The older holder went, where the second has its own copy; it stays where the second builds on it
+        assert _folder_of(first.snapshot).exists() is not complete
         assert before.exists() and models.path("forecast:m@champion", project_dir=serve) == before
 
 
@@ -329,7 +356,9 @@ class TestASnapshotSentToTwoStores:
         table = _folder_of(old) / "_data" / "treasury.parquet"
         kept = table.read_bytes()
         _lose(table)  # the first store's copy lacks its table, so the next run makes a new one, whole in both
-        assert snapshot.make(rates, **self._both(store, there), made_at=NOW).made
+        # Complete in each: the second store, where the older one is whole, would keep it as an increment on that
+        # one, and what follows takes away the newer one's own copy of the table there
+        assert snapshot.make(rates, **self._both(store, there), made_at=NOW, complete=True).made
         table.write_bytes(kept)  # the sync brings it after all: the older one is whole in both again
         store_module._found_whole.clear()
         (newer,) = [taken for taken in snapshot.all_snapshots(FolderStore(there)) if taken.made_at == NOW]
@@ -339,7 +368,7 @@ class TestASnapshotSentToTwoStores:
         assert [len(snapshot.all_snapshots(FolderStore(root))) for root in (store.root, there)] == [2, 2]
 
     def test_only_a_store_the_run_writes_to_is_asked_and_once(self, rates, store, holed, monkeypatch):
-        """With one store nothing else is asked; each other store costs one `find` and one `holes_of`."""
+        """With one store nothing else is asked; each other store costs one `find` and one `holes_of`, and one more `holes_of` where a snapshot is then made: of the complete snapshot there that it could be an increment on."""
         _, there = holed
         asked: list = []
         find, holes_of = snapshot.find, FolderStore.holes_of
@@ -362,7 +391,8 @@ class TestASnapshotSentToTwoStores:
             assert asked.count(("holes_of", here)) == 1 and not [what for what, where in asked if where == second]
         asked.clear()
         assert snapshot.make(rates, **self._both(store, there), made_at=LATER).made
-        assert [what for what, where in asked if where == second] == ["find", "holes_of"]
+        # Whether the one stood on is whole there; and then, for the new one, whether the one it could build on there is
+        assert [what for what, where in asked if where == second] == ["find", "holes_of", "holes_of"]
 
     def test_the_line_names_the_other_store_and_the_file(self, rates, work, store, monkeypatch):
         from chartbook.cli import _when
@@ -464,12 +494,12 @@ class TestTheWayOutGcNames:
     def test_one_a_tag_keeps_is_not_said_to_be_pinned(self, rates, store):
         snapshot.make(rates, store=store, made_at=OLDER)
         _chart(rates, "two")
-        tagged = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
+        tagged = _complete(rates, store, OLD).snapshot  # with a table of its own, to lose
         _git(rates, "tag", "v1")
         (rates / "README.md").write_text("# Rates, on\n", encoding="utf-8", newline="\n")
         _commit(rates)
         _table(rates, 4)
-        snapshot.make(rates, store=FolderStore(store.root), made_at=NOW)
+        _complete(rates, store, NOW)  # which the tagged one is then not kept for
         _lose(_folder_of(tagged) / "_data" / "treasury.parquet")
         result = CliRunner().invoke(main, ["store", "gc", "--yes", "--forget-missing"])
         assert result.exit_code == 0, result.output
@@ -514,7 +544,7 @@ class TestTheWayOutGcNames:
             "a lockfile pins it": "once no lockfile pins it",
             "a lockfile that cannot be found pins it": "--forget-missing",
             "a lockfile not read here, another machine's, pins it": "that machine's lockfile",
-            "it is the newest of its pipeline": "`chartbook run` in its folder",
+            "it is the newest of its pipeline": "`chartbook snapshot` in its folder",
             "it is the newest a branch or tag can pin from": "--aggressive",
             "a label points at a version in it": "--aggressive",
             "it holds a version of 7, which is kept (`keep = true` in its chartbook.toml)": "the mark `keep = true` is taken out of",
@@ -537,11 +567,11 @@ class TestTheWayOutGcNames:
         """Three snapshots of rates: one old enough to go, one a reader pins, which has lost its table for good, and a newer one."""
         snapshot.make(rates, store=store, made_at=OLDER)
         _chart(rates, "two")
-        pinned = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
+        pinned = _complete(rates, store, OLD).snapshot  # with a table of its own, to lose
         reader = _reader(work / "reader", "acme/rates", "../rates")
         assert lock.pin(reader, FolderStore(store.root)).problems == []
         _chart(rates, "three")
-        snapshot.make(rates, store=FolderStore(store.root), made_at=OLDISH)
+        _complete(rates, store, OLDISH)  # which the pinned one is then not kept for
         _lose(_folder_of(pinned) / "_data" / "treasury.parquet")
         return pinned, reader
 
@@ -584,7 +614,9 @@ class TestTheWayOutGcNames:
         _commit(rates, "Kept")
         snapshot.make(rates, store=store, made_at=OLDER)
         _chart(rates, "two")
-        snapshot.make(rates, store=FolderStore(store.root), made_at=OLD)
+        # Complete: the newest that holds the first version of the table, with a copy of its own to lose; and the
+        # one before it is then one gc would remove, which is what gc speaks of
+        _complete(rates, store, OLD)
         _table(rates, 4)
         snapshot.make(rates, store=FolderStore(store.root), made_at=OLDISH)
         _table(rates, 5)
@@ -595,7 +627,7 @@ class TestTheWayOutGcNames:
             CliRunner().invoke(main, ["store", "gc", "--yes"]), holed,
             "it holds a version of treasury, which is kept (`keep = true` in its chartbook.toml)",
             "once the mark `keep = true` is taken out of its pipeline's chartbook.toml, that is committed, and a snapshot "
-            "is made since (`chartbook run` in its folder)",
+            "is made since (`chartbook snapshot` in its folder)",
         )
         del raw["dataframes"]["treasury"]["keep"]
         (rates / "chartbook.toml").write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
@@ -608,11 +640,11 @@ class TestTheWayOutGcNames:
     def test_the_newest_goes_once_a_newer_one_is_made(self, rates, store):
         snapshot.make(rates, store=store, made_at=OLDER)
         _chart(rates, "two")
-        newest = snapshot.make(rates, store=FolderStore(store.root), made_at=OLD).snapshot
+        newest = _complete(rates, store, OLD).snapshot  # with a table of its own, to lose
         _lose(_folder_of(newest) / "_data" / "treasury.parquet")
         self._said(
             CliRunner().invoke(main, ["store", "gc", "--yes"]), newest, "it is the newest of its pipeline",
-            "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it",
+            "once a newer snapshot of its pipeline is made (`chartbook snapshot` in its folder) and nothing else keeps it",
         )
         _table(rates, 4)
         assert snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).made  # the way out, carried out
@@ -678,7 +710,7 @@ class TestWhatGcSaysItFreed:
         first = snapshot.make(rates, store=store, made_at=OLD).snapshot
         (rates / "README.md").write_text("# Rates, on\n", encoding="utf-8", newline="\n")
         _commit(rates, "A README")
-        second = snapshot.make(rates, store=FolderStore(store.root), made_at=NOW).snapshot
+        second = _complete(rates, store, NOW).snapshot  # which the first is then not kept for
         _lose(_folder_of(first) / "_chartbook" / "index.json")  # the first's own index: no other snapshot has it
         result = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert result.exit_code == 0, result.output
@@ -892,7 +924,7 @@ class TestGcReadsTheCopyAReadIsLeftWith:
             f"it is the newest of its pipeline.",
             "  If a sync is still bringing it, wait for the sync to finish. `chartbook store verify` lists everything "
             "missing. If it is lost for good, that snapshot goes once a newer snapshot of its pipeline is made "
-            "(`chartbook run` in its folder) and nothing else keeps it.",
+            "(`chartbook snapshot` in its folder) and nothing else keeps it.",
         ]
         for typed in (["store", "gc", "--dry-run"], ["store", "gc", "--yes"]):
             result = CliRunner().invoke(main, typed)
@@ -960,7 +992,7 @@ class TestGcReadsTheCopyAReadIsLeftWith:
         assert lock.pin(two, FolderStore(store.root)).problems == []  # pins the owner's snapshot by its name
         (upstream / "README.md").write_text("# Upstream, on\n", encoding="utf-8", newline="\n")
         _commit(upstream, "A word more")
-        newest = snapshot.make(upstream, store=FolderStore(store.root), made_at=OLDISH).snapshot
+        newest = _complete(upstream, store, OLDISH).snapshot  # with its own copy of the table, which stays intact
         damaged = _folder_of(owners) / "data" / "steady.parquet"  # the older one that stays, pinned by name; the newest is intact
         os.chmod(damaged, stat.S_IWRITE | stat.S_IREAD)
         damaged.write_bytes(bytes(len(good)))

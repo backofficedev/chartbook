@@ -39,6 +39,7 @@ from chartbook.store import (
     EarlierLayoutError,
     FolderStore,
     KeptRecord,
+    PathTooLongError,
     Store,
     StoreError,
     INCREMENTS_DIR,
@@ -99,7 +100,7 @@ def _pipeline_folders(source: Path) -> list[Path]:
 
 
 def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[str], None] = lambda line: None) -> Copied:
-    """Copy snapshots, each by its record, into a store: oldest first, each complete, every byte checked.
+    """Copy snapshots, each by its record, into a store: each complete one, oldest first, then the increments on it, which keep their form and carry no count; every byte checked.
 
     A snapshot the store has already (its pipeline, commit and time) is not
     copied again. One whose file is not what its record says, or whose
@@ -165,22 +166,27 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
         try:
             on = _builds_on_there(record, into, whole)  # it keeps its form on a complete one found whole in this run
             counted = done.size_bytes
+            # It carries no count of what the increments on that snapshot have added up to: that is of what snapshots
+            # made in this store copied, and the next one made here counts from what its own increments carry
             pending = into.begin(record.pipeline, record.commit, record.made_at, **({"builds_on": on} if on is not None else {}))
-            why = _copy_parts(document, record, pending, done)
-            if why is None:
-                try:
+            try:
+                why = _copy_parts(document, record, pending, done)
+                if why is None:
                     written = pending.write(document)
                     if on is None:
                         whole.add(str(written))  # written in this run, each file hashed as it was written
-                except BuiltOnGoneError:
-                    # What it builds on went from the store meanwhile: written complete, every file being at hand
-                    pending.discard()
-                    pending = into.begin(record.pipeline, record.commit, record.made_at)
-                    done.size_bytes = counted  # what the increment had counted is counted once
-                    document = json.loads(record.path.read_text(encoding="utf-8"))
-                    why = _copy_parts(document, record, pending, done)
-                    if why is None:
-                        pending.write(document)
+            except (BuiltOnGoneError, PathTooLongError):
+                if on is None:
+                    raise  # it does not fit complete either
+                # What it builds on went from the store meanwhile, or a file of its own does not fit under
+                # increments/, one letter longer than snapshots/: written complete, every file being at hand
+                pending.discard()
+                pending = into.begin(record.pipeline, record.commit, record.made_at)
+                done.size_bytes = counted  # what the increment had counted is counted once
+                document = json.loads(record.path.read_text(encoding="utf-8"))
+                why = _copy_parts(document, record, pending, done)
+                if why is None:
+                    pending.write(document)
         except (OSError, ValueError, StoreError) as error:
             why = str(error) or type(error).__name__
         except BaseException:
@@ -211,7 +217,8 @@ def _builds_on_there(record: KeptRecord, into: Store, whole: set) -> Optional[st
     source = record.folder.parent.parent.parent / V3_LAYOUT.pipelines / record.folder.parent.name / record.builds_on / OWN_DIR / RECORD_FILE
     on = read_kept_record(source) if os.path.isfile(_any_length(source)) else None
     for kept in into.records():
-        if not kept.readable or kept.increment or kept.pipeline != record.pipeline:
+        # A complete one by what its record is: not one that keeps files in other folders (0.5's kind, copied in by hand)
+        if not kept.complete or kept.pipeline != record.pipeline:
             continue
         same = (kept.commit, kept.made_at) == (on.commit, on.made_at) if on is not None and on.readable else kept.folder.name == record.builds_on
         if same:

@@ -157,7 +157,8 @@ class TestWhatTheStoreKeeps:
         _write(costly, "embeddings", b"emb-3")
         third = snapshot.make(costly, made_at=OLD).snapshot
         _write(costly, "summary", b"sum-2")
-        fourth = snapshot.make(costly, made_at=LESS_OLD).snapshot
+        # Complete, with its own copy of the third version: the third is then built on by nothing, and is one gc removes
+        fourth = snapshot.make(costly, made_at=LESS_OLD, complete=True).snapshot
         return first, second, third, fourth
 
     def test_every_version_is_kept_each_in_the_newest_snapshot_holding_it(self, versions):

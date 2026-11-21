@@ -3,8 +3,11 @@
 An increment is a snapshot of its pipeline like any other: its folder is
 ``increments/<pipeline>/<snapshot>/``, it holds the files that one complete
 snapshot of the pipeline does not have, and its record says where each of
-its files is, in one of the two folders. Nothing in ordinary use makes one
-yet; ``tests/increments.py`` writes what ``chartbook store migrate`` will.
+its files is, in one of the two folders. ``chartbook snapshot`` makes one
+where little changed (``tests/test_snapshot_decides.py``), on a complete
+snapshot older than itself; ``chartbook store migrate`` leaves them on a
+newer one. Here the snapshots are made complete, and
+``tests/increments.py`` keeps them in the one shape or the other.
 
 Each thing here is asked of a store in both shapes: an older complete
 snapshot with later increments on it, and the newest complete with the
@@ -116,12 +119,17 @@ def _reader(folder: Path) -> Path:
 
 @pytest.fixture
 def three(rates, work, store):
-    """Three snapshots of rates, each with a part more and another chart; a reader pinned to each of them. The snapshots, oldest first, and the readers."""
+    """Three snapshots of rates, each with a part more and another chart; a reader pinned to each of them. The snapshots, oldest first, and the readers.
+
+    Each complete: ``tests/increments.py`` then keeps all but one as
+    increments, in the shape a test asks for, and the shape a migrate
+    leaves (the newest complete) is one that making snapshots never gives.
+    """
     taken, readers = [], []
     for number, (made_at, year, text) in enumerate(((OLDER, 2020, "one"), (OLD, 2021, "two"), (OLDISH, 2022, "three"))):
         _part(rates, year)
         _chart(rates, text)
-        taken.append(snapshot.make(rates, store=FolderStore(store.root), made_at=made_at).snapshot)
+        taken.append(snapshot.make(rates, store=FolderStore(store.root), made_at=made_at, complete=True).snapshot)
         readers.append(_reader(work / f"reader{number}"))
         assert lock.pin(readers[-1], FolderStore(store.root)).problems == []
     return taken, readers
@@ -181,12 +189,12 @@ class TestReads:
 
 @pytest.fixture
 def unpinned(rates, store):
-    """Three snapshots of rates that nothing pins, each with a part more and another chart, all older than a week; oldest first."""
+    """Three snapshots of rates that nothing pins, each with a part more and another chart, all older than a week; oldest first. Each complete, for ``tests/increments.py`` to keep in one shape or the other (see ``three``)."""
     taken = []
     for made_at, year, text in ((OLDER, 2020, "one"), (OLD, 2021, "two"), (OLDISH, 2022, "three")):
         _part(rates, year)
         _chart(rates, text)
-        taken.append(snapshot.make(rates, store=FolderStore(store.root), made_at=made_at).snapshot)
+        taken.append(snapshot.make(rates, store=FolderStore(store.root), made_at=made_at, complete=True).snapshot)
     return taken
 
 
@@ -308,7 +316,10 @@ class TestDamaged:
         fresh = FolderStore(store.root)
         for folder in (complete, *increments):  # a hole of each snapshot that keeps the table there
             assert fresh.holes_of(folder / "_chartbook" / "snapshot.json") == ["_data/treasury.parquet"]
-        assert [problem.message for problem in fresh.verify()] == [f"_data/treasury.parquet is not in the store (the snapshot {complete.name})"]
+        # Said once, with the snapshot whose folder it is missing from, and how many snapshots kept as increments keep it there
+        assert [problem.message for problem in fresh.verify()] == [
+            f"_data/treasury.parquet is not in the store (the snapshot {complete.name}), and 2 snapshots kept as increments on it keep it there"
+        ]
         for reader in readers:
             with pytest.raises(AssetNotPinnedError) as refused:
                 data.path("acme/rates:treasury", project_dir=reader)
@@ -349,7 +360,8 @@ class TestDamaged:
             (problem,) = fresh.verify_snapshot(folder / "_chartbook" / "snapshot.json")
             assert problem.message.startswith("_data/treasury.parquet is no longer what its record says")
         (said,) = [problem.message for problem in fresh.verify()]
-        assert said.startswith("_data/treasury.parquet is no longer what its record says") and said.endswith(f"(the snapshot {complete.name})")
+        assert said.startswith("_data/treasury.parquet is no longer what its record says")
+        assert said.endswith(f"(the snapshot {complete.name}), and 2 snapshots kept as increments on it keep it there")
 
 
 def _form(root: Path) -> list:
@@ -478,8 +490,8 @@ class TestTheRestOfWhatReadsTheStore:
         assert not report.made and report.snapshot.made_at == taken[-1].made_at and report.not_whole is None
         assert _files(store.root) == before  # nothing is written into a recorded snapshot of either kind
 
-    def test_where_the_newest_lacks_a_file_a_run_makes_a_new_complete_snapshot(self, kept, rates, store):
-        """Rule A, unchanged: the one with the hole is left as it is, and the new one is complete, under snapshots/."""
+    def test_where_the_newest_lacks_a_file_a_run_makes_a_new_snapshot_that_is_whole(self, kept, rates, store):
+        """Rule A, unchanged: the one with the hole is left as it is, and a new one is made, whole. Which kind it is, the rule of adding up says."""
         complete, increments, taken, _ = kept
         newest = _folder_of(taken[-1])
         newest = next(folder for folder in (complete, *increments) if folder.name == newest.name)
@@ -487,10 +499,17 @@ class TestTheRestOfWhatReadsTheStore:
         report = snapshot.make(rates, store=FolderStore(store.root), made_at="2026-03-01T09:15:00.000000Z")
         assert report.made and report.not_whole[1] == ["_output/curve.html"]
         made = _folder_of(report.snapshot)
-        assert made.parent == store.root / "snapshots" / "acme+rates" and not (newest / "_output" / "curve.html").exists()
+        assert not (newest / "_output" / "curve.html").exists()
         fresh = FolderStore(store.root)
         assert fresh.holes_of(report.snapshot.path) == [] and fresh.verify_snapshot(report.snapshot.path) == []
-        assert not fresh.builds_on(report.snapshot.path) and (made / "_data" / "treasury.parquet").is_file()
+        if newest == complete:
+            # The complete one is the one with the hole, and is not built on: the new one is complete, under snapshots/
+            assert made.parent == store.root / "snapshots" / "acme+rates" and not fresh.builds_on(report.snapshot.path)
+            assert (made / "_data" / "treasury.parquet").is_file()
+        else:
+            # An increment has the hole, and the complete one is whole: the new one is an increment on it, with a chart of its own
+            assert made.parent == store.root / "increments" / "acme+rates" and (made / "_output" / "curve.html").is_file()
+            assert fresh.builds_on(report.snapshot.path) == complete / "_chartbook" / "snapshot.json"
 
 
 class TestGcOnWhatAnIncrementKeeps:
@@ -512,7 +531,7 @@ class TestGcOnWhatAnIncrementKeeps:
         monkeypatch.setattr(FolderStore, "age_of", lambda self, content_hash, now=None: 2.0 * lock.RECENT_SECONDS)
         # A fourth snapshot of the same commit that nothing pins and is old: it goes, and holds the table the readers pin
         _chart(work / "rates", "four")
-        snapshot.make(work / "rates", store=FolderStore(store.root), made_at="2025-11-01T09:15:00.000000Z")
+        snapshot.make(work / "rates", store=FolderStore(store.root), made_at="2025-11-01T09:15:00.000000Z", complete=True)  # as the three
         complete, increments = with_increments(store.root, "newest")["acme+rates"]
         opened: list = []
         real = store_module.hashing.HashCache.file_hex
@@ -537,7 +556,7 @@ class TestGcOnWhatAnIncrementKeeps:
 
 class TestARunThatWritesToTwoStores:
     def test_an_increment_with_a_hole_in_the_second_store_is_not_stood_on(self, unpinned, work, store):
-        """The two-store rule asks an increment's holes like any other's: a new complete snapshot is made, whole in both."""
+        """The two-store rule asks an increment's holes like any other's: a new snapshot is made, whole in both, and each store keeps it as it decides."""
         import shutil
 
         from chartbook.multi_store import NamedStore, Stores
@@ -554,7 +573,10 @@ class TestARunThatWritesToTwoStores:
         report = snapshot.make(work / "rates", store=both, store_names=["here", "there"], made_at="2026-03-01T09:15:00.000000Z")
         assert report.made and report.not_whole[1] == ["_output/curve.html"] and str(report.not_whole[2]) == str(FolderStore(there))
         (new,) = [record for record in FolderStore(there).records() if record.made_at == "2026-03-01T09:15:00.000000Z"]
-        assert not new.increment and FolderStore(there).verify_snapshot(new.path) == []
+        # There it is an increment on the one complete snapshot, with a chart of its own; the one with the hole is as it was
+        assert new.increment and new.builds_on == complete.name and (new.folder / "_output" / "curve.html").is_file()
+        assert FolderStore(there).verify_snapshot(new.path) == [] and not (newest / "_output" / "curve.html").exists()
+        assert FolderStore(store.root).verify_snapshot(report.snapshot.path) == []
 
 
 class TestAPathUnderIncrementsThatIsTooLong:

@@ -1,9 +1,12 @@
 """What the store says of its snapshots: a README in each pipeline's folder, `store ls`, and a gc reminder.
 
 ``docs_src/design/plan-data-reads.md``, step 4, where a snapshot was
-standalone or shared. A store of this version holds each snapshot complete
-(``docs_src/design/snapshots-and-increments.md``), and says so; the earlier
-words are those of a store ChartBook 0.5 laid out, which is read as it is.
+standalone or shared. A store of this version holds a snapshot complete or
+as an increment (``docs_src/design/snapshots-and-increments.md``), and says
+which; the earlier words are those of a store ChartBook 0.5 laid out, which
+is read as it is. `store gc` keeps a complete snapshot while an increment
+that stays builds on it, so a test here that wants an old snapshot to be
+one gc would clear makes the one after it complete.
 """
 
 import re
@@ -69,7 +72,7 @@ class TestTheReadme:
 
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")
         _write_year(news, 2024, [3])
-        snapshot.make(news, store=store)
+        snapshot.make(news, store=store, complete=True)  # complete, so that the old one is built on by nothing and gc removes it
         plan = lock.plan_gc(store, keep_days=0)
         assert plan.snapshots_delete
         lock.run_gc(plan, store)
@@ -80,7 +83,7 @@ class TestStoreLs:
     def test_complete_and_complete(self, news, store):
         first = snapshot.make(news, store=store).snapshot
         _write_year(news, 2024, [3])
-        second = snapshot.make(news, store=store).snapshot
+        second = snapshot.make(news, store=store, complete=True).snapshot  # complete: this is of the line of a complete one
         result = CliRunner().invoke(main, ["store", "ls"])
         assert result.exit_code == 0, result.output
         lines = [line for line in result.output.splitlines() if line.startswith("  20")]
@@ -133,7 +136,7 @@ class TestTheGcReminder:
     def test_after_a_snapshot_when_gc_would_clear_one(self, news, store, monkeypatch):
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")  # old, and soon not the newest
         _write_year(news, 2024, [3])
-        snapshot.make(news, store=store)
+        snapshot.make(news, store=store, complete=True)  # complete, so that the old one is built on by nothing and is one gc would clear
         _write_year(news, 2025, [4])
         result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news)])
         assert result.exit_code == 0, result.output
@@ -171,7 +174,7 @@ class TestTheGcReminder:
     def test_store_info_says_it_too(self, news, store):
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")
         _write_year(news, 2024, [3])
-        snapshot.make(news, store=store)
+        snapshot.make(news, store=store, complete=True)  # complete: the old one is then one gc would clear
         result = CliRunner().invoke(main, ["store", "info"])
         assert result.exit_code == 0, result.output
         assert "`chartbook store gc` would clear 1 snapshot(s), freeing" in result.output
@@ -194,7 +197,7 @@ class TestWithACatalogOfStores:
     def test_the_reminder_names_the_store_gc_would_clear(self, news, store, catalog, capsys):
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")
         _write_year(news, 2024, [3])
-        snapshot.make(news, store=store)
+        snapshot.make(news, store=store, complete=True)  # complete: the old one is then one gc would clear
         _write_year(news, 2025, [4])
         snapshot.make(news, store=store)
         result = CliRunner().invoke(main, ["run", "--help"])

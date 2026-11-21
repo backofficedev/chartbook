@@ -3359,8 +3359,13 @@ def _add_dependency(project_dir, pipeline, key=None, commit=None):
     help="Also refuse if any snapshot upstream has a gap in its own lineage (see `chartbook lineage`)",
 )
 @click.option("--store", "store_names", multiple=True, help="Write to this catalog store (repeat for several)")
+@click.option(
+    "--complete",
+    is_flag=True,
+    help="Keep this snapshot complete: every file of it in one folder of the store, which is named. Without it the store may keep one as an increment, with only the files that changed",
+)
 @click.option("--no-gc-reminder", is_flag=True, help="Do not say what `chartbook store gc` would clear")
-def snapshot(project_dir, deep, store_names, no_gc_reminder):
+def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
     """Declare this pipeline's build ready for the pipelines that depend on it.
 
     Every asset the pipeline declares and has built is copied into the
@@ -3385,10 +3390,20 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     however many you make after it. It gets a newer one with
     `chartbook pin --update`, and not before.
 
+    Where little has changed since an earlier snapshot, the store keeps
+    this one in less room, as an increment: its folder there holds only
+    the files that differ. To whatever reads or pins it, it is a snapshot
+    like any other. --complete keeps it complete, a folder that stands by
+    itself and can be copied as it is, and says where that folder is. A
+    complete one of the same files that is there already is named only
+    once each of its files has been read and found to be what its record
+    says; otherwise a new one is made.
+
     \b
     Examples:
         chartbook snapshot
         chartbook snapshot --project-dir ../fed_yield_curve
+        chartbook snapshot --complete
     """
     from chartbook import snapshot as snapshots
     from chartbook.store import ReadOnlyStoreError, StoreError
@@ -3397,9 +3412,13 @@ def snapshot(project_dir, deep, store_names, no_gc_reminder):
     here = _in_its_folder(project_dir)
     _refuse_a_folder_spelled_otherwise(project_dir, "chartbook snapshot")
     try:
-        report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None)
+        report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None, complete=complete)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        said = _explain_os_error(e)
+        if isinstance(e, snapshots.NothingToSnapshot) and here:
+            # The command it names builds this pipeline from wherever the snapshot was typed
+            said = said.replace("Build it first: `chartbook run`.", f"Build it first: `chartbook run{here}`.")
+        click.echo(click.style("Error: ", fg="red", bold=True) + said, err=True)
         # Nothing of it is there to take: each thing, and why, since the run that built it said only
         # that this command makes a snapshot. A reason may run to several lines (an engine's own
         # message): its first says it
@@ -3632,6 +3651,11 @@ def lineage_command(project_dir, check, rehash, as_json):
     is_flag=True,
     help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin, its own first; each must be trusted and committed",
 )
+@click.option(
+    "--complete",
+    is_flag=True,
+    help="With --snapshot: keep the snapshot complete, every file of it in one folder of the store, as `chartbook snapshot --complete` does",
+)
 @click.option("--no-gc-reminder", is_flag=True, help="After a snapshot, do not say what `chartbook store gc` would clear")
 @click.option(
     "--check",
@@ -3654,7 +3678,7 @@ def lineage_command(project_dir, check, rehash, as_json):
     default=None,
     help="With --check: check required fields against the [policy] of this catalog (its catalog.toml, or its folder) instead of the pipeline's own",
 )
-def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder, check_only, within_days, policy_path):
+def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, complete, no_gc_reminder, check_only, within_days, policy_path):
     """Build this pipeline: pin what it reads, run its build, look for what it made.
 
     \b
@@ -3697,7 +3721,8 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     but chartbook.lock, which its own pin is about to write, and where the
     catalog says the store its snapshot goes to may only be read; and it
     fails where no snapshot can be made. Its snapshot records that the
-    build ran in the same command.
+    build ran in the same command. With --complete the snapshot is kept
+    complete, as `chartbook snapshot --complete` keeps one.
 
     \b
     Examples:
@@ -3705,6 +3730,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         chartbook run test
         chartbook run --force
         chartbook run --snapshot
+        chartbook run --snapshot --complete
         chartbook run --frozen
         chartbook run --upstream
         chartbook run --check
@@ -3746,7 +3772,8 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         with_it = [
             name for name, given in (
                 (f"a script ({script})", script != "build"), ("--force", force), ("--snapshot", make_snapshot),
-                ("--frozen", frozen), ("--remake", remake), ("--upstream", upstream), ("--no-gc-reminder", no_gc_reminder),
+                ("--frozen", frozen), ("--remake", remake), ("--upstream", upstream), ("--complete", complete),
+                ("--no-gc-reminder", no_gc_reminder),
             ) if given
         ]
         if with_it:
@@ -3756,6 +3783,9 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         return _check_pipeline(project_dir, 30 if within_days is None else within_days, policy_path)
     if within_days is not None or policy_path is not None:
         raise click.UsageError("--within and --policy go with --check: `chartbook run --check --within 90`.")
+    if complete and not make_snapshot:
+        # A run makes no snapshot unless it is asked for one, so there is none to keep complete
+        raise click.UsageError("--complete goes with --snapshot: `chartbook run --snapshot --complete`.")
     project_dir = resolve_project_dir(project_dir)
     if _is_catalog_folder(project_dir):
         raise click.ClickException("A catalog lists stored snapshots. Run `chartbook run` in a pipeline, or orchestrate pipelines with doit.")
@@ -3777,6 +3807,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         remake=remake,
         upstream=upstream,
         no_gc_reminder=no_gc_reminder,
+        complete=complete,
     )
 
 
@@ -3856,20 +3887,51 @@ def _echo_snapshot(report, upstream=False):
             f"'_' and '-', does not read as a hash, and names a version by twelve or more "
             f"of its digits; `chartbook run --check` says the same."
         )
-    if report.made and upstream:
-        click.echo("Snapshot made, for what depends on it in this run to pin.")
-    elif report.made:
-        click.echo(
-            "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook pin --update`."
-        )
+    kept = getattr(report, "kept", None)
+    if report.made:
+        # How the store keeps it, as the report has it: complete, or as an increment on an earlier one
+        how, sizes, rest = _kept_said(kept)
+        made = f"Snapshot made{', kept ' + how if kept is not None and kept.increment else ''}{': ' + sizes if sizes else ''}"
+        click.echo(f"{made}, for what depends on it in this run to pin.{rest}" if upstream else f"{made}.{rest}")
     else:
         click.echo(
             f"No new snapshot: the same bytes and the same pins as the one made {_when(taken.made_at)}."
         )
+    if getattr(report, "asked_complete", False) and kept is not None and kept.folder is not None:
+        # Asked for a complete one, to look at or to hand on: where it is
+        click.echo(f"  {_printable(kept.folder)}")
+    elif report.made and not upstream:
+        click.echo("A pipeline that depends on this one gets it with `chartbook pin --update`.")
+    for name, other in getattr(report, "kept_otherwise", ()):
+        # Each store decides for itself: one that keeps it the other way is named
+        how, sizes, rest = _kept_said(other)
+        click.echo(f"Store {_printable(name)} keeps it {how}: {sizes}.{rest}")
 
     if getattr(report, "stores", None) and getattr(report, "several", False):
         click.echo("Stores: " + ", ".join(report.stores))
+
+
+def _kept_said(kept) -> tuple:
+    """How a store keeps a snapshot (:class:`chartbook.snapshot.Kept`), in the words of the lines that say one was made: how, its files and their size, and the sentence that follows.
+
+    ``("complete", "5 files, 23.0 MB", "")``, or ``("as an increment", "2
+    of 5 files, 409.6 KB", " The rest is in the snapshot made 2026-11-16
+    09:15 UTC.")``. A count of files is of the files the record lists.
+    Where the record of what an increment builds on could not be read for
+    its time, no blank date is printed: "The rest is in the snapshot it
+    builds on."
+    """
+    if kept is None:
+        return "", "", ""
+    files = "1 file" if kept.files == 1 else f"{kept.files} files"
+    if kept.increment:
+        rest = f"made {_when(kept.rest_made_at)}" if kept.rest_made_at else "it builds on"
+        return (
+            "as an increment", f"{kept.own_files} of {files}, {_format_bytes(kept.own_bytes)}",
+            f" The rest is in the snapshot {rest}.",
+        )
+    added_up = " The increments since the last complete one had added up to its size." if kept.added_up else ""
+    return "complete", f"{files}, {_format_bytes(kept.size_bytes)}", added_up
 
 
 def _offer_to_add(project_dir, report, strict, frozen, added):
@@ -3950,12 +4012,13 @@ def _in_its_folder(folder) -> str:
 
 def _run_script(
     project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
-    upstream=False, no_gc_reminder=False, added=(),
+    upstream=False, no_gc_reminder=False, added=(), complete=False,
 ):
     """Run a named script as `chartbook run` does; exit with its code if it fails.
 
     :param added: The dependencies this command has added to the manifest
         at the person's yes (:func:`_offer_to_add`), before running again.
+    :param complete: With *snapshot*: keep the snapshot complete (``--complete``).
     """
     from chartbook import lock
     from chartbook import run as runner
@@ -3996,6 +4059,7 @@ def _run_script(
             remake=remake,
             remake_command=remake_command,
             upstream=upstream,
+            complete=complete,
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
@@ -4009,7 +4073,7 @@ def _run_script(
             return _run_script(
                 project_dir, script, force=False, snapshot=snapshot, frozen=frozen, remake=remake,
                 remake_command=remake_command, upstream=upstream, no_gc_reminder=no_gc_reminder,
-                added=(*added, now_declared),
+                added=(*added, now_declared), complete=complete,
             )
         if report.not_in_store is not None:
             from chartbook import missing
@@ -4017,7 +4081,8 @@ def _run_script(
             # The command to come back with, as it was typed
             again = "chartbook run" + "".join(
                 f" {flag}" for flag, given in (
-                    ("--force", force), ("--snapshot", snapshot), ("--remake", remake), ("--upstream", upstream),
+                    ("--force", force), ("--snapshot", snapshot), ("--complete", complete), ("--remake", remake),
+                    ("--upstream", upstream),
                 ) if given
             )
             for line in missing.said(report.not_in_store, again=again):
@@ -4734,16 +4799,19 @@ def store_export(pipeline, to, latest, snapshots):
     """Write one pipeline's snapshots into a folder, to send to someone.
 
     The folder is laid out as a store is: TO/snapshots/PIPELINE/, a folder
-    for each snapshot, complete, with its record. Send that folder;
-    whoever receives it runs `chartbook store import` on it, or copies it
-    into their store's snapshots/ by hand.
+    for each complete snapshot, with its record; and, for each snapshot
+    the store keeps as an increment, a folder under TO/increments/PIPELINE/
+    with the files that the complete one it builds on does not have. The
+    last line says which folder to send; whoever receives it runs
+    `chartbook store import` on it.
 
     Every snapshot its owner made is written, or with --latest the newest
-    alone, or each --snapshot named. Each is complete, and readable
-    without ChartBook. Only what a snapshot's record names is written: its
-    data, its documents and its index, never anything that runs. With
-    several stores in the catalog, the one that holds the pipeline is
-    used; --store NAME chooses when more than one does.
+    alone, or each --snapshot named. One written without the snapshot it
+    builds on is written complete, so --latest is one complete snapshot,
+    readable without ChartBook. Only what a snapshot's record names is
+    written: its data, its documents and its index, never anything that
+    runs. With several stores in the catalog, the one that holds the
+    pipeline is used; --store NAME chooses when more than one does.
 
     \b
     Examples:
@@ -4764,7 +4832,11 @@ def store_export(pipeline, to, latest, snapshots):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     _say_copied(done, "Exported")
-    click.echo(f"Send {Path(to).expanduser().resolve() / 'snapshots'}; `chartbook store import` there takes it in.")
+    sent = Path(to).expanduser().resolve()
+    # A snapshot kept as an increment has files in two folders of the export, snapshots/ and increments/: the
+    # whole of it is then what to send. With complete ones alone, snapshots/ is all there is
+    where = sent if (sent / "increments").is_dir() else sent / "snapshots"
+    click.echo(f"Send {where}; `chartbook store import` there takes it in.")
 
 
 @store.command("import")
@@ -4776,7 +4848,8 @@ def store_import(folder):
     pipeline's folder from a store (its snapshots' folders, each with
     _chartbook/snapshot.json). Every file is hashed as it is copied and
     checked against its record: a snapshot with a file that is not what its
-    record says is refused, and said. Each snapshot is written complete, a
+    record says is refused, and said. Each snapshot is written as it came,
+    complete or as an increment on a complete one that is whole here, a
     snapshot the store has already is left as it is, and
     nothing in the store is written over. A pipeline in this store then
     pins the snapshots by the pipeline's ID, with `chartbook pin` and
@@ -4812,7 +4885,10 @@ def store_verify():
     In a folder store each snapshot is checked for itself: every file its
     record names is read in the snapshot's own folder, and every one that
     is missing there or has other bytes is said with the snapshot's name,
-    though another snapshot has the same bytes.
+    though another snapshot has the same bytes. A file that snapshots kept
+    as increments keep in the complete snapshot they build on is said
+    once, under the name it has there, with that snapshot's name and how
+    many of them keep it there.
 
     Examples:
         chartbook store verify
@@ -4883,13 +4959,13 @@ def _when_it_goes(why: str) -> str:
     if "lockfile" in why:
         return "once no lockfile pins it: `chartbook pin --update` in the pipeline that does moves its pin to a newer snapshot"
     if "newest of its pipeline" in why:
-        return "once a newer snapshot of its pipeline is made (`chartbook run` in its folder) and nothing else keeps it"
+        return "once a newer snapshot of its pipeline is made (`chartbook snapshot` in its folder) and nothing else keeps it"
     if "branch or tag" in why or "label points" in why:
         return "once a newer snapshot takes its place for that name, or with `chartbook store gc --aggressive`, which lets names keep nothing"
     if "keep = true" in why:
         return (
             "once the mark `keep = true` is taken out of its pipeline's chartbook.toml, that is committed, and a "
-            "snapshot is made since (`chartbook run` in its folder)"
+            "snapshot is made since (`chartbook snapshot` in its folder)"
         )
     if "days" in why:
         return "once it is older than that"
@@ -4946,7 +5022,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     that pipeline's chartbook.toml, or as its newest snapshot recorded), if
     it is the newest holding a version of an asset marked `keep = true`
     (every version of such an asset is kept, --aggressive or not, and the
-    command says what the marks keep), or
+    command says what the marks keep), if an increment that stays builds
+    on it (a snapshot the store keeps in less room, the rest of whose
+    files are in this one's folder), or
     if it was made in the last 7 days (--keep-days). Otherwise it may be
     removed, and what only it named goes with it. A store keeps what work
     needs now, and lets old lineage go: with --keep-lineage, every snapshot
@@ -4958,7 +5036,11 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     While a snapshot that stays lacks a file of its own (a sync that has
     not brought it, a file removed by hand), no snapshot of its pipeline is
     removed, since a read of the one with the hole is handed another's
-    copy. gc names the pipeline, the snapshot and the file. Wait for the
+    copy. gc names the pipeline, the snapshot and the file: the snapshot
+    whose folder the file is missing from, as `chartbook store verify`
+    names it, or, where that snapshot has itself gone from the store (one
+    that increments build on), the newest of those that kept the file
+    there, which verify names by the folder that has gone. Wait for the
     sync, or see `chartbook store verify`, which lists everything missing.
     gc says why that snapshot stays, and so when one that has lost a file
     for good goes: once a newer one is made, once no lockfile pins it, or

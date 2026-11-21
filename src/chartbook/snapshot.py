@@ -9,8 +9,9 @@ A snapshot is made on purpose, by whoever works on the pipeline, when its
 build is ready for others::
 
     $ chartbook snapshot
-    ftsfr/fed_yield_curve at 4f2a91c: 3 assets in the store
-    Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+    ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+    Snapshot made: 6 files, 23.0 MB.
+    A pipeline that depends on this one gets it with `chartbook pin --update`.
 
 Three rules, decided by the maintainer on 2026-10-13
 (``docs_src/design/overview.md``, "The snapshot model"):
@@ -40,11 +41,20 @@ Where they are kept::
 A record is JSON in the index's format, like a lockfile: an envelope and
 one record for each asset, each with its content hash, and, for each of
 its files, where the store keeps it (``stored``): in a folder store, the
-snapshot's own folder, which holds every file of it; in a bucket, and in a
-store ChartBook 0.5 laid out, each file once in the pipeline's folder,
-usually in the first snapshot that had it
+snapshot's own folder, which holds every file of a complete snapshot; in a
+bucket, and in a store ChartBook 0.5 laid out, each file once in the
+pipeline's folder, usually in the first snapshot that had it
 (:class:`chartbook.store.PendingSnapshot`). A snapshot keeps what it names
 from being cleared (:func:`chartbook.lock.plan_gc`).
+
+**Complete, or an increment.** A folder store keeps a later snapshot where
+little changed in less room, under ``increments/``: its folder holds the
+files that one complete snapshot of the pipeline does not have, and its
+record says of each file which of the two folders keeps it. Which kind a
+snapshot is, each store decides as the snapshot is made, by the rule of
+adding up (:func:`to_be_kept`); ``chartbook snapshot --complete`` asks for
+a complete one. To whatever reads or pins, it is a snapshot either way
+(``docs_src/design/snapshots-and-increments.md``).
 
 **Clearing old ones.** Every snapshot is kept until ``chartbook store gc``
 is run, and then one is kept if a lockfile pins it, if it is the newest of
@@ -136,8 +146,9 @@ class NothingToSnapshot(SnapshotError):
     """A pipeline with nothing to take a snapshot of: it declares nothing with a path, or has built none of what it declares.
 
     Not a fault of anything: a pipeline just begun. ``chartbook snapshot``
-    says so, and a run that ends with a snapshot where it can says it in
-    its own words.
+    says so and lists what is not built; ``chartbook run --snapshot``,
+    which was asked to end with one, fails with it. A plain ``chartbook
+    run`` makes no snapshot, and never meets it.
 
     Attributes:
         not_built: What it declares and has not built, each with its path
@@ -389,6 +400,16 @@ class SnapshotReport:
             one, the files it lacks, and the store it lacks them in where
             that is another store this run sends the snapshot to (None
             where it is the one the snapshot is made in). It is left as it is.
+        kept: How the store it was written to keeps the snapshot, as its
+            record there says (:class:`Kept`): complete, or as an
+            increment, with the counts and sizes a person is told. Of the
+            one already there, where no new one was made.
+        asked_complete: Whether a complete snapshot was asked for
+            (``--complete``), and so where its folder is, is said.
+        kept_otherwise: For a snapshot that was made and sent to several
+            stores: each other store that keeps it the other way (complete
+            there and an increment here, or the reverse), by its name,
+            with how it keeps it. Each store decides for itself.
     """
 
     snapshot: Snapshot
@@ -409,6 +430,50 @@ class SnapshotReport:
     rows_first_said: Optional[Snapshot] = None
     rows_first_count: int = 0
     not_whole: Optional[tuple] = None
+    kept: Optional["Kept"] = None
+    asked_complete: bool = False
+    kept_otherwise: list[tuple[str, "Kept"]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Kept:
+    """How one store keeps one snapshot: complete, or as an increment on a complete one.
+
+    Attributes:
+        files: How many files its record lists.
+        size_bytes: Their bytes: the size of the snapshot, kept complete.
+        builds_on: For an increment, the folder name of the complete
+            snapshot of its pipeline that keeps the rest of its files;
+            empty for a complete one.
+        rest_made_at: For an increment, when that snapshot was made.
+        own_files: How many of its files its own folder holds: all of them
+            for a complete one; for an increment, those the snapshot it
+            builds on does not have.
+        own_bytes: Their bytes: what keeping it copied.
+        increments_bytes: For an increment, what its record carries beside
+            what it builds on: the bytes of the increments made on that
+            snapshot up to and with this one.
+        added_up: For a complete one that :func:`to_be_kept` decided:
+            whether it is complete because the increments since the last
+            complete one, with this one, had added up to its size. Not so
+            for one that alone is the whole of it, every file differing.
+        folder: Its folder in the store, once it is written.
+    """
+
+    files: int
+    size_bytes: int
+    builds_on: str = ""
+    rest_made_at: str = ""
+    own_files: int = 0
+    own_bytes: int = 0
+    increments_bytes: int = 0
+    added_up: bool = False
+    folder: Optional[Path] = None
+
+    @property
+    def increment(self) -> bool:
+        """Whether it is kept as an increment."""
+        return bool(self.builds_on)
 
 
 def asset_record(
@@ -854,14 +919,6 @@ def code_of(directory: Union[str, Path]) -> Code:
         raise SnapshotError(f"the repository at {top} has no commit yet") from None
     subdirectory = directory.relative_to(top).as_posix()
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
-
-
-def on_a_branch(directory: Union[str, Path]) -> bool:
-    """Whether a branch is checked out in a pipeline's repository, and not a commit by its hash."""
-    try:
-        return bool(_git(Path(directory).resolve(), "symbolic-ref", "--quiet", "HEAD").strip())
-    except SnapshotError:
-        return False
 
 
 def uncommitted(directory: Union[str, Path], ignoring: tuple = (), only: str = ".") -> list[str]:
@@ -2552,6 +2609,122 @@ def check_store_takes_one(pipeline: str, store: Optional[Store] = None) -> None:
             check()
 
 
+def _files_listed(taken: Snapshot) -> dict[str, tuple]:
+    """Every file a snapshot's record lists, by its path in the pipeline: its hash, its size, and the folder that keeps it where the record says one.
+
+    Read where the record says how the store keeps each part (``stored``):
+    its assets, its index and its documents. A file that is of two assets
+    is one file.
+    """
+    listed: dict[str, tuple] = {}
+    for part in (*(taken.stored.get("records") or {}).values(), taken.stored.get("index"), taken.stored.get("documents")):
+        for entry in (part or {}).get("files") or []:
+            if isinstance(entry, dict) and isinstance(entry.get("path"), str) and isinstance(entry.get("size_bytes"), int):
+                listed.setdefault(entry["path"], (entry.get("content_hash"), entry["size_bytes"], entry.get("kept_in")))
+    return listed
+
+
+def _to_build_on(store: Store, taken: Snapshot, now: Optional[datetime] = None) -> Optional[tuple]:
+    """The complete snapshot that a snapshot about to be written to a store would be an increment on, and what the increments on it have added up to: ``(its record there, bytes)``; None where there is none to build on.
+
+    The newest complete snapshot of the pipeline in that store that its
+    owner made (one a pin made from a repository is built on by nothing),
+    of the same repository as the records tell it, as a snapshot's making
+    tells it before it says two are one pipeline's (:func:`_make`), whole
+    (:meth:`chartbook.store.Store.holes_of`), and not dated after now.
+    Complete by what its record is
+    (:attr:`chartbook.store.KeptRecord.complete`): one of a pipeline's
+    folder that ChartBook 0.5 laid out, copied into the store by hand,
+    keeps files in earlier folders and is not built on. The
+    bytes are the largest count that any increment on it carries in its
+    record, whatever the dates of the two (a machine whose clock is ahead
+    or behind makes increments too, and one that had not been brought
+    another's writes one that counts from less): 0 where there is none,
+    or where none carries one. The count is of what snapshots made in this
+    store copied: an increment that ``chartbook store migrate`` wrote, or
+    that was copied in from another store (``store move``, ``store
+    import``), carries none, and the next snapshot counts from what this
+    store's own increments carry.
+    """
+    records = [
+        record for record in store.records()
+        if record.readable and record.pipeline == taken.pipeline and record.made_by == "snapshot"
+    ]
+
+    def when(record) -> tuple:
+        return (record.made_at, record.folder.name)
+
+    for record in sorted((record for record in records if record.complete), key=when, reverse=True):
+        try:
+            complete = read(record.path)
+        except SnapshotError:
+            continue
+        if not identity_keys(taken) <= identity_keys(complete) or made_in_the_future(complete, now) or store.holes_of(record.path):
+            continue
+        return record, max(
+            (other.increments_bytes for other in records if other.increment and other.builds_on == record.folder.name), default=0
+        )
+    return None
+
+
+def to_be_kept(store: Store, taken: Snapshot, complete: bool = False, now: Optional[datetime] = None) -> Kept:
+    """How one store is to keep a snapshot that is about to be written to it: the rule of adding up.
+
+    **A snapshot is kept as an increment until the increments since the
+    last complete snapshot, with this one, add up to the size of a complete
+    one. Then it is a complete one**
+    (``docs_src/design/snapshots-and-increments.md``, "Which one
+    ``chartbook snapshot`` makes"). The size of a complete one is the bytes
+    of every file the snapshot's record lists. An increment's is the bytes
+    of the files that the complete snapshot it builds on
+    (:func:`_to_build_on`) does not have, by their hashes and sizes,
+    whatever their names. So the first snapshot of a pipeline in a store
+    is complete, and so is one where every file differs. Each store
+    decides for itself, from its own records: this is the one place the
+    rule is written, and it reads no file of the snapshot.
+
+    :param taken: The snapshot, with where each of its files is listed
+        (``stored``): one its pipeline's owner made.
+    :param complete: Whether a complete one was asked for (``--complete``),
+        whatever the rule would choose.
+    :returns: How it is to be kept. An increment's ``increments_bytes`` is
+        what its record is to carry beside what it builds on.
+    """
+    files = _files_listed(taken)
+    size = sum(size for _, size, _ in files.values())
+    whole = Kept(len(files), size, own_files=len(files), own_bytes=size)
+    if complete or getattr(store, "increments_path", lambda: None)() is None:
+        return whole
+    found = _to_build_on(store, taken, now)
+    if found is None:
+        return whole
+    on, since = found
+    has = {(file.content_hash, file.size_bytes) for asset in on.assets for file in asset.files}
+    own = [size for content_hash, size, _ in files.values() if (content_hash, size) not in has]
+    if since + sum(own) >= size:
+        # Said to have added up only where this one alone is less than the whole: one where every file differs is complete for that
+        return dataclasses.replace(whole, added_up=since > 0 and sum(own) < size)
+    return Kept(len(files), size, on.folder.name, on.made_at, len(own), sum(own), since + sum(own))
+
+
+def as_kept(store: Store, taken: Snapshot) -> Kept:
+    """How a store keeps a snapshot it has, as its record there says: complete, or as an increment on which one."""
+    from chartbook.store import read_kept_record
+
+    files = _files_listed(taken)
+    size = sum(size for _, size, _ in files.values())
+    folder = Path(taken.path).parent.parent if taken.path is not None else None
+    asked = getattr(store, "builds_on", None)
+    on = asked(taken.path) if asked is not None and taken.path is not None else None
+    if on is None:
+        return Kept(len(files), size, own_files=len(files), own_bytes=size, folder=folder)
+    own = [size for _, size, kept_in in files.values() if kept_in == folder.name]
+    return Kept(
+        len(files), size, on.parent.parent.name, read_kept_record(on).made_at, len(own), sum(own),
+        read_kept_record(Path(taken.path)).increments_bytes, folder=folder,
+    )
+
+
 def make(
     project_dir: Union[str, Path] = ".",
     store: Optional[Store] = None,
@@ -2561,6 +2734,7 @@ def make(
     deep: bool = False,
     store_names: Optional[list[str]] = None,
     ask: bool = True,
+    complete: bool = False,
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -2573,6 +2747,13 @@ def make(
     bytes, and what the pipeline is pinned to), no new one is made; unless
     that one took its owner's word and this one follows a build, which is
     worth recording.
+
+    A folder store keeps the snapshot complete, every file of it in its
+    own folder, or as an increment, which holds only the files that one
+    complete snapshot of the pipeline does not have. Which, each store
+    decides for itself by the rule of adding up (:func:`to_be_kept`), and
+    the report says (:attr:`SnapshotReport.kept`). To whatever reads or
+    pins it, it is a snapshot either way.
 
     :param project_dir: The pipeline's folder.
     :param store: The store; this user's by default.
@@ -2588,7 +2769,15 @@ def make(
         those the catalog sends the pipeline to, or its first.
     :param ask: Whether, at a terminal, a pipeline the catalog sends
         nowhere may be asked about when there are several stores to write
-        to. A run passes False: it asks nothing, and follows the catalog.
+        to. A run that makes a snapshot (``chartbook run --snapshot``, and
+        ``--upstream`` of what it builds first) passes False: it asks
+        nothing, and follows the catalog. A plain run makes none.
+    :param complete: Write a complete snapshot in every store it goes to,
+        whatever the rule of adding up would choose (``--complete``).
+        Where the newest snapshot of the same commit, bytes and pins is
+        kept as an increment, a new, complete one is made: the increment
+        is left as it is, since a snapshot's folder is not changed once
+        its record is written.
     :returns: The snapshot, and whether it is new.
     :raises SnapshotError: If the folder holds no pipeline, is not in git,
         has anything uncommitted, or has built nothing.
@@ -2629,12 +2818,19 @@ def make(
         # The lineage is checked in every store, where the pins were read
         # from: a snapshot pinned from a read-only store is written to another
         stood_in = _check_lineage(directory, pipeline, stores, deep)
-        report = _make_in(directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in, also=tuple(targets[1:]))
+        report = _make_in(
+            directory, pipeline, code, targets[0], made_at, built_by_run, deep, stood_in, also=tuple(targets[1:]), complete=complete,
+        )
         if len(targets) > 1:
             from chartbook.transfer import NotWholeThere, copy_snapshot
             for target in targets[1:]:
                 try:
-                    copy_snapshot(report.snapshot, targets[0], target)
+                    # Each store decides for itself how it keeps it, from its own snapshots (to_be_kept)
+                    there = copy_snapshot(report.snapshot, targets[0], target, complete=complete, decides=True)
+                    theirs = as_kept(target, read(there))
+                    if report.made and report.kept is not None and theirs.increment != report.kept.increment:
+                        # Kept the other way there: said, with that store's name
+                        report.kept_otherwise.append((next((e.name for e in stores.entries if e.store is target), str(target)), theirs))
                 except NotWholeThere as error:
                     # That store's own copy of this snapshot lacks a file, and nothing is written over it
                     raise NotInEveryStore(
@@ -2651,7 +2847,7 @@ def make(
 
     store = store if store is not None else default_store()
     stood_in = _check_lineage(directory, pipeline, store, deep)
-    return _make_in(directory, pipeline, code, store, made_at, built_by_run, deep, stood_in)
+    return _make_in(directory, pipeline, code, store, made_at, built_by_run, deep, stood_in, complete=complete)
 
 
 def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> dict:
@@ -2679,21 +2875,28 @@ def _check_lineage(directory: Path, pipeline: str, store: Store, deep: bool) -> 
 
 
 def _make_in(directory: Path, pipeline: str, code: "Code", store: Store, made_at: Optional[str],
-             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, also: tuple = ()) -> SnapshotReport:
+             built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, also: tuple = (),
+             complete: bool = False) -> SnapshotReport:
     """Write the snapshot to one store, its lineage already checked (:func:`_check_lineage`); *also* are the other stores it is then sent to."""
     raw = _read_manifest_file(directory)
     check_within(directory, pipeline)
     check_own_name(directory, pipeline, raw)
     import tempfile
 
+    from chartbook.store import FolderStore
+
     made_at = made_at or _now()
-    pending = store.begin(pipeline, code.commit, made_at, base=directory)
+    # A folder store keeps a snapshot complete or as an increment, which is decided once every file of it
+    # is known (to_be_kept): its folder there is claimed then, in the one place or the other
+    undecided = {"undecided": True} if isinstance(store, FolderStore) else {}
+    pending = store.begin(pipeline, code.commit, made_at, base=directory, **undecided)
     # What is staged for the snapshot (its documents, its index, a table written out of a DuckDB file) is
     # kept until the snapshot is written or let go (_staged)
     with tempfile.TemporaryDirectory(prefix="chartbook-snapshot-") as staging:
         try:
             report = _make(
                 directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep, stood_in, staging=Path(staging), also=also,
+                complete=complete,
             )
             report.stores = [str(store)]
             return report
@@ -2741,15 +2944,59 @@ def _holes_there(other: Store, taken: Snapshot) -> Optional[tuple]:
     return None
 
 
+def _kept_as_an_increment(taken: Snapshot, store: Store, also: tuple = ()) -> bool:
+    """Whether a snapshot is kept as an increment in a store, or in any other store of *also* that has a record of it (found as :func:`_holes_there` finds it)."""
+    def asked(one: Store, path) -> bool:
+        builds_on = getattr(one, "builds_on", None)
+        return builds_on is not None and path is not None and builds_on(path) is not None
+
+    if asked(store, taken.path):
+        return True
+    for other in also:
+        try:
+            for theirs in find(other, taken.commit, taken.subdirectory):
+                if theirs.pipeline == taken.pipeline and theirs.made_at == taken.made_at and asked(other, theirs.path):
+                    return True
+        except (SnapshotError, StoreError, OSError):
+            continue
+    return False
+
+
+def _complete_and_reads_right(taken: Snapshot, store: Store) -> bool:
+    """Whether the snapshot a store has is one ``--complete`` may name in place of making one: a complete snapshot of what its record says.
+
+    Complete by what its record is
+    (:attr:`chartbook.store.KeptRecord.complete`): not an increment, and
+    not one that keeps files in another snapshot's folder, as one that
+    ChartBook 0.5 laid out does. And each of its own files, read and
+    hashed, is what its record says
+    (:meth:`chartbook.store.Store.verify_snapshot`, as ``store move`` asks
+    before it takes a snapshot for there). So every byte of it is read:
+    only where a complete one was asked for, since the folder is then
+    named for a person to look at, to copy or to hand on.
+    """
+    from chartbook.store import FolderStore, read_kept_record
+
+    if taken.path is None:
+        return False
+    try:
+        if isinstance(store, FolderStore) and not read_kept_record(Path(taken.path)).complete:
+            return False
+        return not store.verify_snapshot(Path(taken.path), taken.hashes())
+    except (StoreError, OSError):
+        return False
+
+
 def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
           built_by_run: bool, deep: bool, stood_in: Optional[dict] = None, staging: Optional[Path] = None,
-          also: tuple = ()) -> SnapshotReport:
+          also: tuple = (), complete: bool = False) -> SnapshotReport:
     """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written.
 
     :param staging: A folder for what is staged for the snapshot, which the
         caller removes once this has returned (:func:`_staged`).
     :param also: The other stores this run sends the snapshot to: the one
         it stands on must be whole in each that has a record of it.
+    :param complete: As for :func:`make`.
     """
     assets: dict[str, dict] = {}
     held: dict[str, dict] = {}
@@ -2922,15 +3169,24 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             part["content_hash"] for part in (same.index, same.documents)
             if part and (not store.has(part["content_hash"], same.pipeline) or store.incomplete(part["content_hash"], part.get("size_bytes"), pipeline=same.pipeline))
         ]
-        # A file the store lacked, which is in this snapshot's own folder by
-        # now (`placed`), is kept only if this snapshot is written
-        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
+        # A file the store lacked (`placed`) is kept only if this snapshot is written
+        # Asked for complete, the one there is stood on only where it is a complete snapshot of what its record
+        # says: complete by its record, each of its own files read and hashed. Where it is kept as an increment
+        # (here, or in another store this run sends it to), keeps files in another folder, or does not read
+        # right, a new, complete one is made, and that one is left as it is. Not asked, nothing is read
+        tells = says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed
+        wanted_complete = tells and complete and (
+            _kept_as_an_increment(same, store, also) or not _complete_and_reads_right(same, store)
+        )
+        if tells and not wanted_complete:
             pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(
                 same, False, not_built, skipped_labels=labels_skipped(raw), not_hashed=_not_hashed(same), not_hashed_now=not_now,
                 index_columns=index_columns,
                 index_column_names=index_names,
+                kept=as_kept(store, same),
+                asked_complete=complete,
             )
         if same.built_by_run:
             # Made again for what the one before lacks: the bytes are still
@@ -2969,9 +3225,17 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         stored.pop("index", None)
     kept_documents, stored["documents"] = _put_documents(directory, documents, pending, staging)
     snapshot = dataclasses.replace(snapshot, index=index, documents=kept_documents, stored={k: v for k, v in stored.items() if v})
+    # Complete, or an increment: decided now that every file of it is listed, from the hashes and sizes
+    # the record is about to carry. If the snapshot it would build on goes before the record is written,
+    # or loses a file, the store writes this one complete (_FolderPending.write)
+    decided = to_be_kept(store, snapshot, complete)
+    if decided.increment and getattr(pending, "undecided", False):
+        pending.keep_as_increment(decided.builds_on, decided.increments_bytes)
     path = pending.write(snapshot.to_document())
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
     snapshot = dataclasses.replace(snapshot, path=path)
+    # As its record says it is kept, and whether it is complete because the increments had added up
+    kept = dataclasses.replace(as_kept(store, snapshot), added_up=decided.added_up)
     beside, rows_said = _rows_since(directory, snapshot, store)
     return SnapshotReport(
         snapshot,
@@ -2990,6 +3254,8 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         rows_first_said=rows_first_said,
         rows_first_count=rows_first_count,
         not_whole=not_whole,
+        kept=kept,
+        asked_complete=complete,
     )
 
 

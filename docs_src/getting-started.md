@@ -150,7 +150,8 @@ chartbook snapshot
 
 ```text
 my_pipeline at ad2f29a: 2 asset(s) in the store
-Snapshot made. A pipeline that depends on this one gets it with `chartbook pin --update`.
+Snapshot made: 5 files, 18.2 KB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
 No catalog yet, to show it in.
 Create one over your store at /Users/you/.chartbook/store? [Y/n]:
 ```
