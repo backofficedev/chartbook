@@ -687,6 +687,99 @@ class TestNoLookAtAFileAsItIsPut:
         assert not first.parent.parent.exists()  # its note gone, the cleared folder goes whole
 
 
+class TestARecordIsReadOnce:
+    """A snapshot's record lists every file of the snapshot: 280 bytes a file, 36 MB for a table of 127,000 files. One `chartbook snapshot` read each record of its pipeline ten times over, twelve with the reminder, whole each time: once to put each in order beside another made in the same second, for a time the snapshot in hand already says.
+
+    Each of the two readers of a record now reads it once in a process, by
+    its path, its time and its size: the store, for where its files are
+    (:func:`chartbook.store.read_kept_record`, as before), and
+    :func:`chartbook.snapshot.read`, for what the snapshot is. The two do
+    not share one reading: what the first keeps of a record is small, and
+    keeping the whole of every record it reads for the second would hold
+    every pipeline's in memory at each read of a table.
+    """
+
+    @counted
+    def test_each_record_is_opened_once_by_each_of_its_two_readers(self, asked):
+        for found in asked.values():
+            assert set(found.records.values()) == {1}, found.records
+            # By the store, for where its files are; and as a snapshot. Never to put snapshots in order
+            assert {reader for _, reader in found.records} == {"store.read_kept_record", "snapshot._read"}, found.records
+            # The complete snapshot's and the increment's: each by each
+            assert len(found.records) == 4 and len({record for record, _ in found.records}) == 2
+
+    @pytest.fixture
+    def taken(self, tmp_path, store):
+        from chartbook import snapshot
+
+        project = _pipeline(tmp_path.resolve() / "project", 3)
+        return snapshot.make(project, store=store, made_at=LONG_AGO.format(0)).snapshot
+
+    def _opens(self, monkeypatch) -> list:
+        """Each record opened from here on, by its snapshot's folder."""
+        opened, real = [], builtins.open
+
+        def counting(file, *args, **kwargs):
+            if not isinstance(file, int) and os.path.basename(os.fspath(file)) == "snapshot.json":
+                opened.append(Path(os.fspath(file)).parent.parent.name)
+            return real(file, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "open", counting)
+        monkeypatch.setattr(io, "open", counting)
+        return opened
+
+    def test_a_snapshot_read_again_is_the_one_read_before(self, taken, store, monkeypatch):
+        from chartbook import snapshot
+
+        _as_another_process()
+        opened = self._opens(monkeypatch)
+        first = snapshot.read(taken.path)
+        assert snapshot.read(taken.path) is first and snapshot.read(str(taken.path)) is first
+        assert snapshot.find(FolderStore(store.root), taken.commit) == [first]
+        assert snapshot.all_snapshots(FolderStore(store.root)) == [first]
+        assert opened == [taken.path.parent.parent.name] * 2  # as a snapshot; and by the store, which finds it for find
+        assert first.content() == taken.content() and first.path == taken.path and first.made_at == taken.made_at
+
+    def test_putting_snapshots_in_order_opens_no_record(self, taken, monkeypatch):
+        from chartbook import snapshot
+
+        opened = self._opens(monkeypatch)
+        assert snapshot._count(taken.path, taken.made_at) == 1
+        # The second of two made in one second has the next second's name: told from its name and its time
+        later = taken.path.parent.parent.parent / "2026-01-01T000001Z_aaaaaaaaaaaa" / "_chartbook" / "snapshot.json"
+        assert snapshot._count(later, taken.made_at) == 2
+        assert opened == []
+        assert snapshot._count(taken.path) == 1 and opened == [taken.path.parent.parent.name]  # with no time given, as before
+
+    def test_a_record_that_has_changed_is_read_again(self, taken, monkeypatch):
+        """A record is never rewritten by a store. One that is, by hand or by a sync that brings the rest of it, has another time or size, and is read as it is now."""
+        import json
+
+        from chartbook import snapshot
+
+        first = snapshot.read(taken.path)
+        document = json.loads(taken.path.read_text(encoding="utf-8"))
+        document["tags"] = ["v1.0"]
+        os.chmod(taken.path, 0o600)
+        taken.path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+        again = snapshot.read(taken.path)
+        assert again is not first and again.tags == ["v1.0"] and first.tags == []
+        assert snapshot.read(taken.path) is again
+
+    def test_a_record_that_cannot_be_read_is_not_remembered(self, taken, monkeypatch):
+        """Half of it there, as a sync leaves one: it is refused each time it is asked for, and read once the rest has come."""
+        from chartbook import snapshot
+
+        whole = taken.path.read_bytes()
+        os.chmod(taken.path, 0o600)
+        taken.path.write_bytes(whole[: len(whole) // 2])
+        for _ in range(2):
+            with pytest.raises(snapshot.SnapshotError, match="Cannot read the snapshot"):
+                snapshot.read(taken.path)
+        taken.path.write_bytes(whole)
+        assert snapshot.read(taken.path).content() == taken.content()
+
+
 @pytest.fixture
 def store(tmp_path, monkeypatch) -> FolderStore:
     """A store of this test's own, which the commands of the test write to."""

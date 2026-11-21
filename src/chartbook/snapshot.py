@@ -1170,14 +1170,43 @@ def record_name(subdirectory: str) -> str:
     return name
 
 
+#: Each snapshot read, by its record's file, with the time and size the file had then: a record is never
+#: rewritten, so one read is enough (as :data:`chartbook.store._read_records` is for where its files are).
+_read_snapshots: dict = {}
+
+
 def read(path: Union[str, Path]) -> Snapshot:
-    """Read one snapshot record.
+    """Read one snapshot record, once in a process while its file is unchanged.
+
+    A record lists every file of its snapshot, and one command asks for
+    the same record many times over (each snapshot of the pipeline's
+    history, each time the history is asked for): it is opened and parsed
+    the first time, and the snapshot read then is handed out again for as
+    long as the file has the time and the size it had. A record that
+    cannot be read is not remembered: a sync may yet bring the rest of it.
+
+    What is handed out is the one snapshot, to every caller: its records
+    are not to be changed in place.
 
     :raises SnapshotError: If the file is not a record this version reads.
     """
-    from chartbook.store import _any_length, unreadable_detail
+    from chartbook.store import _record_stamp
 
     path = Path(path)
+    stamp = _record_stamp(path)  # taken before the file is opened: one that changes meanwhile is read again next time
+    known = _read_snapshots.get(str(path))
+    if known is not None and stamp is not None and known[0] == stamp:
+        return known[1]
+    taken = _read(path)
+    if stamp is not None:
+        _read_snapshots[str(path)] = (stamp, taken)
+    return taken
+
+
+def _read(path: Path) -> Snapshot:
+    """Open one snapshot record and read it (:func:`read`)."""
+    from chartbook.store import _any_length, unreadable_detail
+
     try:
         # In the form Windows takes whatever its length: a record another machine wrote may be past this one's limit
         with open(_any_length(path), encoding="utf-8") as f:
@@ -1347,7 +1376,7 @@ def find(store: Store, commit: str, subdirectory: str = "") -> list[Snapshot]:
     :raises SnapshotError: If one of them cannot be read.
     """
     found = [read(file) for file in store.snapshot_files(commit, record_name(subdirectory))]
-    return sorted(found, key=lambda s: (s.made_at, _count(s.path)), reverse=True)
+    return sorted(found, key=lambda s: (s.made_at, _count(s.path, s.made_at)), reverse=True)
 
 
 def newest_for(
@@ -1412,7 +1441,7 @@ def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[
         line.split()[0] for line in answers.splitlines() if line.endswith(" commit")
     }
     found = [taken for commit in ours for taken in find(store, commit, code.subdirectory)]
-    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)))
 
 
 def versions_of(
@@ -1474,7 +1503,7 @@ def all_snapshots(store: Store) -> list[Snapshot]:
         removed from a store that cannot say what it is keeping.
     """
     found = [read(file) for file in store.all_snapshot_files()]
-    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)))
 
 
 def is_at(path: Union[str, Path], commit: str) -> bool:
@@ -1501,7 +1530,7 @@ def readable_snapshots(store: Store) -> tuple[list[Snapshot], list[tuple[Path, s
             found.append(read(file))
         except SnapshotError as error:
             unreadable.append((Path(file), str(error)))
-    found.sort(key=lambda taken: (taken.made_at, _count(taken.path)))
+    found.sort(key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)))
     return found, unreadable
 
 
@@ -1901,7 +1930,7 @@ def builds_at(found: list, pipeline: Optional[str], commit: str, named: Optional
     at = [taken for taken in found if taken.commit == commit and taken.pipeline == pipeline]
     exact = [taken for taken in at if isinstance(named, str) and taken.same_moment(commit, named)]
     others = [taken for taken in at if not any(taken is one for one in exact) and not made_in_the_future(taken, now)]
-    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path)), reverse=True)
+    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)), reverse=True)
 
 
 def made_in_the_future(taken: Snapshot, now: Optional[datetime] = None) -> bool:
@@ -2075,7 +2104,7 @@ def plan_removals(
     # A note that names no snapshots (from before notes recorded them) keeps,
     # of the snapshots holding each object it names, the newest: an object
     # that never changes would otherwise keep every snapshot there is
-    every = sorted((taken for group, _, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
+    every = sorted((taken for group, _, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path, t.made_at)))
 
     def newest_holding(hashes: set) -> set:
         # In each pipeline: a note names bytes and not whose they are, and a read of a pipeline's asset
@@ -2110,7 +2139,7 @@ def plan_removals(
         holders: dict[tuple[str, str], Snapshot] = {}
         # Not one dated after now: a record written to win would otherwise be
         # the holder for ever, and the genuine holder let go
-        for taken in sorted((t for t in group if not made_in_the_future(t, now)), key=lambda t: (t.made_at, _count(t.path))):
+        for taken in sorted((t for t in group if not made_in_the_future(t, now)), key=lambda t: (t.made_at, _count(t.path, t.made_at))):
             for name in marks:
                 content_hash = (taken.assets.get(name) or {}).get("content_hash")
                 if content_hash:
@@ -2333,19 +2362,24 @@ def remove(store: Store, taken: Snapshot) -> bool:
     return store.remove_snapshot(taken.path)
 
 
-def _count(path: Path) -> int:
+def _count(path: Path, made_at: Optional[str] = None) -> int:
     """Which of the snapshots made at one instant a file is: 1, unless numbered.
 
     A store names a snapshot's folder by the second, and gives a second
     snapshot of the same second the next one's name: its folder's name
     orders them.
+
+    :param made_at: When the snapshot was made, as its record says, where
+        whoever asks has the snapshot in hand: the record is then not
+        opened for it. It lists every file of the snapshot, and this is
+        asked of each snapshot each time some are put in order.
     """
     if path.name == "snapshot.json":
         from chartbook.store import is_snapshot_folder
 
         folder = path.parent.parent.name
         try:
-            made = json.loads(path.read_text(encoding="utf-8")).get("made_at", "")
+            made = made_at if made_at is not None else json.loads(path.read_text(encoding="utf-8")).get("made_at", "")
             later = datetime.strptime(folder[:18], "%Y-%m-%dT%H%M%SZ") - datetime.strptime(made[:19], "%Y-%m-%dT%H:%M:%S")
         except (OSError, ValueError, AttributeError, TypeError):
             return 1
