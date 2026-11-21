@@ -262,6 +262,12 @@ Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the o
 - `chartbook pin --update` is as it was. `chartbook pin --check` and `chartbook run --frozen`, which fetch nothing, say what this pipeline lacks and add `` `chartbook run` lists all there is to build, in order``.
 - In Python: `chartbook.missing.find()` gives the list (`Listing`, of `Wanted` lines) and `missing.said()` its lines; `RunReport.not_in_store` and `PinReport.not_in_store` hold it, and a run stopped by nothing else has `reason == run.NOT_IN_STORE`. `GitCache.paths_at()` and `GitCache.text_at()` read a commit's files with nothing checked out.
 
+### Fixed — on Windows, a build in a network folder ran in `C:\Windows`
+
+`cmd.exe`, which runs a script on Windows, takes no network folder (`\\server\…`) as the folder it works in: started in one it says "UNC paths are not supported", goes to `C:\Windows`, and runs the script there. A pipeline on a drive letter that is such a folder was run so too, since ChartBook follows a folder to where it really is: a home folder on a network, by someone who never typed a `\\`. A build of one line of shell ran in the Windows folder, and the run said `Ran build in 1 pipeline(s).` It was so in every release.
+
+A script is now run from the drive letter its share is connected under, which ChartBook finds among the connected drives. Where the share has no letter, the script is not run: `… is a network folder with no drive letter … Connect the share to a drive letter (`net use Q: \\server\share`, with a letter that is free), and run this again.`
+
 ### Fixed — on Windows, a command that a message prints can be pasted
 
 A message that names a command to type, such as `chartbook restore --project-dir …`, `chartbook pin --project-dir …` or a line of the list above, wrote its folder for a POSIX shell: in single quotes, which `cmd.exe` reads as part of the folder's name, or bare, which Git Bash reads without its backslashes. On Windows a folder is now in double quotes, which `cmd.exe`, PowerShell and Git Bash all read. A word that one of them would read even inside quotes (a folder named `$(…)`, say) is never written into a command: `ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS` stands in its place, which runs nothing. The `cruft link` line that `chartbook init` prints is as it was: its answers are JSON, which no one spelling gives to `cmd.exe` and PowerShell alike.

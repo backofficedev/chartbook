@@ -68,6 +68,76 @@ class TestABatchFile:
         assert ran == []
 
 
+class TestAScriptInAShare:
+    """Found on Windows, 2026-11-20, and as old as `chartbook run`: cmd.exe takes no share as its current folder, and ran the build in C:\\Windows.
+
+    A build of one line of shell ran there, and the run said "Ran build in
+    1 pipeline(s)." A drive letter was no cure: a folder is followed to
+    where it really is, which for a home folder on a network is the share.
+    """
+
+    CONNECTED = {"Q:": "\\\\localhost\\c$", "H:": "\\\\files.example.edu\\home\\ab123", "X:": "\\\\files.example.edu\\home"}
+
+    @pytest.mark.parametrize("folder, lettered", [
+        ("\\\\localhost\\c$\\cbtest\\n4\\plain\\report", "Q:\\cbtest\\n4\\plain\\report"),
+        ("\\\\LOCALHOST\\C$\\cbtest\\My Work", "Q:\\cbtest\\My Work"),  # a share's name is one whatever its letter case
+        ("//localhost/c$/cbtest/report", "Q:\\cbtest\\report"),
+        ("\\\\?\\UNC\\localhost\\c$\\cbtest\\report", "Q:\\cbtest\\report"),  # the long spelling of it
+        ("\\\\localhost\\c$", "Q:\\"),  # the share's own folder: not `Q:`, which is wherever one last stood on it
+        ("\\\\localhost\\c$\\", "Q:\\"),
+        # Two letters lead there: the one nearest the folder
+        ("\\\\files.example.edu\\home\\ab123\\work\\report", "H:\\work\\report"),
+        ("\\\\files.example.edu\\home\\cd456\\work", "X:\\cd456\\work"),
+        ("\\\\files.example.edu\\home\\ab1234\\work", "X:\\ab1234\\work"),  # `ab1234` is no folder of `ab123`
+        ("\\\\other\\share\\work", None),
+        ("\\\\localhost\\d$\\work", None),
+        ("\\\\localhost", None),
+    ])
+    def test_a_share_is_named_by_a_letter_connected_to_it(self, folder, lettered):
+        assert run._by_its_drive_letter(folder, self.CONNECTED) == lettered
+
+    @pytest.mark.parametrize("script", ["python build.py", "python a.py\npython b.py\n"])
+    def test_the_script_is_run_from_the_letter(self, monkeypatch, tmp_path, script):
+        """Both ways a script is handed to cmd.exe: a line as it is, and several as a file."""
+        ran = []
+        monkeypatch.setattr(run, "_batch_encoding", lambda: "cp437")
+        monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
+        monkeypatch.setattr(run.os, "name", "nt")
+        monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options) or type("Done", (), {"returncode": 0})())
+        assert run._execute(script, "\\\\localhost\\c$\\cbtest\\report", dict(os.environ)) == 0
+        assert [options["cwd"] for options in ran] == ["Q:\\cbtest\\report"]
+
+    @pytest.mark.parametrize("folder, stood_in", [
+        ("C:\\cbtest\\report", "C:\\cbtest\\report"),
+        ("\\\\?\\C:\\cbtest\\report", "C:\\cbtest\\report"),  # the long spelling of a folder on a drive
+    ])
+    def test_a_folder_on_a_drive_is_run_in_as_it_is(self, monkeypatch, folder, stood_in):
+        ran = []
+        monkeypatch.setattr(run, "_connected_drives", lambda: pytest.fail("asked of a folder that is no share"))
+        monkeypatch.setattr(run.os, "name", "nt")
+        monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options) or type("Done", (), {"returncode": 0})())
+        run._execute("python build.py", folder, dict(os.environ))
+        assert [options["cwd"] for options in ran] == [stood_in]
+
+    def test_a_share_with_no_letter_is_said_and_nothing_runs(self, monkeypatch):
+        ran = []
+        monkeypatch.setattr(run, "_connected_drives", lambda: {})
+        monkeypatch.setattr(run.os, "name", "nt")
+        monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options))
+        with pytest.raises(run.RunError) as refused:
+            run._execute("del /q _data\\*", "\\\\files.example.edu\\home\\ab123\\work\\report", dict(os.environ))
+        assert str(refused.value) == (
+            "\\\\files.example.edu\\home\\ab123\\work\\report is a network folder with no drive letter, and cmd.exe, which "
+            "runs a script on Windows, takes no such folder as its own: it would have run the script in C:\\Windows. Connect "
+            "the share to a drive letter (`net use Q: \\\\files.example.edu\\home`, with a letter that is free), and run this "
+            "again. The script was not run."
+        )
+        assert ran == []
+
+    def test_no_letter_is_looked_for_on_another_system(self):
+        assert run._connected_drives() == {} or os.name == "nt"
+
+
 class TestRemovingAStagingFolder:
     def test_nothing_above_it_is_touched(self, tmp_path):
         from chartbook.gitcache import _remove_staging
