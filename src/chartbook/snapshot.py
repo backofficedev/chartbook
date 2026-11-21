@@ -143,6 +143,10 @@ class SnapshotError(Exception):
     """Raised when a snapshot cannot be made, or a pipeline has none to find."""
 
 
+class NotInARepository(SnapshotError):
+    """A pipeline's folder is in no git repository (:func:`code_of`): a class of its own, as :class:`RepositoryNotTrusted` is, so that what has shorter words for it need not read the sentence."""
+
+
 class NothingToSnapshot(SnapshotError):
     """A pipeline with nothing to take a snapshot of: it declares nothing with a path, or has built none of what it declares.
 
@@ -1000,7 +1004,7 @@ def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
         return None
     import shlex
 
-    from chartbook.missing import _quoted  # which imports this module
+    from chartbook.missing import NOT_TEXT, _quoted  # which imports this module
 
     folder = None
     if command:
@@ -1015,10 +1019,23 @@ def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
     else:
         repository = found.group(1) if found else str(directory)
         folder = repository
+    # The word is handed to git, which is a program and no batch file: the `%` git begins a share's with is
+    # text in every shell there, and the command in double quotes makes git trust the folder, by its server
+    # and through a connected letter (typed on Windows 11, 2026-11-20, in cmd.exe, Windows PowerShell and Git
+    # Bash; git's own line, in single quotes, is two words in cmd.exe). Where the folder's own name holds what
+    # a shell would read (a `%NAME%`, a backtick), no command of ours is given: git prints its own in that
+    # folder, which PowerShell and Git Bash take as it is
+    if _quoted(folder, batch=False) == NOT_TEXT:
+        to_run = (
+            "run the `git config --global --add safe.directory` command that `git status` prints in that folder "
+            "(in PowerShell or Git Bash: `cmd.exe` does not read its quotes)"
+        )
+    else:
+        to_run = f"run `git config --global --add safe.directory {_quoted(folder, batch=False)}`"
     return (
         f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it "
-        f"is on a network share, and git reads no such repository until it is told to. To have git trust it, run "
-        f"`git config --global --add safe.directory {_quoted(folder)}`, and then this again"
+        f"is on a network share, and git reads no such repository until it is told to. To have git trust it, "
+        f"{to_run}, and then this again"
     )
 
 
@@ -1042,11 +1059,13 @@ def code_of(directory: Union[str, Path]) -> Code:
 
     :raises RepositoryNotTrusted: If git does not trust the repository the
         folder is in (another user's, or on a network share): the message
-        has the command that makes git trust it. A ``SnapshotError``, and
-        the one case of them with a class of its own.
+        has the command that makes git trust it. A ``SnapshotError``
+        with a class of its own.
+    :raises NotInARepository: If the folder is not in a git repository.
+        A ``SnapshotError`` with a class of its own too.
     :raises SnapshotError: If there is no such folder, git could not be
-        run, the folder is not in a git repository, the repository has no
-        commit yet, or git gives a top the folder is not under.
+        run, the repository has no commit yet, or git gives a top the
+        folder is not under.
     """
     directory = Path(directory).resolve()
     if not directory.is_dir():
@@ -1059,7 +1078,7 @@ def code_of(directory: Union[str, Path]) -> Code:
         not_trusted = _not_trusted_by_git(directory, str(error))
         if not_trusted is not None:
             raise RepositoryNotTrusted(not_trusted) from None
-        raise SnapshotError(
+        raise NotInARepository(
             f"{directory} is not in a git repository. A snapshot is labelled "
             f"with the commit it was built from, so only a pipeline that is in "
             f"git has any"

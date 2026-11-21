@@ -777,6 +777,45 @@ class TestTheNotesThemselves:
         assert result.exit_code == 0 and _ran(directory) == 1
         assert not built.note_path(directory).exists() and "could not be kept" not in result.output
 
+    def test_in_a_repository_git_does_not_trust_the_run_says_why_it_kept_no_note(self, demo, store, monkeypatch):
+        """Found on Windows, on a share: the run built, left no note and said nothing; the snapshot typed next was the first to say."""
+        from chartbook.missing import _quoted
+        from tests.test_not_in_your_store import DUBIOUS, NOT_TRUSTED, _git_refuses
+
+        at = demo.as_posix()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=demo)
+        result = _run()
+        assert result.exit_code == 0 and _ran(demo) == 1, result.output
+        assert not built.note_path(demo).exists()
+        # Said last, in place of the command that makes a snapshot: that one would be refused, for git's
+        # trust and then for the note (found by the review: the line was said, and then the command was)
+        assert result.output.splitlines()[-2:] == [
+            "acme/demo: built.",
+            "  No note of this build was kept: " + NOT_TRUSTED.format(folder=demo, at=at, typed=_quoted(at)) + ".",
+        ], result.output
+        assert "chartbook snapshot" not in result.output
+
+    def test_it_is_not_said_where_no_snapshot_comes_next(self, demo, store, monkeypatch):
+        """Under ``--frozen``, which is for CI and for a store one may only read, a run's last lines name no snapshot, and no note for one."""
+        from tests.test_not_in_your_store import DUBIOUS, _git_refuses
+
+        _git_refuses(monkeypatch, DUBIOUS.format(at=demo.as_posix()), under=demo)
+        result = _run("--frozen")
+        assert result.exit_code == 0, result.output
+        assert "note" not in result.output and "chartbook snapshot" not in result.output
+
+    def test_where_git_fails_some_other_way_the_run_says_nothing_of_a_note(self, demo, store, monkeypatch):
+        """In no repository there is no snapshot to hold against a note; and git that could not be run is said by what needs git."""
+        from chartbook import snapshot
+        from tests.test_not_in_your_store import _git_refuses
+
+        for words in ("fatal: not a git repository (or any of the parent directories): .git", f"{snapshot._GIT_NOT_RUN}: no git"):
+            with monkeypatch.context() as patched:
+                _git_refuses(patched, words, under=demo)
+                result = _run()
+            assert result.exit_code == 0, result.output
+            assert "note" not in result.output, result.output
+
     def test_what_a_build_writes_is_listed_with_its_files(self, demo):
         from chartbook import run
 

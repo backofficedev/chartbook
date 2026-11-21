@@ -214,14 +214,54 @@ class TestARepositoryGitDoesNotTrust:
         assert str(refused.value) == (
             f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it is "
             f"on a network share, and git reads no such repository until it is told to. To have git trust it, run "
-            f"`git config --global --add safe.directory {_quoted(trusted)}`, and then this again"
+            f"`git config --global --add safe.directory {_quoted(trusted, batch=False)}`, and then this again"
         )
         assert "is not in a git repository" not in str(refused.value)
+
+    @staticmethod
+    def _as_on_windows(monkeypatch) -> None:
+        """The sentence's command as it is written on Windows, on any system: the word is quoted for its shells."""
+        from chartbook import missing
+
+        real = missing._quoted
+        monkeypatch.setattr(missing, "_quoted", lambda text, windows=None, batch=True: real(text, windows=True, batch=batch))
+
+    def test_on_windows_a_shares_folder_is_in_the_command(self, work, monkeypatch):
+        """Found by the review of what prints this sentence: the word git writes for a share begins
+        `%(prefix)/`, and for its `%` the command read `safe.directory ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS`.
+        The word is handed to git, a program: typed on Windows 11, 2026-11-20, it is text in double
+        quotes in cmd.exe, Windows PowerShell and Git Bash."""
+        self._as_on_windows(monkeypatch)
+        said = snapshot._not_trusted_by_git(work / "rates", ON_A_SHARE)
+        assert said.endswith(
+            'To have git trust it, run `git config --global --add safe.directory "%(prefix)///server/share/work/rates"`, '
+            "and then this again"
+        )
+        assert "ITS-NAME" not in said
+
+    @pytest.mark.parametrize("folder", ["//server/share/%CD%/rates", "//server/share/a`b/rates", "//server/share/$(calc)/rates"])
+    def test_on_windows_a_folder_no_shell_takes_as_text_gets_no_command_of_ours(self, work, monkeypatch, folder):
+        """The sentence never tells a person to run a command with a placeholder in it: git prints its own in that folder."""
+        import shlex
+
+        self._as_on_windows(monkeypatch)
+        words = (
+            f"fatal: detected dubious ownership in repository at '{folder}'\n"
+            "To add an exception for this directory, call:\n\n"
+            f"\tgit config --global --add safe.directory {shlex.quote('%(prefix)/' + folder)}"
+        )
+        said = snapshot._not_trusted_by_git(work / "rates", words)
+        assert said == (
+            f"git does not trust the repository that {work / 'rates'} is in ({folder}): another user owns it, or it is "
+            "on a network share, and git reads no such repository until it is told to. To have git trust it, run the "
+            "`git config --global --add safe.directory` command that `git status` prints in that folder (in PowerShell or "
+            "Git Bash: `cmd.exe` does not read its quotes), and then this again"
+        )
 
     def test_it_is_an_error_of_its_own_class_and_no_other_case_is(self, work, monkeypatch):
         """For what must tell this case from the others without reading the sentence: ``snapshot.RepositoryNotTrusted``, a ``SnapshotError``. Every other case raises a ``SnapshotError`` that is not one."""
         directory = _folder(work / "rates")
-        others = [work / "no-such-folder", directory]  # no folder there; a folder in no repository
+        others = [work / "no-such-folder"]  # no folder there
         begun = _folder(work / "begun")
         _git(begun, "init", "--quiet", "-b", "main")
         others.append(begun)  # a repository with no commit yet
@@ -233,15 +273,19 @@ class TestARepositoryGitDoesNotTrust:
             with pytest.raises(SnapshotError) as refused:
                 snapshot.code_of(other)
             assert type(refused.value) is SnapshotError, (other, refused.value)
-        for words in (
-            "fatal: not a git repository (or any of the parent directories): .git",
-            "fatal: not a git repository: /srv/safe.directory-notes/main/.git/worktrees/tree",
-            "git could not be run: [Errno 2] No such file or directory: 'git'",
+        # A folder in no repository has a class of its own too, for the list of what is not in a store, which has shorter words for it
+        with pytest.raises(snapshot.NotInARepository) as refused:
+            snapshot.code_of(directory)
+        assert isinstance(refused.value, SnapshotError) and str(refused.value).startswith(f"{directory} is not in a git repository. ")
+        for words, kind in (
+            ("fatal: not a git repository (or any of the parent directories): .git", snapshot.NotInARepository),
+            ("fatal: not a git repository: /srv/safe.directory-notes/main/.git/worktrees/tree", snapshot.NotInARepository),
+            ("git could not be run: [Errno 2] No such file or directory: 'git'", SnapshotError),
         ):
             self._refusing(monkeypatch, words)
             with pytest.raises(SnapshotError) as refused:
                 snapshot.code_of(directory)
-            assert type(refused.value) is SnapshotError, (words, refused.value)
+            assert type(refused.value) is kind, (words, refused.value)
         for words in (ON_A_SHARE, ANOTHER_USERS):
             self._refusing(monkeypatch, words)
             with pytest.raises(snapshot.RepositoryNotTrusted) as refused:

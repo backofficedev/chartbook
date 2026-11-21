@@ -4113,6 +4113,11 @@ def _run_script(
     # may only read: a snapshot is not what comes next there
     for step in () if frozen else report.to_snapshot:
         click.echo(f"{step.id}: built.")
+        if step.id in report.not_noted:
+            # A snapshot of it would be refused, for git's trust and then for the note this build could
+            # not leave: what to do first is said, and the run after it names the command that makes one
+            click.echo(f"  No note of this build was kept: {report.not_noted[step.id]}.")
+            continue
         click.echo(
             f"  For other pipelines and the catalog: commit, then `chartbook snapshot{_in_its_folder(step.directory)}`."
         )
