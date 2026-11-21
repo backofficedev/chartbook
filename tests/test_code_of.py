@@ -254,7 +254,8 @@ class TestARepositoryGitDoesNotTrust:
         assert said == (
             f"git does not trust the repository that {work / 'rates'} is in ({folder}): another user owns it, or it is "
             "on a network share, and git reads no such repository until it is told to. To have git trust it, run the "
-            "`git config --global --add safe.directory` command that `git status` prints in that folder, and then this again"
+            "`git config --global --add safe.directory` command that `git status` prints in that folder (in PowerShell or "
+            "Git Bash: `cmd.exe` does not read its quotes), and then this again"
         )
 
     def test_it_is_an_error_of_its_own_class_and_no_other_case_is(self, work, monkeypatch):

@@ -1023,9 +1023,13 @@ def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
     # text in every shell there, and the command in double quotes makes git trust the folder, by its server
     # and through a connected letter (typed on Windows 11, 2026-11-20, in cmd.exe, Windows PowerShell and Git
     # Bash; git's own line, in single quotes, is two words in cmd.exe). Where the folder's own name holds what
-    # a shell would read (a `%NAME%`, a backtick), no command of ours is given: git prints its own in that folder
+    # a shell would read (a `%NAME%`, a backtick), no command of ours is given: git prints its own in that
+    # folder, which PowerShell and Git Bash take as it is
     if _quoted(folder, batch=False) == NOT_TEXT:
-        to_run = "run the `git config --global --add safe.directory` command that `git status` prints in that folder"
+        to_run = (
+            "run the `git config --global --add safe.directory` command that `git status` prints in that folder "
+            "(in PowerShell or Git Bash: `cmd.exe` does not read its quotes)"
+        )
     else:
         to_run = f"run `git config --global --add safe.directory {_quoted(folder, batch=False)}`"
     return (

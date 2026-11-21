@@ -2228,8 +2228,8 @@ class TestAFolderGitWillNotRead:
             + ". Its own `chartbook run` says."
         ) in said, said
 
-    def test_the_command_is_whole_however_long_the_folders_name(self, work, theirs, mine, monkeypatch):
-        """A line of the list holds 300 characters of what a file gave; this one ends with a command to type."""
+    def test_the_command_is_not_cut_where_a_line_of_the_list_otherwise_is(self, work, theirs, mine, monkeypatch):
+        """A line of the list holds 300 characters of what a file gave; this one ends with a command to type, and holds 4,096."""
         name = "m" * 200
         mid = _pipeline(work, name)
         _ready(mid, theirs)

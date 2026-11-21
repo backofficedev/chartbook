@@ -1025,7 +1025,7 @@ def _a_windows_shell_reads(
     on through ``call``, as pyenv's shims do, has cmd.exe read the line
     once more by a batch file's rules, and that ``%`` is dropped with
     nothing said, whichever shell the line was typed in:
-    ``C:\work\100%\mid`` reached the program as ``C:\work\100\mid``.
+    ``C:\\work\\100%\\mid`` reached the program as ``C:\\work\\100\\mid``.
     Doubled, it is right there and wrong everywhere else. So for what may
     be a batch file, a single ``%`` is withheld too. With *batch* false,
     for a command that is a program (``git``), it is text, and so are the
