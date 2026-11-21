@@ -1087,7 +1087,7 @@ class TestALabelPinnedKeepsItsSnapshot:
         assert lock.pin(user).problems == []
         locked = lock.read_lock(user)
         champion = locked.assets["acme/maker:model/m@champion"]["content_hash"]
-        assert locked.snapshots() == {(second.commit, second.made_at)}
+        assert locked.snapshots() == {("acme/maker", second.commit, second.made_at)}
         assert champion == first.assets["model/m"]["content_hash"] != second.assets["model/m"]["content_hash"]
         assert locked.labelled() == {(second.commit, second.made_at, "model/m", champion)}
         manifest(version(v2), "three")

@@ -582,7 +582,7 @@ class TestTheRestOfWhatReadsTheStore:
         complete, increments, taken, _ = kept
         reader = _reader(work / "late")
         assert lock.pin(reader, FolderStore(store.root)).problems == []
-        assert lock.read_lock(reader).snapshots() == {(taken[-1].commit, taken[-1].made_at)}
+        assert lock.read_lock(reader).snapshots() == {("acme/rates", taken[-1].commit, taken[-1].made_at)}
         assert data.load("acme/rates:parts", project_dir=reader).collect().height == 3
 
     def test_a_run_with_nothing_changed_stands_on_the_newest_and_writes_nothing(self, kept, rates, store):

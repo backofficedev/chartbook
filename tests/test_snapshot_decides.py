@@ -1327,7 +1327,7 @@ class TestWhoeverDependsOnItSeesNoDifference:
             encoding="utf-8", newline="\n",
         )
         assert lock.pin(reader, FolderStore(store.root)).problems == []
-        assert lock.read_lock(reader).snapshots() == {(second.snapshot.commit, _at(1))}
+        assert lock.read_lock(reader).snapshots() == {("acme/rates", second.snapshot.commit, _at(1))}
         assert data.load("acme/rates:treasury", project_dir=reader).collect().height == 3
         assert lock.verify(reader, FolderStore(store.root), note=False).problems == []
 

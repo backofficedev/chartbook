@@ -1926,7 +1926,7 @@ class S3Store(Store):
         self,
         lockfile: Union[str, Path],
         hashes: Iterable[str],
-        snapshots: Iterable[tuple[str, str]] = (),
+        snapshots: Iterable[tuple] = (),
         machine: Optional[str] = None,
         labelled: Iterable[tuple[str, str, str, str]] = (),
     ) -> None:

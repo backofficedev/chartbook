@@ -2202,7 +2202,10 @@ def plan_removals(
     # that holds what is asked for, which need not be the newest of them
     # (builds_at). They stand in, each of them, and are kept as the named one would be
     here = {(taken.commit, taken.made_at) for taken in every}
-    absent = {commit for commit, made_at in set(pinned) | set(noted) if (commit, made_at) not in here}
+    # Stand-ins are for a live lockfile's pins only: a note (including one
+    # of a branch or tag that is not checked out) holds the snapshot it
+    # names and no other of its commit
+    absent = {commit for commit, made_at in set(pinned) if (commit, made_at) not in here}
     by_standing = {id(taken) for taken in every if taken.commit in absent and not made_in_the_future(taken, now)}
     by_label = _holding_labelled(every, labelled or {})
     # An asset marked `keep = true` keeps every version of its bytes: for

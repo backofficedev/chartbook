@@ -150,7 +150,7 @@ class TestTheStoreFound:
     def test_afterwards_the_store_is_whole_and_a_read_through_the_pin_gives_the_bytes_the_record_says(self, found_store, monkeypatch):
         root, names = found_store
         said = {path: content_hash for (_, folder, path), content_hash in said_by_the_records(root).items() if folder == names["r"]}
-        assert MADE[1] in {made_at for _, made_at in lock.read_lock(names["reader"]).snapshots()}  # the reader pins R
+        assert MADE[1] in {made_at for *_, made_at in lock.read_lock(names["reader"]).snapshots()}  # the reader pins R
         assert typed("store", "migrate", "--yes")[0].exit_code == 0
         store = fresh(root)
         assert store.verify() == []

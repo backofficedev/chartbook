@@ -582,10 +582,12 @@ class Root:
             person can find it; another name than the store gives a note
             is a sync service's copy of one (:attr:`copy`).
         snapshots: The snapshots the lockfile pinned when it was last
-            pinned or updated, each ``(commit, made_at)`` as the lockfile
-            names it, which ``store gc`` keeps. None for a note from before
-            notes recorded them: the snapshots holding its objects are kept
-            then, the newest holding each.
+            pinned or updated, each ``(pipeline, commit, made_at)`` as the
+            lockfile names it (the dependency's ID, then the moment), which
+            ``store gc`` keeps. A note from before notes recorded the
+            pipeline has ``""`` for it, and is still read. None for a note
+            from before notes recorded snapshots: the snapshots holding its
+            objects are kept then, the newest holding each.
         node: The hardware address of the machine that wrote it
             (:func:`this_node`), for a person to read; nothing goes by it.
             Empty where it had none to give, or for a note from before
@@ -608,7 +610,7 @@ class Root:
     machine: str = field(default="", compare=False)
     host: str = field(default="", compare=False)
     note: str = field(default="", compare=False)
-    snapshots: Optional[tuple[tuple[str, str], ...]] = field(default=None, compare=False)
+    snapshots: Optional[tuple[tuple[str, str, str], ...]] = field(default=None, compare=False)
     node: str = field(default="", compare=False)
     labelled: Optional[tuple[tuple[str, str, str, str], ...]] = field(default=None, compare=False)
     written: str = field(default="", compare=False)
@@ -924,12 +926,14 @@ def this_node() -> str:
 def root_document(
     lockfile: Union[str, Path],
     hashes: Iterable[str],
-    snapshots: Iterable[tuple[str, str]],
-    machine: str,
+    snapshots: Iterable[tuple] = (),
+    machine: str = "",
     labelled: Iterable[tuple[str, str, str, str]] = (),
 ) -> dict:
     """A note of a lockfile on this machine, named *machine*, as a store keeps it.
 
+    :param snapshots: Each pin, ``(pipeline, commit, made_at)`` or the older
+        ``(commit, made_at)``; the pipeline is the dependency's ID.
     :param labelled: The model versions the lockfile pins by label, each
         ``(commit, made_at, name, content_hash)`` (:attr:`Root.labelled`);
         the moment may be empty for a pin that names no snapshot.
@@ -941,9 +945,9 @@ def root_document(
         "node": this_node(),
         "hashes": list(hashes),
         "snapshots": [
-            {"commit": commit, "made_at": made_at}
-            for commit, made_at in sorted(set(snapshots))
-            if isinstance(commit, str) and _FULL_COMMIT.match(commit) and isinstance(made_at, str)
+            entry for entry in (
+                _snapshot_entry(item) for item in sorted(set(snapshots), key=_snapshot_sort_key)
+            ) if entry is not None
         ],
         "labelled": [
             {"commit": commit, "made_at": made_at, "name": name, "content_hash": content_hash}
@@ -951,6 +955,32 @@ def root_document(
             if _is_labelled_entry(commit, made_at, name, content_hash)
         ],
     }
+
+
+def _snapshot_entry(item: tuple) -> Optional[dict]:
+    """One snapshot pin as a note writes it; None if it is not a full commit and a time."""
+    pipeline, commit, made_at = _snapshot_triple(item)
+    if not isinstance(commit, str) or not _FULL_COMMIT.match(commit) or not isinstance(made_at, str):
+        return None
+    entry = {"commit": commit, "made_at": made_at}
+    if pipeline:
+        entry["pipeline"] = pipeline
+    return entry
+
+
+def _snapshot_triple(item: tuple) -> tuple[str, str, str]:
+    """``(pipeline, commit, made_at)`` from a note's pin or an older ``(commit, made_at)``."""
+    if len(item) == 2:
+        return "", item[0], item[1]
+    if len(item) >= 3:
+        pipeline, commit, made_at = item[0], item[1], item[2]
+        return pipeline if isinstance(pipeline, str) else "", commit, made_at
+    return "", "", ""
+
+
+def _snapshot_sort_key(item: tuple) -> tuple:
+    """Order snapshot pins so a note writes them the same way twice."""
+    return _snapshot_triple(item)
 
 
 def _is_labelled_entry(commit: object, made_at: object, name: object, content_hash: object) -> bool:
@@ -978,9 +1008,14 @@ def read_root(stored: dict, note: str = "") -> Root:
     snapshots = None
     if isinstance(stored.get("snapshots"), list):
         # A pair that is not a full commit and a time (a lockfile edited by
-        # hand) is passed over: the note's objects are kept all the same
+        # hand) is passed over: the note's objects are kept all the same.
+        # A note from before notes recorded the pipeline has "" for it.
         snapshots = tuple(sorted({
-            (entry["commit"], entry["made_at"])
+            (
+                entry["pipeline"] if isinstance(entry.get("pipeline"), str) else "",
+                entry["commit"],
+                entry["made_at"],
+            )
             for entry in stored["snapshots"]
             if isinstance(entry, dict) and isinstance(entry.get("commit"), str)
             and _FULL_COMMIT.match(entry["commit"]) and isinstance(entry.get("made_at"), str)
@@ -1397,11 +1432,15 @@ class Store(abc.ABC):
         self,
         lockfile: Union[str, Path],
         hashes: Iterable[str],
-        snapshots: Iterable[tuple[str, str]] = (),
+        snapshots: Iterable[tuple] = (),
         machine: Optional[str] = None,
         labelled: Iterable[tuple[str, str, str, str]] = (),
     ) -> None:
-        """Note that a lockfile names these objects, pins these snapshots, and pins these model versions by label (:attr:`Root.labelled`), so that they are kept: under this machine's name, or *machine* (``""`` names the path alone)."""
+        """Note that a lockfile names these objects, pins these snapshots, and pins these model versions by label (:attr:`Root.labelled`), so that they are kept: under this machine's name, or *machine* (``""`` names the path alone).
+
+        :param snapshots: Each ``(pipeline, commit, made_at)``, or the older
+            ``(commit, made_at)``.
+        """
 
     @abc.abstractmethod
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
@@ -2945,7 +2984,7 @@ class FolderStore(Store):
         self,
         lockfile: Union[str, Path],
         hashes: Iterable[str],
-        snapshots: Iterable[tuple[str, str]] = (),
+        snapshots: Iterable[tuple] = (),
         machine: Optional[str] = None,
         labelled: Iterable[tuple[str, str, str, str]] = (),
     ) -> None:
@@ -2965,7 +3004,8 @@ class FolderStore(Store):
 
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
-        :param snapshots: The snapshots it pins, each ``(commit, made_at)``.
+        :param snapshots: The snapshots it pins, each
+            ``(pipeline, commit, made_at)`` or the older ``(commit, made_at)``.
         :param machine: The name to note it under: this machine's by
             default; ``""`` for the path alone, as notes were named before
             they named machines (a CI runner with no name of its own),

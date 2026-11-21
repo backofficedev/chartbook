@@ -313,18 +313,20 @@ class Lock:
             if record.get("content_hash")
         }
 
-    def snapshots(self) -> set[tuple[str, str]]:
-        """The snapshots it pins, each ``(commit, made_at)``: what a note of it records for ``store gc``.
+    def snapshots(self) -> set[tuple[str, str, str]]:
+        """The snapshots it pins, each ``(pipeline, commit, made_at)``: what a note of it records for ``store gc``.
 
-        Only a full commit names one: a commit cut short or in capitals (a
-        lockfile edited by hand) names no snapshot a store keeps.
+        The pipeline is the dependency's ID. Only a full commit names one: a
+        commit cut short or in capitals (a lockfile edited by hand) names no
+        snapshot a store keeps.
         """
         from chartbook.store import _FULL_COMMIT
 
         return {
-            (entry["location"]["commit"], entry["snapshot"])
+            (entry["id"], entry["location"]["commit"], entry["snapshot"])
             for entry in self.dependencies
-            if isinstance(entry.get("location"), dict)
+            if isinstance(entry.get("id"), str)
+            and isinstance(entry.get("location"), dict)
             and isinstance(entry["location"].get("commit"), str)
             and _FULL_COMMIT.match(entry["location"]["commit"])
             and isinstance(entry.get("snapshot"), str)
@@ -435,6 +437,18 @@ def read_lock(path: Union[str, Path]) -> Optional[Lock]:
     try:
         with open(path, encoding="utf-8") as f:
             document = json.load(f)
+    except (OSError, ValueError) as error:
+        raise LockError(f"Cannot read {path}: {error}") from None
+    return _lock_from_document(document, str(path))
+
+
+def _lock_from_document(document: dict, where: str) -> Lock:
+    """A :class:`Lock` from a lockfile's JSON, as :func:`read_lock` builds it.
+
+    :param where: Named in the error when the document is not a lockfile
+        this version reads (a path, or ``git show``).
+    """
+    try:
         if document.get("schema") not in READS:
             raise ValueError(
                 f"its schema is {document.get('schema')!r}, and this version of "
@@ -474,8 +488,8 @@ def read_lock(path: Union[str, Path]) -> Optional[Lock]:
                 if overall is not None:
                     entry["pinned_hash"] = overall
                 lock.dependencies[position] = entry
-    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
-        raise LockError(f"Cannot read {path}: {error}") from None
+    except (ValueError, KeyError, TypeError, AttributeError) as error:
+        raise LockError(f"Cannot read {where}: {error}") from None
     return lock
 
 
@@ -2059,14 +2073,11 @@ def _sync_now(
             report.without_rows = pinned_before_rows(after, before, report.snapshots)
             report.rows_now = rows_pinned_now(after, before)
             report.not_hashed_now = rows_not_hashed_now(after, before)
-    hashes = after.hashes()
     noted_as = _noted_as()
     try:
-        # A snapshot it names is kept too, with what the lockfile does not hold of it
-        if hashes or after.snapshots():
-            store.add_root(lock_path, hashes, after.snapshots(), machine=noted_as, labelled=after.labelled())
-        else:
-            store.remove_root(lock_path, machine=noted_as)
+        # A snapshot it names is kept too, with what the lockfile does not hold of it;
+        # and what every local branch and tag of its clone pins (:func:`write_note`)
+        write_note(lock_path, after, store, machine=noted_as)
     except (OSError, StoreError) as error:
         from chartbook.config import without_credentials
 
@@ -2405,7 +2416,8 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     A machine that only reads (``run --frozen``, a read through the lockfile)
     is kept this way: ``store gc`` on another machine keeps what a note
     records, and would otherwise know nothing of this one's pins. The note
-    is replaced with what the lockfile pins now, as ``pin`` and ``update``
+    is replaced with what the lockfile pins now (and what every local branch
+    and tag of its clone pins: :func:`write_note`), as ``pin`` and ``update``
     replace it, so a reader's note follows its pulls; nothing is written
     when it says that already.
 
@@ -2417,25 +2429,148 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     """
     from chartbook.config import without_credentials
 
-    hashes, snapshots, labelled = locked.hashes(), locked.snapshots(), locked.labelled()
-    if not hashes and not snapshots:
-        return False, ""
     noted_as = _noted_as()
     try:
+        pins = pins_for_note(lock_path, locked)
         before = store.root_of(lock_path, machine=noted_as)
+        if not pins.complete and before is not None:
+            # A partial answer must not drop pins the note already held
+            pins.hashes |= set(before.hashes)
+            pins.snapshots |= set(before.snapshots or ())
+            pins.labelled |= set(before.labelled or ())
+        if not pins.hashes and not pins.snapshots:
+            if before is None:
+                return False, ""
+            if pins.complete:
+                store.remove_root(lock_path, machine=noted_as)
+                return True, ""
+            return False, ""
         if (
             before is not None
-            and set(before.hashes) == hashes
+            and set(before.hashes) == pins.hashes
             and before.snapshots is not None
-            and set(before.snapshots) == snapshots
+            and set(before.snapshots) == pins.snapshots
             and before.labelled is not None
-            and set(before.labelled) == labelled
+            and set(before.labelled) == pins.labelled
         ):
             return False, ""
-        store.add_root(lock_path, hashes, snapshots, machine=noted_as, labelled=labelled)
+        store.add_root(lock_path, pins.hashes, pins.snapshots, machine=noted_as, labelled=pins.labelled)
     except Exception as error:  # noqa: BLE001 - a note is best effort, whatever the store raised
         return False, without_credentials(str(error))
     return True, ""
+
+
+@dataclass
+class NotePins:
+    """What a store's note of a lockfile should hold.
+
+    Attributes:
+        hashes: Content hashes to keep.
+        snapshots: Snapshot pins, each ``(pipeline, commit, made_at)``.
+        labelled: Model versions pinned by label.
+        complete: Whether every local branch and tag tip answered (lockfile
+            resolved or clearly absent). True also when the project is not
+            in a git clone. False means merge into the note that is there;
+            True means replace it.
+    """
+
+    hashes: set[str] = field(default_factory=set)
+    snapshots: set[tuple[str, str, str]] = field(default_factory=set)
+    labelled: set[tuple[str, str, str, str]] = field(default_factory=set)
+    complete: bool = True
+
+
+def pins_for_note(lock_path: Path, locked: Lock) -> NotePins:
+    """What the store's note of *lock_path* should name: this lockfile's pins, and what every local branch and tag pins.
+
+    In a git clone, each tip of ``refs/heads`` and ``refs/tags`` is asked
+    for the lockfile at the same path relative to the repository top
+    (``git show <tip>:…/chartbook.lock``). Only the snapshot that tip's
+    lockfile names is taken: no other snapshot of its commit. Where every
+    tip answered (the lockfile resolved or was clearly absent), the note
+    may replace what it held; where any tip failed, the answer is partial
+    and must be merged into the note that is there so pins are not dropped.
+
+    Outside a clone, only this lockfile's pins are returned, and the note
+    may replace.
+    """
+    pins = NotePins(
+        hashes=set(locked.hashes()),
+        snapshots=set(locked.snapshots()),
+        labelled=set(locked.labelled()),
+        complete=True,
+    )
+    try:
+        code = snapshot.code_of(lock_path.parent)
+    except snapshot.NotInARepository:
+        return pins
+    except snapshot.SnapshotError:
+        # Git could not say where the folder is: keep what we have, and merge
+        pins.complete = False
+        return pins
+    relative = f"{code.subdirectory}/{LOCK_FILE}" if code.subdirectory else LOCK_FILE
+    try:
+        tips = snapshot._git(code.top, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/tags")
+    except snapshot.SnapshotError:
+        pins.complete = False
+        return pins
+    for tip in set(tips.split()):
+        found, status = _lockfile_at_tip(code.top, tip, relative)
+        if status == "failed":
+            pins.complete = False
+            continue
+        if found is None:
+            continue  # clearly absent at that tip: answered
+        pins.hashes |= found.hashes()
+        pins.snapshots |= found.snapshots()
+        pins.labelled |= found.labelled()
+    return pins
+
+
+def _lockfile_at_tip(top: Path, tip: str, relative: str) -> tuple[Optional[Lock], str]:
+    """The lockfile at *relative* on *tip*, and whether git answered: ``ok``, ``absent``, or ``failed``."""
+    try:
+        text = snapshot._git(top, "show", f"{tip}:{relative}")
+    except snapshot.SnapshotError as error:
+        said = str(error).lower()
+        # Git's words when the path is not in that commit: a clear answer, not a failure
+        if "does not exist" in said or "exists on disk" in said or "not in '" in said or 'not in "' in said:
+            return None, "absent"
+        return None, "failed"
+    try:
+        return _lock_from_text(text), "ok"
+    except LockError:
+        return None, "failed"
+
+
+def _lock_from_text(text: str) -> Lock:
+    """A lockfile as :func:`read_lock` would give it, from the text ``git show`` printed."""
+    try:
+        document = json.loads(text)
+    except (ValueError, TypeError) as error:
+        raise LockError(f"Cannot read lockfile text: {error}") from None
+    return _lock_from_document(document, "git show")
+
+
+def write_note(lock_path: Path, locked: Lock, store: Store, machine: Optional[str] = None) -> None:
+    """Write the store's note of a lockfile: what it pins, and what every local branch and tag of its clone pins.
+
+    Replaces the note when git answered for the whole clone (or the project
+    is not in one). Merges into the note that is there when the answer is
+    partial, so pins are not dropped. Removes the note when nothing is pinned.
+    """
+    pins = pins_for_note(lock_path, locked)
+    noted_as = _noted_as() if machine is None else machine
+    if not pins.complete:
+        before = store.root_of(lock_path, machine=noted_as)
+        if before is not None:
+            pins.hashes |= set(before.hashes)
+            pins.snapshots |= set(before.snapshots or ())
+            pins.labelled |= set(before.labelled or ())
+    if not pins.hashes and not pins.snapshots:
+        store.remove_root(lock_path, machine=noted_as)
+        return
+    store.add_root(lock_path, pins.hashes, pins.snapshots, machine=noted_as, labelled=pins.labelled)
 
 
 def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, note: bool = False) -> FrozenReport:
@@ -4263,6 +4398,9 @@ class GcPlan:
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.
+        noted_by: For each snapshot a note pins, ``(commit, made_at)`` to
+            the note's file name under ``_chartbook/roots/``: so ``store
+            gc`` can say which note holds it.
     """
 
     lockfiles: list[tuple[Path, bool]] = field(default_factory=list)
@@ -4288,6 +4426,7 @@ class GcPlan:
     #: The pipelines of *held_back* whose snapshot that stays has a file with other bytes than its record
     #: says, found by reading it (:func:`plan_gc` with *hashed*); for them *held_back* gives what is wrong
     not_intact: set = field(default_factory=set)
+    noted_by: dict = field(default_factory=dict)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -4328,6 +4467,7 @@ def plan_gc(
     aggressive: bool = False,
     hashed: bool = False,
     looks: bool = True,
+    pipeline: Optional[str] = None,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
@@ -4388,6 +4528,10 @@ def plan_gc(
         (:meth:`chartbook.store.Store.check_tidy`).
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.
+    :param pipeline: When set, the plan is narrowed to that pipeline's
+        snapshots only: for the line after ``chartbook snapshot``, which
+        says what ``store gc`` could remove of this pipeline and removes
+        nothing. Whole-store ``store gc`` leaves it unset.
     :returns: The plan, for :func:`run_gc`.
     :raises StoreError: If the store's notes cannot be read.
     :raises LockError: If a lockfile that is there cannot be read. Nothing
@@ -4396,7 +4540,39 @@ def plan_gc(
     store = store if store is not None else default_store()
     # Asked many times over: the records are read once for the whole plan
     with store.reading():
-        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed, looks)
+        plan = _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed, looks)
+    if pipeline is not None:
+        _narrow_to_pipeline(plan, pipeline)
+    return plan
+
+
+def _narrow_to_pipeline(plan: GcPlan, pipeline: str) -> None:
+    """Leave only what of *pipeline* the plan would clear or keep: for the line after a snapshot of that pipeline.
+
+    Objects nothing names, and unused files, are of no one pipeline: the
+    reminder of one says nothing of them. Copies that would go are only
+    those in this pipeline's snapshot folders.
+    """
+    from chartbook.store import pipeline_folder
+
+    plan.snapshots_delete = [(taken, why) for taken, why in plan.snapshots_delete if taken.pipeline == pipeline]
+    plan.pinned_delete = [(taken, why) for taken, why in plan.pinned_delete if taken.pipeline == pipeline]
+    plan.snapshots_kept = [(taken, why) for taken, why in plan.snapshots_kept if taken.pipeline == pipeline]
+    plan.pinned_kept = [(taken, why) for taken, why in plan.pinned_kept if taken.pipeline == pipeline]
+    plan.kept_versions = [kept for kept in plan.kept_versions if kept.pipeline == pipeline]
+    plan.held_back = {key: value for key, value in plan.held_back.items() if key == pipeline}
+    plan.not_intact = plan.not_intact & {pipeline}
+    plan.delete = []
+    plan.recent = []
+    plan.unused = []
+    plan.files = {}
+    plan.recent_files = set()
+    folder = pipeline_folder(pipeline)
+    markers = (f"snapshots/{folder}/", f"increments/{folder}/", f"pipelines/{folder}/")
+    plan.copies = {
+        name: size for name, size in plan.copies.items()
+        if any(marker in name.replace("\\", "/") for marker in markers)
+    }
 
 
 def _plan_gc(
@@ -4434,13 +4610,26 @@ def _plan_gc(
         return found
 
     noted: dict[tuple[str, str], str] = {}
+    # Which note file under _chartbook/roots/ holds each noted pin, for the listing
+    noted_by: dict[tuple[str, str], str] = {}
 
     def keep_noted(root, why: str, fallback: set, hashes: Optional[set] = None) -> None:
-        """Keep what a note recorded: its objects, the snapshots it pins (or, for a note that names none, by its objects), and a snapshot holding each version it pins by label."""
+        """Keep what a note recorded: its objects, the snapshots it pins (or, for a note that names none, by its objects), and a snapshot holding each version it pins by label.
+
+        Each snapshot pin is kept by its ``(commit, made_at)`` alone: a note
+        from a branch or tag that is not checked out holds only the snapshot
+        it names, never another of its commit (stand-ins are for a live
+        lockfile's pins only).
+        """
+        from chartbook.store import _snapshot_triple
+
         keep.update(root.hashes)
         if root.snapshots is not None:
-            for pair in root.snapshots:
-                noted.setdefault(pair, why)
+            for item in root.snapshots:
+                _, commit, made_at = _snapshot_triple(item)
+                noted.setdefault((commit, made_at), why)
+                if root.note:
+                    noted_by.setdefault((commit, made_at), root.note)
         else:
             fallback.update(root.hashes if hashes is None else hashes)
         for version in root.labelled or ():
@@ -4514,6 +4703,7 @@ def _plan_gc(
         else:
             keep_noted(root, "a lockfile that cannot be found pins it", hashes_of_missing)
 
+    plan.noted_by = noted_by
     try:
         snapshots = snapshot.plan_removals(
             store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage,

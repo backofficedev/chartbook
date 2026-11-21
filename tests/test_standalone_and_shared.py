@@ -141,7 +141,8 @@ class TestTheGcReminder:
         result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(news)])
         assert result.exit_code == 0, result.output
         assert "Snapshot made" in result.output
-        assert "`chartbook store gc` would clear 1 snapshot(s), freeing" in result.output
+        # Of this pipeline only: a catalog build's line stays of the whole store
+        assert "`chartbook store gc` would clear 1 snapshot(s) of news, freeing" in result.output
         assert "Nothing is removed unless you ask" in result.output
         assert (store.root / "snapshots" / "news").is_dir() and len(list(store.all_snapshot_files())) == 3  # said, not done
 

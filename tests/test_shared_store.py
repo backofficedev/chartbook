@@ -1258,7 +1258,7 @@ class TestAReadersNote:
         shutil.copytree(project, clone)
         assert lock.verify(clone, note=True).problems == []
         (note,) = [r for r in default_store().roots() if r.lockfile == clone / lock.LOCK_FILE]
-        assert [made_at for _, made_at in note.snapshots] == ["2020-03-01T00:00:00.000000Z"]
+        assert [made_at for *_, made_at in note.snapshots] == ["2020-03-01T00:00:00.000000Z"]
         machine("a")
         plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
         assert len(plan.snapshots_kept) == 1 and s1.made_at in [t.made_at for t, _ in plan.snapshots_delete]
@@ -1314,7 +1314,7 @@ class TestAReadersNote:
         data.load("acme/rates:treasury").collect()  # reads the first, notes it
         data.load("acme/rates:treasury").collect()  # reads the second: noted too
         (note,) = [r for r in default_store().roots() if r.lockfile == clone / lock.LOCK_FILE]
-        assert [made_at for _, made_at in note.snapshots] == ["2020-02-01T00:00:00.000000Z"]
+        assert [made_at for *_, made_at in note.snapshots] == ["2020-02-01T00:00:00.000000Z"]
 
     def test_a_read_never_fails_for_its_note(self, drive, monkeypatch):
         """A store of another make whose add_root takes the old arguments."""
@@ -1444,7 +1444,7 @@ class TestRunnersThatShareAName:
             assert lock.verify(checkout, note=True).problems == []
         notes = [r for r in default_store().roots() if r.lockfile == checkout / lock.LOCK_FILE]
         assert len(notes) == 1 and notes[0].machine == "ci-runners"
-        assert [made_at for _, made_at in notes[0].snapshots] == [taken.made_at]  # the last run's
+        assert [made_at for *_, made_at in notes[0].snapshots] == [taken.made_at]  # the last run's
 
     @pytest.mark.skipif(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="chmod makes no folder read-only on Windows, nor for root")
     def test_a_note_not_written_is_said_for_what_it_is(self, drive):
