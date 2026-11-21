@@ -4410,8 +4410,10 @@ def _remind_of_gc(silenced: bool) -> None:
     After `chartbook snapshot`, `chartbook run --snapshot` and `chartbook catalog build`, the two
     commands that grow the store or read all of it: a store that nobody
     ever clears grows without bound, and this is where a person learns the
-    command. The plan is the one gc makes, read-only; a store that cannot
-    be read says nothing, since a reminder never fails a command.
+    command. The plan is the one gc makes, read-only, and made to look at
+    no file of the store: it goes by the records alone
+    (:func:`_what_gc_would_clear`); a store that cannot be read says
+    nothing, since a reminder never fails a command.
     """
     if silenced:
         return
@@ -4569,11 +4571,23 @@ def store_info(store_name):
 
 
 def _what_gc_would_clear(the_store) -> "str | None":
-    """In a few words, what `chartbook store gc` would clear from a store; None when nothing, or when that cannot be told."""
+    """In a few words, what `chartbook store gc` would clear from a store; None when nothing, or when that cannot be told.
+
+    The plan asks nothing of the disk about a snapshot's files
+    (``looks=False``): it goes by the records alone. It walks no folder
+    for what no snapshot uses, which is no part of the line; and it does
+    not ask whether each snapshot that stays holds its files, which is
+    what keeps a real gc from removing a pipeline's snapshots while one
+    that stays lacks a file. Either asks about every file of many
+    snapshots, at each snapshot of any pipeline, and a reminder removes
+    nothing. So the line may count a snapshot that ``store gc`` would hold
+    back; ``store gc --dry-run`` and the real one look, and are exact. A
+    store a sweep would refuse still says nothing.
+    """
     try:
         from chartbook import lock
 
-        plan = lock.plan_gc(the_store)
+        plan = lock.plan_gc(the_store, looks=False)
     except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
         return None
     # A snapshot a pin made from a repository goes with gc too, with its own copy of every file

@@ -103,7 +103,9 @@ from chartbook.replacing import replace_when_let
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
 from chartbook.store import LINKS as STORE_LINKS
-from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, TidyError, default_store
+from chartbook.store import (
+    ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, TidyError, default_store, increment_note,
+)
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -4240,6 +4242,7 @@ class GcPlan:
         unused: What no snapshot uses besides, each name with its size: a
             snapshot's folder begun and never written, a sync service's
             copies beside a snapshot's files (:meth:`chartbook.store.Store.tidy`).
+            Empty in a plan that looks at no file (:func:`plan_gc` with ``looks=False``).
         kept_versions: Each version of an asset marked ``keep = true`` that
             a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
             what the marks keep, for the bill.
@@ -4254,7 +4257,9 @@ class GcPlan:
             (:meth:`chartbook.store.Store.holes_left`): by the pipeline's
             ID, that snapshot's record, the first such file, and how many.
             Its snapshots that would have gone are in *snapshots_kept*,
-            with :data:`HELD_BACK` for why.
+            with :data:`HELD_BACK` for why. Empty in a plan that looks at no
+            file (:func:`plan_gc` with ``looks=False``), which may then count
+            a snapshot that this would hold back.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.
@@ -4322,6 +4327,7 @@ def plan_gc(
     keep_lineage: bool = False,
     aggressive: bool = False,
     hashed: bool = False,
+    looks: bool = True,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
@@ -4367,6 +4373,19 @@ def plan_gc(
         stays, which a read is handed afterwards, is read and hashed, and
         if it is not what its record says nothing of that pipeline goes.
         Off by default: the line a snapshot ends with reads nothing.
+    :param looks: Whether the plan may look at the files of the store's
+        snapshots. False for the line a snapshot ends with, which removes
+        nothing: the plan then asks nothing of the disk about them and
+        goes by the records alone. It walks no pipeline's folder for what
+        no snapshot uses (:attr:`GcPlan.unused` is empty), and it does
+        not ask whether each snapshot that stays holds its files
+        (:attr:`GcPlan.held_back` is empty), each of which asks about
+        every file of many snapshots; *hashed* reads nothing either. So
+        such a plan may count a snapshot that ``store gc`` would hold
+        back because a snapshot of its pipeline that stays has lost a
+        file; ``store gc`` and its dry run look, and are exact. What a
+        sweep refuses before it looks at anything is still refused
+        (:meth:`chartbook.store.Store.check_tidy`).
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.
     :returns: The plan, for :func:`run_gc`.
@@ -4377,14 +4396,17 @@ def plan_gc(
     store = store if store is not None else default_store()
     # Asked many times over: the records are read once for the whole plan
     with store.reading():
-        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed)
+        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed, looks)
 
 
-def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool, hashed: bool = False) -> GcPlan:
+def _plan_gc(
+    store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool,
+    hashed: bool = False, looks: bool = True,
+) -> GcPlan:
     """The rest of :func:`plan_gc`, within one reading of the store's records."""
     plan = GcPlan(
         forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
-        keep_lineage=keep_lineage, aggressive=aggressive, hashed=hashed,
+        keep_lineage=keep_lineage, aggressive=aggressive, hashed=hashed and looks,
     )
     keep: set[str] = set()
     pinned_snapshots: set[tuple[str, str]] = set()
@@ -4506,7 +4528,11 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     _keep_what_only_they_hold(plan, keep)
     _plan_pinned(store, plan, keep, recent_seconds)
     _keep_what_an_increment_builds_on(store, plan)
-    _hold_back_where_one_that_stays_has_a_hole(store, plan, keep)
+    if looks:
+        # Asks whether each file of each snapshot that stays is there, for every pipeline something goes from:
+        # what keeps a real gc from removing a snapshot while one that stays lacks a file. A plan that removes
+        # nothing and may not look goes by the records, and may count a snapshot that this would hold back
+        _hold_back_where_one_that_stays_has_a_hole(store, plan, keep)
     named_by_snapshots = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept + plan.pinned_kept))
     plan.snapshots = len(named_by_snapshots)
     keep |= named_by_snapshots
@@ -4565,8 +4591,20 @@ def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_day
     root = getattr(store, "root", None)
     for path in going if isinstance(root, Path) and getattr(type(store), "builds_on", None) is not None else []:
         note = Path(path).parent / "INCREMENT.txt"
-        if store.builds_on(Path(path)) is not None and note.is_file():
+        on = store.builds_on(Path(path))
+        if on is None:
+            continue
+        if not looks:
+            # Its size by what the record says it builds on: the line is ChartBook's own (store.increment_note)
+            said = increment_note(on.parent.parent.parent.name, on.parent.parent.name)
+            plan.copies[note.relative_to(root).as_posix()] = len(said.encode("utf-8"))
+        elif note.is_file():
             plan.copies[note.relative_to(root).as_posix()] = note.stat().st_size
+    if not looks:
+        # The line a snapshot ends with says nothing of what a sweep would find, and a sweep asks the disk about
+        # every file of every snapshot in the store. What one refuses before it looks at anything is refused still
+        store.check_tidy()
+        return plan
     # What no snapshot uses beside that: a snapshot never written, a sync service's copies
     named = {name for names in plan.files.values() for name in names}
     plan.unused = [(name, size) for name, size in store.tidy(dry_run=True, keep=recent_files) if name not in named]

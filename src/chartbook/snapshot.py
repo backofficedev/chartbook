@@ -84,6 +84,7 @@ secrets, and a store is something to share.
 
 from __future__ import annotations
 
+import collections
 import hashlib
 import contextlib
 import dataclasses
@@ -1203,14 +1204,86 @@ def record_name(subdirectory: str) -> str:
     return name
 
 
+#: How many files the snapshots remembered may list in all. A snapshot read holds an entry for every file its
+#: record lists, and records differ by four orders of magnitude (one real record lists 127,676 files and
+#: another 9), so what a process holds goes by the files listed and not by the number of records: about 140
+#: megabytes at this bound, by a measure of 188 MB for 400,000. A process that reads every record of a store
+#: (a catalog built, a ``store gc`` planned) holds no more than that until it ends, and a pipeline's whole
+#: history stays remembered through one command, where it comes to less. Two records of the largest table
+#: known (127,676 files each) are remembered together: the one before and the one being made are the two a
+#: snapshot reads again and again.
+READ_KEPT_FILES = 300_000
+
+#: The snapshots read and remembered, the least recently read first, each by its record's file with the time
+#: and size the file had then and the number of files it lists: a record is never rewritten, so one read is
+#: enough while it is remembered. Together they list :data:`READ_KEPT_FILES` at most, but for one that lists
+#: more alone. A record that is removed is forgotten (:func:`forget`).
+_read_snapshots: collections.OrderedDict = collections.OrderedDict()
+
+
 def read(path: Union[str, Path]) -> Snapshot:
-    """Read one snapshot record.
+    """Read one snapshot record; one that is remembered is not read again while its file is unchanged.
+
+    A record lists every file of its snapshot, and one command asks for
+    the same record many times over (each snapshot of the pipeline's
+    history, each time the history is asked for): it is opened and parsed
+    the first time, and the snapshot read then is handed out again for as
+    long as the file has the time and the size it had. A record that
+    cannot be read is not remembered: a sync may yet bring the rest of it.
+
+    **What is remembered is bounded by what the records hold,** not by
+    how many there are: the snapshots remembered list
+    :data:`READ_KEPT_FILES` files at most in all (:func:`_how_many_listed`),
+    and the least recently read goes first. One record that lists more
+    than that is remembered alone, since it is the one being read again
+    and again; the next record read puts it out.
+
+    What is handed out is the one snapshot, to every caller: its records
+    are not to be changed in place.
 
     :raises SnapshotError: If the file is not a record this version reads.
     """
-    from chartbook.store import _any_length, unreadable_detail
+    from chartbook.store import _record_stamp
 
     path = Path(path)
+    key = str(path)
+    stamp = _record_stamp(path)  # taken before the file is opened: one that changes meanwhile is read again next time
+    known = _read_snapshots.get(key)
+    if known is not None and stamp is not None and known[0] == stamp:
+        _read_snapshots.move_to_end(key)
+        return known[1]
+    _read_snapshots.pop(key, None)  # gone, or no longer the file that was read
+    taken = _read(path)
+    if stamp is not None:
+        _read_snapshots[key] = (stamp, taken, _how_many_listed(taken))
+        # Counted afresh each time one is read from the disk, which costs far more: nothing else keeps the sum
+        listed = sum(files for _, _, files in _read_snapshots.values())
+        while listed > READ_KEPT_FILES and len(_read_snapshots) > 1:
+            listed -= _read_snapshots.popitem(last=False)[1][2]
+    return taken
+
+
+def _how_many_listed(taken: Snapshot) -> int:
+    """How many files a snapshot's record says the store keeps for it: those of each asset, of its index and of its documents; one, for a record that lists none.
+
+    What a snapshot read holds in memory goes by this: an entry for each
+    file, with its path, its hash, its size and where it is kept.
+    """
+    stored = taken.stored if isinstance(taken.stored, dict) else {}
+    records = stored.get("records")
+    held = [*(records.values() if isinstance(records, dict) else ()), stored.get("index"), stored.get("documents")]
+    return max(1, sum(len(one["files"]) for one in held if isinstance(one, dict) and isinstance(one.get("files"), list)))
+
+
+def forget(path: Union[str, Path]) -> None:
+    """Forget what was read of one record (:func:`read`): its store has removed it."""
+    _read_snapshots.pop(str(Path(path)), None)
+
+
+def _read(path: Path) -> Snapshot:
+    """Open one snapshot record and read it (:func:`read`)."""
+    from chartbook.store import _any_length, unreadable_detail
+
     try:
         # In the form Windows takes whatever its length: a record another machine wrote may be past this one's limit
         with open(_any_length(path), encoding="utf-8") as f:
@@ -1380,7 +1453,7 @@ def find(store: Store, commit: str, subdirectory: str = "") -> list[Snapshot]:
     :raises SnapshotError: If one of them cannot be read.
     """
     found = [read(file) for file in store.snapshot_files(commit, record_name(subdirectory))]
-    return sorted(found, key=lambda s: (s.made_at, _count(s.path)), reverse=True)
+    return sorted(found, key=lambda s: (s.made_at, _count(s.path, s.made_at)), reverse=True)
 
 
 def newest_for(
@@ -1445,7 +1518,7 @@ def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[
         line.split()[0] for line in answers.splitlines() if line.endswith(" commit")
     }
     found = [taken for commit in ours for taken in find(store, commit, code.subdirectory)]
-    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)))
 
 
 def versions_of(
@@ -1507,7 +1580,7 @@ def all_snapshots(store: Store) -> list[Snapshot]:
         removed from a store that cannot say what it is keeping.
     """
     found = [read(file) for file in store.all_snapshot_files()]
-    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)))
 
 
 def is_at(path: Union[str, Path], commit: str) -> bool:
@@ -1534,7 +1607,7 @@ def readable_snapshots(store: Store) -> tuple[list[Snapshot], list[tuple[Path, s
             found.append(read(file))
         except SnapshotError as error:
             unreadable.append((Path(file), str(error)))
-    found.sort(key=lambda taken: (taken.made_at, _count(taken.path)))
+    found.sort(key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)))
     return found, unreadable
 
 
@@ -1934,7 +2007,7 @@ def builds_at(found: list, pipeline: Optional[str], commit: str, named: Optional
     at = [taken for taken in found if taken.commit == commit and taken.pipeline == pipeline]
     exact = [taken for taken in at if isinstance(named, str) and taken.same_moment(commit, named)]
     others = [taken for taken in at if not any(taken is one for one in exact) and not made_in_the_future(taken, now)]
-    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path)), reverse=True)
+    return exact + sorted(others, key=lambda taken: (taken.made_at, _count(taken.path, taken.made_at)), reverse=True)
 
 
 def made_in_the_future(taken: Snapshot, now: Optional[datetime] = None) -> bool:
@@ -2108,7 +2181,7 @@ def plan_removals(
     # A note that names no snapshots (from before notes recorded them) keeps,
     # of the snapshots holding each object it names, the newest: an object
     # that never changes would otherwise keep every snapshot there is
-    every = sorted((taken for group, _, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
+    every = sorted((taken for group, _, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path, t.made_at)))
 
     def newest_holding(hashes: set) -> set:
         # In each pipeline: a note names bytes and not whose they are, and a read of a pipeline's asset
@@ -2143,7 +2216,7 @@ def plan_removals(
         holders: dict[tuple[str, str], Snapshot] = {}
         # Not one dated after now: a record written to win would otherwise be
         # the holder for ever, and the genuine holder let go
-        for taken in sorted((t for t in group if not made_in_the_future(t, now)), key=lambda t: (t.made_at, _count(t.path))):
+        for taken in sorted((t for t in group if not made_in_the_future(t, now)), key=lambda t: (t.made_at, _count(t.path, t.made_at))):
             for name in marks:
                 content_hash = (taken.assets.get(name) or {}).get("content_hash")
                 if content_hash:
@@ -2366,19 +2439,24 @@ def remove(store: Store, taken: Snapshot) -> bool:
     return store.remove_snapshot(taken.path)
 
 
-def _count(path: Path) -> int:
+def _count(path: Path, made_at: Optional[str] = None) -> int:
     """Which of the snapshots made at one instant a file is: 1, unless numbered.
 
     A store names a snapshot's folder by the second, and gives a second
     snapshot of the same second the next one's name: its folder's name
     orders them.
+
+    :param made_at: When the snapshot was made, as its record says, where
+        whoever asks has the snapshot in hand: the record is then not
+        opened for it. It lists every file of the snapshot, and this is
+        asked of each snapshot each time some are put in order.
     """
     if path.name == "snapshot.json":
         from chartbook.store import is_snapshot_folder
 
         folder = path.parent.parent.name
         try:
-            made = json.loads(path.read_text(encoding="utf-8")).get("made_at", "")
+            made = made_at if made_at is not None else json.loads(path.read_text(encoding="utf-8")).get("made_at", "")
             later = datetime.strptime(folder[:18], "%Y-%m-%dT%H%M%SZ") - datetime.strptime(made[:19], "%Y-%m-%dT%H:%M:%S")
         except (OSError, ValueError, AttributeError, TypeError):
             return 1
@@ -3210,6 +3288,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     not_now: list[tuple[str, str]] = []  # the dataframes whose rows could not be hashed this time, each with why
     index_columns: list[str] = []  # the dataframes whose file has the column pandas makes of an index with no name
     index_names: dict = {}  # and which columns those are
+    # Each dataframe put from files of the folder: where they are, how they are read, and each as it was just before
+    # it was put (_as_they_are). What is said of its rows is told from the folder while they are still so (_rows_since)
+    put_from: dict = {}
 
     def rows(name: str, record: dict, path: Path, entry, reading: Optional[dict]) -> dict:
         """What a dataframe's record says of its rows, taken from an earlier snapshot of these bytes where there is one.
@@ -3217,7 +3298,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         A snapshot is of the bytes, and is made whatever becomes of this:
         where the rows could not be hashed, for want of room for the
         scratch files say, the record says nothing of them and the report
-        says why.
+        says why. So too where the folder no longer holds the files the
+        dataframe was put from once its rows are hashed there: they are
+        not known to be the rows of the bytes the snapshot holds.
         """
         from chartbook import rowhash
 
@@ -3231,8 +3314,9 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
         if made_of_an_index:
             index_columns.append(record.get("id") or name)
             index_names[record.get("id") or name] = made_of_an_index
+        put = put_from.get(name)
         try:
-            return _rows_of(name, record, path, entry, reading, earlier[0])
+            return _rows_of(name, record, path, entry, reading, earlier[0], put if put is not None and put[0] == path else None)
         except rowhash.NotNow as error:
             not_now.append((record.get("id") or name, str(error)))
             return {}
@@ -3243,9 +3327,11 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True, keep=str(local) in marked, locked=str(local) in locked)
             not_built.append((str(ref), declared_path))
             continue
+        reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
+        if local.kind == "dataframe":
+            put_from[str(local)] = (absolute, reading, _as_they_are(found.files))  # before a byte of them is hashed
         stored = pending.put(absolute, links=LINKS)
         held[str(local)] = stored.stored
-        reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
         record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked, reading=reading,
                               locked=str(local) in locked)
         if local.kind == "model":
@@ -3439,7 +3525,7 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     snapshot = dataclasses.replace(snapshot, path=path)
     # As its record says it is kept, and whether it is complete because the increments had added up
     kept = dataclasses.replace(as_kept(store, snapshot), added_up=decided.added_up)
-    beside, rows_said = _rows_since(directory, snapshot, store)
+    beside, rows_said = _rows_since(directory, snapshot, store, put_from)
     return SnapshotReport(
         snapshot,
         True,
@@ -3462,15 +3548,89 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
     )
 
 
-def _rows_since(directory: Path, taken: Snapshot, store: Store) -> tuple:
+def _as_they_are(files) -> Optional[dict]:
+    """Each of some files with its size and when it was last written, as the disk has them now; None where one cannot be asked about."""
+    seen = {}
+    for file in files:
+        try:
+            looked = os.stat(file)
+        except OSError:
+            return None
+        seen[str(file)] = (looked.st_size, looked.st_mtime_ns)
+    return seen
+
+
+def _at_hand(put: Optional[tuple]):
+    """What gives a dataframe's table where it was put from, in the pipeline's folder, for as long as it is there as it was put; None for a dataframe put from no file of the folder.
+
+    Asked, it gives the table to read (:class:`chartbook.rowhash.Table`)
+    where the folder holds the files the dataframe was put from, no more
+    and no fewer, each at the size and the time it had just before it was
+    put. It gives None once any of that is no longer so (a build under
+    way again while the snapshot is made), and whoever asks reads the
+    store's copy.
+
+    A look, and no proof: a file written again and put back at the size
+    and the time it had passes it with other bytes. So it chooses where a
+    line of output is read, and what is read there is remembered as the
+    snapshot's by nobody (:func:`chartbook.standins.rows_compared`).
+
+    :param put: Where its files are, how they are read, and each as it was
+        (:func:`_as_they_are`), as :func:`_make` notes them.
+    """
+    if put is None or put[2] is None:
+        return None
+    path, reading, _ = put
+
+    def table():
+        from chartbook import rowhash
+
+        if not _still_as_put(put):
+            return None
+        return rowhash.Table(path, (reading or {}).get("format"), (reading or {}).get("read_options"))
+
+    return table
+
+
+def _still_as_put(put: tuple) -> bool:
+    """Whether the folder holds the files a dataframe was put from, no more and no fewer, each at the size and the time it had just before it was put.
+
+    :param put: As :func:`_make` notes it: where its files are, how they
+        are read, and each as it was (:func:`_as_they_are`), which is None
+        where one could not be asked about, and then nothing is known.
+    """
+    path, _, as_put = put
+    if as_put is None:
+        return False
+    found = hashing.find_files(path)
+    return found is not None and _as_they_are(found.files) == as_put
+
+
+def _rows_since(directory: Path, taken: Snapshot, store: Store, put_from: Optional[dict] = None) -> tuple:
     """The snapshot of this pipeline before one just made, and what each dataframe's rows are beside it: ``(snapshot, [(asset ID, what)])``.
 
     Only a dataframe whose file is another than the one before is told
     of: ``24 new rows, through 2026-11-11; earlier rows unchanged``, or
     ``earlier rows changed: …`` (:func:`chartbook.standins.since`). Telling
-    it reads what the two records do not already show to be the same,
-    which for a table that gained rows is its last period. Nothing here
-    stops a snapshot: what cannot be told is left unsaid.
+    it reads nothing where the two records already show every period to
+    be the same. Otherwise the new table is read, every file of it, and
+    its rows hashed in the periods still to be told, which for a table
+    that gained rows is its last. Nothing here stops a snapshot: what
+    cannot be told is left unsaid.
+
+    **The table is read where it was put from, in the pipeline's folder,
+    and not in the store,** where its files are still as they were put
+    (:func:`_at_hand`). Its rows were hashed there a moment ago; the store
+    may be a folder a sync service keeps, where reading the table back was
+    more than a dozen questions of the disk for each of its files, and
+    every byte of it. Where the folder has changed since, the store's
+    copy is read, as it always was. What is read in the folder is said and
+    is not remembered: only what the store's copy gave is taken later for
+    what the snapshot's rows are. A table written out of a DuckDB file has
+    no file in the folder, and is read in the store.
+
+    :param put_from: The dataframes put from files of the folder, by name,
+        each as :func:`_make` notes it.
     """
     from chartbook import standins
 
@@ -3487,7 +3647,7 @@ def _rows_since(directory: Path, taken: Snapshot, store: Store) -> tuple:
         if (record.get("ref") or {}).get("kind") != "dataframe" or name not in before.assets:
             continue
         # A snapshot is made whatever becomes of what is said of it: since() raises nothing
-        what = standins.since(before.assets[name], record, taken, store, read=read)
+        what = standins.since(before.assets[name], record, taken, store, read=read, at_hand=_at_hand((put_from or {}).get(name)))
         if what:
             told.append((record["id"], what))
     return (before, told) if told else (None, [])
@@ -3501,7 +3661,7 @@ def _not_hashed(taken: Snapshot) -> list:
     ]
 
 
-def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict], earlier: list) -> dict:
+def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict], earlier: list, put: Optional[tuple] = None) -> dict:
     """What a dataframe's record says of its rows: their hash by period, up to its last date (:mod:`chartbook.rowhash`).
 
     ``date_col``, ``as_of``, ``rows`` and ``row_count``; or ``not_hashed``,
@@ -3516,13 +3676,30 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
     is hashed again, and one that names a column of numbers is not hashed
     again at every snapshot.
 
+    **The rows are hashed in the pipeline's folder, once its files are
+    put, and are said only where the folder still holds those files.**
+    *put* says each as it was just before it was put, and the folder is
+    looked at again when the rows are hashed: the same files, no more and
+    no fewer, each at that size and time, and the rows are those of the
+    bytes the snapshot holds. A build that writes the table again while
+    the snapshot is made gave the record the rows of a file it does not
+    hold; now nothing is said of the rows this time, with why, and a
+    snapshot of the same bytes made again says them. (Reading them from
+    what the store was given instead is not built: before the record, the
+    store has the files under other names, or in an earlier snapshot's
+    folder that nothing has looked at.)
+
     :param record: Its record so far, with its ``content_hash``.
     :param path: Its file, glob or folder, on disk.
     :param entry: Its entry in the manifest, for its ``date_col``.
     :param reading: Its ``format`` and ``read_options``, if it has them.
     :param earlier: This pipeline's snapshots, oldest first.
+    :param put: Its files as they were just before they were put
+        (:func:`_make` notes them); None for a table put from no file of
+        the folder, which is hashed without the look.
     :raises chartbook.rowhash.NotNow: If its rows could not be hashed this
-        time, for no fault of the table's.
+        time, for no fault of the table's, or were hashed from a folder
+        that no longer holds the files put.
     """
     from chartbook import rowhash
 
@@ -3548,7 +3725,10 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
         said = {key: before[key] for key in rowhash.FIELDS if key in before}
         if ("rows" in said or "not_hashed" in said) and said.get("date_col") == dated:
             return said
-    return rowhash.fields_of(table, declared)
+    said = rowhash.fields_of(table, declared)
+    if put is not None and not _still_as_put(put):
+        raise rowhash.NotNow("its files in the pipeline's folder changed while the snapshot was made")
+    return said
 
 
 #: The one file in a snapshot's index object.

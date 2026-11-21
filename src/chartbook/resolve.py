@@ -1978,7 +1978,7 @@ def _snapshots_in(store) -> list:
     from chartbook import snapshot
 
     found = _read_snapshots(store.all_snapshot_files())
-    found.sort(key=lambda taken: (taken.made_at, snapshot._count(taken.path)))
+    found.sort(key=lambda taken: (taken.made_at, snapshot._count(taken.path, taken.made_at)))
     return found
 
 

@@ -657,6 +657,13 @@ broke it three times.)*
   folder, as a pipeline's folder that 0.5 laid out does) and each of its own files, read and
   hashed, is what its record says. Otherwise a new complete one is made, as over an increment.
   Without the option nothing is read.
+- **`chartbook store gc` removes nothing from a folder that a snapshot being made takes files
+  from,** on the machine that makes it. *It kept the files the writer had noted, one by one; by
+  the folder since 2026-11-21.* The writer notes the folder of each earlier snapshot it takes files from, once,
+  before it looks at or copies any of them, and a `store gc` removes nothing from a noted folder
+  until the note has gone (the snapshot written, or let go) or is a day old. A note never kept a
+  snapshot's record: a gc may still take the record of a snapshot that nothing else keeps, and
+  an increment that was to build on it is then written complete, or stopped, as above.
 - **Only `chartbook store gc` removes,** as before.
 - **`chartbook store migrate` moves every file once.** As the move from 0.2 did.
 
@@ -900,6 +907,87 @@ data in mind.
   today its unchanged files were kept once. A large pipeline that makes a complete snapshot often
   takes more room than it did. Snapshots are fewer than when every run made one.
 - **`--complete` in a script copies everything each time.** Without it the rule decides.
+- **An increment asks the store four questions for a file it does not copy.** *Measured and
+  decided 2026-11-21.* A store in a folder that a sync service keeps answers a question of the
+  disk (is this file there, how large is it, open it) in the better part of a millisecond, and a
+  table kept as a file a day is thousands of files. An increment that added 20 files to such a
+  table copied the 20 and asked the store 26 questions for each of the others, and read them
+  all back: on Google Drive for desktop on Windows, 22 to 29 seconds for a table of 500 files,
+  whether it copied 21 files or 422. What it asks now, for a file it keeps where it is: whether
+  it is a link and how large it is, as the snapshot's kind is decided, and once more before the
+  record. Counted on a table of 2,020 files, that is 8,553 questions of the store where there
+  were 53,349. What went:
+  - The line about a dataframe's rows read the new table back from the store. It reads it in the
+    pipeline's folder ({doc}`pins-and-rebuilds`, "What each command does"), which is asked that
+    much more: the table is still read twice, once for its rows and once for the line, and both
+    times where the pipeline is built.
+  - The writer asked whether each file was there as it was put. The records say whether the
+    store has a file's bytes; one a record names and the store has lost is found by the two looks
+    that are left, while the file given is at hand, and the snapshot is written complete. The
+    record gone by is the newest that names the bytes; before a snapshot stops for want of them,
+    every other copy that a record of the pipeline names is tried *(found by review,
+    2026-11-21)*. **What this costs:** bytes a record names are no longer written aside as the
+    file is put. Where the store has no whole copy of them and the file given has gone or
+    changed by the time of the record (a build under way again), the snapshot stops and says
+    `Run the command again.`, where it used to be written.
+  - It noted each file it used, a line a file, twice. It notes the folder of the snapshot that
+    keeps them, once ("What the store promises").
+  - It set its note's time for each file, twice. Once a minute says as much: a note counts for a
+    day. The minute is counted on the time of day, which is the clock the note's age is judged
+    by: a machine that slept for a day in the middle of a snapshot says at its next file that
+    the snapshot is still being made. *(Found by review, 2026-11-21: counted on the process's
+    own clock, which stands still in sleep, a `store gc` in the minute after waking went by no
+    note.)*
+  - The line about `chartbook store gc` planned a sweep of every pipeline's folder, which asked
+    about each file of every snapshot in the store. The line says nothing of what a sweep finds,
+    and is planned without one. And with snapshots older than seven days in the store, the plan
+    asked whether each snapshot that stays holds its files, for every pipeline it would remove
+    something of: 10,000 looks at files for a table of 2,000, where the snapshot itself makes
+    4,000 *(measured 2026-11-21, once the measuring had old snapshots in it)*. That is what
+    keeps a real gc from removing a pipeline's snapshots while one that stays lacks a file, and
+    a reminder removes nothing. **The reminder's plan asks nothing of the disk about a
+    snapshot's files** (`lock.plan_gc(..., looks=False)`): it goes by the records alone. Counted
+    for a table of 2,000 files, the questions one `chartbook snapshot` asks the store:
+
+    | Snapshots in the store, all long past | With the line, before | With the line, now | With `--no-gc-reminder` |
+    |---|---|---|---|
+    | 4 | 20,395 | 8,341 | 8,280 |
+    | 8 | 24,654 | 8,550 | 8,449 |
+    | 12 | 36,792 | 8,584 | 8,448 |
+    | 20 | 79,424 | 43,102 | 42,882 |
+
+    (With 20 the snapshot was written complete, its increments having added up, and copied
+    2,025 files.) **What this costs:** the line may count a snapshot that a real `store gc`
+    would hold back because a snapshot of its pipeline that stays has lost a file. `chartbook
+    store gc --dry-run` and the real one look as before, and are exact.
+  - Each record of the pipeline was opened and parsed ten times over. It is read once by the
+    store and once as a snapshot. What is remembered of snapshots read is bounded by what the
+    records hold, and not by how many there are: the snapshots remembered list 300,000 files at
+    most in all (about 140 megabytes), the least recently read going first, and one record that
+    lists more is remembered alone. Two records of the largest table known (127,676 files each)
+    are remembered together: the one before and the one being made are the two a snapshot reads
+    again and again. *(Found by review, 2026-11-21: every snapshot read was
+    held until the process ended, each with an entry for every file of its snapshot, so a
+    process that read every record of a store held them all. One real record lists 127,676
+    files and another 9, which is why the bound is not a number of records: eight records,
+    tried first, had one `chartbook snapshot` open records 82 times for a pipeline with 20
+    snapshots.)* Counted for a table of 2,000 files, the records one `chartbook snapshot` opens
+    as snapshots:
+
+    | Snapshots of the pipeline in the store | Records opened as snapshots | Files the remembered ones list |
+    |---|---|---|
+    | 4 | 5 | 10,035 |
+    | 8 | 9 | 18,081 |
+    | 12 | 13 | 26,143 |
+    | 20 | 21 | 42,315 |
+
+    Each once: those there, and the one it makes. **What this leaves:** a pipeline whose records
+    list more than 300,000 files between them (three snapshots of a table of 127,676 files) has
+    the ones that do not fit opened again at each pass over its history, of which a snapshot
+    makes four. Fewer passes would end that, and is not built.
+
+  The second look could take what the first was told, and be no question at all. It stays: it
+  is what finds a file lost between the two.
 
 ## Not doing
 

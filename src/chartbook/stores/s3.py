@@ -1183,10 +1183,14 @@ class S3Store(Store):
         :raises TidyError: Once the rest is removed, if some of it could not
             be, naming each with what the service said and what to do.
         """
-        self._check_layout()
+        self.check_tidy()
         if not dry_run:
             self._tidy_tmp()
         return self._tidy(dry_run, keep)
+
+    def check_tidy(self) -> None:
+        """Refuse a bucket of a layout this version does not read, as :meth:`tidy` does before it looks at anything."""
+        self._check_layout()
 
     def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from one pipeline's folder, as :meth:`tidy` does from every one; what was removed, each with its size.
