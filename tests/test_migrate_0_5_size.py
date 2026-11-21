@@ -181,3 +181,52 @@ def test_the_time_of_the_command_grows_with_the_files_and_not_with_their_square(
     times, ratio = COMMAND_SIZES[-1] / COMMAND_SIZES[0], seconds[COMMAND_SIZES[-1]] / seconds[COMMAND_SIZES[0]]
     print(f"\n{times:g} times the files took {ratio:.1f} times the time")
     assert ratio < 1.6 * times, f"{times:g} times the files took {ratio:.1f} times as long: {seconds}"
+
+
+# How often the disk is asked about a file (the third review of the mover, 2026-11-20): on a synced drive each question
+# costs a third of a millisecond, and a real store has a snapshot of 127,676 files
+
+
+def _shared(root, files: int, snapshots: int) -> None:
+    """*files* files kept once, in the oldest snapshot's folder, and named by each of *snapshots* snapshots, as 0.5 kept a file that did not change."""
+    letters = "abcdefghijklmnop"
+    first = folder_of("2025-01-01", letters[0])
+    folder = root / "pipelines" / "acme+news" / first / "_data" / "articles"
+    folder.mkdir(parents=True)
+    entries = []
+    for number in range(files):
+        data = f"article {number:07d}".encode()
+        name = f"{number:07d}.parquet"
+        (folder / name).write_bytes(data)
+        entries.append((name, "sha256:" + hashlib.sha256(data).hexdigest(), len(data)))
+    for index in range(snapshots):
+        _record(root, folder_of(f"2025-01-{index + 1:02d}", letters[index]), f"2025-01-{index + 1:02d}", letters[index], entries, first)
+    store_module._read_records.clear()
+    store_module._found_whole.clear()
+
+
+def test_a_move_asks_the_disk_about_a_file_as_often_however_many_snapshots_name_it(tmp_path, monkeypatch):
+    """The end of a move looks at every file every record names, to say what is missing. An increment's files are in the snapshot it builds on, so the same file was asked about once for each snapshot that names it, three questions each time: 64,000 to 316,000 for 2,000 files as 6 to 48 snapshots named them."""
+    import os
+
+    asked = {}
+    for snapshots in (3, 12):
+        root = empty_store(tmp_path, f"shared-{snapshots}")
+        _shared(root, 300, snapshots)
+        calls = []
+
+        def counting(real):
+            def ask(path, *args, **kwargs):
+                if isinstance(path, (str, os.PathLike)) and os.fspath(path).endswith(".parquet"):
+                    calls.append(os.fspath(path))
+                return real(path, *args, **kwargs)
+            return ask
+
+        with monkeypatch.context() as patch:
+            patch.setattr(os, "stat", counting(os.stat))
+            patch.setattr(os, "lstat", counting(os.lstat))
+            done = migrate_0_5.run(root)
+        assert (done.snapshots, done.renamed, done.copied, done.missing) == (snapshots, 300, 0, [])
+        asked[snapshots] = len(calls)
+        print(f"\n300 files named by {snapshots:2d} snapshots: the disk asked about a data file {len(calls):,} times, {len(calls) / 300:.1f} a file")
+    assert asked[12] == asked[3], asked

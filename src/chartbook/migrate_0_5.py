@@ -500,10 +500,12 @@ def _told_apart(records, moved_in: set) -> tuple[list, list]:
 
 
 def _size(path: Path) -> Optional[int]:
+    """The size of a plain file, by one question of the disk; None where nothing is there, or what is there is no plain file (a folder, a link)."""
     try:
-        return path.stat().st_size if path.is_file() and not path.is_symlink() else None
-    except OSError:
+        seen = os.lstat(path)
+    except (OSError, ValueError):
         return None
+    return seen.st_size if stat.S_ISREG(seen.st_mode) else None
 
 
 def _will(root: Path, source: str, target: str) -> Optional[int]:
@@ -1207,6 +1209,14 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     # anything. Removed by hand once the old folder was aside, it took the counts with it: they are not known, not 0
     done.moved_in, done.counted = so_far.get("moved_in", 0), bool(so_far)
     taken = {root / pair[1] for pair in done.in_place}  # each said on its own, with both sizes
+    sizes: dict = {}
+
+    def size_of(location: Path) -> Optional[int]:
+        """The size of a file a record names, asked of the disk once however many snapshots name it: an increment's files are in the snapshot it builds on, and each of them was asked about once for each snapshot."""
+        if location not in sizes:
+            sizes[location] = _size(location)
+        return sizes[location]
+
     # And what the store holds now, from its folders: its snapshots, and after a move that moved any in, the files
     # that are not at their size where a record names them
     for tree, increment in ((V3_LAYOUT.pipelines, False), (INCREMENTS_DIR, True)):
@@ -1217,7 +1227,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
             done.complete += 0 if increment else 1
             done.by_pins += 1 if kept.readable and kept.made_by == "pin" else 0
             if first_move or so_far.get("moved_in"):
-                lacks = sorted({file.path for asset in kept.assets for file in asset.files if _size(file.location) != file.size_bytes and file.location not in taken})
+                lacks = sorted({file.path for asset in kept.assets for file in asset.files if size_of(file.location) != file.size_bytes and file.location not in taken})
                 done.missing += [(kept.folder.parent.name, kept.folder.name, path) for path in lacks]
                 if lacks:
                     done.missing_in.append((kept.folder.parent.name, kept.folder.name, len(lacks), len({file.path for asset in kept.assets for file in asset.files})))
