@@ -777,6 +777,32 @@ class TestTheNotesThemselves:
         assert result.exit_code == 0 and _ran(directory) == 1
         assert not built.note_path(directory).exists() and "could not be kept" not in result.output
 
+    def test_in_a_repository_git_does_not_trust_the_run_says_why_it_kept_no_note(self, demo, store, monkeypatch):
+        """Found on Windows, on a share: the run built, left no note and said nothing; the snapshot typed next was the first to say."""
+        from chartbook.missing import _quoted
+        from tests.test_not_in_your_store import DUBIOUS, NOT_TRUSTED, _git_refuses
+
+        at = demo.as_posix()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=demo)
+        result = _run()
+        assert result.exit_code == 0 and _ran(demo) == 1, result.output
+        assert not built.note_path(demo).exists()
+        assert (
+            "acme/demo: no note of this build was kept: " + NOT_TRUSTED.format(folder=demo, at=at, typed=_quoted(at)) + "."
+        ) in result.output.splitlines(), result.output
+
+    def test_where_git_fails_some_other_way_the_run_says_nothing_of_a_note(self, demo, store, monkeypatch):
+        """In no repository there is no snapshot to hold against a note; and git that could not be run is said by what needs git."""
+        from chartbook import snapshot
+        from tests.test_not_in_your_store import _git_refuses
+
+        for words in ("fatal: not a git repository (or any of the parent directories): .git", f"{snapshot._GIT_NOT_RUN}: no git"):
+            with monkeypatch.context() as patched:
+                _git_refuses(patched, words, under=demo)
+                result = _run()
+            assert result.exit_code == 0, result.output
+            assert "note" not in result.output, result.output
+
     def test_what_a_build_writes_is_listed_with_its_files(self, demo):
         from chartbook import run
 

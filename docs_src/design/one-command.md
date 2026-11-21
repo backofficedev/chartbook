@@ -517,9 +517,13 @@ What building it settled:
   every
   pipeline that others pin to `chartbook snapshot`; they say `chartbook run` first, or
   `--as-is`.
-- **In a repository git does not trust, a run leaves no note and says nothing of it,** since it
-  cannot ask which files are source; the snapshot there says the folder is in no repository.
-  *(Found on Windows, on a share.)* Left until `snapshot.code_of` tells the two apart.
+- **In a repository git does not trust, a run leaves no note, and says so,** since it cannot
+  ask which files are source. *(Found on Windows, on a share: the run said nothing, and the
+  snapshot typed next said the folder was in no repository.)* `snapshot.code_of` now tells the
+  two apart (`snapshot.RepositoryNotTrusted`), so the run ends with one line, `no note of this
+  build was kept:` and git's own command that makes it trust the repository, and the snapshot
+  says the same. In a folder that is in no repository the run says nothing of a note: there is
+  no snapshot to hold against one.
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It

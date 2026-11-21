@@ -143,6 +143,10 @@ class SnapshotError(Exception):
     """Raised when a snapshot cannot be made, or a pipeline has none to find."""
 
 
+class RepositoryNotTrusted(SnapshotError):
+    """Raised where git refuses to read the repository a folder is in, because it does not trust it (another user's; on Windows, one on a network share). The message has the command that makes git trust it."""
+
+
 class NothingToSnapshot(SnapshotError):
     """A pipeline with nothing to take a snapshot of: it declares nothing with a path, or has built none of what it declares.
 

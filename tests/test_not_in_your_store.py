@@ -2141,3 +2141,86 @@ class TestFilesAtACommit:
             cache.text_at(str(top), "--output=x", "chartbook.toml")
         with pytest.raises(ValueError):
             cache.paths_at(str(top), "HEAD", "chartbook.toml")
+
+
+#: What git says of a repository another user owns, and on Windows of any on a network share; it ends 128
+DUBIOUS = (
+    "fatal: detected dubious ownership in repository at '{at}'\n"
+    "To add an exception for this directory, call:\n"
+    "\n"
+    "\tgit config --global --add safe.directory {at}"
+)
+NOT_TRUSTED = (
+    "git does not trust the repository that {folder} is in ({at}): another user owns it, or it is on a network share, "
+    "and git reads no such repository until it is told to. To have git trust it, run `git config --global --add "
+    "safe.directory {typed}`, and then this again"
+)
+
+
+def _git_refuses(monkeypatch, words: str, under: Path) -> None:
+    """Git fails with *words* wherever it is run in *under*, as ``snapshot._git`` raises what git said; elsewhere it runs."""
+    real = snapshot._git
+
+    def refuse(directory, *arguments, **options):
+        if Path(directory) == under or under in Path(directory).parents:
+            raise snapshot.SnapshotError(words)
+        return real(directory, *arguments, **options)
+
+    monkeypatch.setattr(snapshot, "_git", refuse)
+
+
+class TestAFolderGitWillNotRead:
+    """The list said "… is not in a git repository" of every folder ``snapshot.code_of`` refused: one in a
+    repository git does not trust, which on Windows is any on a network share, and one on a machine where
+    git could not be run. Neither was so, and neither left anything to do.
+
+    Found by the review of ``code_of``'s own change, 2026-11-20. Each line is now what the folder's own
+    commands say.
+    """
+
+    @pytest.fixture
+    def mid(self, work, theirs, mine):
+        """report pins mid, a ``path`` dependency, at a commit; and mid is not in this machine's store."""
+        mid = _pipeline(work, "mid")
+        _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {"acme/mid": {"path": "../mid"}}), theirs)
+        mine()
+        return mid
+
+    def test_a_repository_git_does_not_trust_is_said_with_the_command_that_makes_git_trust_it(self, work, mid, monkeypatch):
+        at = mid.as_posix()  # as git writes a folder, on Windows too
+        _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert not any("is not in a git repository" in line for line in said), said
+        assert (
+            "     What it reads in turn is not known: "
+            + NOT_TRUSTED.format(folder=mid, at=at, typed=missing._quoted(at))
+            + ". Its own `chartbook run` says."
+        ) in said, said
+
+    def test_the_command_is_whole_however_long_the_folders_name(self, work, theirs, mine, monkeypatch):
+        """A line of the list holds 300 characters of what a file gave; this one ends with a command to type."""
+        name = "m" * 200
+        mid = _pipeline(work, name)
+        _ready(mid, theirs)
+        _ready(_pipeline(work, "report", {f"acme/{name}": {"path": f"../{name}"}}), theirs)
+        mine()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=mid.as_posix()), under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert any(
+            line.endswith(f"safe.directory {missing._quoted(mid.as_posix())}`, and then this again. Its own `chartbook run` says.")
+            for line in said
+        ), said
+
+    def test_git_that_could_not_be_run_is_said_so(self, work, mid, monkeypatch):
+        _git_refuses(monkeypatch, f"{snapshot._GIT_NOT_RUN}: [Errno 2] No such file or directory: 'git'", under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert (
+            "     What it reads in turn is not known: git could not be run: [Errno 2] No such file or directory: 'git'. "
+            "Its own `chartbook run` says."
+        ) in said, said
+
+    def test_a_folder_that_is_in_no_repository_is_still_said_to_be_in_none(self, work, mid, monkeypatch):
+        _git_refuses(monkeypatch, "fatal: not a git repository (or any of the parent directories): .git", under=mid)
+        said = _said(_run(work, monkeypatch, "run"))
+        assert any(line.startswith(f"     What it reads in turn is not known: {mid} is not in a git repository. ") for line in said), said

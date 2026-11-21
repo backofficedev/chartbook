@@ -1789,6 +1789,17 @@ def run(
                         f"{step.id}: the note of this build could not be kept, so `chartbook snapshot` "
                         f"will ask for it to be built again, or for `{built.AS_IS}`."
                     )
+            elif building and step.source in ("asked", "upstream"):
+                # No note was begun: which files are source could not be asked. In no git repository there
+                # is no snapshot to hold against one, and nothing to say. In one git does not trust (on
+                # Windows, any on a network share) there is, once git is told to trust it: said, since the
+                # build ran as it would anywhere and the snapshot typed next would be the first to say so
+                try:
+                    snapshots.code_of(step.directory)
+                except snapshots.RepositoryNotTrusted as error:
+                    echo(f"{step.id}: no note of this build was kept: {error}.")
+                except snapshots.SnapshotError:
+                    pass
 
             if building and step.source == "asked" and not snapshot and not step.snapshot_first:
                 # Built, and no snapshot asked for: none is made, and the run's last line names the

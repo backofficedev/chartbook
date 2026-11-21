@@ -458,10 +458,14 @@ class _Walk:
         from chartbook.resolve import MANIFEST_NAME
 
         folder = wanted.folder
+        why_not = ""
         try:
             code = snapshot.code_of(folder)
-        except snapshot.SnapshotError:
-            code = None
+        except snapshot.SnapshotError as error:
+            # Said as the folder's own commands say it, and whole: git that does not trust the repository
+            # (the sentence ends with the command that makes it), git that could not be run, a repository
+            # with no commit yet. Each was "is not in a git repository" here, of a folder that is in one
+            code, why_not = None, _plain((str(error).strip().splitlines() or [""])[0].rstrip("."), most=4096)
         wanted.top = code.top if code is not None else None
         if not wanted.commit:
             wanted.built = code is not None and _is_built(folder)
@@ -470,7 +474,7 @@ class _Walk:
         if not _COMMIT.match(wanted.commit):
             return None, "its pin names no commit git would take"
         if code is None:
-            return None, f"{folder} is not in a git repository"
+            return None, why_not
         wanted.on_commit = code.commit.startswith(wanted.commit)
         wanted.read_at = wanted.commit
         within = f"{code.subdirectory}/" if code.subdirectory else ""
