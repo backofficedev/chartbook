@@ -474,6 +474,26 @@ def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
     assert {"doit", "hatch", "pytest", "pytest-xdist"} <= dev
 
 
+def test_on_windows_a_runs_folder_is_short_and_no_longer_for_a_run_on_several_cores(tmp_path):
+    """Found on a hosted Windows runner, 2026-11-21, the first time the suite ran on several cores there:
+    each worker's folders are one level deeper (`popen-gw0`, ten characters), and `git add -A` in one
+    test's catalog ended 128, git keeping to 260 characters whatever Windows is set to. pytest's own
+    folder there is 30 characters before a worker's; the short one was made only where long paths are off."""
+    import os
+
+    from tests.fixtures import short_base_folder
+
+    assert short_base_folder(False, False, str(tmp_path)) is None and short_base_folder(False, True, str(tmp_path)) is None
+    assert list(tmp_path.iterdir()) == []  # elsewhere pytest's own does, and nothing is made
+    one = Path(short_base_folder(True, False, str(tmp_path)))
+    several = Path(short_base_folder(True, True, str(tmp_path)))
+    assert one.is_dir() and one.parent == tmp_path and one.name.startswith("cbt-") and len(one.name) == 12
+    assert several.is_dir() and several.parent == tmp_path and len(several.name) == 4
+    # A test's folder under a worker is then within two characters of one under a run of one process
+    assert len(os.path.join(several.name, "popen-gw0")) <= len(one.name) + 2
+    assert Path(short_base_folder(True, True, str(tmp_path))) != several  # and each run has its own
+
+
 def test_the_hook_and_init_name_the_file_alike(hook):
     from chartbook import scaffold
 

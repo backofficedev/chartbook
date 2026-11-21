@@ -11,6 +11,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import polars as pl
 import pytest
@@ -768,3 +769,35 @@ def republish_catalog(root):
         _git(root, "commit", "--quiet", "-m", "Publish edited metadata")
     for path in sorted((root / "pipelines").glob("*/chartbook.toml")):
         snapshot.make(path.parent)
+
+
+def short_base_folder(windows: bool, on_several_cores: bool, parent: Optional[str] = None) -> Optional[str]:
+    """A short folder of a test run's own for every test's folder, on Windows; None elsewhere, where pytest's own does.
+
+    On Windows a test's files must stay under 260 characters, and not
+    only where long paths are off: git keeps to 260 whatever Windows is
+    set to. (Found on a hosted runner, where they are on, 2026-11-21: with
+    the suite on several cores, ``git add -A`` in a test's catalog ended
+    128.) So the folder is short on every Windows machine.
+
+    On several cores (pytest-xdist) each worker's folders are one level
+    deeper, ``popen-gw0\\``, ten characters. The run's folder is then
+    named in four characters where it has twelve, so that a test's paths
+    are no longer than in a run of one process.
+    """
+    import random
+    import string
+    import tempfile
+
+    if not windows:
+        return None
+    parent = parent or tempfile.gettempdir()
+    if on_several_cores:
+        for _ in range(200):
+            folder = os.path.join(parent, "c" + "".join(random.choices(string.ascii_lowercase + string.digits, k=3)))
+            try:
+                os.mkdir(folder)
+            except FileExistsError:
+                continue
+            return folder
+    return tempfile.mkdtemp(prefix="cbt-", dir=parent)
