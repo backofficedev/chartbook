@@ -5048,7 +5048,12 @@ def store_verify():
 
     Ahead of the lines for each file comes what they add up to: how many
     files of how many snapshots, and one line for each such snapshot,
-    with its pipeline, its folder's name and how many files.
+    with its pipeline, its folder's name and how many files. A folder
+    files are missing from that has no record is said to be that, not a
+    snapshot: `chartbook store ls` names the snapshots that lack them.
+
+    A record that cannot be read is named on a line of its own, with why:
+    nothing of its snapshot is checked.
 
     Examples:
         chartbook store verify
@@ -5071,13 +5076,16 @@ def store_verify():
     for problem in problems:
         click.echo(problem.format())
     if problems:
-        # By object: one that two snapshots have each lost a file of is said twice above, and is one object
-        wrong = len({problem.content_hash for problem in problems})
-        click.echo(
-            f"\n{wrong} of {total} object(s) in {the_store} are "
-            f"not what their names say.",
-            err=True,
-        )
+        # A record that cannot be read is no object, and its snapshot's objects are not among those counted: said by itself
+        unread = sum(1 for problem in problems if getattr(problem, "of_record", False))
+        closing = []
+        if unread < len(problems):
+            # By object: one that two snapshots have each lost a file of is said twice above, and is one object
+            wrong = len({problem.content_hash for problem in problems if not getattr(problem, "of_record", False)})
+            closing.append(f"{wrong} of {total} object(s) in {the_store} are not what their names say.")
+        if unread:
+            closing.append(f"{unread} snapshot record(s) in {the_store} cannot be read.")
+        click.echo("\n" + " ".join(closing), err=True)
         raise SystemExit(1)
     click.echo(f"{the_store}: OK ({total} object(s))")
 
@@ -5093,9 +5101,12 @@ def _wrong_by_snapshot(the_store, problems) -> list:
     a folder may have no record now, as one cleared in a store of
     ChartBook 0.5, or a complete snapshot that has gone and that
     increments still name: its files are counted under its name all the
-    same, and its pipeline is the one whose folder it is in. Each line has
-    the pipeline, the folder's name and how many files, a pipeline's
-    folders together, oldest first. What is wrong outside any snapshot (an
+    same, its pipeline is the one whose folder it is in, and its line says
+    that it is a folder with no record, as each of its files' lines does
+    (``store ls`` names the snapshots whose records name those files, and
+    this folder is none of them). Each line has the pipeline, the folder's
+    name and how many files, a pipeline's folders together, oldest first.
+    What is wrong outside any snapshot (a record that cannot be read, an
     object no pipeline owns, a folder that is not read) has its own line
     below and none here; with nothing wrong in any snapshot there is
     nothing to say.
@@ -5103,9 +5114,12 @@ def _wrong_by_snapshot(the_store, problems) -> list:
     from chartbook.store import StoreError
 
     counts: dict = {}
+    no_record: set = set()
     for problem in problems:
         if getattr(problem, "of_snapshot", False):
             counts[problem.path] = counts.get(problem.path, 0) + 1
+            if getattr(problem, "no_record", False):
+                no_record.add(problem.path)
     if not counts:
         return []
     # A pipeline's ID is in its records: a folder that has none is named by a record in a folder of its pipeline
@@ -5128,7 +5142,8 @@ def _wrong_by_snapshot(the_store, problems) -> list:
         f"By snapshot, and then each file:"
     ]
     for folder in sorted(counts, key=lambda folder: (pipeline(folder), folder.name)):
-        lines.append(f"  {_printable(pipeline(folder))}  {folder.name}  {counts[folder]:,} file(s)")
+        named = f"{folder.name} (a folder with no record)" if folder in no_record else folder.name
+        lines.append(f"  {_printable(pipeline(folder))}  {named}  {counts[folder]:,} file(s)")
     return lines
 
 

@@ -617,16 +617,24 @@ class StoreProblem:
         path: Its directory in the store.
         message: What is wrong with it.
         of_snapshot: Whether it is of a file of a snapshot, said with the
-            snapshot's name: ``path`` is then the snapshot's folder the
-            file is in, or is missing from. That folder may have no record
-            now (one cleared in a store of ChartBook 0.5, a complete
-            snapshot that has gone and that increments still name).
+            name of the folder the file is in, or is missing from, which
+            is ``path``.
+        no_record: With *of_snapshot*: whether that folder has no record,
+            and so is no snapshot (one cleared in a store of ChartBook
+            0.5, a complete snapshot that has gone and that increments
+            still name). The snapshots that lack the file are then the
+            ones whose records name it there, which ``store ls`` says.
+        of_record: Whether it is a snapshot's record that cannot be read:
+            ``path`` is then the folder the record is in, and nothing of
+            that snapshot is checked.
     """
 
     content_hash: str
     path: Path
     message: str
     of_snapshot: bool = False
+    no_record: bool = False
+    of_record: bool = False
 
     def format(self) -> str:
         """Render as ``hash: message``, one line."""
@@ -1030,6 +1038,33 @@ def unreadable_detail(path: Path, error: Exception) -> str:
     except OSError:
         pass
     return str(error)
+
+
+def why_not_read(path: Path) -> str:
+    """Why a snapshot's record is not one the store reads, for the line ``store verify`` says of it.
+
+    A file that cannot be opened, or is not JSON (a sync has brought part
+    of it, most likely), is said as that. One that is JSON is asked of
+    the reader of records (:func:`chartbook.snapshot.read`), which says
+    what it will not take: a schema of another version, a commit or a
+    pipeline that is not its folder's. Where that reader takes it and the
+    store's does not, no more is known than that.
+    """
+    try:
+        with open(_any_length(path), encoding="utf-8") as f:
+            json.load(f)
+    except OSError as error:
+        return f"it cannot be opened ({error.strerror or error})"
+    except ValueError as error:
+        return f"it is not JSON ({unreadable_detail(path, error)}), as a file is that a sync has brought part of"
+    from chartbook.snapshot import SnapshotError, read  # which imports this module
+
+    try:
+        read(path)
+    except SnapshotError as error:
+        said, lead = str(error), f"Cannot read the snapshot {path}: "
+        return (said[len(lead):] if said.startswith(lead) else said).rstrip(".")
+    return "it is not a record this ChartBook reads"
 
 
 def declared_name(declared: str) -> Optional[str]:
@@ -3470,13 +3505,24 @@ class FolderStore(Store):
     def _verify_every_snapshot(self) -> list[StoreProblem]:
         """Every snapshot's own files, and every object no pipeline owns, hashed again (:meth:`verify` with no hashes named)."""
         problems = []
+        unread = []
         read: dict = {}
         said: dict = {}
         held: set = set()
         #: For each place whose file is wrong, the snapshots kept as increments that keep it in the complete one they build on
         kept_there: dict = {}
-        for record in self.records():
+        records = self.records()
+        with_record = {record.folder for record in records}  # a snapshot's folder: one whose record is there, read or not
+        for record in records:
             if not record.readable:
+                # Not passed over: nothing of this snapshot is checked, and what sends a person here (a move that
+                # could not follow the record) is told which record, and why
+                unread.append(StoreProblem(
+                    "", record.folder,
+                    f"The snapshot record {self._shown(record.path)} cannot be read: {why_not_read(record.path)}. "
+                    f"Nothing of its snapshot is checked.",
+                    of_record=True,
+                ))
                 continue
             # What it names and gives no place for: a hole for a run, for gc and for a move, which send a person here
             for content_hash in _not_followed(record):
@@ -3516,9 +3562,15 @@ class FolderStore(Store):
                 f", and {count} snapshots kept as increments on it keep it there" if count > 1
                 else ", and 1 snapshot kept as an increment on it keeps it there"
             )
-            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}", of_snapshot=True))
+            # The folder is a snapshot's where it has a record. One that has none is said as that: the snapshots that
+            # lack the file are those whose records name it there, and `store ls` names them
+            no_record = where not in with_record
+            named = f"the folder {where.name}, which has no record" if no_record else f"the snapshot {where.name}"
+            problems.append(StoreProblem(content_hash, where, f"{message} ({named}){also}", of_snapshot=True, no_record=no_record))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
+        # Ahead of them, each record that could not be read, in the order of their paths
+        problems = sorted(unread, key=lambda problem: str(problem.path)) + problems
         # The same snapshot in both folders: the complete one is the snapshot, and the other is named
         increments = self.increments_path()
         if increments is not None and increments.is_dir():

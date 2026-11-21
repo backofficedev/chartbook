@@ -430,18 +430,22 @@ class TestDamaged:
         with pytest.raises(AssetNotPinnedError):
             data.path("acme/rates:treasury", project_dir=readers[index])
         result = CliRunner().invoke(main, ["store", "verify"])
-        assert result.exit_code == 1 and "_data/treasury.parquet is not in the store (the snapshot " in result.output
+        assert result.exit_code == 1 and "_data/treasury.parquet is not in the store (the folder " in result.output
         # Found by review: the first line counted the files of folders that have a record, and this one has none now,
         # so every file the increments keep in it had a line and no count ahead of them. It counts every line of a
-        # file below it, under the folder the file is missing from, whose pipeline its folder says
+        # file below it, under the folder the file is missing from, whose pipeline its folder says. And that folder
+        # is said to be one with no record, in each file's line and in its count: it is no snapshot now, and the
+        # snapshots that lack the files are the increments, which `store ls` names
         lines = result.output.splitlines()
-        of_files = [line for line in lines if "(the snapshot " in line]
-        assert all(f" is not in the store (the snapshot {complete.name}), and " in line for line in of_files), of_files
+        of_files = [line for line in lines if f"(the folder {complete.name}, which has no record)" in line]
+        assert all(f" is not in the store (the folder {complete.name}, which has no record), and " in line for line in of_files), of_files
         assert lines[:2] == [
             f"{len(of_files)} file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
-            f"  acme/rates  {complete.name}  {len(of_files)} file(s)",
+            f"  acme/rates  {complete.name} (a folder with no record)  {len(of_files)} file(s)",
         ]
-        assert lines[2:2 + len(of_files)] == of_files and len(of_files) > 1
+        assert lines[2:2 + len(of_files)] == of_files and len(of_files) > 1 and "(the snapshot " not in result.output
+        listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert sorted(line.split()[0] for line in listed if ", lacks " in line) == sorted(folder.name for folder in increments)
 
     def test_a_file_there_at_its_size_with_other_bytes(self, kept, store):
         complete, increments, taken, readers = kept

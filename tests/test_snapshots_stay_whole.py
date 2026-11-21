@@ -530,6 +530,36 @@ class TestStoreVerify:
         assert result.exit_code == 1 and len(lines) == 3 and lines[0].startswith(f"{put.content_hash}: ")
         assert lines[1:] == ["", f"1 of 1 object(s) in {store} are not what their names say."]
 
+    def test_a_record_it_cannot_read_is_named_with_why_on_a_line_of_its_own(self, holed, store):
+        """Found by review: a record that is not read was passed over without a word, and nothing of its snapshot was checked. Each has a line: the record, as the store shows it, and why. The first line stays the count of files, and the last says the records by themselves."""
+        first, second, lost = holed
+        record = Path(first.path)
+        whole = record.read_text(encoding="utf-8")
+        _writable(record)
+        record.write_text(whole[:200], encoding="utf-8", newline="\n")  # as a sync that has not finished leaves it
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        result = CliRunner().invoke(main, ["store", "verify"])
+        lines = result.output.splitlines()
+        assert result.exit_code == 1 and len(lines) == 6, result.output
+        assert lines[:2] == [self.BY_SNAPSHOT.format(files=1, snapshots=1), f"  acme/rates  {_folder_of(second).name}  1 file(s)"]
+        assert lines[2].startswith(f"The snapshot record {record} cannot be read: it is not JSON (")
+        assert lines[2].endswith("), as a file is that a sync has brought part of. Nothing of its snapshot is checked.")
+        assert lines[3].endswith(f": _data/treasury.parquet is not in the store (the snapshot {_folder_of(second).name})") and lines[4] == ""
+        assert lines[5] == f"1 of {len(second.hashes())} object(s) in {store} are not what their names say. 1 snapshot record(s) in {store} cannot be read."
+        # One that is JSON and of another version: what the reader of records says of it
+        document = json.loads(whole)
+        document["schema"] = "chartbook/snapshot/v9"
+        record.write_text(json.dumps(document), encoding="utf-8", newline="\n")
+        store_module._read_records.clear()
+        said = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()[2]
+        assert said.startswith(f"The snapshot record {record} cannot be read: its schema is 'chartbook/snapshot/v9', and this version of ChartBook reads ")
+        assert said.endswith(". Nothing of its snapshot is checked.") and ".. Nothing" not in said
+        # Put back, the store is as it was: one file, of the one snapshot
+        record.write_text(whole, encoding="utf-8", newline="\n")
+        store_module._read_records.clear()
+        assert len(CliRunner().invoke(main, ["store", "verify"]).output.splitlines()) == 5
+
     def test_it_names_every_file_that_is_missing_or_damaged_a_snapshots_together(self, work, store):
         """Not the first bad file of an asset alone: both files of the dataset the newer has lost, and the one the older holds damaged."""
         folder = _parted(work / "parted", "acme/parted", (2020, 2021))

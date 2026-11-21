@@ -853,7 +853,13 @@ class TestAStoreOf05IsReadAsItIs:
 
         The first line counts every line of a file below it, each under
         the folder the file is missing from: here the cleared one, whose
-        pipeline its folder says."""
+        pipeline its folder says.
+
+        And that folder is said to be what it is. Found on a real store:
+        each file's line ended "(the snapshot <the cleared folder>)" and
+        the count listed that folder as a snapshot, while `store ls`
+        named the snapshot whose record names the files. Two snapshots
+        were named for the same files, and one of them is none."""
         old, second, cleared = of_0_5
         lost = cleared / "_data" / "treasury.parquet"
         lost.chmod(0o644)
@@ -865,10 +871,38 @@ class TestAStoreOf05IsReadAsItIs:
         verify = CliRunner().invoke(main, ["store", "verify"])
         assert verify.exit_code == 1 and verify.output.splitlines()[:4] == [
             "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
-            f"  acme/rates  {cleared.name}  1 file(s)",
-            f"{second.content()['treasury']}: _data/treasury.parquet is not in the store (the snapshot {cleared.name})",
+            f"  acme/rates  {cleared.name} (a folder with no record)  1 file(s)",
+            f"{second.content()['treasury']}: _data/treasury.parquet is not in the store (the folder {cleared.name}, which has no record)",
             "",
         ]
+        # A file missing from a folder that has its record is of that snapshot, as it was
+        own = _folder_of(second) / "_output" / "curve.html"
+        own.chmod(0o644)
+        own.unlink()
+        store_module._found_whole.clear()
+        lines = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
+        assert lines[:3] == [
+            "2 file(s) of 2 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {cleared.name} (a folder with no record)  1 file(s)",
+            f"  acme/rates  {_folder_of(second).name}  1 file(s)",
+        ]
+        assert lines[4].endswith(f": _output/curve.html is not in the store (the snapshot {_folder_of(second).name})")
+
+    def test_store_verify_names_a_record_it_cannot_read(self, of_0_5):
+        """Found by review: `chartbook store migrate` refuses a store for a record it cannot follow and says "`chartbook store verify` says more", and verify passed such a record over without a word. It names the record, as the store shows it, and why it is not read; and ends 1."""
+        old, second, cleared = of_0_5
+        record = Path(second.path)
+        whole = record.read_text(encoding="utf-8")
+        record.chmod(0o644)
+        record.write_text(whole[:200], encoding="utf-8", newline="\n")  # as a sync that has not finished leaves it
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        verify = CliRunner().invoke(main, ["store", "verify"])
+        lines = verify.output.splitlines()
+        assert verify.exit_code == 1 and len(lines) == 3, verify.output
+        assert lines[0].startswith(f"The snapshot record {record} cannot be read: it is not JSON (")
+        assert lines[0].endswith("), as a file is that a sync has brought part of. Nothing of its snapshot is checked.")
+        assert lines[1:] == ["", f"1 snapshot record(s) in {old} cannot be read."]
 
     def test_a_pipeline_pins_from_it_and_reads_through_the_pin(self, of_0_5, reader):
         old, second, cleared = of_0_5
