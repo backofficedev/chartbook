@@ -115,7 +115,7 @@ class TestASnapshotCarriesItsLineage:
     def test_the_command_says_what_to_run(self, two, monkeypatch):
         rates, forecast = two
         monkeypatch.chdir(forecast)
-        result = CliRunner().invoke(main, ["snapshot"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is"])
         assert result.exit_code == 1
         assert "its pins do not account for every dependency" in result.output
         assert "Run `chartbook pin`" in result.output

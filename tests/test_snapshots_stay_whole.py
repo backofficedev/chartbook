@@ -349,7 +349,7 @@ class TestASnapshotsFolderIsNotChangedOnceItsRecordIsWritten:
 
     def test_the_command_says_in_one_line_which_snapshot_lacks_which_file(self, holed, rates, store):
         first, second, lost = holed
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates)])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates)])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
         assert lines[0] == f"acme/rates at {second.commit[:7]}: 2 asset(s) in the store"

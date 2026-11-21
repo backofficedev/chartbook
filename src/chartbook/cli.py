@@ -3369,8 +3369,14 @@ def _add_dependency(project_dir, pipeline, key=None, commit=None):
     is_flag=True,
     help="Keep this snapshot complete: every file of it in one folder of the store, which is named. Without it the store may keep one as an increment, with only the files that changed",
 )
+@click.option(
+    "--as-is",
+    "as_is",
+    is_flag=True,
+    help="Take what is on disk as it is, without holding it against the last build `chartbook run` made here",
+)
 @click.option("--no-gc-reminder", is_flag=True, help="Do not say what `chartbook store gc` would clear")
-def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
+def snapshot(project_dir, deep, store_names, complete, as_is, no_gc_reminder):
     """Declare this pipeline's build ready for the pipelines that depend on it.
 
     Every asset the pipeline declares and has built is copied into the
@@ -3386,10 +3392,14 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
 
     `chartbook run` builds and makes no snapshot: you type this when a
     build is one that others should read. It does not run the build. It
-    takes what is on disk, however it was built (`chartbook run`, doit by
-    hand, a notebook, a long job), and takes your word that the commit
-    you are on built it. `chartbook run --snapshot` is the two in one
-    command, and needs nobody's word.
+    holds what is committed, and what is on disk, against the note the
+    last `chartbook run` left here: the files it built from, and the
+    files it left. Where they differ it stops and names them, since the
+    label would say that this commit built files it did not. Build again,
+    or type --as-is to take what is on disk as it is, however it was
+    built (doit by hand, a notebook, a long job). A pipeline with no
+    `build` script is not asked: it commits what it declares.
+    `chartbook run --snapshot` is the two in one command.
 
     A pipeline that depends on this one keeps the snapshot it pinned,
     however many you make after it. It gets a newer one with
@@ -3415,8 +3425,11 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
 
     project_dir = resolve_project_dir(project_dir)
     here = _in_its_folder(project_dir)
+    ran_by_chartbook = False if as_is else _held_against_its_build(project_dir, here, deep, store_names, complete)
     try:
-        report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None, complete=complete)
+        report = snapshots.make(
+            project_dir, deep=deep, store_names=list(store_names) or None, complete=complete, built_by_run=ran_by_chartbook,
+        )
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
         said = _explain_os_error(e)
         if isinstance(e, snapshots.NothingToSnapshot) and here:
@@ -3456,6 +3469,37 @@ def snapshot(project_dir, deep, store_names, complete, no_gc_reminder):
     _echo_snapshot(report)
     _say_where_a_snapshot_shows()
     _remind_of_gc(no_gc_reminder)
+
+
+def _held_against_its_build(project_dir, here: str, deep: bool, store_names, complete: bool) -> bool:
+    """Hold a pipeline's folder against what the last `chartbook run` built here, before a snapshot of it is made; whether ChartBook ran the build.
+
+    Stops the command where the files are not the build's
+    (:mod:`chartbook.built`), with what differs and the two ways on. Not
+    where something is uncommitted, or the folder cannot be read: the
+    snapshot itself says that, in its own words.
+    """
+    from chartbook import built
+    from chartbook import snapshot as snapshots
+    from chartbook.missing import _quoted
+
+    try:
+        if snapshots.uncommitted(project_dir) or not built.built_files(project_dir):
+            return False  # not committed, or nothing built at all: the snapshot names each thing
+        pipeline = snapshots.pipeline_in(project_dir)
+    except (snapshots.SnapshotError, OSError, ValueError):
+        return False  # no pipeline there, no repository, a manifest that is no TOML: the snapshot says so
+    try:
+        return built.check(project_dir, pipeline)
+    except built.NotHeld as refusal:
+        typed = "".join([
+            " --deep" if deep else "", *(f" --store {_quoted(name)}" for name in store_names), " --complete" if complete else "",
+        ])
+        first, *rest = built.said(refusal, pipeline, here, typed)
+        click.echo(click.style("Error: ", fg="red", bold=True) + first, err=True)
+        for line in rest:
+            click.echo(line, err=True)
+        raise SystemExit(1) from None
 
 
 def _a_store_to_send_it_to(project_dir):

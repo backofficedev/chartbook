@@ -250,7 +250,7 @@ class TestAfterAMove:
         assert {made_at for _, made_at in pinned} <= {made_at for _, made_at in kept} | {taken.made_at for taken, _ in plan.pinned_kept}
         assert {("acme/rates", TIMES[1]), ("acme/rates", TIMES[3]), ("acme/once", TIMES[0]), ("acme/upstream", TIMES[2])} <= kept
         assert [(taken.pipeline, taken.made_at) for taken, _ in plan.snapshots_delete] == [("acme/rates", TIMES[2])]
-        for typed in (["store", "gc", "--dry-run"], ["store", "verify"], ["store", "ls"], ["snapshot"]):
+        for typed in (["store", "gc", "--dry-run"], ["store", "verify"], ["store", "ls"], ["snapshot", "--as-is"]):
             monkeypatch.chdir(readers["rates3"].parent / "rates")
             result = CliRunner().invoke(main, typed)
             assert result.exit_code == 0 and "has the layout of ChartBook 0.5" not in result.output, (typed, result.output)

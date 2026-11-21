@@ -25,7 +25,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import config, lock, missing, snapshot
+from chartbook import built, config, lock, missing, snapshot
 from chartbook.cli import main
 from chartbook.gitcache import GitCache, GitError
 from chartbook.replacing import rename_when_let  # a folder git has just written is held for a moment on Windows
@@ -147,6 +147,12 @@ def _chain(work: Path, theirs) -> dict:
     commits["mid"] = _ready(_pipeline(work, "mid", {"acme/rates": {}}), theirs)
     commits["report"] = _ready(_pipeline(work, "report", {"acme/mid": {}}), theirs)
     return commits
+
+
+def _built_by_a_run(directory: Path) -> Path:
+    """Leave the note a run leaves of a build: of the folder's files as they are, as if `chartbook run` had just built them."""
+    built.finished(built.began(directory, built.pipeline_of(directory)))
+    return directory
 
 
 def _away(work: Path, *names: str) -> None:
@@ -314,6 +320,7 @@ class TestTheList:
         report = _pipeline(work, "report", {"acme/rates": {}})
         _ready(report, theirs)
         _git(work / "rates", "commit", "--quiet", "--allow-empty", "-m", "On")  # and its clone is on another commit by now
+        _built_by_a_run(work / "rates")
         # Read after rates, and before it: the list is the same either way
         for name in ("zed", "mid"):
             _pipeline(work, name, {"acme/rates": {}})
@@ -473,11 +480,16 @@ class TestALine:
         rates = _pipeline(work, "rates")
         (rates / "out.csv").write_text("a,b\nrates,1\n", encoding="utf-8", newline="\n")
         _pipeline(work, "report", {"acme/rates": {"path": "../rates"}})
+        # Its files are there, and no run of ChartBook's left them: a snapshot of them would be refused, so
+        # the list says to build (found by the review of the design: its `chartbook snapshot` line was one
+        # that is not made)
+        unbuilt = _said(_run(work, monkeypatch, "run"))
+        at = unbuilt.index(f"1. acme/rates    {_up('rates')} (a folder on this machine)")
+        assert unbuilt[at + 1] == f"     chartbook run --snapshot --project-dir {_q(rates)}"
+        _built_by_a_run(rates)
         said = _said(_run(work, monkeypatch, "run"))
-        assert said[5:7] == [
-            f"1. acme/rates    {_up('rates')} (a folder on this machine, built already)",
-            f"     chartbook snapshot --project-dir {_q(rates)}",
-        ]
+        at = said.index(f"1. acme/rates    {_up('rates')} (a folder on this machine, built already)")
+        assert said[at + 1] == f"     chartbook snapshot --project-dir {_q(rates)}"
         # With work that is not committed, a snapshot would be refused: the build is what is said, and its refusal says to commit
         (rates / "chartbook.toml").write_text((rates / "chartbook.toml").read_text(encoding="utf-8") + "\n# more\n", encoding="utf-8", newline="\n")
         assert _said(_run(work, monkeypatch, "run"))[3:5] == [
@@ -881,6 +893,7 @@ class TestWhateverCommitACloneWasLeftOn:
         _write(report, _table("report", {"acme/old": {"path": "../multi/old"}, "acme/new": {"path": "../multi/new"}}))
         _git(report, "commit", "--quiet", "-am", "Reads new too")
         (new / "out.csv").write_text("a,b\nnew,1\n", encoding="utf-8", newline="\n")  # built, and never snapshotted
+        _built_by_a_run(new)
         now = _git(top, "rev-parse", "HEAD")
         mine()
         said = _said(_run(work, monkeypatch, "run"))

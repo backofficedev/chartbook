@@ -131,7 +131,7 @@ class TestASnapshotsRecord:
 
     def test_the_command_says_it(self, rates, store):
         pl.DataFrame({"code": ["a"], "vector": [[0.1, 0.2]]}).write_parquet(rates / "_data" / "codes.parquet")
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates), "--no-gc-reminder"])
         assert result.exit_code == 0, result.output
         assert (
             "  rows not hashed: acme/rates:codes (column 'vector' is List(Float64), and a rows hash takes no such "
@@ -270,7 +270,7 @@ class TestRowsThatCouldNotBeHashed:
 
     def test_the_command_says_it_and_the_next_one_hashes_them(self, rates, store, monkeypatch):
         self._full(monkeypatch)
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates), "--no-gc-reminder"])
         assert result.exit_code == 0, result.output
         assert "  rows not hashed this time: acme/rates:treasury (OSError: " in result.output
         assert "Its bytes are in the snapshot; `chartbook snapshot` again hashes its rows." in result.output

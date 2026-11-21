@@ -772,7 +772,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         _as_an_earlier_one_made_it(first)
         assert _run("pin").exit_code == 0
 
-        again = _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates))
+        again = _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates))
         assert again.exit_code == 0, again.output
         said = [line for line in again.output.splitlines() if line.startswith("  The same files")]
         assert len(said) == 1 and said[0].endswith(
@@ -780,7 +780,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         )
         assert said_made(again.output, INCREMENT)  # the same files as the one before it, which is whole: nothing of it is copied
         # Once: a third finds a snapshot that says its rows, and makes none
-        assert "No new snapshot" in _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).output
+        assert "No new snapshot" in _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates)).output
 
         moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
@@ -804,7 +804,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         _as_an_earlier_one_made_it(snapshot.make(rates, store=store).snapshot)
         assert _run("pin").exit_code == 0
         _yields(41).write_parquet(rates / "_data" / "treasury.parquet")
-        assert _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
+        assert _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
         moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         # The table of codes is the same file, pinned with its rows now; the yields moved
@@ -826,12 +826,12 @@ class TestPinsFromBeforeRowsWereRecorded:
         first = _run("pin")
         assert first.exit_code == 0 and _earlier(3) in first.output.splitlines()
         # The rates' owner snapshots again; the reader updates, twice
-        assert _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
+        assert _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
         moved = _run("pin", "--update")
         assert moved.exit_code == 0, moved.output
         assert "pinned by" not in moved.output and lock.rows_now_said(["a", "b"]) in moved.output.splitlines()
         _yields(41).write_parquet(rates / "_data" / "treasury.parquet")
-        assert _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
+        assert _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates)).exit_code == 0
         again = _run("pin", "--update")
         assert again.exit_code == 0 and "Wrote chartbook.lock." in again.output and "pinned by" not in again.output
         assert "rows" not in lock.read_lock(report).assets["acme/other:t"]
@@ -847,7 +847,7 @@ class TestPinsFromBeforeRowsWereRecorded:
         _as_an_earlier_one_made_it(snapshot.make(nested, store=store).snapshot)
         assert _earlier(1) in _run("pin").output.splitlines()
 
-        again = _run("snapshot", "--no-gc-reminder", "--project-dir", str(nested))
+        again = _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(nested))
         assert again.exit_code == 0, again.output
         assert "  rows not hashed: acme/rates:nested (column 'l' is List" in again.output
         assert "The same files" not in again.output and said_made(again.output, INCREMENT)
@@ -874,20 +874,20 @@ class TestPinsFromBeforeRowsWereRecorded:
         _as_an_earlier_one_made_it(snapshot.make(blob, store=store).snapshot)
         said = _run("pin").output
         assert "where a table's rows can be recorded, the same commit and the same files make a new snapshot, once." in said
-        assert "No new snapshot" in _run("snapshot", "--no-gc-reminder", "--project-dir", str(blob)).output
+        assert "No new snapshot" in _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(blob)).output
 
     def test_a_snapshot_made_again_for_another_reason_says_nothing_of_rows(self, rates, store):
         """A tag put on the commit makes a new snapshot of the same files: the one before said its rows, and nothing is said of them."""
         snapshot.make(rates, store=store)
         _git(rates, "tag", "v1")
-        result = _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates))
+        result = _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates))
         assert result.exit_code == 0 and said_made(result.output, INCREMENT)  # the same files: an increment
         assert "The same files" not in result.output
 
     def test_a_snapshot_of_other_files_says_nothing_of_it(self, rates, store):
         _as_an_earlier_one_made_it(snapshot.make(rates, store=store).snapshot)
         _yields(41).write_parquet(rates / "_data" / "treasury.parquet")
-        result = _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates))
+        result = _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates))
         assert result.exit_code == 0 and "The same files" not in result.output
 
     def test_which_records_are_of_these(self):
@@ -1105,7 +1105,7 @@ class TestWhatTheSecondReviewFound:
             {"_data/t.parquet": pl.DataFrame({"a": [1, 2, 3]})},
         )
         _as_an_earlier_one_made_it(snapshot.make(one, store=store).snapshot)
-        again = _run("snapshot", "--no-gc-reminder", "--project-dir", str(one))
+        again = _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(one))
         (said,) = [line for line in again.output.splitlines() if line.startswith("  The same files")]
         assert said.endswith("UTC, which says nothing of the rows of 1 dataframe: this one records them, so that a rebuild can meet a pin of it.")
 

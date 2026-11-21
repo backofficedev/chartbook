@@ -161,7 +161,7 @@ class TestAnotherPipelineReadsThem:
     def test_the_commands_say_it(self, work, monkeypatch):
         rates, forecast = work
         monkeypatch.chdir(rates)
-        made = CliRunner().invoke(main, ["snapshot"])
+        made = CliRunner().invoke(main, ["snapshot", "--as-is"])
         assert made.exit_code == 0, made.output
         assert "3 asset(s) in the store" in made.output
         monkeypatch.chdir(forecast)

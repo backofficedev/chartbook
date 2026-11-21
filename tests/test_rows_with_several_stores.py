@@ -95,7 +95,7 @@ def _run(*arguments: str):
 
 
 def _snapshot(rates: Path):
-    result = _run("snapshot", "--no-gc-reminder", "--project-dir", str(rates))
+    result = _run("snapshot", "--as-is", "--no-gc-reminder", "--project-dir", str(rates))
     assert result.exit_code == 0, result.output
     return result
 

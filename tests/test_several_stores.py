@@ -500,7 +500,7 @@ def test_snapshot_deep_into_one_store_of_a_pipeline_pinned_from_another(tmp_path
     assert snapshot.make(consumer, deep=True).stores == ["mine"]
 
 
-@pytest.mark.parametrize("command", [["snapshot"], ["run", "--snapshot"]])
+@pytest.mark.parametrize("command", [["snapshot", "--as-is"], ["run", "--snapshot"]])
 def test_the_commands_snapshot_into_one_store_a_pipeline_pinned_from_another(tmp_path, monkeypatch, command):
     upstream, consumer, shared = _pinned_from_a_read_only_store(tmp_path, monkeypatch)
     monkeypatch.chdir(consumer)

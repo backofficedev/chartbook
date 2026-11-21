@@ -177,7 +177,7 @@ class TestSnapshot:
 
     def test_the_command_says_it(self, rates, store):
         _yields(41).write_parquet(rates / "_data" / "treasury.parquet")
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates), "--no-gc-reminder"])
         assert result.exit_code == 0, result.output
         lines = result.output.splitlines()
         # Named by its commit and its time: the one before may be another branch's
@@ -198,7 +198,7 @@ class TestSnapshot:
     def test_the_same_bytes_make_no_new_snapshot_and_say_so(self, rates, store):
         made = snapshot.make(rates, store=store)
         assert not made.made and made.rows_said == []
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates), "--no-gc-reminder"])
         assert "No new snapshot: the same bytes and the same pins as the one made " in result.output
 
     def test_a_first_snapshot_has_nothing_before_it(self, work, store):
@@ -228,7 +228,7 @@ class TestThePandasIndexColumn:
         self._with_an_index(rates)
         made = snapshot.make(rates, store=store)
         assert made.index_columns == ["acme/rates:treasury"]
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates), "--no-gc-reminder"])
         assert (
             "  acme/rates:treasury: its file has the column pandas makes of an index with no name (__index_level_0__). "
             "Where that holds row positions, they shift when a pull has more rows, and no rebuild then has the rows a "
@@ -432,7 +432,7 @@ class TestWhichFilesTheIndexWarningIsFor:
         assert "__index_level_1__" in pl.read_parquet(rates / "_data" / "treasury.parquet").columns
         made = snapshot.make(rates, store=store)
         assert made.index_columns == ["acme/rates:treasury"] and made.index_column_names == {"acme/rates:treasury": ["__index_level_1__"]}
-        result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(rates), "--no-gc-reminder"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(rates), "--no-gc-reminder"])
         assert "acme/rates:treasury: its file has the column pandas makes of an index with no name (__index_level_1__)." in result.output
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")

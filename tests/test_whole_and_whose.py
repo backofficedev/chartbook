@@ -408,7 +408,7 @@ class TestASnapshotSentToTwoStores:
             encoding="utf-8", newline="\n",
         )
         monkeypatch.chdir(rates)
-        typed = ["snapshot", "--store", "here", "--store", "there"]
+        typed = ["snapshot", "--as-is", "--store", "here", "--store", "there"]
         first = CliRunner().invoke(main, typed)
         assert first.exit_code == 0, first.output
         (copy,) = snapshot.all_snapshots(FolderStore(there))
