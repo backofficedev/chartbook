@@ -1979,7 +1979,7 @@ class TestWhatGcCannotRemove:
         assert "Traceback" not in result.output and isinstance(result.exception, SystemExit)
         assert "Removed 2 snapshot(s) and " in result.output
         assert "Error: 1 thing(s) could not be removed:" in result.output
-        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/snapshots/" in result.output
+        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {held}: " in result.output  # a path of this system
         assert "Operation not permitted. It is another user's, most likely" in result.output
         assert "its owner removes it" in result.output and "write permission on it and on the folder holding it" in result.output
         assert held.is_file() and not their.exists()
@@ -2003,7 +2003,7 @@ class TestWhatGcCannotRemove:
                 lock.run_gc(plan, store)
             ((what, why),) = raised.value.failures
             assert what == f"the object {first.assets['treasury']['content_hash']}"
-            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/snapshots/")
+            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {held}: ")
             assert "Operation not permitted" in why and "its owner removes it" in why
             assert raised.value.removed_snapshots == 2 and raised.value.removed >= 1
             assert held.is_file() and not their.exists()
@@ -2043,8 +2043,36 @@ class TestWhatGcCannotRemove:
             return unlink(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "unlink", refused)
-        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(store))}/snapshots/.*: Permission denied\. It is another user's"):
+        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(taken.path))}: Permission denied\. It is another user's"):
             store.remove_snapshot(taken.path)
+
+    def test_what_stayed_is_named_by_a_path_of_the_system(self, drive, monkeypatch):
+        """Found on Windows: ``C:\\…\\chartbook-store/snapshots/acme+rates/…``. Its own join stands in for the system's here."""
+        import ntpath
+
+        store, first, second = self._two_to_remove(drive, monkeypatch)
+        content_hash = first.assets["treasury"]["content_hash"]
+        ((name, _),) = store.files_of(content_hash)
+        held = store.root / name
+        remove_file = store_module._remove_file
+
+        def another_users(path):
+            if Path(path) == held:
+                raise PermissionError(errno.EPERM, "Operation not permitted", str(path))
+            remove_file(path)
+
+        monkeypatch.setattr(store_module, "_remove_file", another_users)
+        monkeypatch.setattr(store_module, "_join", ntpath.join)
+        as_windows_would = str(store) + "\\" + name.replace("/", "\\")
+        with pytest.raises(lock.GcError) as raised:
+            lock.run_gc(lock.plan_gc(store, recent_seconds=0, keep_days=0), store)
+        ((_, why),) = raised.value.failures
+        assert why.startswith(f"Cannot remove the object {content_hash} at {as_windows_would}: Operation not permitted. ")
+        # And as the store itself says it, of a file no snapshot uses now
+        with pytest.raises(store_module.TidyError) as stuck:
+            store.tidy()
+        assert str(stuck.value).startswith(f"Cannot remove {as_windows_would}, which no snapshot uses: Operation not permitted. ")
+        assert [kept for kept, _ in stuck.value.failed] == [name]  # its name in the store, which is of no system
 
 
 class TestAnObjectGoneWhilePlanning:

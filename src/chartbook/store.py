@@ -719,6 +719,13 @@ def _read_marker(marker: Path):
             time.sleep(0.05)
 
 
+#: How this system joins the parts of a path. A message names a file of the
+#: store with it (:meth:`FolderStore._shown`), so that the path has one kind
+#: of separator and is the one the system itself would write: on Windows,
+#: backslashes from the drive to the file
+_join = os.path.join
+
+
 def link_target(path) -> str:
     """Where a symlink points, as a path is written: on Windows without the ``\\\\?\\`` that ``os.readlink`` may give."""
     target = os.readlink(path)
@@ -1494,6 +1501,15 @@ class Store(abc.ABC):
     @abc.abstractmethod
     def origins(self, commit: str, name: str) -> list[str]:
         """The repository folders a pipeline's records at a commit were made from, as noted."""
+
+    def shown(self, name: str) -> str:
+        """A file of the store by its name under the store's top (``/`` between its parts), as a message names it.
+
+        A bucket's is its address and the name. A folder's is a path of
+        the system it is on, with that system's separator all the way
+        (:meth:`FolderStore.shown`).
+        """
+        return f"{self}/{name}"
 
     def __str__(self) -> str:
         return repr(self)
@@ -2976,11 +2992,20 @@ class FolderStore(Store):
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
     def _shown(self, path: Path) -> str:
-        """A file of the store, as a message names it: under the store as :meth:`__str__` shows it, which carries no password."""
+        """A file of the store, as a message names it: under the store as :meth:`__str__` shows it, which carries no password.
+
+        The two are joined as this system joins a path (:data:`_join`), so
+        the whole has one kind of separator: what a record, a note or a
+        lockfile stores of a path is another matter, and is posix everywhere.
+        """
         try:
-            return f"{self}/{path.relative_to(self.root).as_posix()}"
+            return _join(str(self), *path.relative_to(self.root).parts)
         except ValueError:
             return str(path)
+
+    def shown(self, name: str) -> str:
+        """A file of the store by its name under the store's top, as a message names it: a path of this system (:meth:`_shown`)."""
+        return self._shown(self.root.joinpath(*name.split("/")))
 
 
     def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
@@ -3300,7 +3325,7 @@ class FolderStore(Store):
             name, why = failed[0]
             more = f" (and {len(failed) - 1} more)" if len(failed) > 1 else ""
             raise TidyError(
-                f"Cannot remove {self}/{name}{more}, which no snapshot uses: {why}. {self._not_this_users_remedy()}",
+                f"Cannot remove {self.shown(name)}{more}, which no snapshot uses: {why}. {self._not_this_users_remedy()}",
                 removed,
                 [(name, f"{why}. {self._not_this_users_remedy()}") for name, why in failed],
             )
