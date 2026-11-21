@@ -4738,16 +4738,25 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         ended = not moved and migrate_0_5.is_moved(root)
         # The question is skipped only where this machine's own journal says a move is under way
         mine = started is not None and started.get("machine") == this_machine(create=False)
-        if mine:
-            click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
-        elif moved:
+        if moved and started is None and not found.steps:
+            # A moved store with nothing of 0.5 at its top and no journal: what is left to do is the move's own folder of
+            # temporaries, which a run killed as it ended left. It is the move's own, and no question is asked
             click.echo(
-                f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
-                f"({', '.join(name + '/' for name in migrate_0_5.old_left(root))}). Its notes are moved under _chartbook/, and "
-                f"pipelines/ goes aside whole: nothing under it is moved in."
+                f"The store at {the_store} has this version's layout, and the folder a move keeps its own temporary files in "
+                f"is still there ({migrate_0_5.MOVING}/): a move was cut short as it ended. "
+                + ("It would be removed: nothing in it is a file of the store's." if dry_run else "It is removed: nothing in it is a file of the store's.")
             )
-        elif ended:
-            again = ", ".join(name + "/" for name in migrate_0_5.old_left(root))
+            if dry_run:
+                click.echo("Nothing was moved.")
+            else:
+                migrate_0_5.run(root)
+            return
+        again = ", ".join(name + "/" for name in migrate_0_5.old_left(root))
+        # No journal of this machine says whose move left its signs in a store of 0.5. One made on another machine and
+        # finished there has none either, and a sync may have brought its folders before its store.json: said before
+        # the question, as every other command says of such a store
+        wait = "If another machine moved it, a sync may still be bringing the rest: wait for the sync to finish, and move nothing here."
+        if mine and ended:
             click.echo(
                 f"A move of the store at {the_store} to this version's layout was cut short at its end, its old folder "
                 f"aside already: it is finished now."
@@ -4757,14 +4766,34 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
                     if again else ""
                 )
             )
+        elif mine:
+            click.echo(f"A move of the store at {the_store} to this version's layout was cut short: it goes on where it stopped.")
+        elif moved:
+            click.echo(
+                f"The store at {the_store} has this version's layout, and at its top what ChartBook 0.5 keeps there "
+                f"({again}). Its notes are moved under _chartbook/, and "
+                f"pipelines/ goes aside whole: nothing under it is moved in."
+            )
+        elif ended:
+            # The old folder is aside and store.json does not say the new layout: this machine's own move, cut short at
+            # its end, where its journal says so (above). Without one it may as well be what a sync has brought so far
+            # of another machine's move, and then what is at the top is this machine's whole store: the line does not
+            # say that a move is finished, and says what a yes does
+            click.echo(
+                f"The store at {the_store} has the layout of ChartBook 0.5, and what a move to this version's layout puts "
+                f"aside is there already ({migrate_0_5.LEFT_ASIDE}/), with no journal of a move on this machine. {wait} "
+                f"If a move on this machine was cut short at its end, this finishes it."
+                + (
+                    f" What ChartBook 0.5 keeps at a store's top is there ({again}): a yes moves its notes under "
+                    f"_chartbook/ and puts pipelines/ aside whole. Nothing under it is moved in, and a file there that a "
+                    f"snapshot lacks does not reach it."
+                    if again else ""
+                )
+            )
         elif migrate_0_5.new_there(root):
-            # No journal says whose move this was. One made on another machine and finished there has none either,
-            # and a sync may have brought its new folders before its store.json: said before the question, as every
-            # other command says of such a store
             click.echo(
                 f"The store at {the_store} has the layout of ChartBook 0.5, and folders of this version's beside it: it "
-                f"looks half moved, and the move goes on from the folders as they are. If another machine moved it, a "
-                f"sync may still be bringing the rest: wait for the sync to finish, and move nothing here. "
+                f"looks half moved, and the move goes on from the folders as they are. {wait} "
                 f"{found.pipelines} pipeline(s), {found.snapshots} snapshot(s)."
             )
         else:
@@ -4798,16 +4827,29 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
         raise SystemExit(1)
     click.echo(f"The store at {the_store} has this version's layout: {done.pipelines} pipeline(s), {done.snapshots} snapshot(s).")
     first, moved_in, rest = counts(done, "became")
-    for line in first + ([] if moved else moved_in) + rest:
+    # Where files are missing, the old folder is where to look before it goes: a sync's second copy of a snapshot's
+    # folder (`<name> 2`) may hold what the first lacked, and the move reads no record of such a folder
+    look_first = (
+        f" {len(done.missing)} file(s) are missing, and one may be in that folder (in a second copy of its snapshot's "
+        f"folder, as a sync names one: `<name> 2`): look there first."
+        if done.missing else ""
+    )
+    if not done.counted:
+        # The journal carried what the move came to, and is gone (removed by hand, as two messages say to, once the old
+        # folder was aside): the snapshots are counted from the folders, and what went with the journal is left out,
+        # not said as 0
+        lines = first + moved_in[:1] + [
+            f"  How many files the move renamed, copied and put aside went with its journal, which is gone. The old folder "
+            f"is under {migrate_0_5.LEFT_ASIDE}/: it may be removed once the move has been checked.{look_first}"
+        ]
+    else:
+        # What this move moved in, by what its journal carries: a run that goes on after store.json was written says
+        # the same as the one that was cut short would have. And after a move that ended before this run and left no
+        # journal, the snapshots, renames and copies are not this run's to say
+        lines = first + (moved_in if done.moved_in or not (moved or ended) else []) + rest
+    for line in lines:
         click.echo(line)
     if done.kept:
-        # Where files are missing, the old folder is where to look before it goes: a sync's second copy of a snapshot's
-        # folder (`<name> 2`) may hold what the first lacked, and the move reads no record of such a folder
-        look_first = (
-            f" {len(done.missing)} file(s) are missing, and one may be in that folder (in a second copy of its snapshot's "
-            f"folder, as a sync names one: `<name> 2`): look there first."
-            if done.missing else ""
-        )
         click.echo(f"The old folder, with its records, is kept at {done.kept}: it may be removed once the move has been checked.{look_first}")
     click.echo(synced)
 

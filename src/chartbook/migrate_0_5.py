@@ -253,6 +253,14 @@ class Plan:
             place, the size of the one, the size of the other)``.
         copied_as_is: The copies whose bytes are not what their record says.
         kept: Where the old folder is kept, once the move has put it aside.
+        moved_in: Of a move that is done, how many snapshots the whole move
+            moved in, by what its journal carried: more than none where a
+            run that goes on after ``store.json`` was written finishes a
+            first move.
+        counted: Of a move that is done, whether its journal was there to
+            say what the whole move came to. Where it is not (removed by
+            hand once the old folder was aside), the counts above are not
+            known, and are not to be said as 0.
         steps: The steps, in order.
     """
 
@@ -283,6 +291,8 @@ class Plan:
     in_place: list = field(default_factory=list)
     copied_as_is: list = field(default_factory=list)
     kept: str = ""
+    moved_in: int = 0
+    counted: bool = True
     steps: list = field(default_factory=list)
 
 
@@ -307,11 +317,29 @@ def new_there(root: Path) -> bool:
     )
 
 
+def temporaries_left(root: Path) -> bool:
+    """Whether the move's own folder of temporaries (:data:`MOVING`) is there with something a move removes: a file in it, or the folder itself where it is empty.
+
+    A move that was killed once ``store.json`` said the new layout, and
+    whose journal was then removed, left it: nothing else says so. A
+    folder somebody made in it is no file the move wrote, and stays with
+    the folder: one that holds nothing else is nothing to do.
+    """
+    folder = Path(root) / MOVING
+    try:
+        if folder.is_symlink() or not folder.is_dir():
+            return False
+        inside = list(folder.iterdir())
+    except OSError:
+        return False
+    return not inside or any(one.is_symlink() or not one.is_dir() for one in inside)
+
+
 def to_move(root: Path) -> bool:
-    """Whether ``chartbook store migrate`` has something to do in a folder store: one of 0.5, one whose move was cut short, or a moved one with what 0.5 keeps at its top."""
+    """Whether ``chartbook store migrate`` has something to do in a folder store: one of 0.5, one whose move was cut short, or a moved one with what 0.5 keeps at its top, or with a move's own folder of temporaries still in it."""
     root = Path(root)
     said = marker_of(root)
-    return (root / JOURNAL).is_file() or said == SCHEMA or (said == FOLDER_SCHEMA and bool(old_left(root)))
+    return (root / JOURNAL).is_file() or said == SCHEMA or (said == FOLDER_SCHEMA and (bool(old_left(root)) or temporaries_left(root)))
 
 
 def journal_of(root: Path) -> Optional[dict]:
@@ -1175,6 +1203,9 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     done.store_bytes = so_far.get("store_bytes", 0)
     done.store_after = so_far.get("store_after", 0)
     done.copied_into = [tuple(item) for item in so_far.get("copied_into", [])]
+    # What the journal carried of the whole move: how many snapshots it moved in, and whether it was there to carry
+    # anything. Removed by hand once the old folder was aside, it took the counts with it: they are not known, not 0
+    done.moved_in, done.counted = so_far.get("moved_in", 0), bool(so_far)
     taken = {root / pair[1] for pair in done.in_place}  # each said on its own, with both sizes
     # And what the store holds now, from its folders: its snapshots, and after a move that moved any in, the files
     # that are not at their size where a record names them

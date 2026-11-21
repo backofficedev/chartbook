@@ -695,7 +695,9 @@ class TestOnceTheOldFolderIsAsideTheStoreIsMoved:
         store_module._read_records.clear()
         result, said = typed("store", "migrate", "--yes")
         assert result.exit_code == 0, said
-        assert "was cut short at its end, its old folder aside already: it is finished now. What ChartBook 0.5 keeps at a store's top is there again (pipelines/)" in said
+        # Its journal is gone, so the first line does not say whose move it was: it says to wait for a sync, and what a yes does
+        assert "what a move to this version's layout puts aside is there already (_chartbook/left-by-0.5/), with no journal of a move on this machine." in said
+        assert "wait for the sync to finish, and move nothing here. If a move on this machine was cut short at its end, this finishes it. What ChartBook 0.5 keeps at a store's top is there (pipelines/): a yes moves its notes under _chartbook/ and puts pipelines/ aside whole." in said and "it is finished now" not in said
         assert f"1 snapshot(s) went aside without being moved in: acme+p/{C0}. Run that pipeline again with this ChartBook." in said
         again, said = typed("store", "migrate", "--yes")
         assert again.exit_code == 0 and "nothing to move" in said
@@ -717,7 +719,7 @@ class TestOnceTheOldFolderIsAsideTheStoreIsMoved:
             rmtree(root)
         assert not wrong, json.dumps(wrong[:6], indent=1)
 
-    def test_with_nothing_come_since_the_command_says_the_move_is_finished_and_writes_the_marker(self, store):
+    def test_with_nothing_come_since_the_command_finishes_the_move_and_writes_the_marker(self, store):
         s1, s3 = self._store(store)
         whole = migrate_0_5.plan(store)
         with pytest.raises(Stop):
@@ -726,7 +728,7 @@ class TestOnceTheOldFolderIsAsideTheStoreIsMoved:
         store_module._read_records.clear()
         assert migrate_0_5.plan(store).steps == [] and migrate_0_5.to_move(store)
         result, said = typed("store", "migrate", "--yes")
-        assert result.exit_code == 0 and "was cut short at its end, its old folder aside already: it is finished now." in said
+        assert result.exit_code == 0 and "If a move on this machine was cut short at its end, this finishes it." in said and "it is finished now" not in said
         assert "What ChartBook 0.5 keeps" not in said and migrate_0_5.marker_of(store) == "chartbook/store/v3"
         assert f"has this version's layout: 1 pipeline(s), 2 snapshot(s)." in said and fresh(store).verify() == []
         again, said = typed("store", "migrate", "--yes")
