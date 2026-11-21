@@ -1579,6 +1579,23 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         assert missing._in(word, windows=True) == f" --project-dir {typed}"
         assert missing.typed(["git", "-C", word, "checkout", "abc"], windows=True) == f"git -C {typed} checkout abc"
 
+    @pytest.mark.parametrize("folder, written", [
+        ("\\\\fileserver\\share\\$\\rates", '"//fileserver/share/$/rates"'),
+        ("\\\\fileserver\\share\\$", '"//fileserver/share/$"'),
+    ])
+    def test_what_a_shell_reads_is_asked_of_the_word_as_it_is_written(self, work, folder, written):
+        """Found by the review: a share's folder named `$` was written by the one function (a `$` before a
+        slash, or at the end, is text) and given no command by the list, which asked of the word with its
+        backslashes, where Git Bash takes a backslash and a `$` for one sign."""
+        assert missing._quoted(folder, windows=True) == written
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/mid", None, folder=Path(folder)),
+        ])
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert f"     chartbook run --snapshot --project-dir {written}" in said, said
+        # And a drive's folder of that name is given none, as before
+        assert missing._quoted("C:\\work\\$\\rates", windows=True) == missing.NOT_TEXT
+
     def test_net_use_is_given_a_network_path_as_windows_writes_it(self):
         word = "\\\\fileserver\\my share"
         assert missing._quoted(word, windows=True, backslashes=True) == f'"{word}"'
@@ -2253,25 +2270,119 @@ class TestAFolderGitWillNotRead:
         mine()
         return mid
 
-    def test_the_command_that_makes_git_trust_it_is_the_first_of_its_line(self, work, mid, monkeypatch):
+    #: What a line says under the command that makes git trust its repository
+    TOLD = (
+        "     Git does not trust the repository it is in, and reads nothing of it until the command above has been "
+        "typed. How to build it is said after that, by the last command here."
+    )
+    #: And the list's second line then
+    NOT_WHOLE = (
+        "Git does not trust a repository below, and reads nothing of it, so how to build what is in it is not known yet. "
+        "Type the commands below, one at a time: the last one then says the rest."
+    )
+
+    def test_its_line_is_the_command_that_makes_git_trust_it_and_no_other(self, work, mid, monkeypatch):
         """Found on Windows, on a share, by typing the list's lines in their order: the list says "one at a
         time", git refused the first of them, and the command that would have let it run was at the end of
-        the line's third, inside a sentence that began with something else."""
+        the line's third, inside a sentence that began with something else. And by the review of putting
+        that command first: the commands under it had been made with nothing read of the repository, and
+        then ran."""
         at = mid.as_posix()  # as git writes a folder, on Windows too
         _git_refuses(monkeypatch, DUBIOUS.format(at=at), under=mid)
-        said = _said(_run(work, monkeypatch, "run"))
+        result = _run(work, monkeypatch, "run")
+        said = _said(result)
         assert not any("is not in a git repository" in line for line in said), said
-        commit = _git_as_it_was(mid)
-        assert _has(
-            said,
-            f"git config --global --add safe.directory {missing._quoted(at, batch=False)}",
-            f"git -C {_q(mid)} checkout {commit[:12]}",
-            f"chartbook run --snapshot --project-dir {_q(mid)}",
-            "What it reads in turn is not known: git does not trust the repository it is in, until the first command here "
-            "has been typed. Its own `chartbook run` says.",
-        ), said
-        # Said once: the sentence with the command in it is the folder's own commands', not a line of the list
+        assert said[1] == self.NOT_WHOLE
+        assert said[3:8] == [
+            f"1. acme/mid at {_git_as_it_was(mid)[:7]}    {_up('mid')} (a folder on this machine)",
+            f"     git config --global --add safe.directory {missing._quoted(at, batch=False)}",
+            self.TOLD,
+            "",
+            "Then here again:",
+        ], said
+        assert said[8] == f"     chartbook run --project-dir {_q(work / 'report')}"  # which then says how to build it
+        assert not any("checkout" in line or "--snapshot" in line for line in said), said
+
+    def test_no_command_is_made_blind_in_the_pipelines_own_repository(self, work, theirs, mine, monkeypatch):
+        """Found by the review, by typing it with git's own refusal: one repository holds both, `report`
+        pins `mid` at a commit before its own, and git reads nothing of the repository. With the trust
+        command put first, the list's `git -C …/mono/mid checkout COMMIT` ran once git trusted it, left
+        the pipeline's own repository on no branch, and `report` was built from the old commit's files. A
+        list made with what git says gives a worktree there, and moves nothing."""
+        top = _several(work, "mono", {"mid": None})
+        _ready(top / "mid", theirs)
+        report = _added(top, "report", {"acme/mid": {"path": "../mid"}})
+        _ready(report, theirs)
+        mine()
+        _git_refuses(monkeypatch, DUBIOUS.format(at=top.as_posix()), under=top)
+        said = _said(_run(work, monkeypatch, "run", where="mono/report"))
+        assert f"     git config --global --add safe.directory {missing._quoted(top.as_posix(), batch=False)}" in said, said
+        assert self.TOLD in said
+        assert not any(line.strip().startswith(("git -C", "chartbook run --snapshot", "chartbook snapshot")) for line in said), said
+
+    def test_the_command_is_given_once_for_two_folders_of_one_repository(self, work):
+        trust = "git config --global --add safe.directory /srv/mono"
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/a", "c" * 40, folder=work / "mono" / "a", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/b", "c" * 40, folder=work / "mono" / "b", not_trusted="git does not trust …", trust=trust),
+        ])
+        said = missing.said(listing, here=work / "report")
+        assert said[3:7] == [
+            f"1. acme/a at ccccccc    {_up(os.path.join('mono', 'a'))} (a folder on this machine)",
+            f"     {trust}",
+            self.TOLD,
+            f"2. acme/b at ccccccc    {_up(os.path.join('mono', 'b'))} (a folder on this machine)",
+        ]
+        assert said[7] == (
+            "     It is in the repository that the command of line 1 makes git trust. How to build it is said after that, "
+            "by the last command here."
+        )
         assert sum("safe.directory" in line for line in said) == 1
+
+    def test_one_that_was_never_pinned_is_told_the_same(self, work):
+        """Found by the review: it got the command and no word of why. Reached only further down a list; the one a pipeline reads itself is refused by its pin."""
+        trust = "git config --global --add safe.directory /srv/mid"
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/mid", None, folder=work / "mid", not_trusted="git does not trust …", trust=trust),
+        ])
+        said = missing.said(listing, here=work / "report")
+        assert said[3:6] == [f"1. acme/mid    {_up('mid')} (a folder on this machine)", f"     {trust}", self.TOLD]
+
+    def test_on_windows_the_command_is_given_where_the_folders_own_name_would_give_none(self, work):
+        """Found by the review: a folder named `R&D` is given no command on Windows, and the line that
+        replaced its commands replaced the one that makes git trust its repository too. That one names
+        the repository, in a word quoted for git, and is the only command its line has."""
+        trust = 'git config --global --add safe.directory "%(prefix)///fileserver/home/mid"'
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/mid", "c" * 40, folder=work / "mid" / "R&D", not_trusted="git does not trust …", trust=trust),
+        ])
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert said[4:6] == [f"     {trust}", self.TOLD]
+        assert not any("No command is given" in line for line in said)
+
+    def test_where_there_is_no_command_to_give_its_line_is_the_sentence(self, work):
+        """On Windows, a repository whose name holds what a shell reads: the sentence says where git's own command is."""
+        sentence = (
+            "git does not trust the repository that C:/x is in (//server/share/a`b): another user owns it, or it is on a "
+            "network share, and git reads no such repository until it is told to. To have git trust it, run the `git "
+            "config --global --add safe.directory` command that `git status` prints in that folder (in PowerShell or "
+            "Git Bash: `cmd.exe` does not read its quotes), and then this again"
+        )
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/mid", "c" * 40, folder=work / "mid", not_trusted=sentence),
+        ])
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert said[1] == self.NOT_WHOLE
+        assert said[4] == f"     How to build it is not known: {sentence}."
+        assert said[5] == "" and not any(line.strip().startswith("git ") for line in said)
+
+    def test_a_list_with_no_such_folder_begins_as_it_did(self, work):
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/mid", "c" * 40, folder=work / "mid"),
+        ])
+        assert missing.said(listing, here=work / "report")[1] == (
+            "Build it first, with the commands below, one at a time. They end with a snapshot, which is what this one reads."
+        )
 
     def test_one_that_was_never_pinned_is_refused_by_its_pin_which_says_the_command(self, work, theirs, mine, monkeypatch):
         """It never reaches the list: the pin of it is what fails, with the folder's own sentence."""
@@ -2287,10 +2398,10 @@ class TestAFolderGitWillNotRead:
             for line in said
         ), said
 
-    def test_where_there_is_no_command_to_give_the_sentence_is_said_whole_and_not_cut(self, work, mid, monkeypatch):
-        """On Windows, a folder whose name holds what a shell reads gets no command of ChartBook's, and the
-        sentence says where git's own is. A line of the list holds 300 characters of what a file gave;
-        this one is the folder's own commands' sentence, and holds 4,096."""
+    def test_the_sentence_is_said_whole_and_not_cut(self, work, mid, monkeypatch):
+        """Where there is no command to give, the sentence says where git's own is. A line of the list
+        holds 300 characters of what a file gave; this one is the folder's own commands' sentence, and
+        holds 4,096."""
         sentence = (
             f"git does not trust the repository that {mid} is in ({'m' * 400}): another user owns it, or it is on a "
             "network share, and git reads no such repository until it is told to. To have git trust it, run the `git "
@@ -2303,7 +2414,7 @@ class TestAFolderGitWillNotRead:
 
         monkeypatch.setattr(snapshot, "code_of", refuse)
         said = _said(_run(work, monkeypatch, "run"))
-        assert f"     What it reads in turn is not known: {sentence}. Its own `chartbook run` says." in said, said
+        assert f"     How to build it is not known: {sentence}." in said, said
         assert not any(line.strip().startswith("git config") for line in said)
 
     def test_git_that_could_not_be_run_is_said_so(self, work, mid, monkeypatch):

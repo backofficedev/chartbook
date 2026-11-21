@@ -528,10 +528,16 @@ What building it settled:
   for the note. *(The second by the review: the line was said, and the command after it.)* The
   snapshot says the same. In a folder that is in no repository the run says nothing of a note:
   there is no snapshot to hold against one. In the list of what is not in a store, the line of
-  a folder in such a repository begins with that command, as a command of its own. *(Found on
-  Windows by typing the list's lines in their order: the list says "one at a time", git
-  refused the first of them, and the command that would have let it run was at the end of the
-  line's third, inside a sentence that began with something else.)*
+  a folder in such a repository is that command and no other, given once for a repository,
+  and the list's second line says the list is not whole yet. *(Found on Windows by typing the
+  list's lines in their order: the list says "one at a time", git refused the first of them,
+  and the command that would have let it run was at the end of the line's third, inside a
+  sentence that began with something else. And by the review of putting that command first
+  and leaving the others under it: they had been made with nothing read of the repository,
+  not the commit it is at nor whether it is the pipeline's own, and once git trusted it they
+  ran. In a repository that holds both, the checkout left the pipeline's own repository on no
+  branch, and it was built from the old commit's files with nothing said. So no command is
+  made blind: the list made after the trust command is made with what git says.)*
 - **What cannot be read does not let a snapshot through.** *(Found by the review of the code: a
   `[scripts]` table that a run refuses made the check step aside, and the snapshot was made of
   files no run had built, with no `--as-is`.)* The check refuses and says what is wrong. It
@@ -866,7 +872,8 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     snapshot` for files of the commit it had been on)*. The last line is read the same way.
     A `$` at the end of a longer name, before a slash or the end of the word, is text to both
     shells (`\\server\home$\…`, the one common `$` in a Windows path); a folder named `$`
-    alone is not, since Git Bash takes the backslash before it and the `$` for one sign. A `%`
+    alone is not, since Git Bash takes the backslash before it and the `$` for one sign (on a
+    drive: a network path is written with forward slashes, below, and there it is text). A `%`
     is text only where it begins the two digits a
     web address writes a sign with (`%20`), and where no name between two of them is a variable
     of this machine or one `cmd.exe` fills in by itself (`%CD%`). What that leaves: a variable
