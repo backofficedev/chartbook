@@ -302,6 +302,32 @@ class TestStoreLs:
             assert now == f"{was}, lacks 1 of its {self._names(folder)} file(s)"
         assert lines.count(self.VERIFY_NAMES_EACH) == 1 and lines[-1] == self.VERIFY_NAMES_EACH
 
+    def test_the_disk_is_asked_about_a_file_once_however_many_snapshots_name_it(self, kept, store, monkeypatch):
+        """Found by review: each snapshot that names a file asked the disk about it again, 60,066 questions for 3,000 files that 20 snapshots name, and on a synced folder each question is a trip.
+
+        The complete snapshot's files are named by its record and by each
+        increment's: one question for each file of the store, whoever names it."""
+        complete, increments, taken, _ = kept
+        asked = []
+        is_whole = store_module._is_whole  # the one question of the disk: a file's size, where its record says it is
+
+        def asking(file, pipeline_folder):
+            asked.append(file.location)
+            return is_whole(file, pipeline_folder)
+
+        monkeypatch.setattr(store_module, "_is_whole", asking)
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0 and "lacks" not in result.output, result.output
+        records = FolderStore(store.root).records()
+        named = [file.location for record in records for asset in record.assets for file in asset.files]
+        assert len(named) > len(set(named))  # the increments name files of the complete one
+        assert sorted(asked) == sorted(set(named))
+        # And what each lacks is still said of each: a file gone from the complete one is one all three lack
+        _lose(complete / "_data" / "treasury.parquet")
+        asked.clear()
+        lines = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        assert len([line for line in lines if ", lacks 1 of its " in line]) == 3 and sorted(asked) == sorted(set(named))
+
     def test_it_is_asked_by_sizes_and_a_file_with_other_bytes_at_its_size_is_store_verifys_to_find(self, kept, store):
         complete, increments, taken, _ = kept
         before = CliRunner().invoke(main, ["store", "ls"]).output
@@ -405,6 +431,17 @@ class TestDamaged:
             data.path("acme/rates:treasury", project_dir=readers[index])
         result = CliRunner().invoke(main, ["store", "verify"])
         assert result.exit_code == 1 and "_data/treasury.parquet is not in the store (the snapshot " in result.output
+        # Found by review: the first line counted the files of folders that have a record, and this one has none now,
+        # so every file the increments keep in it had a line and no count ahead of them. It counts every line of a
+        # file below it, under the folder the file is missing from, whose pipeline its folder says
+        lines = result.output.splitlines()
+        of_files = [line for line in lines if "(the snapshot " in line]
+        assert all(f" is not in the store (the snapshot {complete.name}), and " in line for line in of_files), of_files
+        assert lines[:2] == [
+            f"{len(of_files)} file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {complete.name}  {len(of_files)} file(s)",
+        ]
+        assert lines[2:2 + len(of_files)] == of_files and len(of_files) > 1
 
     def test_a_file_there_at_its_size_with_other_bytes(self, kept, store):
         complete, increments, taken, readers = kept

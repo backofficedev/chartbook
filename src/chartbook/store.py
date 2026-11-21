@@ -616,11 +616,17 @@ class StoreProblem:
         content_hash: The object's name.
         path: Its directory in the store.
         message: What is wrong with it.
+        of_snapshot: Whether it is of a file of a snapshot, said with the
+            snapshot's name: ``path`` is then the snapshot's folder the
+            file is in, or is missing from. That folder may have no record
+            now (one cleared in a store of ChartBook 0.5, a complete
+            snapshot that has gone and that increments still name).
     """
 
     content_hash: str
     path: Path
     message: str
+    of_snapshot: bool = False
 
     def format(self) -> str:
         """Render as ``hash: message``, one line."""
@@ -1412,7 +1418,7 @@ class Store(abc.ABC):
         """
         return self.files_of(content_hash)
 
-    def holes_of(self, record: Path) -> list[str]:
+    def holes_of(self, record: Path, asked: Optional[dict] = None) -> list[str]:
         """The files that the snapshot with this record names and does not itself have, though another snapshot may have the same bytes; by their paths in the pipeline.
 
         Absent, or of another size, where its record says each is: one
@@ -1421,6 +1427,12 @@ class Store(abc.ABC):
         of every file has any: where each file is kept once, what is
         missing is missing for every snapshot that names it, which
         :meth:`incomplete` says.
+
+        :param asked: For what asks of many snapshots at once, as a
+            listing does: an empty dictionary, handed to each call, in
+            which the store keeps what the disk said of each file. A file
+            that several snapshots name (what increments keep in the
+            complete snapshot they build on) is then asked about once.
         """
         return []
 
@@ -3202,9 +3214,9 @@ class FolderStore(Store):
                 found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
 
-    def holes_of(self, record: Path) -> list[str]:
+    def holes_of(self, record: Path, asked: Optional[dict] = None) -> list[str]:
         """The files one snapshot's record names that are not where it says, or are there at another size, by their paths in the pipeline (:meth:`Store.holes_of`)."""
-        return _holes(read_kept_record(Path(record)))
+        return _holes(read_kept_record(Path(record)), asked=asked)
 
     def holds_whole(self, pipeline: str, content_hashes: Iterable[str]) -> bool:
         """Whether one recorded snapshot of the pipeline holds every one of these assets whole (:meth:`Store.holds_whole`): one snapshot, not a file from each."""
@@ -3471,6 +3483,7 @@ class FolderStore(Store):
                 problems.append(StoreProblem(
                     content_hash, record.folder,
                     f"its record does not say where {content_hash[:19]}… is (the snapshot {record.folder.name})",
+                    of_snapshot=True,
                 ))
             for asset in record.assets:
                 held.add(asset.content_hash)
@@ -3503,7 +3516,7 @@ class FolderStore(Store):
                 f", and {count} snapshots kept as increments on it keep it there" if count > 1
                 else ", and 1 snapshot kept as an increment on it keeps it there"
             )
-            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}"))
+            problems.append(StoreProblem(content_hash, where, f"{message} (the snapshot {where.name}){also}", of_snapshot=True))
         # A snapshot's files together, in the order of their paths
         problems.sort(key=lambda problem: (str(problem.path), problem.message))
         # The same snapshot in both folders: the complete one is the snapshot, and the other is named
@@ -3599,7 +3612,7 @@ def _not_followed(record: KeptRecord) -> list[str]:
     return sorted(record.named - {asset.content_hash for asset in record.assets})
 
 
-def _holes(record: KeptRecord, own: bool = False) -> list[str]:
+def _holes(record: KeptRecord, own: bool = False, asked: Optional[dict] = None) -> list[str]:
     """The files a snapshot's record names that are not whole where it says (:func:`_is_whole`), by their paths in the pipeline, each asked about once.
 
     And what it names without saying where it is (:func:`_not_followed`),
@@ -3608,12 +3621,25 @@ def _holes(record: KeptRecord, own: bool = False) -> list[str]:
     :param own: Only those its own folder is to hold: not a file that an
         increment keeps in the complete snapshot it builds on, which is
         missing from that one's folder.
+    :param asked: What the disk has said of each file so far, by where it
+        is and the size it is to have, for a caller that asks of many
+        snapshots at once (:meth:`Store.holes_of`): a file that another
+        snapshot's record named before is not asked about again.
     """
     whole = {
         file.location: file for asset in record.assets for file in asset.files
         if not own or file.location.is_relative_to(record.folder)
     }
-    return sorted({file.path for file in whole.values() if not _is_whole(file, record.folder.parent)}) + [
+
+    def is_whole(file: KeptFile) -> bool:
+        if asked is None:
+            return _is_whole(file, record.folder.parent)
+        key = (str(file.location), file.size_bytes)
+        if key not in asked:
+            asked[key] = _is_whole(file, record.folder.parent)
+        return asked[key]
+
+    return sorted({file.path for file in whole.values() if not is_whole(file)}) + [
         f"{content_hash[:19]}… (its record does not say where it is)" for content_hash in _not_followed(record)
     ]
 

@@ -881,7 +881,7 @@ class TestAMachineThatOnlyReads:
         machine("b")
         assert lock.verify(clone).problems == []
 
-    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
+    @pytest.mark.skipif(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="chmod makes no folder read-only on Windows, nor for root")
     def test_run_frozen_says_when_the_note_cannot_be_written_and_builds(self, reader):
         work, machine, rates, old, project, clone = reader
         _with_a_build(clone)
@@ -1446,7 +1446,7 @@ class TestRunnersThatShareAName:
         assert len(notes) == 1 and notes[0].machine == "ci-runners"
         assert [made_at for _, made_at in notes[0].snapshots] == [taken.made_at]  # the last run's
 
-    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
+    @pytest.mark.skipif(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0), reason="chmod makes no folder read-only on Windows, nor for root")
     def test_a_note_not_written_is_said_for_what_it_is(self, drive):
         work, machine, rates = drive
         snapshot.make(rates)

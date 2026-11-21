@@ -1418,7 +1418,7 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.
 ```
 
-It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
+It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. The disk is asked about each file once, however many snapshots name it. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
@@ -1452,7 +1452,7 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
+The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
 
 A file that snapshots kept as increments keep in the complete snapshot they build on is one place in the store: it is read once and said once, under the name it has in that folder whatever name each increment has for it, with that snapshot's name, and with how many of them keep it there:
 
