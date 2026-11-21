@@ -624,9 +624,10 @@ def _seeds(default):
 
 SEEDS = _seeds((0, 1, 2, 3, 4, 5, 6, 7))
 
-#: The seeds of 0 to 149 whose stores, with files brought of a move made elsewhere, ended in another tree when stopped,
-#: one of each kind: one file more or fewer was aside (16), and the record of an increment named another of two files
-#: of the same bytes (136). The small cases of each are in ``TestStoppedWhereFilesWereAlreadyInTheNewTrees``
+#: A seed of 0 to 149 whose store, with files brought of a move made elsewhere, ended in another tree when stopped: one
+#: file more or fewer was aside (16). Its small case is in ``TestStoppedWhereFilesWereAlreadyInTheNewTrees``. The other
+#: kind (136: the record of an increment named another of two files of the same bytes) is known and left, since the rule
+#: that ended it could hand a snapshot another file's bytes (the design page, "Moving a store to this layout")
 FOUND = (16,)
 
 

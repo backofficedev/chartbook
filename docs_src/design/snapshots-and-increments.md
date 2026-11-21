@@ -802,21 +802,24 @@ searching it, so that the command's time grows with the files and not with their
 
 It also found that, in a store a sync has part brought from a move made elsewhere, a move
 stopped and run again could end in another tree than an uninterrupted one, both whole (6 of 150
-drawn stores). Two rules ended that on all 150: a file at its old place whose own place in the
-new trees is taken is copied from and goes aside, and is never renamed into another snapshot;
-and which file of the newest snapshot an older one names is the first in the newest one's
-record that the move makes whole, by rename or by copy alike.
+drawn stores). One rule ended two of the six: a file at its old place whose own place in the
+new trees is taken is copied from and goes aside, and is never renamed into another snapshot.
 
-One thing is known and left. The move goes by sizes and reads nothing, so a file of the right
-size in the new trees is the file to it, as one that a move cut short put there is. Where its
-bytes are others (a copy that set the file's length first and stopped), and the place a
-snapshot's bytes were to be taken from does not hold them, a copy is made from it, though
-another old place may hold the right bytes; and with the second of the two rules above an older
-snapshot that had the file may be handed the newest one's copy of it (2 of 600 stores drawn
-with any file at any place the move writes to; none of 300 drawn with what a sync brings of a
-real move). The copy is hashed as it is written and the last lines name it, the file at the old
-place goes aside and not away, and `chartbook store verify` says which files are not what their
-records say.
+Two things are known and left, both in a store that already holds files in the new trees
+before the move begins. The first is the other four of the six: which of two files of the
+newest snapshot with the same bytes an older one names can depend on where a move was stopped.
+Both trees hold every file. The rule that would end it (the newest snapshot is taken to have a
+file it is still to be given by copy) was built and taken out again, because on 2 of 600
+stores drawn with any file at any place the move writes to it handed an older snapshot, which
+had its own good file, the newest one's copy of a file of the right size and other bytes: a
+move that ends in one of two whole trees is better than one that can make a snapshot worse.
+The second: the move goes by sizes and reads nothing, so a file of the right size in the new
+trees is the file to it, as one that a move cut short put there is. Where its bytes are others
+(a copy that set the file's length first and stopped), and the place a snapshot's bytes were to
+be taken from does not hold them, a copy is made from it, though another old place may hold the
+right bytes. The copy is hashed as it is written and the last lines name it, the file at the
+old place goes aside and not away, and `chartbook store verify` says which files are not what
+their records say.
 
 - **A file changes folder by a rename and is not read; a file that two folders must each hold is
   copied.** The copies are a file that several older snapshots share and the newest lacks, a
