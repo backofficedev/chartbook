@@ -940,7 +940,26 @@ data in mind.
     note.)*
   - The line about `chartbook store gc` planned a sweep of every pipeline's folder, which asked
     about each file of every snapshot in the store. The line says nothing of what a sweep finds,
-    and is planned without one.
+    and is planned without one. And with snapshots older than seven days in the store, the plan
+    asked whether each snapshot that stays holds its files, for every pipeline it would remove
+    something of: 10,000 looks at files for a table of 2,000, where the snapshot itself makes
+    4,000 *(measured 2026-11-21, once the measuring had old snapshots in it)*. That is what
+    keeps a real gc from removing a pipeline's snapshots while one that stays lacks a file, and
+    a reminder removes nothing. **The reminder's plan asks nothing of the disk about a
+    snapshot's files** (`lock.plan_gc(..., looks=False)`): it goes by the records alone. Counted
+    for a table of 2,000 files, the questions one `chartbook snapshot` asks the store:
+
+    | Snapshots in the store, all long past | With the line, before | With the line, now | With `--no-gc-reminder` |
+    |---|---|---|---|
+    | 4 | 20,395 | 8,341 | 8,280 |
+    | 8 | 24,654 | 8,550 | 8,449 |
+    | 12 | 36,792 | 8,584 | 8,448 |
+    | 20 | 79,424 | 43,102 | 42,882 |
+
+    (With 20 the snapshot was written complete, its increments having added up, and copied
+    2,025 files.) **What this costs:** the line may count a snapshot that a real `store gc`
+    would hold back because a snapshot of its pipeline that stays has lost a file. `chartbook
+    store gc --dry-run` and the real one look as before, and are exact.
   - Each record of the pipeline was opened and parsed ten times over. It is read once by the
     store and once as a snapshot. What is remembered of snapshots read is bounded by what the
     records hold, and not by how many there are: the snapshots remembered list 300,000 files at

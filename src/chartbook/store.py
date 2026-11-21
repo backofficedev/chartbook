@@ -173,6 +173,16 @@ INCREMENTS_DIR = "increments"
 #: The one line in an increment's ``_chartbook/`` that tells a person where the rest of its files are.
 INCREMENT_FILE = "INCREMENT.txt"
 
+
+def increment_note(pipeline_folder: str, builds_on: str) -> str:
+    """The one line of an increment's :data:`INCREMENT_FILE`: where the rest of its files are, by its pipeline's folder and the folder of the complete snapshot it builds on.
+
+    What the writer puts there; and what a plan of ``store gc`` that may
+    look at no file takes the note's size from, as its record says what it
+    builds on (:func:`chartbook.lock.plan_gc`).
+    """
+    return f"The rest of this snapshot's files are in {V3_LAYOUT.pipelines}/{pipeline_folder}/{builds_on}\n"
+
 #: What a snapshot's ``_chartbook/`` holds once ``store gc`` has cleared its
 #: record, until its folder is gone. In a store of 0.5 the folder stays while
 #: later snapshots use files in it. In this layout nothing does: one is there
@@ -4706,10 +4716,7 @@ class _FolderPending(PendingSnapshot):
         if self.builds_on is not None:
             # One line for a person: where the rest of this snapshot's files are. Before the record, as every file
             # of a snapshot is: nothing is written into a snapshot's folder once its record is
-            (own / INCREMENT_FILE).write_text(
-                f"The rest of this snapshot's files are in {V3_LAYOUT.pipelines}/{self.pipeline_path.name}/{self.builds_on}\n",
-                encoding="utf-8", newline="\n",
-            )
+            (own / INCREMENT_FILE).write_text(increment_note(self.pipeline_path.name, self.builds_on), encoding="utf-8", newline="\n")
             if not os.path.isfile(its_record):
                 # Its files are in its folder, so there is no writing it complete from here: said plainly, and
                 # whoever lets go of it leaves nothing of it. Run again (a snapshot, or a copy from another store), it is

@@ -1780,7 +1780,7 @@ class TestTheLineIsAsItWas:
         swept = lock.plan_gc(FolderStore(store.root))
         (unused,) = [name for name, _ in swept.unused]
         assert unused.startswith("snapshots/acme+daily/") and unused.endswith("/_data/codes (1).parquet")
-        plain = lock.plan_gc(FolderStore(store.root), sweep=False)
+        plain = lock.plan_gc(FolderStore(store.root), looks=False)
         assert plain.unused == []
         for plan in (swept, plain):
             assert len(plan.snapshots_delete) == 1 and not plan.pinned_delete
@@ -1808,9 +1808,9 @@ class TestTheLineIsAsItWas:
             raise store_module.StoreError("The store has not finished moving.")
 
         monkeypatch.setattr(FolderStore, "_check_migrated", not_moved)
-        for sweep in (True, False):
+        for looks in (True, False):
             with pytest.raises(store_module.StoreError, match="has not finished moving"):
-                lock.plan_gc(FolderStore(store.root), sweep=sweep)
+                lock.plan_gc(FolderStore(store.root), looks=looks)
         assert _what_gc_would_clear(FolderStore(store.root)) is None
 
     def test_a_store_of_0_5_has_no_plan(self, one_to_clear, store):
@@ -1819,9 +1819,9 @@ class TestTheLineIsAsItWas:
         from tests.store_of_0_5 import laid_out_as_0_5
 
         old = laid_out_as_0_5(store.root)
-        for sweep in (True, False):
+        for looks in (True, False):
             with pytest.raises(store_module.EarlierLayoutError):
-                lock.plan_gc(FolderStore(old.root), sweep=sweep)
+                lock.plan_gc(FolderStore(old.root), looks=looks)
         assert _what_gc_would_clear(FolderStore(old.root)) is None
 
     def test_several_stores_read_as_one_have_no_plan(self, one_to_clear, store):
@@ -1830,6 +1830,113 @@ class TestTheLineIsAsItWas:
         from chartbook.multi_store import NamedStore, Stores
 
         several = Stores([NamedStore("mine", str(store.root), FolderStore(store.root))])
-        for sweep in (True, False):
+        for looks in (True, False):
             with pytest.raises(ValueError, match="Select one store"):
-                lock.plan_gc(several, sweep=sweep)
+                lock.plan_gc(several, looks=looks)
+
+
+@counted
+class TestTheReminderAsksNothingOfASnapshotsFiles:
+    """With snapshots older than seven days in the store, the line a snapshot ends with cost more than the snapshot: 10,000 looks at files for a table of 2,000, where the snapshot itself makes 4,000 (measured 2026-11-21).
+
+    A plan of `store gc` asks, for each pipeline it would remove something
+    of, whether each snapshot that stays holds its files: what keeps a real
+    gc from removing a pipeline's snapshots while one that stays lacks a
+    file. A reminder removes nothing. Its plan looks at no file of a
+    snapshot (``lock.plan_gc(..., looks=False)``) and goes by the records
+    alone, so the line may count a snapshot that a real `store gc` would
+    hold back. `store gc --dry-run` and the real one look, and are exact.
+    """
+
+    THERE = (4, 12)
+
+    def _asked(self, folder: Path, monkeypatch, files: int, there: int, reminder: bool) -> Asked:
+        """What one `chartbook snapshot` asks a store that has *there* snapshots long past of a table of *files* files, a day more at each."""
+        from chartbook import config, snapshot
+
+        root = folder / "store"
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+        monkeypatch.setenv(config.CACHE_ENV_VAR, str(folder / "cache"))
+        project = _pipeline(folder / "project", files)
+        for number in range(there):
+            assert snapshot.make(project, store=FolderStore(root), made_at=LONG_AGO.format(number)).made
+            _write_days(project, files + number, 1)
+        _as_another_process()
+        asked = Asked(files + there)
+        with monkeypatch.context() as patch:
+            _counting(patch, asked, root)
+            result = CliRunner().invoke(main, ["snapshot", "--as-is", *([] if reminder else ["--no-gc-reminder"]), "--project-dir", str(project)])
+        assert result.exit_code == 0, result.output
+        asked.output = result.output
+        return asked
+
+    def test_the_line_asks_no_more_than_a_number_that_does_not_grow_with_the_table(self, tmp_path, monkeypatch):
+        extra = {}
+        for files in SIZES:
+            for there in self.THERE:
+                said, silent = (
+                    self._asked(tmp_path.resolve() / f"{files}-{there}-{reminder}", monkeypatch, files, there, reminder)
+                    for reminder in (True, False)
+                )
+                assert "`chartbook store gc` would clear " in said.output.splitlines()[-1], said.output
+                assert "would clear" not in silent.output
+                # No file of a snapshot is looked at for the line: every look is the snapshot's own
+                assert (sum(said.looks.values()), len(said.looks)) == (sum(silent.looks.values()), len(silent.looks))
+                assert said.sweeps == 0 and said.table_reads == silent.table_reads == {}
+                extra[files, there] = said.of_the_store() - silent.of_the_store()
+        small, large = SIZES
+        for there in self.THERE:
+            # What the line asks is of the records, the notes and each snapshot's folder: more with more snapshots,
+            # and no more with a larger table. Measured: 66 and 61 with four snapshots there, 154 and 149 with twelve
+            assert abs(extra[large, there] - extra[small, there]) <= 10, extra
+            assert 0 <= extra[large, there] <= 15 * (there + 1) + 30, extra
+
+
+class TestWhatTheReminderSaysByTheRecords:
+    """A plan that looks at no file says, of a healthy store, what a plan that looks says, to the letter; and of a store where a snapshot that stays has lost a file, it counts what a real `store gc` holds back."""
+
+    def test_in_a_healthy_store_the_line_is_the_same_to_the_letter(self, tmp_path, store):
+        """Increments among what goes: the one line each has for a person goes with it, and its size is told by the record."""
+        from chartbook import lock, snapshot
+        from chartbook.cli import _format_bytes, _what_gc_would_clear
+
+        project = _pipeline(tmp_path.resolve() / "project", 12)
+        for number in range(6):
+            assert snapshot.make(project, store=FolderStore(store.root), made_at=LONG_AGO.format(number)).made
+            _write_days(project, 12 + number, 1)
+        assert snapshot.make(project, store=FolderStore(store.root)).made
+        looked, plain = lock.plan_gc(FolderStore(store.root)), lock.plan_gc(FolderStore(store.root), looks=False)
+        assert looked.held_back == {} and plain.held_back == {} and plain.unused == []
+        for name in ("snapshots_delete", "snapshots_kept", "pinned_delete", "pinned_kept"):
+            assert [(taken.path, why) for taken, why in getattr(plain, name)] == [(taken.path, why) for taken, why in getattr(looked, name)], name
+        for name in ("delete", "files", "copies", "freed_bytes", "size_bytes", "kept", "recent", "recent_files"):
+            assert getattr(plain, name) == getattr(looked, name), name
+        going = len(looked.snapshots_delete)
+        assert going > 1 and [name for name in plain.copies if name.endswith("/_chartbook/INCREMENT.txt")]
+        assert _what_gc_would_clear(FolderStore(store.root)) == (
+            f"`chartbook store gc` would clear {going} snapshot(s), freeing {_format_bytes(looked.freed_bytes)}: older than "
+            f"{looked.keep_days:g} days, and neither pinned nor the newest of their pipeline."
+        )
+
+    def test_the_line_counts_a_snapshot_that_a_real_gc_holds_back(self, tmp_path, store):
+        """The newest snapshot, which stays, has lost a file: `store gc` removes no snapshot of its pipeline, and says so. The line does not look, and counts the older one. Nothing is removed unless asked, and asked, nothing is."""
+        from chartbook import lock, snapshot
+        from chartbook.cli import _what_gc_would_clear
+
+        project = _pipeline(tmp_path.resolve() / "project", 3)
+        old = snapshot.make(project, store=store, made_at=LONG_AGO.format(0))
+        _write_days(project, 3, 1)
+        new = snapshot.make(project, store=FolderStore(store.root), complete=True)
+        assert old.made and new.made and not new.kept.increment
+        _lose(new.kept.folder / "_data" / "codes.parquet")
+        store_module._read_records.clear()
+        looked, plain = lock.plan_gc(FolderStore(store.root)), lock.plan_gc(FolderStore(store.root), looks=False)
+        assert looked.snapshots_delete == [] and set(looked.held_back) == {"acme/daily"}
+        assert [(taken.path, why) for taken, why in looked.snapshots_kept if why == lock.HELD_BACK] == [(old.snapshot.path, lock.HELD_BACK)]
+        assert [taken.path for taken, _ in plain.snapshots_delete] == [old.snapshot.path] and plain.held_back == {}
+        assert _what_gc_would_clear(FolderStore(store.root)).startswith("`chartbook store gc` would clear 1 snapshot(s), freeing ")
+        # `store gc --dry-run` and the real one look, and are as exact as before
+        dry = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert dry.exit_code == 0 and "Would remove" not in dry.output and "Nothing to remove." in dry.output, dry.output
+        real = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert real.exit_code == 0 and "Removed" not in real.output and old.snapshot.path.is_file(), real.output
