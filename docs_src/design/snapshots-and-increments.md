@@ -927,7 +927,11 @@ data in mind.
   - It noted each file it used, a line a file, twice. It notes the folder of the snapshot that
     keeps them, once ("What the store promises").
   - It set its note's time for each file, twice. Once a minute says as much: a note counts for a
-    day.
+    day. The minute is counted on the time of day, which is the clock the note's age is judged
+    by: a machine that slept for a day in the middle of a snapshot says at its next file that
+    the snapshot is still being made. *(Found by review, 2026-11-21: counted on the process's
+    own clock, which stands still in sleep, a `store gc` in the minute after waking went by no
+    note.)*
   - The line about `chartbook store gc` planned a sweep of every pipeline's folder, which asked
     about each file of every snapshot in the store. The line says nothing of what a sweep finds,
     and is planned without one.

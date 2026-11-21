@@ -398,8 +398,8 @@ class TestTheNotesTimeIsSetOnceAMinute:
 
         store = FolderStore(tmp_path / "store")
         pending = store.begin("acme/sized", COMMIT, LONG_AGO.format(0), undecided=True)
-        clock = [1000.0]
-        monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+        clock = [time.time()]
+        monkeypatch.setattr(time, "time", lambda: clock[0])
         touched = []
         real = os.utime
         monkeypatch.setattr(os, "utime", lambda path, *args, **kwargs: (touched.append(Path(path).name), real(path, *args, **kwargs))[1])
@@ -420,10 +420,133 @@ class TestTheNotesTimeIsSetOnceAMinute:
         clock[0] += 1
         pending._alive()
         assert touched == [note, note]
+        clock[0] -= 3600  # the time of day is set back: the minute is no longer known to be running, so it is said again
+        pending._alive()
+        pending._alive()
+        assert touched == [note, note, note]
         pending.discard()
 
     def test_a_minute_is_well_within_what_a_note_counts_for(self):
         assert store_module.ALIVE_SECONDS * 60 <= store_module.PENDING_FOLDER_SECONDS
+
+
+class _Clock:
+    """The time of day and the process's own clock, moved by hand; the note's time is set by the time of day, as the disk sets it."""
+
+    def __init__(self, monkeypatch):
+        import time
+
+        self.now, self.own = time.time(), 1000.0
+        real_utime, real_line = os.utime, store_module._FolderPending._note_line
+        clock = self
+
+        def utime(path, times=None, **options):
+            if times is None and not options:
+                return real_utime(path, (clock.now, clock.now))
+            return real_utime(path, times, **options)
+
+        def note_line(self, line):
+            real_line(self, line)
+            real_utime(self._note, (clock.now, clock.now))  # a line written sets the file's time, by the time of day
+
+        monkeypatch.setattr(time, "time", lambda: clock.now)
+        monkeypatch.setattr(time, "monotonic", lambda: clock.own)
+        monkeypatch.setattr(os, "utime", utime)
+        monkeypatch.setattr(store_module._FolderPending, "_note_line", note_line)
+
+    def passes(self, seconds: float, asleep: bool = False) -> None:
+        """Time passes; *asleep*, the machine is suspended meanwhile, and the process's own clock stands still (macOS, Linux)."""
+        self.now += seconds
+        if not asleep:
+            self.own += seconds
+
+
+class TestTheNotesMinuteIsOfTheTimeOfDay:
+    """The minute between two touches of the note is counted on the clock the note's age is judged by: the time of day (found by review, 2026-11-21).
+
+    `store gc` takes a note for one given up by the time of day
+    (``time.time()`` beside the note's own time). The minute was counted on
+    the process's own clock (``time.monotonic()``), which stands still
+    while a laptop sleeps: a snapshot that slept for more than a day in
+    the middle did not bring its note up to date at its next file, for up
+    to a minute more, and a `store gc` on the machine in that minute went
+    by no note.
+    """
+
+    A, S, T = b"a" * 100, b"s" * 10, b"t" * 7
+
+    def _counts(self, root: Path, folder: Path, location: Path) -> bool:
+        folders, files = FolderStore(root)._notes()
+        return str(folder) in folders or str(location) in files
+
+    @pytest.fixture
+    def writing(self, tmp_path, store, monkeypatch):
+        """A snapshot being made that has taken one file from the first snapshot's folder; the clock, and what must stay noted."""
+        scratch = tmp_path / "files"
+        first = _sized(FolderStore(store.root), scratch, {"a": self.A, "s": self.S, "t": self.T}, 0)
+        clock = _Clock(monkeypatch)
+        pending = FolderStore(store.root).begin("acme/sized", COMMIT, LONG_AGO.format(1), undecided=True)
+        _put(pending, scratch / "given", "a", self.A)
+        return clock, pending, scratch, first.parent.parent, first.parent.parent / "data" / "a.bin"
+
+    def test_a_slow_snapshot_that_puts_a_file_now_and_then_is_noted_all_along(self, writing, store):
+        """More than a minute, more than an hour, more than a day in all: each file put brings the note's time up to date."""
+        clock, pending, scratch, folder, location = writing
+        assert self._counts(store.root, folder, location)
+        for step, seconds in enumerate([90, 2 * 3600, 23 * 3600, 23 * 3600, 23 * 3600]):
+            clock.passes(seconds)
+            _put(pending, scratch / "given", "s" if step % 2 else "t", self.S if step % 2 else self.T)
+            assert self._counts(store.root, folder, location), f"after step {step}"
+        pending.discard()
+
+    def test_a_writer_silent_for_a_day_is_taken_for_one_given_up_as_before(self, writing, store):
+        clock, pending, scratch, folder, location = writing
+        clock.passes(store_module.PENDING_FOLDER_SECONDS + 60)
+        assert not self._counts(store.root, folder, location)
+        pending.discard()
+
+    def test_after_the_machine_slept_for_a_day_the_next_file_put_says_it_is_still_being_made(self, writing, store):
+        clock, pending, scratch, folder, location = writing
+        clock.passes(store_module.PENDING_FOLDER_SECONDS + 3600, asleep=True)
+        clock.passes(1)  # awake again, and at work
+        _put(pending, scratch / "given", "s", self.S)
+        assert self._counts(store.root, folder, location)
+        pending.discard()
+
+    def test_and_a_gc_then_leaves_the_folder_it_takes_files_from(self, writing, store):
+        clock, pending, scratch, folder, location = writing
+        _sized(FolderStore(store.root), scratch, {"q": b"q" * 50}, 2, complete=True)  # a newer one, so that the first may go
+        clock.passes(store_module.PENDING_FOLDER_SECONDS + 3600, asleep=True)
+        clock.passes(1)
+        _put(pending, scratch / "given", "s", self.S)
+        _gc(store.root)
+        assert location.is_file()
+        pending.discard()
+
+    def test_asleep_as_its_own_files_come_into_its_folder(self, tmp_path, store, monkeypatch):
+        """At its worst: the machine sleeps for more than a day while the snapshot's own files are coming into its folder, wakes, and the snapshot goes on to its next file; a `store gc` then found no note that counted and a folder in which nothing had changed for a day, and took the files already in it. The snapshot was then written, and said it was made."""
+        scratch = tmp_path / "files"
+        clock = _Clock(monkeypatch)
+        files = {"x": b"x" * 100, "y": b"y" * 100, "z": b"z" * 100}
+        pending = FolderStore(store.root).begin("acme/sized", COMMIT, LONG_AGO.format(0), undecided=True)
+        puts = {name: _put(pending, scratch, name, content)[0] for name, content in files.items()}
+        moved, real = [], store_module._FolderPending._moved_in
+
+        def moving(self, temporary, target, *arguments):
+            if len(moved) == 1:
+                _gc(self.store.root)  # the snapshot is at its second file: a gc on this machine, now
+            real(self, temporary, target, *arguments)
+            moved.append(target)
+            if len(moved) == 1:
+                clock.passes(store_module.PENDING_FOLDER_SECONDS + 3600, asleep=True)  # the lid is closed on the first file
+                clock.passes(1)
+
+        monkeypatch.setattr(store_module._FolderPending, "_moved_in", moving)
+        record = _written(FolderStore(store.root), pending, puts, 0)
+        assert len(moved) == 3
+        store_module._found_whole.clear()
+        assert FolderStore(store.root).holes_of(record) == [] and FolderStore(store.root).verify_snapshot(record) == []
+        assert {name: (record.parent.parent / "data" / f"{name}.bin").read_bytes() for name in files} == files
 
 
 def _chart(project: Path, text: str) -> None:
