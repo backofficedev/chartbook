@@ -943,9 +943,11 @@ data in mind.
     and is planned without one.
   - Each record of the pipeline was opened and parsed ten times over. It is read once by the
     store and once as a snapshot. What is remembered of snapshots read is bounded by what the
-    records hold, and not by how many there are: the snapshots remembered list 250,000 files at
-    most in all (about a hundred megabytes), the least recently read going first, and one record
-    that lists more is remembered alone. *(Found by review, 2026-11-21: every snapshot read was
+    records hold, and not by how many there are: the snapshots remembered list 300,000 files at
+    most in all (about 140 megabytes), the least recently read going first, and one record that
+    lists more is remembered alone. Two records of the largest table known (127,676 files each)
+    are remembered together: the one before and the one being made are the two a snapshot reads
+    again and again. *(Found by review, 2026-11-21: every snapshot read was
     held until the process ended, each with an entry for every file of its snapshot, so a
     process that read every record of a store held them all. One real record lists 127,676
     files and another 9, which is why the bound is not a number of records: eight records,
@@ -961,7 +963,7 @@ data in mind.
     | 20 | 21 | 42,315 |
 
     Each once: those there, and the one it makes. **What this leaves:** a pipeline whose records
-    list more than 250,000 files between them (two snapshots of a table of 127,676 files) has
+    list more than 300,000 files between them (three snapshots of a table of 127,676 files) has
     the ones that do not fit opened again at each pass over its history, of which a snapshot
     makes four. Fewer passes would end that, and is not built.
 

@@ -1206,11 +1206,13 @@ def record_name(subdirectory: str) -> str:
 
 #: How many files the snapshots remembered may list in all. A snapshot read holds an entry for every file its
 #: record lists, and records differ by four orders of magnitude (one real record lists 127,676 files and
-#: another 9), so what a process holds goes by the files listed and not by the number of records: about a
-#: hundred megabytes at this bound, by a measure of 188 MB for 400,000. A process that reads every record of
-#: a store (a catalog built, a ``store gc`` planned) holds no more than that until it ends, and a pipeline's
-#: whole history stays remembered through one command, where it comes to less.
-READ_KEPT_FILES = 250_000
+#: another 9), so what a process holds goes by the files listed and not by the number of records: about 140
+#: megabytes at this bound, by a measure of 188 MB for 400,000. A process that reads every record of a store
+#: (a catalog built, a ``store gc`` planned) holds no more than that until it ends, and a pipeline's whole
+#: history stays remembered through one command, where it comes to less. Two records of the largest table
+#: known (127,676 files each) are remembered together: the one before and the one being made are the two a
+#: snapshot reads again and again.
+READ_KEPT_FILES = 300_000
 
 #: The snapshots read and remembered, the least recently read first, each by its record's file with the time
 #: and size the file had then and the number of files it lists: a record is never rewritten, so one read is

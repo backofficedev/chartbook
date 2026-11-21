@@ -1185,9 +1185,11 @@ class TestWhatReadRemembersIsBoundedByWhatTheRecordsHold:
 
     What it remembers is bounded by the files the records list, and not by
     how many records there are: one real record lists 127,676 files and
-    another 9. The snapshots remembered list 250,000 files at most in all
-    (about a hundred megabytes), the least recently read going first, and
-    one that lists more than that is remembered alone. A bound of eight
+    another 9. The snapshots remembered list 300,000 files at most in all
+    (about 140 megabytes), the least recently read going first, and one
+    that lists more than that is remembered alone. Two records of the
+    largest table known fit together: the one before and the one being
+    made are the two a snapshot reads again and again. A bound of eight
     records, tried first, lost the saving exactly where a pipeline has a
     history: with 20 snapshots in the store, one `chartbook snapshot`
     opened records 82 times. And a record its store removes is forgotten,
@@ -1201,7 +1203,7 @@ class TestWhatReadRemembersIsBoundedByWhatTheRecordsHold:
         """Ten complete snapshots of one pipeline that list one file each, by their records; nothing is remembered of them, and the bound is twenty files."""
         from chartbook import snapshot
 
-        assert snapshot.READ_KEPT_FILES == 250_000
+        assert snapshot.READ_KEPT_FILES == 300_000
         monkeypatch.setattr(snapshot, "READ_KEPT_FILES", self.BOUND)
         scratch = tmp_path / "files"
         made = [_sized(FolderStore(store.root), scratch, {"a": bytes([65 + number]) * 10}, number, complete=True) for number in range(10)]
@@ -1237,6 +1239,12 @@ class TestWhatReadRemembersIsBoundedByWhatTheRecordsHold:
         assert len([name for name in kept if "/parts/" in name]) == 12
         assert snapshot._how_many_listed(snapshot.read(made.snapshot.path)) == len(kept)
         assert snapshot._how_many_listed(snapshot.Snapshot("acme/sized", COMMIT, "", LONG_AGO.format(0))) == 1  # one that lists none
+
+    def test_two_records_of_the_largest_table_known_are_remembered_together(self):
+        """The one before and the one being made, which a snapshot reads again and again: 127,676 files each, with what else their records list."""
+        from chartbook import snapshot
+
+        assert 2 * (127_676 + 1_000) <= snapshot.READ_KEPT_FILES
 
     def test_many_small_records_all_stay(self, records):
         from chartbook import snapshot
