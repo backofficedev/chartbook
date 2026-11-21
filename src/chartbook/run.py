@@ -1795,23 +1795,24 @@ def run(
                         f"{step.id}: the note of this build could not be kept, so `chartbook snapshot` "
                         f"will ask for it to be built again, or for `{built.AS_IS}`."
                     )
-            elif building and step.source == "asked":
-                # No note was begun: which files are source could not be asked. In no git repository there
-                # is no snapshot to hold against one, and nothing to say. In one git does not trust (on
-                # Windows, any on a network share) there is, once git is told to trust it: the run's last
-                # lines say so, in place of the command that makes a snapshot, which would be refused twice
-                try:
-                    snapshots.code_of(step.directory)
-                except snapshots.RepositoryNotTrusted as error:
-                    report.not_noted[step.id] = str(error)
-                except snapshots.SnapshotError:
-                    pass
 
             if building and step.source == "asked" and not snapshot and not step.snapshot_first:
                 # Built, and no snapshot asked for: none is made, and the run's last line names the
                 # command that makes one. One that declares nothing a snapshot could hold is told nothing
                 if _declares_what_a_snapshot_holds(step.directory):
                     report.to_snapshot.append(step)
+                    if noted is None:
+                        # No note was begun: which files are source could not be asked. In no git repository
+                        # there is no snapshot to hold against one, and nothing to say. In one git does not
+                        # trust (on Windows, any on a network share) there is, once git is told to trust it:
+                        # the run's last lines say so, in place of the command that makes a snapshot, which
+                        # would be refused twice
+                        try:
+                            snapshots.code_of(step.directory)
+                        except snapshots.RepositoryNotTrusted as error:
+                            report.not_noted[step.id] = str(error)
+                        except snapshots.SnapshotError:
+                            pass
 
             if (snapshot and step.source == "asked") or step.snapshot_first:
                 # A build that changes a committed file, or that commits, leaves
