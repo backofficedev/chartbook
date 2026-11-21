@@ -295,3 +295,158 @@ class TestTheMovesTemporariesAreInAFolderOfItsOwn:
             there = cut / "snapshots" / "acme+q" / q2 / "_data"
             assert [(there / name).read_bytes() for name in names] == [K + b"\x00", K + b"\x01"]
             rmtree(cut)
+
+
+class TestACopyIsMadeFromTheOldPlaceWhereTheWholeFileIsThere:
+    """P2. A file that has taken the place a record's file goes to stays; and a copy was made from it, whatever its bytes, while the whole file was at the old place."""
+
+    def _store(self, work, in_place: bytes):
+        root = empty_store(work)
+        s2 = folder_of("2025-11-01", "b")
+        put(root, "acme+p", s2, "_data/k.parquet", K)
+        record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, None, None)])
+        p3 = record(root, "acme/p", "2025-11-15", "c", [("_data/k.parquet", K, s2, None)], made_by="pin")
+        put(root, "acme+p", s2, "_data/k.parquet", in_place, tree="snapshots")
+        return root, s2, p3
+
+    def test_a_copy_is_not_made_from_other_bytes_in_the_new_tree_while_the_old_place_holds_the_file(self, work):
+        """The newest snapshot keeps K at its old place, whole, and a pin's snapshot names it there: 0.5 read both. Where the newest one's file goes there is a file of K's size and other bytes already (what a sync or a copy by hand leaves of a move made on another machine).
+
+        What is in place stays, by the rule. The pin's copy is made from
+        the whole file at the old place, which then goes aside.
+        """
+        root, s2, p3 = self._store(work, bytes(len(K)))
+        before = facts_by_folder(root)
+        assert all(at_place for _, _, at_place, _, _ in before.values())
+        copy = next(step for step in migrate_0_5.plan(root).steps if step.op == "copy")
+        assert copy.source == f"pipelines/acme+p/{s2}/_data/k.parquet"
+        done = migrate_0_5.run(root)
+        reads = reads_after(root)
+        assert (root / ASIDE / "pipelines" / "acme+p" / s2 / "_data" / "k.parquet").read_bytes() == K  # the whole file, aside
+        assert reads[("acme+p", p3, "_data/k.parquet")][0] == sha(K) and done.copied_as_is == [] and done.copied == 1
+        # And what was in place is as it was, and said
+        assert (root / "snapshots" / "acme+p" / s2 / "_data" / "k.parquet").read_bytes() == bytes(len(K)) and len(done.in_place) == 1
+
+    @pytest.mark.parametrize("in_place", [K, K[:100], K + b"more"], ids=["the whole file", "part of it", "a longer one"])
+    def test_whatever_is_in_place_the_copy_is_of_the_file_at_the_old_place(self, work, in_place):
+        root, s2, p3 = self._store(work, in_place)
+        migrate_0_5.run(root)
+        assert reads_after(root)[("acme+p", p3, "_data/k.parquet")][0] == sha(K)
+        assert (root / "snapshots" / "acme+p" / s2 / "_data" / "k.parquet").read_bytes() == in_place
+
+    def test_stopped_after_any_step_it_ends_in_the_same_tree(self, work):
+        root, s2, p3 = self._store(work, bytes(len(K)))
+        assert _stopped_after_each_step(root, work) == []
+
+    def test_where_the_old_place_does_not_hold_the_file_the_copy_is_from_the_new_tree(self, work):
+        """The file was renamed by a run that was cut short: it is in the new tree and nowhere else, and the pin's copy is made from there, as before."""
+        root = empty_store(work)
+        s2 = folder_of("2025-11-01", "b")
+        record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", K, None, None)])
+        p3 = record(root, "acme/p", "2025-11-15", "c", [("_data/k.parquet", K, s2, None)], made_by="pin")
+        put(root, "acme+p", s2, "_data/k.parquet", K, tree="snapshots")
+        copy = next(step for step in migrate_0_5.plan(root).steps if step.op == "copy")
+        assert copy.source == f"snapshots/acme+p/{s2}/_data/k.parquet"
+        done = migrate_0_5.run(root)
+        assert reads_after(root)[("acme+p", p3, "_data/k.parquet")][0] == sha(K) and done.missing == []
+
+
+def _stopped_after_each_step(root, work) -> list:
+    """A move of a copy of *root* stopped after each step, journal kept and deleted, and run again: each ``(step, journal kept, what differs from the uninterrupted move's tree)`` that differs."""
+    whole = work / "whole"
+    shutil.copytree(root, whole)
+    _clear()
+    steps = len(migrate_0_5.plan(root).steps)
+    migrate_0_5.run(whole)
+    wanted = tree_of(whole)
+    differ = []
+    for number in range(1, steps + 2):
+        for journal in (True, False):
+            cut = work / "cut"
+            shutil.copytree(root, cut)
+            _clear()
+            with pytest.raises(Stop):
+                migrate_0_5.run(cut, after_step=lambda done, number=number: (_ for _ in ()).throw(Stop()) if done == number else None)
+            if not journal:
+                (cut / migrate_0_5.JOURNAL).unlink()
+            _clear()
+            migrate_0_5.run(cut)
+            now = tree_of(cut)
+            if now != wanted:
+                differ.append((number, journal, sorted(path for path in set(now) | set(wanted) if now.get(path) != wanted.get(path))))
+            rmtree(cut)
+    rmtree(whole)
+    return differ
+
+
+@pytest.mark.skipif(MODES_KEEP_NOBODY_OUT, reason="the mode of a file keeps nobody from reading it here (Windows, or root)")
+class TestAFileThisUserMayNotReadThatMustBeCopied:
+    """P3. ``check`` asked whether each folder may be written and whether a file is locked, and not whether a file a copy reads may be read: the file was renamed, and the copy of it stopped the move half way, each time it was run again."""
+
+    def _two_pins(self, root, mode_of=None):
+        q1 = folder_of("2025-10-01", "e")
+        put(root, "acme+q", q1, "_data/a.parquet", A)
+        unreadable = put(root, "acme+q", q1, "_data/k.parquet", K)
+        record(root, "acme/q", "2025-10-01", "e", [("_data/a.parquet", A, None, None), ("_data/k.parquet", K, None, None)], made_by="pin")
+        q2 = record(root, "acme/q", "2025-11-01", "f", [("_data/a.parquet", A, q1, None), ("_data/k.parquet", K, q1, None)], made_by="pin")
+        return q1, q2, unreadable
+
+    def test_it_is_found_before_the_first_step(self, work):
+        """Two snapshots a pin made share a file this user may not read (another user's, in a shared store)."""
+        root = empty_store(work)
+        q1, q2, unreadable = self._two_pins(root)
+        os.chmod(unreadable, 0)
+        try:
+            listing = sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
+            with pytest.raises(migrate_0_5.MoveError) as stopped:
+                migrate_0_5.run(root)
+            assert str(stopped.value) == (
+                f"{unreadable} is a file this user may not read, and the move has to copy it (two snapshots must each hold it): the store "
+                f"is not moved. It is moved by whoever may read all of it; or let this user read that file, and run this again."
+            )
+            assert sorted(path.relative_to(root).as_posix() for path in root.rglob("*")) == listing
+        finally:
+            os.chmod(unreadable, stat.S_IRUSR | stat.S_IWUSR)
+        _clear()
+        migrate_0_5.run(root)  # the way out, carried out
+        assert {key: got[0] for key, got in reads_after(root).items()} == {
+            ("acme+q", q1, "_data/a.parquet"): sha(A), ("acme+q", q1, "_data/k.parquet"): sha(K),
+            ("acme+q", q2, "_data/a.parquet"): sha(A), ("acme+q", q2, "_data/k.parquet"): sha(K),
+        }
+
+    def test_one_that_is_only_renamed_is_moved_as_it_is(self, work):
+        """A rename reads nothing: a file one snapshot alone holds changes folder whoever may read it."""
+        root = empty_store(work)
+        s = folder_of("2025-10-01", "a")
+        unreadable = put(root, "acme+p", s, "_data/k.parquet", K)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", K, None, None)])
+        os.chmod(unreadable, 0)
+        moved = root / "snapshots" / "acme+p" / s / "_data" / "k.parquet"
+        try:
+            done = migrate_0_5.run(root)
+            assert done.renamed == 1 and done.missing == [] and moved.stat().st_size == len(K)
+        finally:
+            os.chmod(moved if moved.exists() else unreadable, stat.S_IRUSR | stat.S_IWUSR)
+
+    def test_one_that_a_run_cut_short_has_renamed_already_is_found_where_it_is_now(self, work):
+        """The copy reads the file where the rename put it: asked there, once the rename is made."""
+        root = empty_store(work)
+        q1, q2, unreadable = self._two_pins(root)
+        steps = migrate_0_5.plan(root).steps
+        renamed = next(number for number, step in enumerate(steps, 1) if step.op == "rename" and step.target.endswith("k.parquet"))
+        with pytest.raises(Stop):
+            migrate_0_5.run(root, after_step=lambda done: (_ for _ in ()).throw(Stop()) if done == renamed else None)
+        now = root / steps[renamed - 1].target
+        os.chmod(now, 0)
+        try:
+            _clear()
+            before = tree_of_names(root)
+            with pytest.raises(migrate_0_5.MoveError, match="is a file this user may not read"):
+                migrate_0_5.run(root)
+            assert tree_of_names(root) == before
+        finally:
+            os.chmod(now, stat.S_IRUSR | stat.S_IWUSR)
+
+
+def tree_of_names(root) -> list:
+    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))

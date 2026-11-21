@@ -830,13 +830,14 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
         # What the rename leaves at the first place: the file, by its size, or nothing
         first = will(source, first_target)
         in_place = look(source)[0] and look(first_target)[0]  # said on its own, with both sizes
-        # A copy is made only from a file at its size: from the first place, where the file will be so; and where
-        # another file has taken that place, from the old place, where the whole file is (it is read there, and goes
-        # aside with the old folder)
-        if first == first_size:
-            copy_from = first_target
-        elif look(first_target)[0] and look(source)[1] == first_size:
+        # A copy is made only from a file at its size, and from the old place where the whole file is there and stays:
+        # a file has taken the place it goes to, which may have its size and other bytes (what a sync has brought so
+        # far of a move made elsewhere), so the file is read at the old place, and goes aside with the old folder.
+        # From the new tree only where it is not: from the first place, where the rename leaves the file
+        if look(first_target)[0] and look(source)[1] == first_size:
             copy_from = source
+        elif first == first_size:
+            copy_from = first_target
         else:
             copy_from = None
         planned: set = set()
@@ -992,6 +993,24 @@ def check(root: Path, found: Plan) -> None:
             f"it, or moves the folder itself: the store is not moved. It is moved by whoever may write all of it; or let "
             f"this user write that folder, and run this again."
         )
+    # A file a copy will read that this user may not read (another user's, in a shared store). A rename asks only
+    # whether its folders may be written, so the file would change folder, and the copy of it would stop the move
+    renamed_from = {step.target: step.source for step in found.steps if step.op == "rename"}
+    read_asked: set = set()
+    for step in found.steps:
+        if step.op != "copy" or os.path.lexists(root / step.target):
+            continue
+        # Where the file is now: where the copy reads it, or where the rename before the copy takes it from
+        read = step.source if os.path.lexists(root / step.source) else renamed_from.get(step.source, step.source)
+        if read in read_asked:
+            continue
+        read_asked.add(read)
+        if _size(root / read) is not None and not os.access(root / read, os.R_OK):
+            raise MoveError(
+                f"{root / read} is a file this user may not read, and the move has to copy it (two snapshots must "
+                f"each hold it): the store is not moved. It is moved by whoever may read all of it; or let this user "
+                f"read that file, and run this again."
+            )
     if hasattr(os.stat_result, "st_flags"):
         # A file this system will not rename because it is locked (the Finder's "Locked" box; `chflags uchg`), or a
         # folder that lets nothing out for the same reason: its folder may be written, and the rename is refused
