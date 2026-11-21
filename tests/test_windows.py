@@ -76,7 +76,12 @@ class TestAScriptInAShare:
     where it really is, which for a home folder on a network is the share.
     """
 
-    CONNECTED = {"Q:": "\\\\localhost\\c$", "H:": "\\\\files.example.edu\\home\\ab123", "X:": "\\\\files.example.edu\\home"}
+    CONNECTED = [
+        ("Q:", "\\\\localhost\\c$"), ("H:", "\\\\files.example.edu\\home\\ab123"), ("X:", "\\\\files.example.edu\\home\\"),
+        # A letter under two names of its share: as it was connected, and as its folder is followed to
+        ("N:", "\\\\campus.example.edu\\dfs\\home"), ("N:", "\\\\fs07.example.edu\\home$"),
+        ("B:", "\\\\server"), ("B:", ""),  # no share: never a letter for anything
+    ]
 
     @pytest.mark.parametrize("folder, lettered", [
         ("\\\\localhost\\c$\\cbtest\\n4\\plain\\report", "Q:\\cbtest\\n4\\plain\\report"),
@@ -89,9 +94,15 @@ class TestAScriptInAShare:
         ("\\\\files.example.edu\\home\\ab123\\work\\report", "H:\\work\\report"),
         ("\\\\files.example.edu\\home\\cd456\\work", "X:\\cd456\\work"),
         ("\\\\files.example.edu\\home\\ab1234\\work", "X:\\ab1234\\work"),  # `ab1234` is no folder of `ab123`
+        # Found by review: a share reached through a name that stands for several servers is named either way
+        ("\\\\fs07.example.edu\\home$\\ab123\\work", "N:\\ab123\\work"),
+        ("\\\\campus.example.edu\\dfs\\home\\ab123\\work", "N:\\ab123\\work"),
         ("\\\\other\\share\\work", None),
         ("\\\\localhost\\d$\\work", None),
+        ("\\\\files.example.edu.evil.org\\home\\ab123", None),
+        ("\\\\files.example.edu\\homes\\ab123", None),
         ("\\\\localhost", None),
+        ("\\\\server\\share\\x", None),  # a letter that names a server alone leads nowhere
     ])
     def test_a_share_is_named_by_a_letter_connected_to_it(self, folder, lettered):
         assert run._by_its_drive_letter(folder, self.CONNECTED) == lettered
@@ -104,14 +115,19 @@ class TestAScriptInAShare:
         monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
         monkeypatch.setattr(run.os, "name", "nt")
         monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options) or type("Done", (), {"returncode": 0})())
-        assert run._execute(script, "\\\\localhost\\c$\\cbtest\\report", dict(os.environ)) == 0
-        assert [options["cwd"] for options in ran] == ["Q:\\cbtest\\report"]
+        assert run._execute(script, "\\\\localhost\\c$\\cbtest\\report", {"PATH": "x"}) == 0
+        assert [(options["cwd"], options["env"]) for options in ran] == [("Q:\\cbtest\\report", {"PATH": "x"})]
 
     @pytest.mark.parametrize("folder, stood_in", [
         ("C:\\cbtest\\report", "C:\\cbtest\\report"),
         ("\\\\?\\C:\\cbtest\\report", "C:\\cbtest\\report"),  # the long spelling of a folder on a drive
+        # Found by review: these are no shares, and were said to be. They are left as they were given
+        ("\\\\.\\C:\\cbtest", "C:\\cbtest"),
+        ("\\\\?\\Volume{1b3f}\\x", "\\\\?\\Volume{1b3f}\\x"),
+        ("\\\\?\\C:", "\\\\?\\C:"),
+        ("\\\\.\\pipe\\x", "\\\\.\\pipe\\x"),
     ])
-    def test_a_folder_on_a_drive_is_run_in_as_it_is(self, monkeypatch, folder, stood_in):
+    def test_a_folder_that_is_no_share_is_run_in_as_it_is(self, monkeypatch, folder, stood_in):
         ran = []
         monkeypatch.setattr(run, "_connected_drives", lambda: pytest.fail("asked of a folder that is no share"))
         monkeypatch.setattr(run.os, "name", "nt")
@@ -119,23 +135,69 @@ class TestAScriptInAShare:
         run._execute("python build.py", folder, dict(os.environ))
         assert [options["cwd"] for options in ran] == [stood_in]
 
+    REFUSED = (
+        "{folder} is a network folder with no drive letter, and cmd.exe, which runs a script on Windows, takes no such "
+        "folder as its own: it would have run the script in C:\\Windows. Connect the share to a drive letter "
+        "(`net use Q: {share}`, with a letter that is free), and run this again."
+    )
+
     def test_a_share_with_no_letter_is_said_and_nothing_runs(self, monkeypatch):
         ran = []
-        monkeypatch.setattr(run, "_connected_drives", lambda: {})
+        monkeypatch.setattr(run, "_connected_drives", lambda: [])
         monkeypatch.setattr(run.os, "name", "nt")
         monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options))
+        folder = "\\\\files.example.edu\\home\\ab123\\work\\report"
         with pytest.raises(run.RunError) as refused:
-            run._execute("del /q _data\\*", "\\\\files.example.edu\\home\\ab123\\work\\report", dict(os.environ))
-        assert str(refused.value) == (
-            "\\\\files.example.edu\\home\\ab123\\work\\report is a network folder with no drive letter, and cmd.exe, which "
-            "runs a script on Windows, takes no such folder as its own: it would have run the script in C:\\Windows. Connect "
-            "the share to a drive letter (`net use Q: \\\\files.example.edu\\home`, with a letter that is free), and run this "
-            "again. The script was not run."
-        )
+            run._execute("del /q _data\\*", folder, dict(os.environ))
+        assert str(refused.value) == self.REFUSED.format(folder=folder, share='"\\\\files.example.edu\\home"') + " The script was not run."
         assert ran == []
 
+    @pytest.mark.parametrize("folder, share", [
+        # Found by review: the share was printed bare, which is two words where its name has a space, and in
+        # Git Bash loses its backslashes
+        ("\\\\server\\my share\\work\\report", '"\\\\server\\my share"'),
+        ("\\\\server\\R&D\\x", "ITS-NAME-HOLDS-A-SIGN-A-SHELL-READS"),
+    ])
+    def test_the_share_to_connect_is_one_word_of_the_command(self, monkeypatch, folder, share):
+        monkeypatch.setattr(run, "_connected_drives", lambda: [])
+        with pytest.raises(run.RunError) as refused:
+            run._as_cmd_takes_it(folder)
+        assert str(refused.value) == self.REFUSED.format(folder=folder, share=share)
+
+    def test_it_is_known_before_anything_is_built(self, monkeypatch):
+        """Found by review: the refusal came when the step was reached, after whatever it depends on had been built and snapshotted."""
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
+        steps = [
+            SimpleNamespace(id="acme/up", directory="\\\\localhost\\c$\\cbtest\\up"),
+            SimpleNamespace(id="acme/elsewhere", directory=None),
+            SimpleNamespace(id="acme/report", directory="\\\\other\\share\\report"),
+        ]
+        with pytest.raises(run.RunError) as refused:
+            run._no_script_in_a_share_without_a_letter(steps, windows=True)
+        assert str(refused.value) == (
+            "acme/report: " + self.REFUSED.format(folder="\\\\other\\share\\report", share='"\\\\other\\share"') + " Nothing was built."
+        )
+        run._no_script_in_a_share_without_a_letter(steps[:2], windows=True)
+        # On another system a folder is run in as it is, whatever its name
+        monkeypatch.setattr(run, "_connected_drives", lambda: pytest.fail("asked on a system that is not Windows"))
+        run._no_script_in_a_share_without_a_letter(steps, windows=False)
+
+    def test_git_is_told_the_folder_to_stop_at_by_the_letter_too(self, monkeypatch):
+        """Found by review: a git dependency's build is told where git is to look no further up, by the share's name; git in the script stands on the letter."""
+        ran = []
+        monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
+        monkeypatch.setattr(run.os, "name", "nt")
+        monkeypatch.setattr(run.os, "pathsep", ";")
+        monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options) or type("Done", (), {"returncode": 0})())
+        given = {"GIT_CEILING_DIRECTORIES": "\\\\localhost\\c$\\cache\\checkouts"}
+        run._execute("python build.py", "\\\\localhost\\c$\\cache\\checkouts\\rates", given)
+        assert ran[0]["env"] == {"GIT_CEILING_DIRECTORIES": "\\\\localhost\\c$\\cache\\checkouts;Q:\\cache\\checkouts"}
+        assert given == {"GIT_CEILING_DIRECTORIES": "\\\\localhost\\c$\\cache\\checkouts"}  # the caller's own is as it was
+
     def test_no_letter_is_looked_for_on_another_system(self):
-        assert run._connected_drives() == {} or os.name == "nt"
+        assert run._connected_drives() == [] or os.name == "nt"
 
 
 class TestRemovingAStagingFolder:

@@ -1358,13 +1358,13 @@ class TestWhoseTextThisIs:
     def test_a_folder_a_message_tells_to_type_is_written_by_the_one_function(self):
         """Found by the second pass: two messages wrote a folder after `--project-dir` their own way (a Python repr; double quotes of their own, and bare on Windows)."""
         source = Path(missing.__file__).parent
-        told = r"(?:--project-dir|safe\.directory|migrate_toml_v2\.py|chartbook path|chartbook link \{[^{}]*\}) \{([^{}]*)\}"
+        told = r"(?:--project-dir|safe\.directory|migrate_toml_v2\.py|chartbook path|net use Q:|chartbook link \{[^{}]*\}) \{([^{}]*)\}"
         written = [
             (file.name, found[1]) for file in sorted(source.rglob("*.py"))
             for found in re.finditer(told, file.read_text(encoding="utf-8"))
         ]
         # And by the third pass: `chartbook link ID FOLDER`, of a manifest's `path`, and three of the user's own words
-        assert len(written) >= 10 and {"resolve.py", "scaffold.py", "lock.py", "run.py", "cli.py", "missing.py", "manifest.py"} <= {name for name, _ in written}
+        assert len(written) >= 11 and {"resolve.py", "scaffold.py", "lock.py", "run.py", "cli.py", "missing.py", "manifest.py"} <= {name for name, _ in written}
         assert [(name, how) for name, how in written if "_quoted(" not in how] == []
 
     def test_no_other_code_quotes_a_command_for_a_posix_shell_alone(self):
