@@ -339,6 +339,50 @@ class TestTheReminderSweepsNothing:
         assert [found.sweeps for found in asked.values()] == [0, 0]
 
 
+COMMIT = "a" * 40
+LONG_AGO = "2026-01-01T00:{:02d}:00.000000Z"
+
+
+class TestTheNotesTimeIsSetOnceAMinute:
+    """A snapshot being made says by its note's time that it still is, and said it once for each file put and once more for each before the record: two questions of the disk a file, for a note that counts for a day."""
+
+    @counted
+    def test_a_snapshot_made_within_the_minute_sets_it_once_at_most(self, asked):
+        assert all(found.note_times <= 1 for found in asked.values()), [found.note_times for found in asked.values()]
+
+    def test_however_many_files_it_is_asked_for(self, tmp_path, monkeypatch):
+        import time
+
+        store = FolderStore(tmp_path / "store")
+        pending = store.begin("acme/sized", COMMIT, LONG_AGO.format(0), undecided=True)
+        clock = [1000.0]
+        monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+        touched = []
+        real = os.utime
+        monkeypatch.setattr(os, "utime", lambda path, *args, **kwargs: (touched.append(Path(path).name), real(path, *args, **kwargs))[1])
+        pending._alive()
+        assert touched == []  # nothing is noted yet: there is no note to speak of
+        pending._note_line(store_module.FOLDER_MARK + "snapshots/acme+sized/2026-01-01T000000Z_aaaaaaaaaaaa")
+        note = pending._note.name
+        for _ in range(500):
+            pending._alive()
+        assert touched == []  # a line written a moment ago has said it
+        clock[0] += store_module.ALIVE_SECONDS
+        for _ in range(500):
+            pending._alive()
+        assert touched == [note]
+        clock[0] += store_module.ALIVE_SECONDS - 1
+        pending._alive()
+        assert touched == [note]
+        clock[0] += 1
+        pending._alive()
+        assert touched == [note, note]
+        pending.discard()
+
+    def test_a_minute_is_well_within_what_a_note_counts_for(self):
+        assert store_module.ALIVE_SECONDS * 60 <= store_module.PENDING_FOLDER_SECONDS
+
+
 @pytest.fixture
 def store(tmp_path, monkeypatch) -> FolderStore:
     """A store of this test's own, which the commands of the test write to."""

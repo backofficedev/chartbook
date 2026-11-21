@@ -3833,6 +3833,12 @@ FOLDER_MARK = "folder "
 #: ``store gc`` takes it for one given up: a day, for one uploaded slowly through a sync.
 PENDING_FOLDER_SECONDS = 86400
 
+#: How often, at most, a snapshot being made brings its note's time up to date, in seconds. The note counts for
+#: :data:`PENDING_FOLDER_SECONDS` from its time, so once a minute says it as well as once a file did; and in a
+#: folder a sync service keeps, setting a file's time is a question of the disk like any other, and one more
+#: change of the note to send.
+ALIVE_SECONDS = 60
+
 def _identity(path) -> Optional[tuple]:
     """What the disk says a file is (its device and number), whatever form of its name it was asked by; None if it is not there."""
     try:
@@ -4011,6 +4017,8 @@ class _FolderPending(PendingSnapshot):
         #: For an increment begun undecided, once :meth:`_settle` has looked: where the snapshot it builds on keeps each file it has, by the entry
         self._there: dict = {}
         self._note: Optional[Path] = None
+        #: When the note's time was last brought up to date, by a line written to it or by :meth:`_alive`, on this process's own clock
+        self._alive_at = 0.0
         #: Hashes already known, by the source file's path, which are then not read again
         self.known: dict[str, str] = {}
 
@@ -4100,18 +4108,25 @@ class _FolderPending(PendingSnapshot):
             self._note = tmp / f"{uuid.uuid4().hex[:12]}{PENDING_SUFFIX}"
         with open(self._note, "a", encoding="utf-8", newline="\n") as f:
             f.write(line + "\n")
+        self._alive_at = time.monotonic()  # a line written is the note's time brought up to date
 
     def _note_use(self, location: Path) -> None:
         """Note, before it is used, a file of an earlier snapshot that this one uses, so that ``store gc`` keeps it meanwhile."""
         self._note_line(location.relative_to(self.store.root).as_posix())
 
     def _alive(self) -> None:
-        """Say, by the note's time, that this snapshot is still being made: a slow one is not taken for one given up."""
-        if self._note is not None:
+        """Say, by the note's time, that this snapshot is still being made: a slow one is not taken for one given up.
+
+        Asked for each file, and done once in :data:`ALIVE_SECONDS` at
+        most: the note counts for a day from its time, and a line written
+        to it has brought its time up to date already.
+        """
+        if self._note is not None and time.monotonic() - self._alive_at >= ALIVE_SECONDS:
             try:
                 os.utime(self._note, None)
             except OSError:
                 pass
+            self._alive_at = time.monotonic()
 
     def _complete(self) -> None:
         """Copy into this snapshot's own folder each file an earlier snapshot of the pipeline has, now that this one is to be written.
