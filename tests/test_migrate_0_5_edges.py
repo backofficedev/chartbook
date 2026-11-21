@@ -1328,8 +1328,8 @@ class TestWhatIsMissingIsSaidFirstAndBySnapshot:
         dry, _ = typed("store", "migrate", "--dry-run")
         said = dry.output.splitlines()
         assert said[1:4] == [
-            "  1201 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):",
-            f"    acme+p/{s1}: 1201 of 1202 file(s)",
+            "  1,201 file(s) that a record names are missing or of another size, as before the move, in 1 snapshot(s):",
+            f"    acme+p/{s1}: 1,201 of 1,202 file(s)",
             "    under _data/llm_cache/ (1,200), _output/ (1)",
         ]
         assert not any(name in dry.output for name in names)

@@ -1427,7 +1427,7 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 
 Every snapshot is a whole version: its record, `_chartbook/snapshot.json`, lists every file of every asset, and says of each which folder keeps it. A snapshot is listed as **complete** where its folder holds every file of its version, each in its own place, so that the folder can be read, copied or sent as it is; and as an **increment** where it holds the files that the complete snapshot it builds on does not have, with how many of its files are in that one's folder and which it is. Which of the two `chartbook snapshot` makes, it decides by itself and says ({ref}`chartbook snapshot <snapshot-complete-or-increment>`); `chartbook snapshot --complete` makes a complete one. A snapshot's folder is not to be deleted by hand, since a lockfile may pin it, and an increment may keep its files there: `chartbook store gc` removes snapshots, an increment with its own folder, and a complete one once no increment that stays builds on it. A `README.txt` at the top of the store, and one in each pipeline's folder, say the same, for whoever finds the folder. A store that ChartBook 0.5 laid out, and a bucket, keep each file once, usually in the first snapshot that had it: there an increment's other files may be in several snapshots' folders.
 
-The size on a line is the one the snapshot's record gives for its folder. **A snapshot that lacks files its record names** (not in the store, or not at their size: a sync that has not finished, a folder emptied by hand) says how many of how many, in the same words whether it is complete or an increment, and one line below the listing names the command that says which:
+The size on a line is the one the snapshot's record gives for its folder, each file counted once however many of the pipeline's assets name it (a folder declared as one asset and a folder inside it as another list the inner files twice): what the folder holds on disk, and what `chartbook snapshot` said when it made the snapshot. The files an increment keeps in the snapshot it builds on are counted once each too. **A snapshot that lacks files its record names** (not in the store, or not at their size: a sync that has not finished, a folder emptied by hand) says how many of how many, in the same words whether it is complete or an increment, and one line below the listing names the command that says which:
 
 ```console
 $ chartbook store ls acme/news_headlines
@@ -1472,12 +1472,12 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. Such a folder is no snapshot, and is said to be what it is, in its count and in each of its files' lines; the snapshots that lack those files are the ones whose records name them there, which `chartbook store ls` says:
+The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. Such a folder is no snapshot, and is said to be what it is, in its count and in each of its files' lines; the snapshots that lack those files are the ones whose records name them there, which `chartbook store ls` says, and the folder's count line names that snapshot (the newest, where several records keep files there, with how many more), so that the two commands' lines are joined:
 
 ```console
 $ chartbook store verify
 2 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:
-  acme/parted  2026-10-30T053455Z_9b1e22d7a0c4 (a folder with no record)  2 file(s)
+  acme/parted  2026-10-30T053455Z_9b1e22d7a0c4 (a folder with no record; the record of 2026-11-19T140200Z_4f2a91c0e1b2 keeps them there)  2 file(s)
 sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the folder 2026-10-30T053455Z_9b1e22d7a0c4, which has no record)
 sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the folder 2026-10-30T053455Z_9b1e22d7a0c4, which has no record)
 
@@ -1671,8 +1671,8 @@ The store at /Volumes/Shared/chartbook_store has the layout of ChartBook 0.5: 2 
     under _data/articles/ (212)
   If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards goes aside, and does not reach its snapshot. `chartbook store verify` lists every one.
   3 snapshot(s) become complete (1 of them made by a pin), 5 become increments on the newest of their pipeline.
-  5804 file(s), 11.2 GB, are moved inside the store by rename: nothing is copied or uploaded again for these.
-  1930 file(s), 6.1 GB, are copied: each is in two folders that must each hold it. In a synced folder every copied byte is uploaded again.
+  5,804 file(s), 11.2 GB, are moved inside the store by rename: nothing is copied or uploaded again for these.
+  1,930 file(s), 6.1 GB, are copied: each is in two folders that must each hold it. In a synced folder every copied byte is uploaded again.
   The store takes 11.4 GB now, and will take 17.5 GB. The copies go to 3 snapshot(s), the largest first:
     acme+rates/2026-08-01T060000Z_9b1e22d4a6f0: 2.1 GB in 660 file(s)
     acme+rates/2026-09-01T060000Z_1c7d03e59ab2: 2.0 GB in 640 file(s)
