@@ -1081,8 +1081,11 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
             directory = _as_cmd_takes_it(directory)
         except RunError as error:
             raise RunError(f"{error} The script was not run.") from None
-        if directory is not named and environment.get("GIT_CEILING_DIRECTORIES"):
-            # Git in the script stands on the letter: the folder it is to look no further up than, by that name too
+        above = os.fspath(named).replace("/", "\\").rstrip("\\").rsplit("\\", 1)[0]
+        if directory is not named and environment.get("GIT_CEILING_DIRECTORIES", "").replace("/", "\\").rstrip("\\") == above:
+            # Git in the script stands on the letter: the folder it is to look no further up than, by that name
+            # too. Only where that folder is this one's own, as it is set for a git dependency's copy: one the
+            # person set for themselves is theirs, and is left as it is
             environment = {
                 **environment,
                 "GIT_CEILING_DIRECTORIES": environment["GIT_CEILING_DIRECTORIES"] + os.pathsep + directory.rstrip("\\").rsplit("\\", 1)[0],
@@ -1218,16 +1221,20 @@ def _connected_drives() -> list[tuple[str, str]]:
     return found
 
 
-def _no_script_in_a_share_without_a_letter(steps: Iterable, windows: Optional[bool] = None) -> None:
-    """Stop a run on Windows, before anything is built, where a step's folder is a share that no drive letter is connected to.
+def _no_script_in_a_share_without_a_letter(steps: Iterable, script: str, windows: Optional[bool] = None) -> None:
+    """Stop a run on Windows, before anything is built, where a pipeline that was asked for is in a share that no drive letter is connected to.
 
     Its script could not be run (:func:`_as_cmd_takes_it`), and that is
-    known now: not after an hour of building what it depends on.
+    known now: not after an hour of building what it depends on. Only of
+    a pipeline that was asked for and has the script: what it depends on
+    may not be built at all (an upstream that has its snapshot, a git
+    dependency that is built), and is refused when its script is reached,
+    if it is.
     """
     if not (os.name == "nt" if windows is None else windows):
         return
     for step in steps:
-        if step.directory is None:
+        if step.source != "asked" or step.directory is None or script not in step.scripts:
             continue
         try:
             _as_cmd_takes_it(step.directory)
@@ -1423,7 +1430,7 @@ def run(
     if not any(script in step.scripts for step in steps if step.source == "asked"):
         raise RunError(f"No pipeline here has a script named {script!r}.")
     _require_trust_to_run(steps, script, here)
-    _no_script_in_a_share_without_a_letter(steps)
+    _no_script_in_a_share_without_a_letter(steps, script)
     if snapshot and not building:
         raise RunError(
             f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "

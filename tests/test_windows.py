@@ -6,6 +6,7 @@ import pytest
 
 from chartbook import config, run, store
 from chartbook.gitcache import repository_slug
+from tests.test_run import work  # noqa: F401 - a fixture: a folder that is a git repository
 
 
 class TestALinksTarget:
@@ -169,32 +170,69 @@ class TestAScriptInAShare:
         from types import SimpleNamespace
 
         monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
-        steps = [
-            SimpleNamespace(id="acme/up", directory="\\\\localhost\\c$\\cbtest\\up"),
-            SimpleNamespace(id="acme/elsewhere", directory=None),
-            SimpleNamespace(id="acme/report", directory="\\\\other\\share\\report"),
-        ]
+        nowhere = "\\\\other\\share\\"
+        asked = SimpleNamespace(id="acme/report", source="asked", scripts={"build": "x"}, directory=nowhere + "report")
         with pytest.raises(run.RunError) as refused:
-            run._no_script_in_a_share_without_a_letter(steps, windows=True)
+            run._no_script_in_a_share_without_a_letter([asked], "build", windows=True)
         assert str(refused.value) == (
-            "acme/report: " + self.REFUSED.format(folder="\\\\other\\share\\report", share='"\\\\other\\share"') + " Nothing was built."
+            "acme/report: " + self.REFUSED.format(folder=nowhere + "report", share='"\\\\other\\share"') + " Nothing was built."
         )
-        run._no_script_in_a_share_without_a_letter(steps[:2], windows=True)
+        # Found by the same review, a pass later: only of what is sure to be run. A pipeline that was asked for
+        # and has the script, in a share that has its letter; one that has no such script; what it depends on,
+        # which may be built already (an upstream with its snapshot, a git dependency); and one with no folder
+        steps = [
+            SimpleNamespace(id="acme/here", source="asked", scripts={"build": "x"}, directory="\\\\localhost\\c$\\cbtest\\here"),
+            SimpleNamespace(id="acme/other", source="asked", scripts={"lab": "x"}, directory=nowhere + "other"),
+            SimpleNamespace(id="acme/up", source="upstream", scripts={"build": "x"}, directory=nowhere + "up"),
+            SimpleNamespace(id="acme/data", source="git", scripts={}, directory=nowhere + "cache\\checkouts\\data"),
+            SimpleNamespace(id="acme/elsewhere", source="asked", scripts={"build": "x"}, directory=None),
+        ]
+        run._no_script_in_a_share_without_a_letter(steps, "build", windows=True)
         # On another system a folder is run in as it is, whatever its name
         monkeypatch.setattr(run, "_connected_drives", lambda: pytest.fail("asked on a system that is not Windows"))
-        run._no_script_in_a_share_without_a_letter(steps, windows=False)
+        run._no_script_in_a_share_without_a_letter([asked], "build", windows=False)
 
-    def test_git_is_told_the_folder_to_stop_at_by_the_letter_too(self, monkeypatch):
+    @pytest.mark.parametrize("given, handed", [
+        # The folder a git dependency's build is told to look no further up than: by the letter's name too
+        ("\\\\localhost\\c$\\cache\\checkouts", "\\\\localhost\\c$\\cache\\checkouts;Q:\\cache\\checkouts"),
+        ("//localhost/c$/cache/checkouts/", "//localhost/c$/cache/checkouts/;Q:\\cache\\checkouts"),
+        # Found by review: one the person set for themselves is theirs. With the pipeline's parent added to it,
+        # git in the build no longer found the repository the pipeline is a folder of
+        ("C:\\Users\\me", "C:\\Users\\me"),
+        ("\\\\localhost\\c$\\cache", "\\\\localhost\\c$\\cache"),
+    ])
+    def test_git_is_told_the_folder_to_stop_at_by_the_letter_too(self, monkeypatch, given, handed):
         """Found by review: a git dependency's build is told where git is to look no further up, by the share's name; git in the script stands on the letter."""
         ran = []
         monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
         monkeypatch.setattr(run.os, "name", "nt")
         monkeypatch.setattr(run.os, "pathsep", ";")
         monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(options) or type("Done", (), {"returncode": 0})())
-        given = {"GIT_CEILING_DIRECTORIES": "\\\\localhost\\c$\\cache\\checkouts"}
-        run._execute("python build.py", "\\\\localhost\\c$\\cache\\checkouts\\rates", given)
-        assert ran[0]["env"] == {"GIT_CEILING_DIRECTORIES": "\\\\localhost\\c$\\cache\\checkouts;Q:\\cache\\checkouts"}
-        assert given == {"GIT_CEILING_DIRECTORIES": "\\\\localhost\\c$\\cache\\checkouts"}  # the caller's own is as it was
+        environment = {"GIT_CEILING_DIRECTORIES": given}
+        run._execute("python build.py", "\\\\localhost\\c$\\cache\\checkouts\\rates", environment)
+        assert ran[0]["env"] == {"GIT_CEILING_DIRECTORIES": handed}
+        assert environment == {"GIT_CEILING_DIRECTORIES": given}  # the caller's own is as it was
+
+    def test_a_share_typed_with_forward_slashes_is_one_too(self, monkeypatch):
+        monkeypatch.setattr(run, "_connected_drives", lambda: self.CONNECTED)
+        assert run._as_cmd_takes_it("//localhost/c$/cbtest/report") == "Q:\\cbtest\\report"
+
+    @pytest.mark.skipif(os.name == "nt", reason="the scripts here are POSIX shell")
+    def test_a_run_asks_it_of_the_steps_it_planned_before_any_script(self, work, monkeypatch):
+        from tests.test_run import LOG, _commit, _order, _with_data
+
+        pipeline = _with_data(work / "p", {"build": LOG})
+        _commit(work)
+        asked = []
+
+        def refuse(steps, script, windows=None):
+            asked.append(([step.id for step in steps], script))
+            raise run.RunError("p: … is a network folder with no drive letter … Nothing was built.")
+
+        monkeypatch.setattr(run, "_no_script_in_a_share_without_a_letter", refuse)
+        with pytest.raises(run.RunError, match="is a network folder with no drive letter"):
+            run.run(pipeline, echo=lambda line: None)
+        assert asked == [(["p"], "build")] and _order(work) == []
 
     def test_no_letter_is_looked_for_on_another_system(self):
         assert run._connected_drives() == [] or os.name == "nt"
