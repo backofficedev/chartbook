@@ -758,7 +758,9 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
   itself as it was at that commit.)* What is wanted there at another commit is built in a
   worktree of that commit, and the reader's checkout stays on its branch. A worktree of that
   name is used only where git says it is one, on that commit. *(Found by the third pass: a
-  leftover folder of the name was taken for it.)*
+  leftover folder of the name was taken for it.)* But for a checkout git does not trust yet,
+  which git says nothing of: that one is taken by its name, with the command that makes git
+  trust it first (below, of a network share).
 - **An address is one only if it is a plain web address,** which is all a snapshot records.
   *(Found by review: one that began with `--upload-pack=` was refused by the fetch and printed in
   a `git clone` to paste.)* A pipeline's name is one only if it is an ID. Everything shown is

@@ -1132,9 +1132,15 @@ def _worktree_at(tree: Path, commit: str) -> bool:
 
 
 def _waits_for_trust(folder: Path) -> Optional[str]:
-    """For a folder that is there, in a repository git does not trust: the command that makes git trust it, empty where there is none to give. None for any other folder."""
+    """For a folder that is the top of a checkout git does not trust: the command that makes git trust it, empty where there is none to give. None for any other folder.
+
+    The top of a checkout has a ``.git`` in it. Without that, git's refusal
+    is of a repository further up, and the folder is a leftover in it
+    (found by review: a plain folder of the name, in a repository git did
+    not trust, was taken for the worktree).
+    """
     try:
-        if not folder.is_dir():
+        if not folder.is_dir() or not os.path.lexists(folder / ".git"):
             return None
         snapshot.code_of(folder)
     except snapshot.RepositoryNotTrusted as error:
@@ -1214,6 +1220,8 @@ def said(
     moved: set = set()
     #: And for a worktree that is there and that git does not trust yet, by its commit: the command that makes it
     untrusted: dict = {}
+    #: What the line being made is to say under its commands, of a command that is not its build
+    noted: list[str] = []
 
     def at_its_commit(top: Path, folder: Path, commit: str, make: str) -> list[str]:
         """Check a repository out and build in a folder of it: from its top, since the folder may not be there until the checkout."""
@@ -1240,6 +1248,7 @@ def said(
                     if trust is not None:
                         there, untrusted[commit] = tree, trust
                         break
+            # (One that git reads at that commit comes first, whichever name it has: no trust is asked for it.)
             add = there is None
             worktrees[commit] = there or next((tree for tree in names if not os.path.lexists(tree)), names[-1])
         tree = worktrees[commit]
@@ -1249,6 +1258,10 @@ def said(
             commands.insert(0, f"git -C {word(listing.top)} worktree add {word(tree)} {commit}")
         elif untrusted.get(commit):
             commands.insert(0, untrusted.pop(commit))  # once, on the first line that builds in it
+            noted.append(
+                "Its first command makes git trust the worktree that an earlier list said to add, which git reads "
+                "nothing of until then."
+            )
         if fetch:
             commands.insert(0, fetch)
         return commands
@@ -1259,8 +1272,9 @@ def said(
     waiting: set[int] = set()
     for number, line in enumerate(wanted, 1):
         held.clear()
+        noted.clear()
         told = ""
-        before = (dict(cloned), dict(worktrees), dict(untrusted))
+        before = (dict(cloned), dict(worktrees))
         moved_before = set(moved)
         pinned = bool(line.commit) and bool(_COMMIT.match(line.commit))
         at = f" at {line.commit[:7]}" if pinned else ""
@@ -1388,7 +1402,7 @@ def said(
             commands, unknown = [], ""
             told = "It waits for what it reads above. How to build it is said after that, by the last command here."
             held.clear()
-            for kept, was in zip((cloned, worktrees, untrusted), before):
+            for kept, was in zip((cloned, worktrees), before):
                 kept.clear()
                 kept.update(was)
             moved.clear()
@@ -1404,7 +1418,7 @@ def said(
             # Nothing of it was typed: no clone was made by it, and no worktree. A repository it would have
             # moved stays counted as moved, since by hand it may well be: a checkout too many costs nothing,
             # and a folder taken for built on a commit it is no longer on would be labelled with another's files
-            for kept, was in zip((cloned, worktrees, untrusted), before):
+            for kept, was in zip((cloned, worktrees), before):
                 kept.clear()
                 kept.update(was)
         reads = f"; reads {_counted(line.reads)} above" if line.reads else ""
@@ -1412,9 +1426,12 @@ def said(
         lines += [f"     {command}" for command in commands]
         if line.absent:
             lines.append("     It could not be found there, so no command is given for it.")
-        elif told:
+            continue
+        if told:
             lines.append(f"     {told}")
-        elif unknown:
+        elif noted and not read:
+            lines.append(f"     {noted[0]}")
+        if unknown:
             lines.append(f"     What it reads in turn is not known: {unknown}. Its own `chartbook run` says.")
     # With its folder, as every command above has its own: typed wherever those were, it builds this pipeline.
     # The pipeline's folder may be one of somebody's repository too, named as they named it

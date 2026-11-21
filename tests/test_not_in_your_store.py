@@ -1226,12 +1226,25 @@ class TestInThePipelinesOwnRepository:
         _git(top, "worktree", "add", "--quiet", "--detach", str(tree), commit)  # as the list before this one said
         _git_refuses(monkeypatch, DUBIOUS.format(at=tree.as_posix()), under=tree)
         said = _said(CliRunner().invoke(main, ["run"]))
-        assert said[3:6] == [
+        assert said[3:7] == [
             f"1. acme/mid at {commit[:7]}    {_up('mid')} (a folder of this repository, at another commit)",
             f"     git config --global --add safe.directory {missing._quoted(tree.as_posix(), batch=False)}",
             f"     chartbook run --snapshot --project-dir {_q(tree / 'mid')}",
+            "     Its first command makes git trust the worktree that an earlier list said to add, which git reads nothing of until then.",
         ], said
         assert not any("worktree add" in line for line in said)
+
+    def test_a_worktree_git_reads_at_that_commit_comes_before_one_it_does_not_trust(self, work, monkeypatch):
+        """Whichever name each has: no trust is asked for where a worktree git reads is there."""
+        commit = "c" * 40
+        first, second = work / "mono" / f"mono-at-{commit[:12]}", work / "mono" / f"mono-at-{commit[:12]}-2"
+        monkeypatch.setattr(missing, "_waits_for_trust", lambda folder: "git config --global --add safe.directory /x" if folder == first else None)
+        monkeypatch.setattr(missing, "_worktree_at", lambda tree, at: tree == second)
+        listing = missing.Listing("acme/report", work / "mono" / "report", stores=[str(work / "mine")], top=work / "mono", wanted=[
+            missing.Wanted("acme/a", commit, folder=work / "mono" / "a", top=work / "mono"),
+        ])
+        said = missing.said(listing, here=work / "mono" / "report")
+        assert said[4:6] == [f"     chartbook run --snapshot --project-dir {_q(second / 'a')}", ""], said
 
     def test_its_command_is_given_once_for_two_pipelines_built_in_it(self, work, monkeypatch):
         commit = "c" * 40
@@ -1244,20 +1257,58 @@ class TestInThePipelinesOwnRepository:
             missing.Wanted("acme/b", commit, folder=work / "mono" / "b", top=work / "mono"),
         ])
         said = missing.said(listing, here=work / "mono" / "report")
-        assert said[4:8] == [
+        assert said[4:9] == [
             f"     {trust}",
             f"     chartbook run --snapshot --project-dir {_q(tree / 'a')}",
+            "     Its first command makes git trust the worktree that an earlier list said to add, which git reads nothing of until then.",
             f"2. acme/b at ccccccc    {_up('b')} (a folder of this repository, at another commit)",
             f"     chartbook run --snapshot --project-dir {_q(tree / 'b')}",
         ], said
+        assert said[9] == ""  # and the second says nothing of a command it does not have
 
-    def test_a_folder_of_that_name_that_git_reads_and_is_not_it_is_still_passed_by(self, work):
-        """Only git's refusal for trust takes a folder by its name: one that is in no repository is a leftover, as before."""
-        for folder, waits in ((work / "plain", None), (work / "nowhere" / "x", None)):
-            folder.parent.mkdir(exist_ok=True)
-            if folder.name == "plain":
-                folder.mkdir()
-            assert missing._waits_for_trust(folder) is waits
+    def test_on_windows_a_line_given_no_command_says_nothing_of_a_first_command(self, work, monkeypatch):
+        commit = "c" * 40
+        top = work / "a!b" / "mono"
+        tree = top / f"mono-at-{commit[:12]}"
+        monkeypatch.setattr(missing, "_waits_for_trust", lambda folder: "git config --global --add safe.directory x" if folder == tree else None)
+        listing = missing.Listing("acme/report", top / "report", stores=[str(work / "mine")], top=top, wanted=[
+            missing.Wanted("acme/a", commit, folder=top / "a", top=top),
+        ])
+        said = missing.said(listing, here=top / "report", windows=True)
+        assert said[4].startswith("     No command is given for it: one would hold a `!`")
+        assert said[5].startswith("     By hand: ") and said[6] == "", said
+
+    def test_only_the_top_of_a_checkout_git_does_not_trust_is_taken_by_its_name(self, work, monkeypatch):
+        """Found by the review, with git's own refusal: the pipeline's repository was in a folder that is
+        itself a repository git does not trust, a plain folder of the worktree's name was there, and the
+        list said to make git trust the repository around and to build in the plain folder. Git's refusal
+        is of whatever repository it finds going up; the top of a checkout has a `.git` in it."""
+        trust = "git config --global --add safe.directory /srv/outer"
+
+        def code_of(directory):
+            raise snapshot.RepositoryNotTrusted("git does not trust …", trust)
+
+        monkeypatch.setattr(snapshot, "code_of", code_of)
+        plain, checkout = work / "plain", work / "checkout"
+        plain.mkdir()
+        checkout.mkdir()
+        (checkout / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8", newline="\n")  # as a worktree has it
+        assert missing._waits_for_trust(plain) is None
+        assert missing._waits_for_trust(checkout) == trust
+        assert missing._waits_for_trust(work / "nowhere") is None
+
+    def test_a_folder_git_reads_or_that_is_in_no_repository_waits_for_no_trust(self, work, monkeypatch):
+        folder = work / "x"
+        folder.mkdir()
+        (folder / ".git").mkdir()
+        monkeypatch.setattr(snapshot, "code_of", lambda directory: None)  # git reads it
+        assert missing._waits_for_trust(folder) is None
+
+        def refuse(directory):
+            raise snapshot.NotInARepository("…")
+
+        monkeypatch.setattr(snapshot, "code_of", refuse)
+        assert missing._waits_for_trust(folder) is None
 
     def test_where_this_repository_is_the_clone_wanted_and_lacks_the_commit(self, work, theirs, mine, monkeypatch):
         """Found by the second pass: the list said `git fetch && git checkout` in the reader's own repository, and its last command built the other pipeline there."""
@@ -2442,6 +2493,63 @@ class TestAFolderGitWillNotRead:
             "4. acme/c at ccccccc    https://example.org/acme/mono; reads 2 above",
         ], said
         assert said[13] == self.WAITS  # it reads one that waits, which reads the one git does not trust
+
+    def test_a_line_that_reads_one_that_does_not_wait_has_its_commands(self, work):
+        trust = "git config --global --add safe.directory /srv/y"
+        commit = "c" * 40
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/y", commit, folder=work / "y", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/b", commit, "https://example.org/acme/b", placed=True),
+            missing.Wanted("acme/c", commit, "https://example.org/acme/c", placed=True, reads=[2]),
+        ])
+        said = missing.said(listing, here=work / "report")
+        assert _has(said, f"git clone https://example.org/acme/c {_q(work / 'c')}"), said
+        assert sum(line == self.WAITS for line in said) == 0
+
+    def test_a_repository_a_line_that_waits_would_have_moved_is_where_it_was(self, work):
+        """The next line of that repository is of files as they are: built already, and a snapshot is all there is to make."""
+        trust = "git config --global --add safe.directory /srv/y"
+        commit = "c" * 40
+        other = work / "other"
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/y", commit, folder=work / "y", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/a", commit, folder=other / "a", top=other, reads=[1]),  # its line would have checked `other` out
+            missing.Wanted("acme/b", None, folder=other / "b", top=other, built=True),
+        ])
+        said = missing.said(listing, here=work / "report")
+        assert said[6:10] == [
+            f"2. acme/a at ccccccc    {_up(os.path.join('other', 'a'))} (a folder on this machine); reads 1 above",
+            self.WAITS,
+            f"3. acme/b    {_up(os.path.join('other', 'b'))} (a folder on this machine, built already)",
+            f"     chartbook snapshot --project-dir {_q(other / 'b')}",
+        ], said
+
+    def test_a_worktree_a_line_that_waits_would_have_added_is_added_by_the_next(self, work):
+        trust = "git config --global --add safe.directory /srv/y"
+        commit = "c" * 40
+        top = work / "mono"
+        tree = top / f"mono-at-{commit[:12]}"
+        listing = missing.Listing("acme/report", top / "report", stores=[str(work / "mine")], top=top, wanted=[
+            missing.Wanted("acme/y", commit, folder=work / "y", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/a", commit, folder=top / "a", top=top, reads=[1]),
+            missing.Wanted("acme/b", commit, folder=top / "b", top=top),
+        ])
+        said = missing.said(listing, here=top / "report")
+        assert _has(
+            said,
+            f"git -C {_q(top)} worktree add {_q(tree)} {commit[:12]}", f"chartbook run --snapshot --project-dir {_q(tree / 'b')}",
+        ), said
+        assert sum("worktree add" in line for line in said) == 1
+
+    def test_on_windows_a_line_that_waits_keeps_its_words_whatever_its_folder_is_named(self, work):
+        """Its folder is in no command, so no sign in its name is in one: the line that gives no command for a sign is not its line."""
+        trust = 'git config --global --add safe.directory "%(prefix)///fileserver/home/y"'
+        listing = missing.Listing("acme/report", work / "report", stores=[str(work / "mine")], wanted=[
+            missing.Wanted("acme/y", "c" * 40, folder=work / "y", not_trusted="git does not trust …", trust=trust),
+            missing.Wanted("acme/x", "c" * 40, folder=work / "R&D", top=work / "R&D", reads=[1]),
+        ])
+        said = missing.said(listing, here=work / "report", windows=True)
+        assert said[7] == self.WAITS and not any("No command is given" in line for line in said), said
 
     def test_the_command_is_named_by_the_line_that_gave_it_wherever_that_is(self, work):
         """A line git trusts, and then two folders of one repository it does not."""
