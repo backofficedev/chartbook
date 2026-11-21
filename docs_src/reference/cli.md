@@ -1671,8 +1671,8 @@ The store at /Volumes/Shared/chartbook_store has the layout of ChartBook 0.5: 2 
     under _data/articles/ (212)
   If a sync may still be bringing these files, wait for it to finish before the move: a file that arrives afterwards goes aside, and does not reach its snapshot. `chartbook store verify` lists every one.
   3 snapshot(s) become complete (1 of them made by a pin), 5 become increments on the newest of their pipeline.
-  5804 file(s), 11.2 GB, are moved inside the store by rename: nothing is copied or uploaded again for these.
-  1930 file(s), 6.1 GB, are copied: each is in two folders that must each hold it. In a synced folder every copied byte is uploaded again.
+  5,804 file(s), 11.2 GB, are moved inside the store by rename: nothing is copied or uploaded again for these.
+  1,930 file(s), 6.1 GB, are copied: each is in two folders that must each hold it. In a synced folder every copied byte is uploaded again.
   The store takes 11.4 GB now, and will take 17.5 GB. The copies go to 3 snapshot(s), the largest first:
     acme+rates/2026-08-01T060000Z_9b1e22d4a6f0: 2.1 GB in 660 file(s)
     acme+rates/2026-09-01T060000Z_1c7d03e59ab2: 2.0 GB in 640 file(s)
