@@ -1595,6 +1595,9 @@ class TestWhatAShellOnWindowsReadsInQuotes:
         assert f"     chartbook run --snapshot --project-dir {written}" in said, said
         # And a drive's folder of that name is given none, as before
         assert missing._quoted("C:\\work\\$\\rates", windows=True) == missing.NOT_TEXT
+        # The last line is read the same way: the pipeline's own folder, there
+        own = missing.Listing("acme/report", Path(folder), stores=[str(work / "mine")], wanted=[missing.Wanted("acme/mid", None, folder=work / "mid")])
+        assert missing.said(own, here=work, windows=True)[-2] == f"     chartbook run --project-dir {written}"
 
     def test_net_use_is_given_a_network_path_as_windows_writes_it(self):
         word = "\\\\fileserver\\my share"
