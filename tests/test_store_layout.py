@@ -888,6 +888,62 @@ class TestAStoreOf05IsReadAsItIs:
         ]
         assert lines[4].endswith(f": _output/curve.html is not in the store (the snapshot {_folder_of(second).name})")
 
+    def test_two_names_a_record_keeps_at_one_place_are_two_files_it_lacks(self, rates, store):
+        """Decided 2026-11-20: in `store ls`, "lacks N of its M file(s)" counts both by the names the snapshot's record lists. A snapshot's files are its names.
+
+        ChartBook 0.5 kept two files of one snapshot with the same bytes
+        once, and the second's entry names the first. With that place
+        missing the snapshot lacks two files, and the line said 1: the
+        store asks about a place once, and says it once. `store verify`
+        goes on saying the place once, since its lines are of places."""
+        shutil.copy(rates / "_data" / "treasury.parquet", rates / "_data" / "again.parquet")
+        (rates / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "acme/rates"},
+                "dataframes": {
+                    "again": {"path": "./_data/again.parquet", "docs": "d"},
+                    "treasury": {"path": "./_data/treasury.parquet", "docs": "d"},
+                },
+                "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "treasury", "docs": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        _git(rates, "add", "-A")
+        _git(rates, "commit", "--quiet", "-m", "The table, under two names")
+        snapshot.make(rates, store=store, made_at=FIRST)
+        old = laid_out_as_0_5(store.root)
+        (kept,) = old.records()
+        places = {file.path: file.location for asset in kept.assets for file in asset.files}
+        place = places["_data/again.parquet"]
+        assert places["_data/treasury.parquet"] == place and len(set(places.values())) == len(places) - 1
+        intact = CliRunner().invoke(main, ["store", "ls"]).output
+        assert "lacks" not in intact
+        place.chmod(0o644)
+        place.unlink()
+        store_module._read_records.clear()
+        store_module._found_whole.clear()
+        asked = []
+        is_whole = store_module._is_whole
+
+        def asking(file, pipeline_folder):
+            asked.append(file.location)
+            return is_whole(file, pipeline_folder)
+
+        with pytest.MonkeyPatch.context() as patched:
+            patched.setattr(store_module, "_is_whole", asking)
+            listed = CliRunner().invoke(main, ["store", "ls"]).output.splitlines()
+        (line,) = [line for line in listed if line.split()[:1] == [kept.folder.name]]
+        assert line.endswith(f", lacks 2 of its {len(places)} file(s)"), line
+        assert sorted(asked) == sorted(set(places.values()))  # and the disk was asked about the place once
+        verify = CliRunner().invoke(main, ["store", "verify"]).output.splitlines()
+        assert verify[:2] == [
+            "1 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:",
+            f"  acme/rates  {kept.folder.name}  1 file(s)",
+        ]
+        assert [line.partition(": ")[2] for line in verify if "(the snapshot " in line] == [
+            f"_data/again.parquet is not in the store (the snapshot {kept.folder.name})"
+        ]
+
     def test_store_verify_names_a_record_it_cannot_read(self, of_0_5):
         """Found by review: `chartbook store migrate` refuses a store for a record it cannot follow and says "`chartbook store verify` says more", and verify passed such a record over without a word. It names the record, as the store shows it, and why it is not read; and ends 1."""
         old, second, cleared = of_0_5

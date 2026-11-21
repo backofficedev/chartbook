@@ -1438,7 +1438,7 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.
 ```
 
-It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. The disk is asked about each file once, however many snapshots name it. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
+It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. The disk is asked about each file once, however many snapshots name it. Both numbers count the names the snapshot's record lists, so where a record keeps two names at one place (ChartBook 0.5 kept two files of the same bytes once) and that place is missing, the snapshot lacks two files, while `chartbook store verify` says that place once, its lines being of places in the store: the two commands' numbers differ only there. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 

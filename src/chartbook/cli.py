@@ -4318,6 +4318,14 @@ def _files_it_lacks(the_store, record, asked: dict):
     A store that cannot say (another kind, or a record it cannot follow
     now) says nothing here, and `store verify` is what checks a store.
 
+    Both numbers are of the names the snapshot's record lists: a
+    snapshot's files are its names. The store asks about a place once and
+    says it once, under one of the names the record has for it; where a
+    record keeps two names at one place (a store of ChartBook 0.5 kept
+    two files of the same bytes once) and that place is missing, the
+    snapshot lacks two files, and that is the number here. `store verify`
+    says the place once, since its lines are of places in the store.
+
     :param asked: What the disk has said of each file of this store so
         far in the listing, which the store adds to: twenty snapshots
         that name the same files ask about each file once, not twenty
@@ -4332,8 +4340,20 @@ def _files_it_lacks(the_store, record, asked: dict):
         return None
     if not holes:
         return None
-    named = {file.path for asset in record.assets for file in asset.files} | set(holes)
-    return len(holes), len(named)
+    names_at: dict = {}  # each place the record keeps a file at, with every name it has for the file there
+    places_of: dict = {}  # and where each name is kept
+    for asset in record.assets:
+        for file in asset.files:
+            names_at.setdefault(file.location, set()).add(file.path)
+            places_of.setdefault(file.path, set()).add(file.location)
+    lacked: set = set()
+    for hole in holes:
+        if hole in places_of:
+            for place in places_of[hole]:
+                lacked |= names_at[place]
+        else:
+            lacked.add(hole)  # what its record names without saying where it is: no place, and one file
+    return len(lacked), len(lacked | set(places_of))
 
 
 def _stores_to_list(store_name):
