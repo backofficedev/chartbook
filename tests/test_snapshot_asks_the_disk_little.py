@@ -405,7 +405,8 @@ def _counting(patch: pytest.MonkeyPatch, asked: Asked, root: Path) -> None:
     is_whole = store_module._is_whole
 
     def counted_is_whole(file, pipeline_folder):
-        asked.looks[os.path.relpath(str(file.location), store)] += 1
+        # As built_on is written (.as_posix): on Windows relpath alone is backslashes, and the rules compare by "/"
+        asked.looks[Path(os.path.relpath(str(file.location), store)).as_posix()] += 1
         return is_whole(file, pipeline_folder)
 
     patch.setattr(store_module, "_is_whole", counted_is_whole)
