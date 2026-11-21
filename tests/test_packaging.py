@@ -469,7 +469,9 @@ def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
     matrix = names(document["tool"]["hatch"]["envs"]["hatch-test"]["extra-dependencies"])
     dev = names(document["dependency-groups"]["dev"])
     assert matrix <= dev, f"missing from the dev group: {sorted(matrix - dev)}"
-    assert {"doit", "hatch", "pytest"} <= dev
+    # And what `uv run pytest -n …` needs, which the page and the CI workflow type: one of hatch's own
+    # defaults for its test environments, so no extra dependency there names it
+    assert {"doit", "hatch", "pytest", "pytest-xdist"} <= dev
 
 
 def test_the_hook_and_init_name_the_file_alike(hook):
