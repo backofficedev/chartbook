@@ -124,7 +124,7 @@ $ chartbook run
 Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
 Fetching https://github.com/ftsfr/fed_yield_curve, to see what ftsfr/fed_yield_curve reads in turn.
 acme/report cannot be built yet: 3 pipelines it reads are not in the store at /Users/x/.chartbook/store.
-Build them in this order, with the commands below. Each ends with a snapshot, which is what the next one reads.
+Build them in this order, with the commands below, one at a time. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
      git clone https://github.com/ftsfr/he_kelly_manela /work/he_kelly_manela
@@ -317,10 +317,8 @@ Said plainly, since the day with one command hid each of these *(found by review
   `chartbook snapshot` has always said so of itself, and its record does not say that ChartBook
   ran the build; the record of `chartbook run --snapshot` does, and the catalog marks only those.
   Build, change a file, commit, snapshot: the snapshot is named for a commit that did not build
-  it. That is now the taught way, and no longer the seldom one. *Proposed by Claude, and put to
-  the maintainer, not built:* a run leaves a note of the files it built from, and `chartbook
-  snapshot` holds the commit against it, records that the build ran where they are the same, and
-  says so where they differ.
+  it. That is now the taught way, and no longer the seldom one. *Decided 2026-11-20, to be built
+  before 0.6.0: see "A snapshot is of what a run built", below.*
 - **`chartbook snapshot` takes what is there.** After a run that failed for an output its build
   did not write, a snapshot is still made of the rest, with the missing one listed, as it always
   was. And one typed while a build is running takes the files as they are at that moment.
@@ -335,6 +333,126 @@ Said plainly, since the day with one command hid each of these *(found by review
 - **`chartbook snapshot` in a folder that is in no git repository** says that only a pipeline in
   git has snapshots, and not `git init`. A project `chartbook init` makes without `--git` meets
   that. Left as it is.
+
+### A snapshot is of what a run built
+
+*Decided 2026-11-20 by the maintainer: "Yes. We need to do this." Not built yet.* Proposed by
+Claude as a note of what a run built from; the maintainer added what it built ("Can chartbook
+run always hash the stuff at the end and keep a note of those hashes somewhere? Then when
+chartbook snapshot happens it can verify?"), and chose where the note is kept.
+
+A run that succeeds leaves a note. `chartbook snapshot` holds what is committed, and what is on
+disk, against it. The two halves stop two different slips.
+
+**1. The usual way. Nothing more is typed, and nothing more is said.**
+
+```text
+$ chartbook run
+…
+acme/rates: built.
+  For other pipelines and the catalog: commit, then `chartbook snapshot`.
+$ git add -A && git commit -m "Yields through October" && chartbook snapshot
+acme/rates at 4f2a91c: 2 asset(s) in the store
+Snapshot made: 5 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
+```
+
+**2. The code was changed after the build.** The fix is committed, and the old file would have
+been labelled with it.
+
+```text
+$ chartbook run
+$ (a fix in load_rates.py) && git commit -am "Fix the day count"
+$ chartbook snapshot
+Error: acme/rates was built before these changed: load_rates.py.
+  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+```
+
+**3. A file was changed after the build,** by hand or by a tool run by hand.
+
+```text
+$ chartbook run
+$ doit pull_rates
+$ git commit -am "…" && chartbook snapshot
+Error: acme/rates: these changed after it was built: _data/rates.parquet.
+  Build again: `chartbook run`. Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+```
+
+**4. No run of ChartBook's built it here:** a clone whose files came from a job elsewhere, a
+notebook, `doit` by hand.
+
+```text
+$ chartbook snapshot
+Error: acme/rates has not been built by `chartbook run` here, so there is nothing to hold its files against.
+  Build it: `chartbook run` (a build with nothing left to do takes a moment). Or, to take what is on disk as it is: `chartbook snapshot --as-built`.
+```
+
+**5. Taking the files as they are is typed, and no longer assumed.**
+
+```text
+$ chartbook snapshot --as-built
+acme/rates at 4f2a91c: 2 asset(s) in the store
+Snapshot made: 5 files, 23.0 MB.
+A pipeline that depends on this one gets it with `chartbook pin --update`.
+```
+
+What is settled:
+
+- **The note has two halves.** *What the build ran on:* a plain hash of each source file of the
+  pipeline's folder, and of `chartbook.lock`, as they are when the run has pinned and its script
+  is about to start. A source file is one git tracks, or would add; what the manifest declares
+  as built is not one. *What the build left:* the size and the time of last change of every file
+  the manifest declares with a path, when the build has ended and each was found.
+- **Size and time for what was built, and not its bytes** *(the maintainer's choice, on Claude's
+  recommendation)*. A hash of every output at the end of every run costs seconds for each
+  gigabyte, on runs that are never snapshotted; size and time cost nothing and catch what
+  happens by accident. Hashes of the outputs can replace them later without changing anything
+  that is typed.
+- **Files that no run built are refused too** *(the maintainer's choice)*. The check is strict,
+  with a plain message, as every check here is.
+- **`chartbook snapshot --as-built` is the way past** *(the maintainer's choice of the name; the
+  session building the store's side has since said it can be read as "exactly as the run built
+  it", the opposite of what it does, and offered `--as-is`: put to the maintainer)*. Its record
+  does not say that ChartBook ran the build, as a typed snapshot's never did.
+- **Where the check passes, the record says that ChartBook ran the build,** as the record of
+  `chartbook run --snapshot` does, and the catalog marks it so.
+- **The note is kept with ChartBook's own things, and not in the project or in `.git`** *(the
+  maintainer's choice: "I kinda like the option of putting in the centralized place where all
+  of the other chartbook stuff is")*: `~/.chartbook/cache/built/`, one small file for each
+  pipeline folder, named from the folder's path, and moved with the cache by `CHARTBOOK_CACHE`.
+  Claude had proposed `.git`, and then a `.chartbook/` folder in the project that ignores
+  itself. Of `.git` the maintainer said: "My resistance to .git is about tying ourselves to git
+  too much and messing with how git works … I would like to be version control agnostic and
+  work towards that". So the note holds plain hashes and no git ids, nothing has to be ignored
+  by any version control system, and git is asked one thing, in one place: which files of the
+  folder are its source.
+- **A build that fails leaves no note,** and the note before it is gone when a build starts. A
+  snapshot after a run that failed was made of the rest, with what was missing listed; it is
+  now refused, or made with `--as-built`.
+- **`chartbook run --snapshot` writes the note and holds its snapshot against it in the one
+  command,** and so does each pipeline `--upstream` builds. Nothing changes in what is typed.
+- **Only a `build` leaves a note.** Another script (`lab`, `test`) builds nothing a snapshot
+  holds.
+- **A folder reached by another spelling is the same folder:** where no note is under the
+  folder's name, one whose folder is the same folder is taken.
+- **A note whose folder is gone is removed** when another note is written.
+
+What it costs:
+
+- **A build that rewrites a tracked file it does not declare is refused every time:** a notebook
+  run in place, a README written by the build. The message names the files. Declare them, keep
+  them out of version control, or type `--as-built`.
+- **Only the pipeline's own folder is looked at,** as for what is not committed. Code the build
+  uses from elsewhere in its repository can change, and the note does not see it.
+- **The build's own account is taken.** A build tool that finds nothing to do leaves the files
+  it left before, and the note then says they are of this source. `chartbook run --snapshot`
+  has always taken that account.
+- **A folder that is moved or renamed, and a cache that is cleared, have no note:** build again.
+  A machine whose home folder does not last (a container) types `chartbook run --snapshot`, or
+  points `CHARTBOOK_CACHE` at a folder that lasts.
+- **A file rewritten to the same size, with its time put back, passes.** Nothing does that by
+  accident.
+- **One more option,** on a first screen that was cut to six commands a day before.
 
 ### Clearing old snapshots: the record
 
@@ -582,9 +700,11 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     through a pin is safe: a pin is met only by the same file or the same rows, so such a
     snapshot either holds what was pinned or is not read, and the list comes back. A pipeline
     that was never pinned takes whatever was built, of whatever commit, and its pin's line says
-    which. The reference and the guide say to type the lines one at a time. A build line that
-    carried the commit it is to be of, and refused elsewhere, would close it; that is an option
-    on two commands, and is not built.
+    which. The list itself says "one at a time", and the reference and the guide say why. A
+    build line that carried the commit it is to be of, and refused elsewhere, would close it;
+    that is an option on two commands. *Decided 2026-11-20: not now. It is in the roadmap, with
+    what would bring it forward: a class told to paste a list whole, or a build of the wrong
+    commit met by someone.*
   - *A run at a pinned commit leaves a `chartbook.lock` that blocks the next checkout in the same
     clone,* where that commit has none and the next one has. Older than this change: the old
     line stopped there, and the list asked for again then said to build where the clone stood.
@@ -639,8 +759,10 @@ yet (see "Later").* *Proposed by Claude, 2026-11-19:*
     so. No test types either.
   - *Not typed by any test on Windows.* The tests that type a list's lines need a POSIX shell.
     PowerShell 5.1, `cmd.exe` and Git Bash were typed into by hand, once, on Windows 11.
-- **The list's first words say "with the commands below".** *(Found by review, 2026-11-20:
-  "Build it first. It ends with a snapshot" was true while a build ended with one.)*
+- **The list's first words say "with the commands below, one at a time".** *(Found by review,
+  2026-11-20: "Build it first. It ends with a snapshot" was true while a build ended with one.
+  "One at a time" was added the same day, when the lines stopped being joined: the list says
+  how to type it, where only the reference did.)*
 - **`chartbook add` undoes nothing for a cycle found here.** *(Found by review: taking the new
   entry out was wrong where the cycle was another entry's.)* The error is said, and the manifest
   is as the command left it.
@@ -838,3 +960,6 @@ changes.
     snapshot, and makes none; the first screen has six commands. *Built 2026-11-20.* Which
     kind of snapshot `chartbook snapshot` makes, and `--complete`, are in the order of work of
     {doc}`snapshots-and-increments`.
+12. A snapshot is of what a run built: a run leaves a note, and `chartbook snapshot` holds what
+    is committed and what is on disk against it; `--as-built`. *Decided 2026-11-20; this page
+    first.*
