@@ -2007,7 +2007,7 @@ class TestGcAndVerifyWhereWhatTheIncrementsBuildOnHasGone:
         store_module._read_records.clear()
         store_module._found_whole.clear()
         verified = CliRunner().invoke(main, ["store", "verify"]).output
-        named_by_verify = set(re.findall(r"_data/history\.parquet is not in the store \(the snapshot (\S+)\)", verified))
+        named_by_verify = set(re.findall(r"_data/history\.parquet is not in the store \(the folder (\S+), which has no record\)", verified))
         said = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "0"]).output
         named_by_gc = set(re.findall(r"Nothing of acme/rates is removed: its snapshot (\S+) lacks", said))
         assert named_by_verify == {made[0].kept.folder.name}  # the folder that has gone, where the file was

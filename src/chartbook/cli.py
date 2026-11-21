@@ -4318,6 +4318,14 @@ def _files_it_lacks(the_store, record, asked: dict):
     A store that cannot say (another kind, or a record it cannot follow
     now) says nothing here, and `store verify` is what checks a store.
 
+    Both numbers are of the names the snapshot's record lists: a
+    snapshot's files are its names. The store asks about a place once and
+    says it once, under one of the names the record has for it; where a
+    record keeps two names at one place (a store of ChartBook 0.5 kept
+    two files of the same bytes once) and that place is missing, the
+    snapshot lacks two files, and that is the number here. `store verify`
+    says the place once, since its lines are of places in the store.
+
     :param asked: What the disk has said of each file of this store so
         far in the listing, which the store adds to: twenty snapshots
         that name the same files ask about each file once, not twenty
@@ -4332,8 +4340,20 @@ def _files_it_lacks(the_store, record, asked: dict):
         return None
     if not holes:
         return None
-    named = {file.path for asset in record.assets for file in asset.files} | set(holes)
-    return len(holes), len(named)
+    names_at: dict = {}  # each place the record keeps a file at, with every name it has for the file there
+    places_of: dict = {}  # and where each name is kept
+    for asset in record.assets:
+        for file in asset.files:
+            names_at.setdefault(file.location, set()).add(file.path)
+            places_of.setdefault(file.path, set()).add(file.location)
+    lacked: set = set()
+    for hole in holes:
+        if hole in places_of:
+            for place in places_of[hole]:
+                lacked |= names_at[place]
+        else:
+            lacked.add(hole)  # what its record names without saying where it is: no place, and one file
+    return len(lacked), len(lacked | set(places_of))
 
 
 def _stores_to_list(store_name):
@@ -5086,7 +5106,12 @@ def store_verify():
 
     Ahead of the lines for each file comes what they add up to: how many
     files of how many snapshots, and one line for each such snapshot,
-    with its pipeline, its folder's name and how many files.
+    with its pipeline, its folder's name and how many files. A folder
+    files are missing from that has no record is said to be that, not a
+    snapshot: `chartbook store ls` names the snapshots that lack them.
+
+    A record that cannot be read is named on a line of its own, with why:
+    nothing of its snapshot is checked.
 
     Examples:
         chartbook store verify
@@ -5109,13 +5134,16 @@ def store_verify():
     for problem in problems:
         click.echo(problem.format())
     if problems:
-        # By object: one that two snapshots have each lost a file of is said twice above, and is one object
-        wrong = len({problem.content_hash for problem in problems})
-        click.echo(
-            f"\n{wrong} of {total} object(s) in {the_store} are "
-            f"not what their names say.",
-            err=True,
-        )
+        # A record that cannot be read is no object, and its snapshot's objects are not among those counted: said by itself
+        unread = sum(1 for problem in problems if getattr(problem, "of_record", False))
+        closing = []
+        if unread < len(problems):
+            # By object: one that two snapshots have each lost a file of is said twice above, and is one object
+            wrong = len({problem.content_hash for problem in problems if not getattr(problem, "of_record", False)})
+            closing.append(f"{wrong} of {total} object(s) in {the_store} are not what their names say.")
+        if unread:
+            closing.append(f"{unread} snapshot record(s) in {the_store} cannot be read.")
+        click.echo("\n" + " ".join(closing), err=True)
         raise SystemExit(1)
     click.echo(f"{the_store}: OK ({total} object(s))")
 
@@ -5131,9 +5159,12 @@ def _wrong_by_snapshot(the_store, problems) -> list:
     a folder may have no record now, as one cleared in a store of
     ChartBook 0.5, or a complete snapshot that has gone and that
     increments still name: its files are counted under its name all the
-    same, and its pipeline is the one whose folder it is in. Each line has
-    the pipeline, the folder's name and how many files, a pipeline's
-    folders together, oldest first. What is wrong outside any snapshot (an
+    same, its pipeline is the one whose folder it is in, and its line says
+    that it is a folder with no record, as each of its files' lines does
+    (``store ls`` names the snapshots whose records name those files, and
+    this folder is none of them). Each line has the pipeline, the folder's
+    name and how many files, a pipeline's folders together, oldest first.
+    What is wrong outside any snapshot (a record that cannot be read, an
     object no pipeline owns, a folder that is not read) has its own line
     below and none here; with nothing wrong in any snapshot there is
     nothing to say.
@@ -5141,9 +5172,12 @@ def _wrong_by_snapshot(the_store, problems) -> list:
     from chartbook.store import StoreError
 
     counts: dict = {}
+    no_record: set = set()
     for problem in problems:
         if getattr(problem, "of_snapshot", False):
             counts[problem.path] = counts.get(problem.path, 0) + 1
+            if getattr(problem, "no_record", False):
+                no_record.add(problem.path)
     if not counts:
         return []
     # A pipeline's ID is in its records: a folder that has none is named by a record in a folder of its pipeline
@@ -5166,7 +5200,8 @@ def _wrong_by_snapshot(the_store, problems) -> list:
         f"By snapshot, and then each file:"
     ]
     for folder in sorted(counts, key=lambda folder: (pipeline(folder), folder.name)):
-        lines.append(f"  {_printable(pipeline(folder))}  {folder.name}  {counts[folder]:,} file(s)")
+        named = f"{folder.name} (a folder with no record)" if folder in no_record else folder.name
+        lines.append(f"  {_printable(pipeline(folder))}  {named}  {counts[folder]:,} file(s)")
     return lines
 
 

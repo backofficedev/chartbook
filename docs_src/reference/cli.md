@@ -1438,7 +1438,7 @@ A complete snapshot's folder holds every file of its version; an increment's hol
 What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.
 ```
 
-It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. The disk is asked about each file once, however many snapshots name it. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
+It is asked by sizes, and nothing is read: a file that is there at its size with other bytes is for `chartbook store verify` to find. The disk is asked about each file once, however many snapshots name it. Both numbers count the names the snapshot's record lists, so where a record keeps two names at one place (ChartBook 0.5 kept two files of the same bytes once) and that place is missing, the snapshot lacks two files, while `chartbook store verify` says that place once, its lines being of places in the store: the two commands' numbers differ only there. An increment lacks a file that is missing from either of its two folders, so a file gone from a complete snapshot is one that each increment on it lacks too.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
@@ -1472,7 +1472,21 @@ sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (th
 1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
 ```
 
-The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
+The first line counts every line of a file below it. A file is counted for the snapshot in whose folder it is, or is missing from: one that increments keep in the complete snapshot they build on is counted once, for that one. A folder that has no record now is counted under its name all the same: one that the `store gc` of ChartBook 0.5 cleared and that later snapshots keep files in, or a complete snapshot that has gone while increments still name it. Such a folder is no snapshot, and is said to be what it is, in its count and in each of its files' lines; the snapshots that lack those files are the ones whose records name them there, which `chartbook store ls` says:
+
+```console
+$ chartbook store verify
+2 file(s) of 1 snapshot(s) are missing or are not what their records say. By snapshot, and then each file:
+  acme/parted  2026-10-30T053455Z_9b1e22d7a0c4 (a folder with no record)  2 file(s)
+sha256:9a41c7e2…: _data/parts/year=2020/part-0.parquet is not in the store (the folder 2026-10-30T053455Z_9b1e22d7a0c4, which has no record)
+sha256:9a41c7e2…: _data/parts/year=2021/part-0.parquet is not in the store (the folder 2026-10-30T053455Z_9b1e22d7a0c4, which has no record)
+
+1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
+```
+
+**A record that cannot be read is named**, on a line of its own under the counts: the record, and why it is not read (it is not JSON, as a file is that a sync has brought part of; or what the reader of records will not take of it, such as a schema of another version). Nothing of its snapshot is checked, it is in no count of files, and the last line says how many such records there are: `1 snapshot record(s) in /Users/x/.chartbook/store cannot be read.` `chartbook store migrate` sends a person here for a record it cannot follow.
+
+What is wrong outside any snapshot (an object no pipeline owns) has its line and no count.
 
 A file that snapshots kept as increments keep in the complete snapshot they build on is one place in the store: it is read once and said once, under the name it has in that folder whatever name each increment has for it, with that snapshot's name, and with how many of them keep it there:
 
