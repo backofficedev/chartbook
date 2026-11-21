@@ -708,7 +708,8 @@ were moved on copies (the note below the rules), by three rules:
    file outside its pipeline's folder; a snapshot being made; two names the disk does not tell
    apart; a folder that may not be written, the old folders at the top among them, which are
    moved themselves; a link at any depth on the way to a file a record names; a locked file; a
-   file where the move makes a folder; too little room for the copies; a path too long. A file
+   file that must be copied and that this user may not read; a file where the move makes a
+   folder; too little room for the copies; a path too long. A file
    that is missing does not stop it: it was so before, it is said first, by snapshot, and its
    record goes on naming it. Nor does one to be copied that has its size and not the bytes its
    record says: it is copied as it is, and the last lines name it. Nor does a folder with files
@@ -781,6 +782,41 @@ rename looks first, so that it never lands on a file that came to be there meanw
 any depth on the way to a file a record names, a locked file, and an old folder that may not be
 written are found before the first step; only a plain file is taken, under the name the disk has
 for it; and a copy is made only from a file that has its size.
+
+A second reviewer moved 1,600 drawn stores and lost nothing that could be read, and found one
+way the move destroyed a file, older than these changes: a copy and a record were written first
+as `<name>.moving` beside where they go, and whatever was at that name was removed as a
+temporary the move had left, so a pipeline that had both `x.parquet` and `x.parquet.moving` lost
+the second. So: **every file the move writes is written first in a folder of its own,
+`_chartbook/moving/`, under a name made from a hash of where it goes; what is in that folder is
+the move's to remove, and nothing anywhere else is ever taken for a temporary of its own.** And
+these were added: a copy is made from the old place where the whole file is there, and from the
+new tree only where it is not (a file of its size and other bytes may be in the new tree, brought
+by a sync of a move made elsewhere); a file that must be copied and that this user may not read
+is found before the first step; a missing file is told by its pipeline, its snapshot and its
+path, since two pipelines may have snapshots of one folder name; a file that is where it goes
+and at the old place too is not counted as moved by rename; a store of 0.5 with this version's
+folders beside it and no journal is told, before the question, to wait for a sync that may
+still be bringing another machine's move; and what the journal carries is added to without
+searching it, so that the command's time grows with the files and not with their square.
+
+It also found that, in a store a sync has part brought from a move made elsewhere, a move
+stopped and run again could end in another tree than an uninterrupted one, both whole (6 of 150
+drawn stores). Two rules ended that on all 150: a file at its old place whose own place in the
+new trees is taken is copied from and goes aside, and is never renamed into another snapshot;
+and which file of the newest snapshot an older one names is the first in the newest one's
+record that the move makes whole, by rename or by copy alike.
+
+One thing is known and left. The move goes by sizes and reads nothing, so a file of the right
+size in the new trees is the file to it, as one that a move cut short put there is. Where its
+bytes are others (a copy that set the file's length first and stopped), and the place a
+snapshot's bytes were to be taken from does not hold them, a copy is made from it, though
+another old place may hold the right bytes; and with the second of the two rules above an older
+snapshot that had the file may be handed the newest one's copy of it (2 of 600 stores drawn
+with any file at any place the move writes to; none of 300 drawn with what a sync brings of a
+real move). The copy is hashed as it is written and the last lines name it, the file at the old
+place goes aside and not away, and `chartbook store verify` says which files are not what their
+records say.
 
 - **A file changes folder by a rename and is not read; a file that two folders must each hold is
   copied.** The copies are a file that several older snapshots share and the newest lacks, a

@@ -86,6 +86,14 @@ And the move takes a file only as the store's reader would find it: by the
 name the disk has for it where a sync wrote the name in the other of
 Unicode's forms (:func:`chartbook.store.on_disk`), only a plain file, and
 through no link at any depth (:func:`check` stops for one).
+
+It goes by sizes and reads nothing but what it copies. A file of its size
+where it goes is the file, as one that a move cut short put there is; so
+a copy is made from the old place where the whole file is there and stays
+(a file has taken the place it goes to), and from the new tree only where
+it is not. A file of the right size and other bytes in the new trees is
+not told from the file: a copy of it is hashed as it is written, and the
+last lines name it.
 """
 
 from __future__ import annotations
@@ -182,7 +190,10 @@ class Plan:
         pipelines, snapshots: How many pipelines and snapshots are moved.
         complete, by_pins, increments: How many snapshots become complete,
             how many of those a pin made, and how many become increments.
-        renamed, renamed_bytes: The files that change folder by rename.
+        renamed, renamed_bytes: The files that change folder by rename, those
+            that a run cut short has renamed already among them. A file that
+            is where it goes and at the old place too is none: it is not
+            moved (*in_place*).
         copied, copied_bytes: The files copied, which are read.
         copied_into: The snapshots that are given the copies, each as
             ``(pipeline's folder, snapshot's folder, how many files, their
@@ -921,8 +932,11 @@ def check(root: Path, found: Plan) -> None:
     """Stop before anything moves, saying what and what to do (:class:`MoveError`).
 
     Whatever was true before a move and would stop it half way is found
-    here. A file a record names that is missing, or of another size, is no
-    such thing: it was so before, and is counted.
+    here: a link, a snapshot being made, a file where a folder is made, a
+    folder that may not be written, a file that must be copied and may not
+    be read, a locked file, a path too long, two names the disk does not
+    tell apart, too little room. A file a record names that is missing, or
+    of another size, is no such thing: it was so before, and is counted.
     """
     root = Path(root)
     started = journal_of(root)
