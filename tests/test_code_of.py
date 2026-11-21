@@ -160,6 +160,102 @@ class TestTheOtherOfUnicodesForms:
         assert snapshot.code_of(directory).subdirectory == f"{listed}/pipe"
 
 
+#: What git says of a repository on a network share (and on a drive letter mapped to one), on Windows: it ends 128
+ON_A_SHARE = (
+    "fatal: detected dubious ownership in repository at '//server/share/work/rates'\n"
+    "'//server/share/work/rates' is owned by:\n"
+    "\t(inconvertible) (S-1-5-21-1004336348-1177238915-682003330-1001)\n"
+    "but the current user is:\n"
+    "\tDESKTOP/someone (S-1-5-21-2127521184-1604012920-1887927527-1001)\n"
+    "To add an exception for this directory, call:\n"
+    "\n"
+    "\tgit config --global --add safe.directory '%(prefix)///server/share/work/rates'"
+)
+#: And of another user's repository on Linux or macOS
+ANOTHER_USERS = (
+    "fatal: detected dubious ownership in repository at '/srv/shared/work/rates'\n"
+    "To add an exception for this directory, call:\n"
+    "\n"
+    "\tgit config --global --add safe.directory /srv/shared/work/rates"
+)
+
+
+class TestARepositoryGitDoesNotTrust:
+    """Git reads no repository that another user owns until it is told to, and on Windows a network share is such a one.
+
+    Found on Windows: ``… is not in a git repository. A snapshot is
+    labelled with the commit it was built from, so only a pipeline that is
+    in git has any``, of a pipeline that is in git, with nothing to do
+    about it. Git's own refusal stands in for a share here: what
+    ``code_of`` runs git with fails with git's words.
+    """
+
+    @staticmethod
+    def _refusing(monkeypatch, words: str) -> None:
+        def refuse(directory, *arguments, **options):
+            raise SnapshotError(words)  # as snapshot._git raises what git said when it fails
+
+        monkeypatch.setattr(snapshot, "_git", refuse)
+
+    @pytest.mark.parametrize("words, repository, trusted", [
+        (ON_A_SHARE, "//server/share/work/rates", "%(prefix)///server/share/work/rates"),
+        (ANOTHER_USERS, "/srv/shared/work/rates", "/srv/shared/work/rates"),
+    ])
+    def test_it_is_said_with_the_command_that_makes_git_trust_it(self, work, monkeypatch, words, repository, trusted):
+        from chartbook.missing import _quoted
+
+        directory = _folder(work / "rates")
+        self._refusing(monkeypatch, words)
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(directory)
+        assert str(refused.value) == (
+            f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it is "
+            f"on a network share, and git reads no such repository until it is told to. To have git trust it, run "
+            f"`git config --global --add safe.directory {_quoted(trusted)}`, and then this again"
+        )
+        assert "is not in a git repository" not in str(refused.value)
+
+    def test_the_folder_in_the_command_is_quoted_for_this_systems_shell(self, work, monkeypatch):
+        """A share's folder as git writes it has a ``%`` and brackets; one with a space is one word of the command all the same."""
+        from chartbook.missing import _quoted
+
+        self._refusing(monkeypatch, (
+            "fatal: detected dubious ownership in repository at '/srv/shared work/rates'\n"
+            "To add an exception for this directory, call:\n"
+            "\n"
+            "\tgit config --global --add safe.directory '/srv/shared work/rates'"
+        ))
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(_folder(work / "rates"))
+        assert f"`git config --global --add safe.directory {_quoted('/srv/shared work/rates')}`" in str(refused.value)
+        assert _quoted("/srv/shared work/rates") != "/srv/shared work/rates"
+
+    def test_without_gits_line_for_it_the_repository_git_names_is_the_folder(self, work, monkeypatch):
+        self._refusing(monkeypatch, "fatal: detected dubious ownership in repository at '/srv/shared/work/rates'")
+        with pytest.raises(SnapshotError, match=r"run `git config --global --add safe\.directory /srv/shared/work/rates`, and then this again$"):
+            snapshot.code_of(_folder(work / "rates"))
+
+    def test_a_folder_in_no_repository_is_still_said_to_be_in_none(self, work):
+        """Git itself, of a folder outside any repository: the message is as it was."""
+        directory = work / "plain"
+        directory.mkdir()
+        with pytest.raises(SnapshotError) as refused:
+            snapshot.code_of(directory)
+        assert str(refused.value) == (
+            f"{directory} is not in a git repository. A snapshot is labelled with the commit it was built from, so only a "
+            f"pipeline that is in git has any"
+        )
+
+    def test_any_other_failure_of_git_keeps_that_message_too(self, work, monkeypatch):
+        directory = _folder(work / "rates")
+        self._refusing(monkeypatch, "fatal: not a git repository (or any of the parent directories): .git")
+        with pytest.raises(SnapshotError, match="is not in a git repository"):
+            snapshot.code_of(directory)
+        self._refusing(monkeypatch, "git could not be run: [Errno 2] No such file or directory: 'git'")
+        with pytest.raises(SnapshotError, match="is not in a git repository"):
+            snapshot.code_of(directory)
+
+
 class TestARepositoryWhoseFilesAreElsewhere:
     def test_a_folder_git_does_not_place_under_its_top_is_said_in_words(self, work):
         """``core.worktree`` set to another folder: git answers with that folder as the top, and the pipeline's is not under it."""

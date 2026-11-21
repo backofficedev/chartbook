@@ -950,6 +950,44 @@ def _as_the_disk_names_it(path: Path, listings: dict) -> Path:
     return named
 
 
+def _not_trusted_by_git(directory: Path, said: str) -> Optional[str]:
+    """What to say where git refuses to read a repository that is there, because it does not trust it; None for any other failure.
+
+    Git reads no repository whose folder is another user's unless it is
+    told to (``safe.directory``), and on Windows a folder on a network
+    share, or on a drive letter mapped to one, is such a folder whoever
+    made it. Git's own words say so: ``fatal: detected dubious ownership
+    in repository at '//server/share/…'``, then the ``git config`` line
+    that adds the exception. That is no folder outside any repository,
+    and the person has one command to run: git's own, with the folder as
+    git writes it there (``%(prefix)///server/share/…`` for a share),
+    quoted for this system's shell. Without that line, the repository git
+    names; without that either, the folder asked of.
+
+    :param said: What git said as it failed.
+    """
+    if "dubious ownership" not in said and "safe.directory" not in said:
+        return None
+    import shlex
+
+    from chartbook.missing import _quoted  # which imports this module
+
+    found = re.search(r"detected dubious ownership in repository at '([^'\n]+)'", said)
+    repository = found.group(1) if found else str(directory)
+    folder = repository
+    command = re.search(r"git config --global --add safe\.directory[ \t]+(\S.*)", said)
+    if command:
+        try:
+            (folder,) = shlex.split(command.group(1).strip())  # as git quotes it, for a POSIX shell
+        except ValueError:
+            folder = repository
+    return (
+        f"git does not trust the repository that {directory} is in ({repository}): another user owns it, or it "
+        f"is on a network share, and git reads no such repository until it is told to. To have git trust it, run "
+        f"`git config --global --add safe.directory {_quoted(folder)}`, and then this again"
+    )
+
+
 def code_of(directory: Union[str, Path]) -> Code:
     """Say where a pipeline's folder is in git, and at which commit.
 
@@ -962,16 +1000,21 @@ def code_of(directory: Union[str, Path]) -> Code:
     composed form whichever the disk has.
 
     :raises SnapshotError: If there is no such folder, it is not in a git
-        repository, the repository has no commit yet, or git gives a top
-        the folder is not under (a repository whose ``core.worktree``
-        names another folder).
+        repository, git does not trust the repository it is in (another
+        user's, or on a network share: the message has the command that
+        makes git trust it), the repository has no commit yet, or git
+        gives a top the folder is not under (a repository whose
+        ``core.worktree`` names another folder).
     """
     directory = Path(directory).resolve()
     if not directory.is_dir():
         raise SnapshotError(f"there is no folder at {directory}")
     try:
         top = Path(_git(directory, "rev-parse", "--show-toplevel").strip()).resolve()
-    except SnapshotError:
+    except SnapshotError as error:
+        not_trusted = _not_trusted_by_git(directory, str(error))
+        if not_trusted is not None:
+            raise SnapshotError(not_trusted) from None
         raise SnapshotError(
             f"{directory} is not in a git repository. A snapshot is labelled "
             f"with the commit it was built from, so only a pipeline that is in "
