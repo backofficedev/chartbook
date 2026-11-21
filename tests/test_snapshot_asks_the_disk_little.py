@@ -45,11 +45,11 @@ from chartbook.cli import main
 from chartbook.store import FolderStore
 from tests.fixtures import _git, kept_out_of_home, remove_tree
 
-#: The wrappers count calls of ``os.stat`` and the like. Before Python 3.12 ``pathlib`` asks the disk through
+#: The wrappers count calls of ``os.stat`` and the like. On Python 3.10 ``pathlib`` asks the disk through
 #: functions it bound when it was imported, which a patch of ``os.stat`` does not reach: nothing is counted there
 counted = pytest.mark.skipif(
-    sys.version_info < (3, 12),
-    reason="a patch of os.stat does not reach pathlib's own methods before Python 3.12, so the questions cannot be counted",
+    sys.version_info < (3, 11),
+    reason="a patch of os.stat does not reach pathlib's own methods on Python 3.10, so the questions cannot be counted",
 )
 
 #: The files of the table at the first snapshot, for the two tables counted, and the files added before the second.

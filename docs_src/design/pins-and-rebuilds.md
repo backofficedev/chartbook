@@ -593,6 +593,15 @@ page had only the two phrases:*
   before may be another branch's, and its rows are then another's. A first snapshot says nothing,
   and "the same as the last one" is what `chartbook snapshot` has always said of the same bytes:
   `No new snapshot: the same bytes and the same pins as the one made …`.
+- **What `snapshot` reads for it.** Nothing, where the two records already say it. Otherwise the
+  new table, every file of it: in the pipeline's folder, where its rows were hashed a moment
+  before, for as long as each file there has the size and the time it had when it was put and
+  the folder has gained and lost none. They are then the snapshot's bytes, and what is found is
+  remembered as what its file gives. Where the folder has changed since (a build under way
+  again), the store's copy is read, as `update` reads it: the line is never of bytes that are
+  not in the snapshot. *Decided 2026-11-21, after a measurement:* read back from a store in a
+  synced folder, the table was the largest part of what a snapshot of a table in many files
+  waited for ({doc}`snapshots-and-increments`, "What it costs").
 - **A table with no `date_col`** has nothing to tell a new row from a changed one by: `its rows
   changed (2 rows before, 3 now); it has no date column to tell new rows by`. Its two records, of
   one hash each, say that between them, and nothing is read.
