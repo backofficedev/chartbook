@@ -28,10 +28,12 @@ Wrote chartbook.lock.
 
 **`chartbook run` is stricter.** It fails when its build did not write something `chartbook.toml` declares (below, "`chartbook run` builds, and looks for what it was to make"). A manifest that declares an output its build does not make yet will stop the run: take the entry out, or make it.
 
+**`chartbook snapshot` is held against a build.** It stops where what is committed, or what is on disk, is not what the last `chartbook run` here built from and left (below, "a snapshot is held against what `chartbook run` built"). A `dodo.py`, a Makefile or a CI file that built some other way and then ran `chartbook snapshot` stops there: build with `chartbook run`, or have it run `chartbook snapshot --as-is`.
+
 In order:
 
 1. Upgrade: `pip install -U chartbook`, or `uv add "chartbook>=0.6.0"` in a uv project, where everyone else then gets it at their next `uv sync`.
-2. In each pipeline that others pin: `chartbook snapshot`. The same commit and the same files make one new snapshot, which records each dataframe's rows, and the command says that is why it was made.
+2. In each pipeline that others pin: `chartbook run`, and then `chartbook snapshot`. The same commit and the same files make one new snapshot, which records each dataframe's rows, and the command says that is why it was made. The run comes first because a snapshot is now held against what `chartbook run` built (below): with nothing to rebuild it takes a moment. Or `chartbook snapshot --as-is`, which takes the files as they are.
 3. In each pipeline that pins them: `chartbook pin --update`, which says `already pinned`, since no file changed, and then what did: `1 dataframe has its rows pinned now, as well as its file: a build of someone's own that holds the same rows meets the pin.` Commit `chartbook.lock` and `chartbook.toml` together.
 4. A script that ran `chartbook pin --frozen` runs `chartbook pin --check` (below), and one that ran `chartbook update` runs `chartbook pin --update`.
 5. A CI file, a `dodo.py` or a Makefile that ran `chartbook check` runs `chartbook run --check`, without `--skip-outputs` (below).
