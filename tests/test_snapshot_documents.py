@@ -100,7 +100,7 @@ class TestTheIndexOfTheVersion:
         (pipeline / "chartbook.toml").write_text(tomli_w.dumps(broken), encoding="utf-8", newline="\n")
         _git(pipeline, "commit", "--quiet", "-am", "A chart with no dataframe")
         monkeypatch.chdir(pipeline)
-        result = CliRunner().invoke(main, ["snapshot"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is"])
         assert result.exit_code == 0, result.output
         assert "  index not recorded: Chart 'curve' has no 'dataframe' key" in result.output
 
@@ -270,7 +270,7 @@ class TestWhatTheReviewFound:
         _git(pipeline, "add", "-A")
         _git(pipeline, "commit", "--quiet", "-m", "A link")
         monkeypatch.chdir(pipeline)
-        result = CliRunner().invoke(main, ["snapshot"])
+        result = CliRunner().invoke(main, ["snapshot", "--as-is"])
         assert result.exit_code == 0, result.output
         assert f"  document not kept: docs_src/site/linked.md ({snapshot.A_LINK})" in result.output
 

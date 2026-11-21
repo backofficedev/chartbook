@@ -336,7 +336,8 @@ Said plainly, since the day with one command hid each of these *(found by review
 
 ### A snapshot is of what a run built
 
-*Decided 2026-11-20 by the maintainer: "Yes. We need to do this." Not built yet.* Proposed by
+*Decided 2026-11-20 by the maintainer: "Yes. We need to do this." Built the same day
+(`chartbook/built.py`).* Proposed by
 Claude as a note of what a run built from; the maintainer added what it built ("Can chartbook
 run always hash the stuff at the end and keep a note of those hashes somewhere? Then when
 chartbook snapshot happens it can verify?"), and chose where the note is kept. *The design was
@@ -486,6 +487,17 @@ What is settled:
 - **The list of what is not in a store calls a folder "built already" only where this check
   would pass,** and gives it `chartbook snapshot`; otherwise `chartbook run --snapshot`.
   *(From the review: its `chartbook snapshot` lines would have been refused.)*
+
+What building it settled:
+
+- **Where nothing at all is built, the snapshot says so in its own words,** naming each thing
+  that is not built, as it did: that is more use than "has not been built by `chartbook run`".
+- **The list gives `chartbook snapshot --as-is` for a pipeline that nothing builds and whose
+  files are not committed,** where it is known: no other command can make that snapshot.
+- **A cache that cannot be written keeps no note,** and the run says so in a line, and builds.
+  A run that makes its own snapshot holds it against the note it has in hand.
+- **Tests of other things that typed `chartbook snapshot` over files written by hand type
+  `--as-is`:** fifty-four of them, in seventeen files.
 
 What it costs:
 
@@ -1025,4 +1037,4 @@ changes.
     {doc}`snapshots-and-increments`.
 12. A snapshot is of what a run built: a run leaves a note, and `chartbook snapshot` holds what
     is committed and what is on disk against it; `--as-is`. *Decided 2026-11-20; this page
-    first.*
+    first. Built 2026-11-20.*

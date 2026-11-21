@@ -1160,6 +1160,10 @@ def said(
         # One with no build script commits what it declares, and one that is built has its files: a
         # snapshot is all there is to make, and a build that may take an hour is not run again
         make = "chartbook run --snapshot" if line.builds and not built else "chartbook snapshot"
+        if not line.builds and line.folder is not None and not _would_be_held(line.folder, line.pipeline):
+            # Nothing builds it, and what it declares is not all committed: its files are taken as they
+            # are, which is typed (chartbook.built). A snapshot without that would be refused
+            make = "chartbook snapshot --as-is"
         unknown = line.unknown
         in_own = listing.top is not None and line.top is not None and _same(line.top, listing.top)
         if line.absent:
@@ -1274,13 +1278,31 @@ def said(
     return lines
 
 
+def _would_be_held(folder: Path, pipeline: str) -> bool:
+    """Whether `chartbook snapshot` of a folder would be made as it is typed, and not refused for files that no build left."""
+    from chartbook import built
+
+    try:
+        built.check(folder, built.pipeline_of(folder, pipeline))
+    except built.NotHeld:
+        return False
+    except (OSError, ValueError):
+        pass  # not known: a folder that is not there yet, a manifest that cannot be read
+    return True
+
+
 def _is_built(folder: Path) -> bool:
-    """Whether a folder has nothing uncommitted, has on disk everything its manifest declares with a path, and declares something a snapshot holds."""
-    from chartbook import run
+    """Whether a folder has nothing uncommitted, has on disk everything its manifest declares with a path, declares something a snapshot holds, and is what the last build here ran on and left.
+
+    The last, so that the `chartbook snapshot` a list gives for it is one
+    that is made, and not one that is refused (:mod:`chartbook.built`).
+    """
+    from chartbook import built, run
 
     try:
         return (
             run._declares_what_a_snapshot_holds(folder) and not run.unwritten(folder) and not snapshot.uncommitted(folder)
+            and built.would_hold(folder, built.pipeline_of(folder))
         )
     except Exception:  # noqa: BLE001 - a manifest that cannot be read is not known to be built
         return False

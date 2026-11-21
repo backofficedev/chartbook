@@ -77,7 +77,7 @@ def test_a_short_folder_is_not_warned_about(windows, monkeypatch):
 
 def test_the_command_says_it_and_no_traceback(windows, pipeline, tmp_path, monkeypatch):
     monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path.resolve() / ("deep" * 50) / "store"))
-    said = CliRunner().invoke(main, ["snapshot", "--project-dir", str(pipeline)])
+    said = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(pipeline)])
     assert said.exit_code == 1 and "Traceback" not in said.output
     assert "Windows refuses a path of 260 or more" in said.output
 

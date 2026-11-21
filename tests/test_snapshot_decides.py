@@ -624,7 +624,7 @@ def _everything_differs(folder: Path, text: str) -> None:
 
 
 def _snapshot(*arguments: str):
-    return CliRunner().invoke(main, ["snapshot", "--no-gc-reminder", *arguments])
+    return CliRunner().invoke(main, ["snapshot", "--as-is", "--no-gc-reminder", *arguments])
 
 
 def _made(result) -> list:

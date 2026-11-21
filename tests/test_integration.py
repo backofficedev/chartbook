@@ -360,14 +360,18 @@ class TestExampleProjects:
         assert (example_path / "docs" / "index.html").exists()
 
     @staticmethod
-    def _snapshot(pipeline_path: Path, env: dict):
+    def _snapshot(pipeline_path: Path, env: dict, as_is: bool = False):
         """Declare a pipeline's build ready, as its owner would.
+
+        :param as_is: For files that `doit` built by hand, or that were
+            written by hand: `chartbook snapshot` holds what is on disk
+            against the last `chartbook run`, and these are no run's.
 
         A snapshot needs everything in the pipeline's folder to be committed,
         so this fails if the example has been edited and not committed.
         """
         result = subprocess.run(
-            ["chartbook", "snapshot"],
+            ["chartbook", "snapshot", *(["--as-is"] if as_is else [])],
             cwd=pipeline_path,
             capture_output=True,
             text=True,
@@ -404,7 +408,7 @@ class TestExampleProjects:
                 env=env, encoding="utf-8", errors="replace"
             )
             assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
-        self._snapshot(yield_curve_path, env)
+        self._snapshot(yield_curve_path, env, as_is=True)
 
         self._clean_example_dirs(example_path)
         result = subprocess.run(
@@ -474,7 +478,7 @@ class TestExampleProjects:
 
             # Its owner makes a snapshot. Now this pipeline is told, and stays put.
             # One table of it was rewritten and the rest is as it was: kept as an increment
-            assert said_made(self._snapshot(yield_curve_path, env).stdout, INCREMENT)
+            assert said_made(self._snapshot(yield_curve_path, env, as_is=True).stdout, INCREMENT)
             pin = run("chartbook", "pin")
             assert "changed upstream" in pin.stdout, pin.stdout + pin.stderr
             assert Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()) == pinned_path
@@ -615,8 +619,8 @@ class TestExampleProjects:
         try:
             snapshot_env = self._get_env_with_pythonpath()
             snapshot_env["CHARTBOOK_STORE"] = str(tmp_path / "store")
-            self._snapshot(fred_charts_path, snapshot_env)
-            self._snapshot(rate_forecast_path, snapshot_env)
+            self._snapshot(fred_charts_path, snapshot_env, as_is=True)
+            self._snapshot(rate_forecast_path, snapshot_env, as_is=True)
 
             # Now render the catalog's site
             result = subprocess.run(
