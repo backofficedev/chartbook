@@ -700,6 +700,59 @@ class TestStoreLs:
             "A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.",
         ]
 
+    @staticmethod
+    def _with_a_folder_asset_and_one_inside_it(rates: Path) -> None:
+        """``_output`` declared as one asset and ``_output/tables`` as another: the chart and both tables are each of two assets."""
+        (rates / "_output" / "tables").mkdir()
+        for name in ("a.csv", "b.csv"):
+            (rates / "_output" / "tables" / name).write_text("day,rate\n" + "1,4.0\n" * 400, encoding="utf-8", newline="\n")
+        (rates / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "acme/rates"},
+                "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
+                "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "treasury", "docs": "d"}},
+                "files": {"output": {"path": "./_output", "docs": "d"}, "tables": {"path": "./_output/tables", "docs": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        _git(rates, "add", "-A")
+        _git(rates, "commit", "--quiet", "-m", "The output folder, and the tables in it")
+
+    def test_a_file_that_several_assets_name_is_counted_once_in_the_size(self, rates, store):
+        """Found on a real store: "complete   58.1 GB here", of a snapshot whose folder holds 25.9 GiB. The pipeline declares ``_output`` as one asset and a folder inside it as another, and the size was summed over every entry of every asset.
+
+        A size in the listing is of distinct files: the folder's on disk,
+        and what the snapshot's own closing line said when it was made."""
+        self._with_a_folder_asset_and_one_inside_it(rates)
+        report = snapshot.make(rates, store=store, made_at=FIRST)
+        folder = _folder_of(report.snapshot)
+        on_disk = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file() and p.name != "snapshot.json")
+        kept = store_module.read_kept_record(report.snapshot.path)
+        entries = [(file.path, file.size_bytes) for asset in kept.assets for file in asset.files]
+        assert len(entries) == len(set(entries)) + 3  # the chart and the two tables, each under two assets
+        assert sum(size for _, size in entries) > on_disk == report.kept.size_bytes  # what was summed; and the closing line's
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.output.splitlines()[1] == (
+            f"  {folder.name}  2026-11-16 09:15 UTC  {report.snapshot.commit[:7]}  complete   {_format_bytes(on_disk)} here"
+        )
+
+    def test_nor_twice_among_the_files_an_increment_keeps_in_the_one_it_builds_on(self, rates, store):
+        """The count beside the size, of an increment: each file it keeps in the complete snapshot it builds on, once."""
+        self._with_a_folder_asset_and_one_inside_it(rates)
+        first = snapshot.make(rates, store=store, made_at=FIRST)
+        _table(rates, 5)  # the table changes, and nothing under _output does
+        second = snapshot.make(rates, store=FolderStore(store.root), made_at=SECOND)
+        assert second.kept.builds_on == _folder_of(first.snapshot).name
+        folder = _folder_of(second.snapshot)
+        on_disk = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file() and p.name not in ("snapshot.json", "INCREMENT.txt"))
+        there = second.kept.files - second.kept.own_files  # as its closing line counted them: "N of M files"
+        (line,) = [line for line in CliRunner().invoke(main, ["store", "ls"]).output.splitlines() if line.split()[:1] == [folder.name]]
+        assert line == (
+            f"  {folder.name}  2026-11-19 14:02 UTC  {second.snapshot.commit[:7]}  increment  {_format_bytes(on_disk)} here, "
+            f"{there} file(s) in {_folder_of(first.snapshot).name}"
+        )
+        assert there >= 3 and on_disk == second.kept.own_bytes
+
 
 class TestExportAndImport:
     def test_an_export_is_laid_out_as_a_store_and_is_taken_in_by_another(self, rates, store, work, monkeypatch):

@@ -4202,7 +4202,8 @@ def store_ls(pipeline, store_name):
     are in that one's folder. A snapshot is removed with `chartbook store
     gc`, never by hand.
 
-    The size is the one a snapshot's record gives. Where files its record
+    The size is the one a snapshot's record gives, each file counted once
+    however many of its assets name it. Where files its record
     names are not in the store, or not at their size, its line says how
     many of how many it lacks, and `chartbook store verify` names each.
 
@@ -4264,19 +4265,13 @@ def store_ls(pipeline, store_name):
             if record.pipeline != current:
                 current = record.pipeline
                 click.echo(f"{current} ({sum(1 for r in found if r.pipeline == current)} snapshot(s))")
-            here = elsewhere = 0
-            for asset in record.assets:
-                for file in asset.files:
-                    if file.location.is_relative_to(record.folder):
-                        here += file.size_bytes
-                    else:
-                        elsewhere += 1
+            here, elsewhere = _held_here_and_elsewhere(record)
             # Its record names files in another snapshot's folder: the one it builds on, or, as 0.5 wrote
             # one, any earlier ones
             kind = "increment" if record.increment or elsewhere else "complete"  # by what its record is
             said_shared = said_shared or bool(elsewhere)
             said_complete = said_complete or kind == "complete"
-            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in {record.builds_on or 'other folders'}"
+            note = "" if elsewhere == 0 else f", {elsewhere:,} file(s) in {record.builds_on or 'other folders'}"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
             # The size is its record's. What its record names and is not where it says, by sizes as every
@@ -4307,6 +4302,31 @@ def store_ls(pipeline, store_name):
         click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
     if said_lacking:
         click.echo("What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.")
+
+
+def _held_here_and_elsewhere(record) -> tuple:
+    """For `store ls`: how many bytes a snapshot's record says its own folder holds, and how many of its files are kept in another snapshot's folder.
+
+    A file is counted once, however many of the record's assets name it:
+    a pipeline that declares a folder as one asset and a folder inside it
+    as another lists the inner files under both, and the size summed over
+    every entry of every asset was twice the folder's (58.1 GB said of a
+    folder that holds 25.9). The size is of the places in its folder,
+    each once, which is what the folder holds on disk; the count is of the
+    names kept elsewhere, each once, as the snapshot's closing line counts
+    files (:func:`chartbook.snapshot._files_listed`).
+    """
+    here = 0
+    places: set = set()
+    elsewhere: set = set()
+    for asset in record.assets:
+        for file in asset.files:
+            if not file.location.is_relative_to(record.folder):
+                elsewhere.add(file.path)
+            elif file.location not in places:
+                places.add(file.location)
+                here += file.size_bytes
+    return here, len(elsewhere)
 
 
 def _files_it_lacks(the_store, record, asked: dict):
