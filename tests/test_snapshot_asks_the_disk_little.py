@@ -1785,9 +1785,12 @@ class TestTheLineIsAsItWas:
         assert plain.unused == []
         for plan in (swept, plain):
             assert len(plan.snapshots_delete) == 1 and not plan.pinned_delete
-        assert (plain.freed_bytes, plain.delete, plain.copies) == (swept.freed_bytes, swept.delete, swept.copies)
+        # The sweep's freed_bytes also count unused files; the reminder's plan (looks=False) does not
+        assert (plain.freed_bytes, plain.delete, plain.copies) == (
+            swept.freed_bytes - swept.unused_bytes, swept.delete, swept.copies
+        )
         assert _what_gc_would_clear(FolderStore(store.root)) == (
-            f"`chartbook store gc` would clear 1 snapshot(s), freeing {_format_bytes(swept.freed_bytes)}: older than "
+            f"`chartbook store gc` would clear 1 snapshot(s), freeing {_format_bytes(plain.freed_bytes)}: older than "
             f"{swept.keep_days:g} days, and neither pinned nor the newest of their pipeline."
         )
 
@@ -1795,7 +1798,7 @@ class TestTheLineIsAsItWas:
         _write_days(one_to_clear, 4, 1)
         result = CliRunner().invoke(main, ["snapshot", "--as-is", "--project-dir", str(one_to_clear)])
         assert result.exit_code == 0, result.output
-        assert "`chartbook store gc` would clear 1 snapshot(s), freeing " in result.output.splitlines()[-1]
+        assert "`chartbook store gc` would clear 1 snapshot(s) of acme/daily, freeing " in result.output.splitlines()[-1]
         assert result.output.splitlines()[-1].endswith(
             " Nothing is removed unless you ask (`--no-gc-reminder` silences this line)."
         )

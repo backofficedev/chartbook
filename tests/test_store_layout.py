@@ -1022,7 +1022,7 @@ class TestAStoreOf05IsReadAsItIs:
         (note,) = (old.root / "roots").iterdir()
         noted = json.loads(note.read_text(encoding="utf-8"))
         assert noted["lockfile"] == str(reader / "chartbook.lock") and noted["hashes"] == [second.content()["treasury"]]
-        assert noted["snapshots"] == [{"commit": second.commit, "made_at": SECOND}]
+        assert noted["snapshots"] == [{"commit": second.commit, "made_at": SECOND, "pipeline": "acme/rates"}]
         assert [root.lockfile for root in FolderStore(old.root).roots()] == [reader / "chartbook.lock"]
         frame = data.load("acme/rates:treasury", project_dir=reader).collect()
         assert frame.shape == (3, 2)
