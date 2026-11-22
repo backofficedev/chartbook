@@ -3468,7 +3468,13 @@ def snapshot(project_dir, deep, store_names, complete, as_is, no_gc_reminder):
 
     _echo_snapshot(report)
     _say_where_a_snapshot_shows()
-    _remind_of_gc(no_gc_reminder)
+    try:
+        from chartbook.snapshot import pipeline_in
+
+        which = pipeline_in(Path(project_dir) if project_dir else Path("."))
+    except Exception:  # noqa: BLE001 - a reminder never fails the command; without an ID, say of the whole store
+        which = None
+    _remind_of_gc(no_gc_reminder, pipeline=which)
 
 
 def _held_against_its_build(project_dir, here: str, deep: bool, store_names, complete: bool) -> bool:
@@ -4060,7 +4066,10 @@ def _run_script(
             on_pin=show_pins,
             force=force,
             snapshot=snapshot,
-            on_snapshot=lambda step, made: (_echo_snapshot(made, upstream=step.snapshot_first), None if step.snapshot_first else _remind_of_gc(no_gc_reminder)),
+            on_snapshot=lambda step, made: (
+                _echo_snapshot(made, upstream=step.snapshot_first),
+                None if step.snapshot_first else _remind_of_gc(no_gc_reminder, pipeline=step.id),
+            ),
             frozen=frozen,
             on_verify=_echo_frozen_report,
             remake=remake,
@@ -4404,16 +4413,18 @@ def _stores_to_list(store_name):
     return [("", the_store, True)]
 
 
-def _remind_of_gc(silenced: bool) -> None:
+def _remind_of_gc(silenced: bool, pipeline: "str | None" = None) -> None:
     """One line on stderr when `chartbook store gc` would clear snapshots; nothing is removed unless asked.
 
-    After `chartbook snapshot`, `chartbook run --snapshot` and `chartbook catalog build`, the two
+    After `chartbook snapshot`, `chartbook run --snapshot` and `chartbook catalog build`, the
     commands that grow the store or read all of it: a store that nobody
     ever clears grows without bound, and this is where a person learns the
-    command. The plan is the one gc makes, read-only, and made to look at
-    no file of the store: it goes by the records alone
-    (:func:`_what_gc_would_clear`); a store that cannot be read says
-    nothing, since a reminder never fails a command.
+    command. After a snapshot of one pipeline, the line is of that pipeline
+    only (*pipeline*). After a catalog build it is of the whole store. The
+    plan is the one gc makes, read-only, and made to look at no file of the
+    store: it goes by the records alone (:func:`_what_gc_would_clear`); a
+    store that cannot be read says nothing, since a reminder never fails a
+    command.
     """
     if silenced:
         return
@@ -4429,7 +4440,7 @@ def _remind_of_gc(silenced: bool) -> None:
             named = [(None, the_store)]
         said = []
         for name, one in named:
-            clearable = _what_gc_would_clear(one)
+            clearable = _what_gc_would_clear(one, pipeline=pipeline)
             if clearable and name is not None:
                 clearable = f"Store {name}: " + clearable.replace("`chartbook store gc`", f"`chartbook store gc --store {name}`", 1)
             if clearable:
@@ -4570,7 +4581,7 @@ def store_info(store_name):
             click.echo(clearable)
 
 
-def _what_gc_would_clear(the_store) -> "str | None":
+def _what_gc_would_clear(the_store, pipeline: "str | None" = None) -> "str | None":
     """In a few words, what `chartbook store gc` would clear from a store; None when nothing, or when that cannot be told.
 
     The plan asks nothing of the disk about a snapshot's files
@@ -4583,22 +4594,27 @@ def _what_gc_would_clear(the_store) -> "str | None":
     nothing. So the line may count a snapshot that ``store gc`` would hold
     back; ``store gc --dry-run`` and the real one look, and are exact. A
     store a sweep would refuse still says nothing.
+
+    :param pipeline: When set, only that pipeline's clearable snapshots
+        (the line after ``chartbook snapshot`` of it). Whole-store ``store
+        info`` and a catalog build leave it unset.
     """
     try:
         from chartbook import lock
 
-        plan = lock.plan_gc(the_store, looks=False)
+        plan = lock.plan_gc(the_store, looks=False, pipeline=pipeline)
     except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
         return None
     # A snapshot a pin made from a repository goes with gc too, with its own copy of every file
     cleared, pinned = len(plan.snapshots_delete), len(plan.pinned_delete)
     if not cleared and not pinned and not plan.delete:
         return None
+    of = f" of {pipeline}" if pipeline else ""
     by_pins = f"{pinned} snapshot(s) a pin made from a repository, whose files no lockfile needs from them"
     if cleared:
         # With the snapshots' own copies of files that objects which stay have too: each snapshot is complete
         return (
-            f"`chartbook store gc` would clear {cleared} snapshot(s), freeing {_format_bytes(plan.freed_bytes)}: "
+            f"`chartbook store gc` would clear {cleared} snapshot(s){of}, freeing {_format_bytes(plan.freed_bytes)}: "
             f"older than {plan.keep_days:g} days, and neither pinned nor the newest of their pipeline"
             f"{f'; and {by_pins}' if pinned else ''}."
         )
@@ -5278,6 +5294,43 @@ def _note_path(the_store, name: str) -> str:
     return f"{the_store}/{ROOTS_DIR}/{name}"
 
 
+def _forget_one_note(the_store, name: str) -> None:
+    """Forget one note under ``_chartbook/roots/`` by its file name: this machine's only.
+
+    Another machine's note, or a sync service's copy of one, is refused:
+    remove its file by hand once no machine needs it.
+    """
+    from chartbook.store import this_machine
+
+    wanted = name if name.endswith(".json") else f"{name}.json"
+    roots = the_store.roots()
+    match = [root for root in roots if root.note == wanted or root.note == name]
+    if not match:
+        raise ValueError(
+            f"No note named {wanted} under _chartbook/roots/. "
+            f"`chartbook store gc --dry-run` lists each note it keeps pins for."
+        )
+    if len(match) > 1:
+        raise ValueError(f"More than one note matches {wanted}: refuse to guess.")
+    (root,) = match
+    here = this_machine(create=False)
+    if root.copy:
+        raise ValueError(
+            f"{root.note} is a sync service's copy of a note, not one this machine wrote. "
+            f"Remove {_note_path(the_store, root.note)} by hand once no machine needs it."
+        )
+    if root.machine and root.machine != here:
+        whose = f"on {root.host}" if root.host else f"under machine {root.machine}"
+        raise ValueError(
+            f"{root.note} is another machine's note ({whose}). "
+            f"Refuse to forget it from here: remove {_note_path(the_store, root.note)} "
+            f"by hand once no machine needs it."
+        )
+    if not the_store.remove_root(root.lockfile, machine=root.machine):
+        raise ValueError(f"Could not remove {_note_path(the_store, root.note)}.")
+    click.echo(f"Forgot note {_note_path(the_store, root.note)}.")
+
+
 def _when_it_goes(why: str) -> str:
     """When a snapshot that `store gc` keeps for *why* goes, in the words of the plan's own reasons: the way out for one that has lost a file for good."""
     if "builds on it" in why:
@@ -5328,6 +5381,12 @@ def _format_bytes(size):
     help="Stop keeping the pins of a lockfile on this machine that cannot be found (another machine's are never forgotten from here)",
 )
 @click.option(
+    "--forget-note",
+    metavar="NAME",
+    default=None,
+    help="Forget one note under _chartbook/roots/ (this machine's only; another machine's: remove its file by hand), then plan as usual",
+)
+@click.option(
     "--keep-days",
     type=click.FloatRange(min=0),
     default=None,
@@ -5344,7 +5403,7 @@ def _format_bytes(size):
     is_flag=True,
     help="Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label",
 )
-def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
+def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage, aggressive):
     """Remove from the store what nothing needs any more.
 
     The store is shared by every project of yours. Two things keep what is
@@ -5392,11 +5451,14 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     machine, which a store in a shared or synced folder has, is kept with
     --forget-missing or without, as is a note from before notes named their
     machine and a sync service's copy of a note; each is listed with its
-    file under _chartbook/roots/, which you remove once no machine needs it. In your
-    own store, under ~/.chartbook, a note from before notes named their
-    machine is this machine's: its lockfile is read, and the note is
-    removed once this machine has a note of that lockfile and the lockfile
-    is read here, or with --forget-missing once the lockfile is gone.
+    file under _chartbook/roots/, which you remove once no machine needs it.
+    --forget-note NAME forgets one of this machine's notes (the name gc
+    prints); another machine's note is refused here, and removed by hand
+    once no machine needs it. In your own store, under ~/.chartbook, a note
+    from before notes named their machine is this machine's: its lockfile is
+    read, and the note is removed once this machine has a note of that
+    lockfile and the lockfile is read here, or with --forget-missing once
+    the lockfile is gone.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed, but what only
@@ -5412,6 +5474,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         chartbook store gc
         chartbook store gc --keep-days 7
         chartbook store gc --yes --forget-missing
+        chartbook store gc --forget-note abcdef0123456789abcdef0123456789.json --dry-run
         chartbook store gc --keep-lineage
         chartbook store gc --aggressive --keep-days 0
     """
@@ -5422,15 +5485,30 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
     try:
         the_store = default_store()
+        if forget_note:
+            _forget_one_note(the_store, forget_note)
         plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive, hashed=True)
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
+    def _why_with_note(taken, why: str) -> str:
+        """*why*, with which note under ``_chartbook/roots/`` holds the pin when the keep is by the note.
+
+        A live lockfile's pin (``a lockfile pins it``) needs no note named: the
+        lockfile is listed above. A keep that is by the note alone names it.
+        """
+        note = plan.noted_by.get((taken.commit, taken.made_at))
+        if not note:
+            return why
+        if why == "a lockfile pins it" or why.startswith("a lockfile pins a labelled version"):
+            return why
+        return f"{why} (note _chartbook/roots/{note})"
+
     def say_held_back(held_back: dict, kept: list, not_intact: set) -> None:
         """Say of each pipeline none of whose snapshots is removed which snapshot lacks which file, or has it with other bytes, why that one stays, and what to do."""
-        reasons = {taken.path: why for taken, why in kept}
+        reasons = {taken.path: _why_with_note(taken, why) for taken, why in kept}
         for pipeline, (record, file, count) in sorted(held_back.items()):
             why = reasons.get(record, "")
             stays = f"stays{f' because {why}' if why else ''}"
@@ -5507,8 +5585,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         )
     if plan.snapshots_kept:
         reasons = {}
-        for _, why in plan.snapshots_kept:
-            reasons[why] = reasons.get(why, 0) + 1
+        for taken, why in plan.snapshots_kept:
+            reasons[_why_with_note(taken, why)] = reasons.get(_why_with_note(taken, why), 0) + 1
         said = ", ".join(f"{count} because {why}" for why, count in reasons.items())
         click.echo(
             f"Kept: {len(plan.snapshots_kept)} snapshot(s), naming {plan.snapshots} "

@@ -224,10 +224,13 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
                 ) from None
             for origin in entry.store.origins(taken.commit, snapshot.record_name(taken.subdirectory)):
                 target.note_origin(taken.commit, snapshot.record_name(taken.subdirectory), origin)
+        from chartbook.store import _snapshot_triple
+
         moments = {(t.commit, t.made_at) for t in chosen}
         hashes = set().union(*(t.hashes() for t in chosen))
         for root in entry.store.roots():
-            if hashes.intersection(root.hashes) or moments.intersection(root.snapshots or ()):
+            noted = {_snapshot_triple(item)[1:] for item in (root.snapshots or ())}
+            if hashes.intersection(root.hashes) or moments.intersection(noted):
                 previous = target.root_of(root.lockfile, root.machine)
                 target.add_root(root.lockfile, set(root.hashes) | set(previous.hashes if previous else ()),
                                 set(root.snapshots or ()) | set(previous.snapshots or () if previous else ()), root.machine,

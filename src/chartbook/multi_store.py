@@ -317,11 +317,13 @@ class Stores:
         return self.default().put(*args, **kwargs)
 
     def add_root(self, lockfile, hashes, snapshots=(), machine=None, labelled=()):
+        from chartbook.store import _snapshot_triple
+
         hashes, snapshots, labelled = list(hashes), list(snapshots), list(labelled)
         for entry in self._available():
             if not entry.read_only and (entry is self.entries[0] or
                     any(entry.store.has(h) for h in hashes) or
-                    any(commit in entry.store.snapshot_commits() for commit, _ in snapshots)):
+                    any(_snapshot_triple(item)[1] in entry.store.snapshot_commits() for item in snapshots)):
                 entry.store.add_root(lockfile, hashes, snapshots, machine, labelled)
 
     def root_of(self, lockfile, machine=None):

@@ -94,7 +94,8 @@ class TestRoots:
         labelled = {(*moment, "model/m", stored.content_hash), ("", "", "model/n", stored.content_hash)}
         store.add_root(lockfile, [stored.content_hash], [moment], labelled=labelled)
         (root,) = store.roots()
-        assert root.snapshots == (moment,) and set(root.labelled) == labelled
+        # A 2-tuple pin is stored with an empty pipeline (notes that name the pipeline write it)
+        assert root.snapshots == (("", COMMIT, "2026-10-16T00:00:00.000000Z"),) and set(root.labelled) == labelled
         assert store.root_of(lockfile).labelled == root.labelled
         store.add_root(lockfile, [stored.content_hash])
         assert store.roots()[0].labelled == ()

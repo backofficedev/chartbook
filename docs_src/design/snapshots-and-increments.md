@@ -1022,8 +1022,8 @@ files for what it changes.
 5. Increments are made: which one `chartbook snapshot` makes, the line that says which, and
    `--complete` on it and on `chartbook run --snapshot`. (That a run no longer ends with a snapshot is
    {doc}`one-command`'s own step.)
-6. For `chartbook store gc`, as "Where it stands" has it: the notes of every branch and tag, with
+6. ~~For `chartbook store gc`, as "Where it stands" has it: the notes of every branch and tag, with
    the pipeline in each name; the line of what `store gc` could remove of this pipeline; `store
-   gc` saying which note holds a snapshot, and forgetting one. Nothing else removes.
+   gc` saying which note holds a snapshot, and forgetting one. Nothing else removes.~~
 7. The guide, the vocabulary and the changelog, read through once more against what was built;
    and what `data.path` says of `data.as_of`.

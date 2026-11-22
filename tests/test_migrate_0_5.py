@@ -247,7 +247,7 @@ class TestAfterAMove:
         plan = lock.plan_gc(FolderStore(root))
         kept = {(taken.pipeline, taken.made_at) for taken, _ in plan.snapshots_kept}
         pinned = {moment for reader in readers.values() for moment in lock.read_lock(reader).snapshots()}
-        assert {made_at for _, made_at in pinned} <= {made_at for _, made_at in kept} | {taken.made_at for taken, _ in plan.pinned_kept}
+        assert {made_at for *_, made_at in pinned} <= {made_at for _, made_at in kept} | {taken.made_at for taken, _ in plan.pinned_kept}
         assert {("acme/rates", TIMES[1]), ("acme/rates", TIMES[3]), ("acme/once", TIMES[0]), ("acme/upstream", TIMES[2])} <= kept
         assert [(taken.pipeline, taken.made_at) for taken, _ in plan.snapshots_delete] == [("acme/rates", TIMES[2])]
         for typed in (["store", "gc", "--dry-run"], ["store", "verify"], ["store", "ls"], ["snapshot", "--as-is"]):

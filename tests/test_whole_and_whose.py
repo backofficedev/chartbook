@@ -596,9 +596,11 @@ class TestTheWayOutGcNames:
         import shutil
 
         pinned, reader = pinned_and_holed
+        (note,) = store.roots()
         shutil.rmtree(reader)
         self._said(
-            CliRunner().invoke(main, ["store", "gc", "--yes"]), pinned, "a lockfile that cannot be found pins it",
+            CliRunner().invoke(main, ["store", "gc", "--yes"]), pinned,
+            f"a lockfile that cannot be found pins it (note _chartbook/roots/{note.note})",
             "with `chartbook store gc --forget-missing`, which lets go of what a lockfile that cannot be found pinned",
         )
         result = CliRunner().invoke(main, ["store", "gc", "--yes", "--forget-missing"])

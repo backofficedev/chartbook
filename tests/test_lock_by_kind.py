@@ -499,7 +499,8 @@ class TestADependencyOfChartsOnly:
         (note,) = store.roots()
         assert note.hashes == frozenset() or not note.hashes
         (entry,) = lock.read_lock(reader).dependencies
-        assert (entry["location"]["commit"], entry["snapshot"]) in set(note.snapshots)
+        pinned = (entry["id"], entry["location"]["commit"], entry["snapshot"])
+        assert pinned in set(note.snapshots)
         _write(charts / "_output" / "curve.html", b"two")
         snapshot.make(charts, store=store)
         plan = lock.plan_gc(store, keep_days=0, recent_seconds=0)
