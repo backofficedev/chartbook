@@ -436,6 +436,29 @@ class GitCache:
         )
         return repo
 
+    def fetch_commit(self, url: str, commit: str) -> None:
+        """Make sure the clone has one commit, fetching it by its hash if need be.
+
+        :meth:`fetch` brings branches, tags and HEAD. A commit on none of
+        them (a branch since deleted, a force-push, a pin of a hash) is
+        asked for by itself, as :meth:`get` does when a revision is a hash.
+
+        :param commit: A full commit hash.
+        :raises GitError: If the repository cannot be reached, or has no such commit.
+        :raises ValueError: If the URL or *commit* is one git could misread.
+        """
+        check_git_url(url)
+        if not _FULL_COMMIT.match(commit):
+            raise ValueError(f"{commit!r} is not a full commit hash.")
+        self.fetch(url)
+        try:
+            self.resolve(url, commit)
+        except GitError:
+            self._git(
+                f"--git-dir={self.repo_path(url)}", "fetch", "--quiet", url, commit, url=url
+            )
+            self.resolve(url, commit)
+
     def resolve(self, url: str, rev: Optional[str] = None) -> str:
         """Turn a revision into the full hash of a commit, from the clone.
 

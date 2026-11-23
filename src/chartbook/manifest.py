@@ -2424,6 +2424,10 @@ def find_latest_source_modification(
 ) -> datetime:
     """Find the most recent modification datetime across pipeline source files.
 
+    A file under ``src`` or ``docs_src`` that cannot be stat'd is skipped:
+    a dangling symlink, or a file this user cannot read. The manifest
+    itself is not skipped.
+
     :param base_dir: The base directory of the pipeline.
     :type base_dir: Union[str, Path]
     :returns: The most recent modification datetime.
@@ -2438,7 +2442,10 @@ def find_latest_source_modification(
         for root, _, files in os.walk(directory):
             for file in files:
                 file_path = Path(root) / file
-                mod_time = get_file_modified_datetime(file_path)
+                try:
+                    mod_time = get_file_modified_datetime(file_path)
+                except OSError:
+                    continue  # a dangling symlink, or a file this user cannot stat
                 if mod_time > latest_time:
                     latest_time = mod_time
         return latest_time

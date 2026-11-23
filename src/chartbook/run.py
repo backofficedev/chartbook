@@ -567,7 +567,8 @@ def _working_copy(
     """A git dependency's writable copy, at the commit it is pinned at.
 
     The commit is the lockfile's if it names one, since a pin does not
-    move; otherwise it is what the ``rev`` means now.
+    move; otherwise it is what the ``rev`` means now. A pinned commit that
+    no branch or tag leads to is fetched by its hash.
 
     :returns: The working copy, or None and why there is none.
     """
@@ -577,7 +578,8 @@ def _working_copy(
         if commit is None:
             commit = git_cache.get(url, entry.get("rev")).commit
         elif git_cache.files(url, commit) is None:
-            git_cache.fetch(url)
+            # The pin names a commit. Branches and tags may no longer lead to it.
+            git_cache.fetch_commit(url, commit)
         return git_cache.work_copy(url, commit), ""
     except (GitError, ValueError, OSError) as error:
         return None, f"could not fetch {strip_url_credentials(entry['git'])}: {error}"

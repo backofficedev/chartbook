@@ -332,6 +332,17 @@ class TestGitCache:
         assert checkout.commit == orphan
         assert (checkout.path / "data" / "committed.parquet").read_bytes() == b"new numbers"
 
+    def test_fetch_commit_asks_for_a_commit_no_branch_leads_to(self, cache, upstream):
+        """Branches and tags do not bring it. Asking for the hash does."""
+        orphan = _change(upstream)
+        _git(upstream, "reset", "--quiet", "--hard", "v1")
+        cache.fetch_commit(str(upstream), orphan)
+        assert cache.resolve(str(upstream), orphan) == orphan
+
+    def test_fetch_commit_wants_a_whole_hash(self, cache, upstream):
+        with pytest.raises(ValueError, match="full commit hash"):
+            cache.fetch_commit(str(upstream), "abc")
+
     def test_a_commit_that_does_not_exist(self, cache, upstream):
         with pytest.raises(GitError):
             cache.get(str(upstream), "0123456789abcdef0123456789abcdef01234567")
@@ -536,6 +547,21 @@ class TestPinning:
         assert _statuses(report)["committed"] == "kept"
         assert (downstream / LOCK_FILE).read_bytes() == before
         assert data.path("upstream:committed", project_dir=downstream).read_bytes() == b"hello"
+
+    def test_a_pinned_commit_no_branch_leads_to_is_fetched_by_its_hash(
+        self, downstream, upstream, cache, work
+    ):
+        """A fresh cache has only branches and tags until it asks for the pinned commit."""
+        first = _git(upstream, "rev-parse", "HEAD")
+        orphan = _change(upstream)
+        lock.pin(downstream, git_cache=cache)
+        _git(upstream, "reset", "--quiet", "--hard", first)
+        fresh = GitCache(work / "fresh")
+        report = lock.pin(downstream, git_cache=fresh)
+        assert report.problems == []
+        checkout = fresh.files(local_url("../upstream", downstream), orphan)
+        assert checkout is not None
+        assert (checkout / "data" / "committed.parquet").read_bytes() == b"new numbers"
 
     def test_update_asks_the_repository_what_the_branch_means_now(
         self, downstream, upstream, cache

@@ -1029,6 +1029,22 @@ class TestGitDependencies:
         assert "s3cret" not in missing.missing
         assert itself.id == "top"
 
+    def test_a_pinned_commit_no_branch_leads_to_still_gets_a_working_copy(
+        self, downstream, repository, work, cache
+    ):
+        """A pin names a commit. Fetching branches does not bring one no branch or tag leads to."""
+        first = _git(repository, "rev-parse", "HEAD")
+        (repository / "data" / "committed.parquet").write_bytes(b"later")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "later")
+        lock.pin(downstream, git_cache=cache)
+        _git(repository, "reset", "--quiet", "--hard", first)
+        fresh = GitCache(work / "fresh")
+        git_step, itself = plan(downstream, git_cache=fresh)
+        assert git_step.source == "git" and git_step.directory is not None and git_step.missing == ""
+        assert (git_step.directory / "data" / "committed.parquet").read_bytes() == b"later"
+        assert itself.id == "downstream"
+
 
 @posix
 class TestCommand:

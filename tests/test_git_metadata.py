@@ -22,6 +22,7 @@ from chartbook.manifest import (
     find_latest_source_modification,
     load_manifest,
 )
+from tests.fixtures import needs_symlinks
 
 needs_git = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 
@@ -200,6 +201,32 @@ class TestCodeChangeTime:
         assert find_latest_code_change(pipeline_project) == find_latest_source_modification(
             pipeline_project
         )
+
+    @needs_symlinks
+    def test_a_dangling_symlink_in_the_source_does_not_stop_the_manifest(
+        self, pipeline_project
+    ):
+        """A link whose target is gone is skipped. The rest of the source still counts."""
+        (pipeline_project / "src" / "gone.py").symlink_to(pipeline_project / "nowhere.py")
+        (pipeline_project / "docs_src" / "gone.md").symlink_to(pipeline_project / "nowhere.md")
+        loaded = load_manifest(pipeline_project)
+        assert loaded["source_last_modified_date"]
+
+    def test_a_source_file_this_user_cannot_stat_is_skipped(self, pipeline_project, monkeypatch):
+        """A file this user cannot stat is not a reason the manifest cannot be read."""
+        kept = pipeline_project / "src" / "kept.py"
+        kept.write_text("x = 1\n", encoding="utf-8", newline="\n")
+        blocked = pipeline_project / "src" / "dummy.py"
+        real = manifest_module.get_file_modified_datetime
+
+        def refuse(path):
+            if Path(path) == blocked:
+                raise PermissionError(13, "Permission denied", str(path))
+            return real(path)
+
+        monkeypatch.setattr(manifest_module, "get_file_modified_datetime", refuse)
+        assert find_latest_source_modification(pipeline_project) >= real(kept)
+        assert load_manifest(pipeline_project)["source_last_modified_date"]
 
     def test_without_git_it_is_the_modification_time(self, pipeline_project, monkeypatch):
         def no_git(*args, **kwargs):

@@ -3035,7 +3035,8 @@ def _fetch(
             # `chartbook run` built it, has more in it than the checkout.
             directory = git_cache.files(url, locked_commit)
             if directory is None:
-                git_cache.fetch(url)
+                # Branches and tags, then the commit itself when none of them lead to it.
+                git_cache.fetch_commit(url, locked_commit)
                 directory = git_cache.checkout(url, locked_commit)
                 report.events.append(
                     PinEvent("fetched", key, detail=f"{shown} at {locked_commit[:7]}")
