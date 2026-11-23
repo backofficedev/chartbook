@@ -42,6 +42,20 @@
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
       "description": "When the snapshot was made, in UTC. One commit can have several: a pipeline that pulls data from outside builds other bytes on another day. With the commit, this names the snapshot."
     },
+    "stored": {
+      "type": "object",
+      "description": "Present on increment snapshots (kept under `increments/`): names the complete snapshot folder in `snapshots/` that unchanged files are kept in.",
+      "properties": {
+        "builds_on": {
+          "type": "string",
+          "description": "The folder name of the complete snapshot this increment builds on."
+        }
+      },
+      "required": [
+        "builds_on"
+      ],
+      "additionalProperties": false
+    },
     "built_with": {
       "type": "object",
       "description": "A note of the conditions the snapshot was made under. It is there to explain a difference between two snapshots, and no hash covers it. Nothing of the pipeline's .env is ever recorded.",

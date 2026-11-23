@@ -908,7 +908,10 @@ def sql(
                     f"reader of, and runs in the source {engine.source!r}, a {engine.name} engine, "
                     f"which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars."
                 )
-            name = f"{formats.handed_name(location)}_to_{re.sub(r'[^0-9]', '', cut[1] or 'none') or 'none'}"
+            import hashlib
+
+            col_hash = hashlib.sha256(str(cut[0]).encode("utf-8")).hexdigest()[:8]
+            name = f"{formats.handed_name(location)}_{col_hash}_to_{re.sub(r'[^0-9]', '', cut[1] or 'none') or 'none'}"
             arrow[name] = _pinned(formats.scan_location(location), cut)
             replacement = quote_identifier(name)
         elif handed is not None:

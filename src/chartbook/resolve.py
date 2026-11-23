@@ -1806,7 +1806,7 @@ def resolve(
             in_pipeline = resolve_project_type(raw_here, source=str(manifest_dir / MANIFEST_NAME)) != "catalog"
         except (OSError, ValueError):
             in_pipeline = True
-    catalog, key, folder, why_not = None, pipeline, None, None
+    catalog, listed, key, folder, why_not = None, None, pipeline, None, None
     try:
         if (in_pipeline or batch()) and catalog_path is None:
             candidate = get_default_catalog_path()
@@ -1833,7 +1833,7 @@ def resolve(
             raise why_not from None
         raise error from None
 
-    catalog_stores = listed["stores"] if catalog is not None and (catalog.parent / "catalog.toml").is_file() else None
+    catalog_stores = listed["stores"] if listed is not None and catalog is not None and (catalog.parent / "catalog.toml").is_file() else None
     if catalog_stores is not None and not in_pipeline:
         from chartbook import lock
         if why_not is not None:

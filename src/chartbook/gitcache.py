@@ -96,14 +96,14 @@ ALLOWED_PROTOCOLS = "file:git:http:https:ssh"
 #: longer than the 260 characters Windows otherwise allows a path.
 GIT = ("git", "-c", "core.longpaths=true") if os.name == "nt" else ("git",)
 
-_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
-_HEX = re.compile(r"^[0-9a-f]{7,40}$")
+_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
+_HEX = re.compile(r"^[0-9a-f]{7,40}\Z")
 # What a revision may be: a branch, a tag or a commit. It is handed to git
 # as an argument, so it must never be able to read as an option.
-_REV = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
+_REV = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _READ_ONLY = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 # git@host:owner/name, or host:owner/name. Not C:\repo, which is a path.
-_SCP_LIKE = re.compile(r"^(?:[^@/\s]+@)?([^:/\s]{2,}):(?![/\\])(.+)$")
+_SCP_LIKE = re.compile(r"^(?:[^@/\s]+@)?([^:/\s]{2,}):(?![/\\])(.+)\Z")
 
 
 #: What git takes from the environment about which repository it is in. A

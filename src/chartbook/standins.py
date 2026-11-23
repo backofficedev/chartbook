@@ -32,6 +32,7 @@ Nothing is written in the project or in the store.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -41,6 +42,7 @@ from pathlib import Path
 from typing import Mapping, Optional
 
 from chartbook import rowhash
+from chartbook.replacing import replace_when_let
 
 #: The form of what is remembered of a comparison. It is part of what a
 #: comparison is remembered by, with this ChartBook's version, so that what
@@ -567,6 +569,7 @@ def _write(path: Optional[Path], answers: str, compared: "rowhash.Compared") -> 
     """Remember what was found, whole or not at all, with what it answers; a cache that cannot be written is no failure."""
     if path is None:
         return
+    temporary = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
@@ -579,6 +582,9 @@ def _write(path: Optional[Path], answers: str, compared: "rowhash.Compared") -> 
                 },
                 f,
             )
-        os.replace(temporary, path)
+        replace_when_let(temporary, path)
     except OSError:
+        if temporary is not None:
+            with contextlib.suppress(OSError):
+                temporary.unlink(missing_ok=True)
         return

@@ -2560,7 +2560,7 @@ class FolderStore(Store):
                     if file in own or str(file) in used or _identity(file) in used_ids or _folded(str(file)) in used_folded:
                         continue
                     try:
-                        seen = file.lstat()
+                        seen = os.lstat(_any_length(file))
                     except OSError:
                         continue
                     if recorded and older_than and now - max(seen.st_mtime, seen.st_ctime) < older_than:
@@ -2579,9 +2579,9 @@ class FolderStore(Store):
         failed: list = []
         for file, size, _ in found:
             try:
-                _remove_file(file)
+                _remove_file(Path(_any_length(file)))
             except OSError as error:
-                if os.path.lexists(file):
+                if os.path.lexists(_any_length(file)):
                     failed.append((file, error.strerror or str(error)))
                 continue
             removed.append((file, size))
@@ -2596,15 +2596,15 @@ class FolderStore(Store):
                 Path(directory) / file_name != cleared for directory, _, files in os.walk(folder) for file_name in files
             ):
                 try:
-                    _remove_file(cleared)
+                    _remove_file(Path(_any_length(cleared)))
                     emptied.add(str(cleared.parent))
                 except OSError:
                     pass
             for directory, _, _ in sorted(os.walk(folder), key=lambda walked: -len(walked[0])):
                 try:
-                    if directory not in emptied and older_than and now - os.stat(directory).st_mtime < older_than:
+                    if directory not in emptied and older_than and now - os.stat(_any_length(directory)).st_mtime < older_than:
                         continue  # made just now: a snapshot about to write into it
-                    os.rmdir(directory)
+                    os.rmdir(_any_length(directory))
                     emptied.add(os.path.dirname(directory))
                 except OSError:
                     pass
@@ -3384,6 +3384,7 @@ class FolderStore(Store):
                 f"Cannot remove the object {content_hash} at {self._shown(path)}: {error.strerror or error}. "
                 f"{self._not_this_users_remedy()}"
             ) from None
+        _found_whole.difference_update({seen for seen in _found_whole if seen[:2] == (str(self.root), content_hash)})
         return True
 
     def delete_unowned(self, content_hash: str) -> bool:
@@ -3399,6 +3400,7 @@ class FolderStore(Store):
                 f"Cannot remove the object {content_hash} at {self._shown(path)}: {error.strerror or error}. "
                 f"{self._not_this_users_remedy()}"
             ) from None
+        _found_whole.difference_update({seen for seen in _found_whole if seen[:2] == (str(self.root), content_hash)})
         return True
 
     @staticmethod

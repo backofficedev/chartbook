@@ -293,7 +293,10 @@ class Stores:
         if content_hashes is None:
             problems = []
             for entry in self._available():
-                problems.extend(entry.store.verify())
+                try:
+                    problems.extend(entry.store.verify())
+                except (StoreUnreachableError, OSError) as error:
+                    self._unreachable(entry, error)
             return problems
         # Each store is asked of the objects it holds: one another store
         # holds is not missing from it. One that no store holds is said
@@ -303,13 +306,17 @@ class Stores:
         for entry in self._available():
             try:
                 held = [content_hash for content_hash in wanted if entry.store.has(content_hash, pipeline)]
+                if held:
+                    found_problems = entry.store.verify(held) if pipeline is None else entry.store.verify(held, pipeline)
+                else:
+                    found_problems = []
             except (StoreUnreachableError, OSError) as error:
                 self._unreachable(entry, error)
                 continue
             first = first or entry.store
             unheld.difference_update(held)
-            if held:
-                problems.extend(entry.store.verify(held) if pipeline is None else entry.store.verify(held, pipeline))
+            if found_problems:
+                problems.extend(found_problems)
         if unheld:
             missing = [content_hash for content_hash in wanted if content_hash in unheld]
             if first is not None:
@@ -333,14 +340,21 @@ class Stores:
     def _root_entries(self, hashes, snapshots):
         from chartbook.store import _snapshot_triple
 
-        return [
-            entry for entry in self._available()
-            if not entry.read_only and (
-                entry is self.entries[0]
-                or any(entry.store.has(h) for h in hashes)
-                or any(_snapshot_triple(item)[1] in entry.store.snapshot_commits() for item in snapshots)
-            )
-        ]
+        targets = []
+        for entry in self._available():
+            if entry.read_only:
+                continue
+            if entry is self.entries[0]:
+                targets.append(entry)
+                continue
+            try:
+                if any(entry.store.has(h) for h in hashes) or any(
+                    _snapshot_triple(item)[1] in entry.store.snapshot_commits() for item in snapshots
+                ):
+                    targets.append(entry)
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
+        return targets
 
     def writable_stores(self):
         """Every writable store a note may be written to."""
@@ -379,7 +393,15 @@ class Stores:
         from chartbook.store import Root
 
         entries = [e for e in self._available() if not e.read_only]
-        roots = [root for e in entries for root in (e.store.root_of(lockfile, machine),) if root is not None]
+        roots = []
+        for e in entries:
+            try:
+                root = e.store.root_of(lockfile, machine)
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(e, error)
+                continue
+            if root is not None:
+                roots.append(root)
         if not roots:
             return None
         if len(roots) == 1:
@@ -407,7 +429,11 @@ class Stores:
         target_ids = {id(entry) for entry in targets}
         wanted = set() if snapshots is None else set(snapshots)
         for entry in targets:
-            root = entry.store.root_of(lockfile, machine)
+            try:
+                root = entry.store.root_of(lockfile, machine)
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
+                return False
             held = set() if root is None or root.snapshots is None else set(root.snapshots)
             if (
                 root is None
@@ -419,8 +445,11 @@ class Stores:
                 return False
         for entry in self._available():
             if not entry.read_only and id(entry) not in target_ids:
-                if entry.store.root_of(lockfile, machine) is not None:
-                    return False
+                try:
+                    if entry.store.root_of(lockfile, machine) is not None:
+                        return False
+                except (StoreUnreachableError, OSError) as error:
+                    self._unreachable(entry, error)
         return True
 
     def remove_root(self, lockfile, machine=None):

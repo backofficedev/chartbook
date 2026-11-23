@@ -1721,13 +1721,13 @@ def _sync_now(
         report says what is wanted, and nothing of the manifest is written.
     """
     project_dir = Path(project_dir).resolve()
+    root, dependencies = _read_pipeline(project_dir)
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(project_dir, store)
     the_store = store
     if not isinstance(store, _PutLater):
         # What the pin puts in the store is put only once the lockfile may be written
         store = _PutLater(store)
-    root, dependencies = _read_pipeline(project_dir)
     # The store's snapshots, read once for every dependency named by its ID
     read = []
 
@@ -2705,9 +2705,9 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
     project_dir = Path(project_dir).resolve()
+    _, dependencies = _read_pipeline(project_dir)
     from chartbook.multi_store import with_dependencies
     store = with_dependencies(project_dir, store)
-    _, dependencies = _read_pipeline(project_dir)
     lock_path = project_dir / LOCK_FILE
     report = FrozenReport(lockfile=lock_path, dependencies=len(dependencies))
     locked = read_lock(lock_path)
@@ -3417,11 +3417,14 @@ def _sync_from_snapshots(
     def as_it_was() -> dict:
         """The listing, still naming the snapshot the pins came from, and the repository it came from."""
         was_location = (was or {}).get("location", {})
-        if was_location.get("kind") == "git" or (
-            was_location.get("pipeline") and was_location.get("pipeline") != listed.get("location", {}).get("pipeline")
+        if was is not None and (
+            was_location.get("kind") == "git"
+            or (was_location.get("pipeline") and was_location.get("pipeline") != listed.get("location", {}).get("pipeline"))
+            or _declared_elsewhere(was, listed)
         ):
-            # Pinned from its repository, or as another pipeline: it says so
-            # still, not the pipeline asked for now at the old commit
+            # Pinned from its repository, or as another pipeline, or moved in the manifest
+            # without moving the pins: it says where the pins came from, not where the
+            # manifest points now.
             return {**was, "location": dict(was_location)}
         kept = dict(listed)
         if locked_commit:

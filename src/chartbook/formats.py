@@ -1533,8 +1533,10 @@ def handed_name(location) -> str:
     import json
 
     read = reading_of(location)
-    files = [str(file) for file in files_of(location.path, read, location.files, location.listed, getattr(location, "inside", None))]
-    said = json.dumps([read.format, read.options, sorted(files)], sort_keys=True, default=str)
+    inside = getattr(location, "inside", None)
+    files = [str(file) for file in files_of(location.path, read, location.files, location.listed, inside)]
+    inside_key = sorted((str(k), str(v)) for k, v in inside.items()) if inside else None
+    said = json.dumps([read.format, read.options, sorted(files), inside_key], sort_keys=True, default=str)
     return f"chartbook_{read.format}_" + hashlib.sha256(said.encode("utf-8")).hexdigest()[:16]
 
 

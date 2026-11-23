@@ -1361,7 +1361,8 @@ def said(
         # snapshot is all there is to make, and a build that may take an hour is not run again
         make = "chartbook run --snapshot" if line.builds and not built else "chartbook snapshot"
         if (
-            not line.builds and line.folder is not None and (not pinned or line.on_commit)
+            not line.builds and line.folder is not None and not is_moved(line.top)
+            and (not pinned or line.on_commit)
             and not _would_be_held(line.folder, line.pipeline)
         ):
             # Nothing builds it, and what it declares is not all committed: its files are taken as they

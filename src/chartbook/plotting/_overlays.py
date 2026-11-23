@@ -2,12 +2,43 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 
 from chartbook.plotting._exceptions import FREDAPIError
+
+
+def _datetime_series_to_seconds(dt: pd.Series) -> np.ndarray:
+    """Convert a parsed datetime Series to float epoch seconds, preserving NaT as NaN across all pandas units."""
+    if getattr(dt.dt, "tz", None) is not None:
+        dt = dt.dt.tz_convert("UTC").dt.tz_localize(None)
+    return (dt - pd.Timestamp("1970-01-01")).dt.total_seconds().to_numpy(dtype=float)
+
+
+def _x_values_to_numeric(x_values) -> np.ndarray:
+    """Convert x values (numeric, datetime, date, or date strings) to float array, preserving NaT/None as NaN."""
+    x_series = pd.Series(x_values)
+    non_null = x_series.dropna()
+    is_dt = pd.api.types.is_datetime64_any_dtype(x_series) or (
+        not non_null.empty
+        and any(isinstance(v, (pd.Timestamp, date, datetime, np.datetime64)) for v in non_null)
+    )
+    if is_dt:
+        dt = pd.to_datetime(x_series, errors="coerce")
+        return _datetime_series_to_seconds(dt)
+    try:
+        x_numeric = pd.to_numeric(x_series, errors="coerce")
+        if x_numeric.isna().all():
+            dt = pd.to_datetime(x_series, errors="coerce")
+            if not dt.isna().all():
+                return _datetime_series_to_seconds(dt)
+            return np.arange(len(x_series), dtype=float)
+        return x_numeric.to_numpy(dtype=float)
+    except Exception:
+        return np.arange(len(x_series), dtype=float)
 
 # Named CSS colors to RGB mapping (common colors)
 _NAMED_COLORS = {
@@ -331,14 +362,7 @@ def apply_overlays_plotly(
                 y_raw = list(fig.data[0].y) if fig.data[0].y is not None else []
 
             if len(x_raw) == len(y_raw) and len(x_raw) > 1:
-                x_series = pd.Series(x_raw)
-                try:
-                    x_numeric = pd.to_numeric(x_series, errors="coerce")
-                    if x_numeric.isna().all():
-                        x_numeric = pd.to_datetime(x_series).astype("int64") / 10**9
-                except Exception:
-                    x_numeric = pd.Series(np.arange(len(x_raw), dtype=float))
-                x_arr = np.asarray(x_numeric, dtype=float)
+                x_arr = _x_values_to_numeric(x_raw)
                 y_arr = pd.to_numeric(pd.Series(y_raw), errors="coerce").to_numpy(dtype=float)
                 mask = ~(np.isnan(x_arr) | np.isnan(y_arr))
                 if mask.sum() > 1:
@@ -464,13 +488,7 @@ def apply_overlays_matplotlib(
                 y_line = pts[:, 1]
 
         if x_line is not None and y_line is not None and len(x_line) == len(y_line) and len(x_line) > 1:
-            # Convert to numeric if needed
-            try:
-                x_numeric = pd.to_numeric(pd.Series(x_line), errors="coerce").to_numpy(dtype=float)
-                if np.isnan(x_numeric).all():
-                    x_numeric = np.arange(len(x_line), dtype=float)
-            except Exception:
-                x_numeric = np.arange(len(x_line), dtype=float)
+            x_numeric = _x_values_to_numeric(x_line)
 
             mask = ~(np.isnan(x_numeric) | np.isnan(y_line))
             if mask.sum() > 1:

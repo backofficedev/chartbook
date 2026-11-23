@@ -46,6 +46,7 @@ from chartbook.store import (
     _any_length,
     _increment_of,
     _not_followed,
+    _on_disk_where_kept,
     _kept_files,
     is_snapshot_folder,
     pipeline_folder,
@@ -163,9 +164,9 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             done.refused.append((what, f"its record cannot be read: {error}"))
             continue
         pending = None
+        counted = done.size_bytes
         try:
             on = _builds_on_there(record, into, whole)  # it keeps its form on a complete one found whole in this run
-            counted = done.size_bytes
             # It carries no count of what the increments on that snapshot have added up to: that is of what snapshots
             # made in this store copied, and the next one made here counts from what its own increments carry
             pending = into.begin(record.pipeline, record.commit, record.made_at, **({"builds_on": on} if on is not None else {}))
@@ -280,19 +281,21 @@ def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Op
             # An increment's files are in two folders of what it came in: its own, and the one it builds on
             # as the folder that was given has it: a link there leads out, and is not followed
             inside.append(Path(os.path.realpath(record.folder.parent.parent.parent)) / V3_LAYOUT.pipelines / record.folder.parent.name)
+        resolved = {file.location: _on_disk_where_kept(file, record.folder.parent) for file in files}
         for file in files:
-            if file.location.is_symlink() or not any(Path(os.path.realpath(file.location)).is_relative_to(folder) for folder in inside):
+            loc = resolved[file.location]
+            if os.path.islink(_any_length(loc)) or not any(Path(os.path.realpath(loc)).is_relative_to(folder) for folder in inside):
                 return f"{file.path} is a link, or leads out of the folder it came in"
         # A file an increment keeps in the complete one, where what was sent does not hold that one: the store's own
         # copy of it, in the complete snapshot this run found whole
         at_hand = {
-            file.location: (pending._held_whole(file.content_hash, file.size_bytes) if getattr(pending, "builds_on", None) and not file.location.is_file() else None) or file.location
+            file.location: (pending._held_whole(file.content_hash, file.size_bytes) if getattr(pending, "builds_on", None) and not os.path.isfile(_any_length(resolved[file.location])) else None) or resolved[file.location]
             for file in files
         }
-        missing = next((file for file in files if not Path(at_hand[file.location]).is_file()), None)
+        missing = next((file for file in files if not os.path.isfile(_any_length(at_hand[file.location]))), None)
         if missing is not None:
             return f"{missing.path} is not there"
-        sources = [(file.relative, str(at_hand[file.location])) for file in files]
+        sources = [(file.relative, _any_length(at_hand[file.location])) for file in files]
         stored = pending.put_listed(sources, files[0].path if single else at, single)
         wrong = [
             new["path"] for new, old in zip(stored.stored["files"], files) if new["content_hash"] != old.content_hash

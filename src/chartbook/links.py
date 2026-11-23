@@ -56,6 +56,8 @@ def add(folder, pipeline, target):
 
 def resolve(asset, folder):
     links = read(folder)
+    if not links:
+        return None
     actual = asset.pipeline_id
     target = links.get(actual)
     if target is None:
@@ -66,7 +68,7 @@ def resolve(asset, folder):
         if isinstance(entry, dict):
             if isinstance(entry.get("id"), str) and entry["id"]:
                 actual = entry["id"]
-            if entry.get("path"):
+            if isinstance(entry.get("path"), (str, dict)) and entry["path"]:
                 from chartbook.manifest import resolve_platform_path
                 from chartbook.resolve import _own_id
                 try:
@@ -74,7 +76,7 @@ def resolve(asset, folder):
                     rel_path = resolve_platform_path(entry["path"])
                     if rel_path:
                         actual = _own_id((Path(folder) / rel_path.expanduser()).resolve()) or actual
-                except (ValueError, OSError):
+                except (ValueError, OSError, TypeError, AttributeError):
                     pass
             target = links.get(actual)
     if target is None:

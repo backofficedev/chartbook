@@ -57,11 +57,11 @@ BUILD_TIMEOUT = 600
 _ABANDONED = 3600
 #: The longest path in a version's site, past its folder: Sphinx's ``_static/mystnb.<sha256>.css``.
 _LONGEST_IN_A_SITE = "site/_static/mystnb." + "0" * 64 + ".css"
-_NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z$")
+_NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z\Z")
 #: How long the name of a version's folder in the cache is: hex digits of a hash.
 _KEPT_NAME_LENGTH = 12
-_COMMIT = re.compile(r"^[0-9a-f]{40}$")
-_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$")
+_COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
+_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z\Z")
 
 
 def version_name(commit: str, made_at: str) -> str:

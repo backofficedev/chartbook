@@ -1517,8 +1517,11 @@ class S3Store(Store):
                 rename_when_let(local, aside)
                 try:
                     rename_when_let(staging, local)
-                finally:
-                    _remove_tree(aside, own=True)
+                except OSError:
+                    with contextlib.suppress(OSError):
+                        rename_when_let(aside, local)
+                    raise
+                _remove_tree(aside, own=True)
             else:
                 rename_when_let(staging, local)
         finally:
@@ -1628,7 +1631,7 @@ class S3Store(Store):
         folder = self._unowned_cache(content_hash)
         if folder.exists() and not folder.is_symlink():
             _remove_tree(folder, own=True)
-        _found_whole.difference_update({(self.url, content_hash, True), (self.url, content_hash, False)})
+        _found_whole.difference_update({seen for seen in _found_whole if seen[:2] == (self.url, content_hash)})
 
     def hashes(self) -> Iterator[str]:
         """The hash of every asset in the bucket, in order: what its records hold, and the objects no pipeline owns."""

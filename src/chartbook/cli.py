@@ -270,8 +270,11 @@ def _remove_old_views_in(cache, former: bool = False) -> None:
     from chartbook.store import OLD_VIEWS_DIR, OLD_VIEWS_REMOVED, _remove_tree
 
     marker = cache / OLD_VIEWS_REMOVED
-    if not cache.is_dir() or marker.is_file():
-        return  # nothing of 0.4's here, or seen to once already: a 0.4 install beside this one keeps its own
+    try:
+        if not cache.is_dir() or marker.is_file():
+            return  # nothing of 0.4's here, or seen to once already: a 0.4 install beside this one keeps its own
+    except OSError:
+        return
     leftovers = [cache / OLD_VIEWS_DIR] if not former or _only_gathered(cache / OLD_VIEWS_DIR) else []
     for depth in ("*", "*/*", "*/*/*", "*/*/*/*"):
         # A bucket's cache, laid out as a folder store: its views/ beside pipelines/, and holding only
@@ -626,7 +629,7 @@ def _render_site(
     if output_dir.exists() and not force_write and any(output_dir.iterdir()):
         if not click.confirm(
             f"Directory '{output_dir}' already exists. Do you want to overwrite it?\n"
-            "(add the -f/--force option to overwrite without prompting)",
+            "(add the -f/--force-write option to overwrite without prompting)",
             default=False,
         ):
             raise SystemExit(0)
@@ -2159,24 +2162,36 @@ def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
     from chartbook.manifest import RESERVED_PIPELINES_KEYS
 
     catalog_toml = _resolve_catalog_toml_path(catalog_path)
-    raw_catalog = _load_raw_catalog(catalog_toml)
+    try:
+        _load_raw_catalog(catalog_toml)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from None
     if catalog_toml.name == "catalog.toml":
         import tomlkit
         from chartbook.identity import validate_pipeline_id
         try:
             validate_pipeline_id(pipeline_id)
             document = tomlkit.parse(catalog_toml.read_text(encoding="utf-8"))
-            notes = document.setdefault("pipelines", tomlkit.table())
-            if not isinstance(notes, dict):
-                raise ValueError(f"{catalog_toml}: [pipelines] must be a table.")
-            note = notes.setdefault(pipeline_id, tomlkit.table())
-            if not isinstance(note, dict):
-                raise ValueError(f"{catalog_toml}: [pipelines.{pipeline_id!r}] must be a table.")
             if disabled:
+                notes = document.setdefault("pipelines", tomlkit.table())
+                if not isinstance(notes, dict):
+                    raise ValueError(f"{catalog_toml}: [pipelines] must be a table.")
+                note = notes.setdefault(pipeline_id, tomlkit.table())
+                if not isinstance(note, dict):
+                    raise ValueError(f"{catalog_toml}: [pipelines.{pipeline_id!r}] must be a table.")
                 note["disabled"] = True
+                catalog_toml.write_text(tomlkit.dumps(document), encoding="utf-8", newline="\n")
             else:
-                note.pop("disabled", None)
-            catalog_toml.write_text(tomlkit.dumps(document), encoding="utf-8", newline="\n")
+                notes = document.get("pipelines")
+                if notes is not None and not isinstance(notes, dict):
+                    raise ValueError(f"{catalog_toml}: [pipelines] must be a table.")
+                if isinstance(notes, dict) and pipeline_id in notes:
+                    note = notes[pipeline_id]
+                    if not isinstance(note, dict):
+                        raise ValueError(f"{catalog_toml}: [pipelines.{pipeline_id!r}] must be a table.")
+                    if "disabled" in note:
+                        note.pop("disabled", None)
+                        catalog_toml.write_text(tomlkit.dumps(document), encoding="utf-8", newline="\n")
         except (ValueError, OSError) as error:
             raise click.ClickException(str(error)) from None
         click.echo(f"{pipeline_id}: {'disabled' if disabled else 'enabled'} in {catalog_toml}")

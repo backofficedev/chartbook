@@ -420,7 +420,7 @@ def _rows(asset: AssetRef, location: FileLocation, start_dirs=()) -> list[tuple[
 
     declared = Path(location.path)
     inside = getattr(location, "inside", None)
-    single = not location.listed if inside else not is_glob_pattern(str(declared)) and declared.is_file()
+    single = not location.listed if inside else declared.is_file()
     listed = None
     if location.content_hash:
         with contextlib.suppress(Exception):

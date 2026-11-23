@@ -285,9 +285,14 @@ def check_paths(
             toml_file = _manifest_file(manifest, missing.pipeline_id, base_dir)
             table = f"{section}.{missing.item_id}"
 
+        try:
+            rel_missing = str(Path(missing.file_path).relative_to(toml_file.parent))
+        except ValueError:
+            rel_missing = str(missing.file_path)
+
         if unbuilt or (output and gathered):
             message = f"{NOT_BUILT_YET}: {missing.file_path}"
-        elif is_glob_pattern(str(missing.file_path)):
+        elif is_glob_pattern(rel_missing):
             message = f"no files match {missing.file_path}"
         elif Path(missing.file_path).is_dir() and missing.file_type != "model_metrics":
             # A directory of scores is not the scores file. Every other output directory is empty of files that count
@@ -795,10 +800,12 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
         locked = None  # said already, by _pinned_keys
     from chartbook import standins
 
+    from chartbook.multi_store import with_dependencies
+
     pinned = next((e for e in (locked.dependencies if locked else []) if e.get("id") == key), None)
     try:
-        store, unopened = default_store(), None
-    except (ValueError, StoreError) as error:  # a URL no store is made from
+        store, unopened = with_dependencies(pipeline_dir, default_store()), None
+    except (OSError, ValueError, StoreError) as error:  # a URL no store is made from
         store, unopened = None, error
     folder = store if standins.reads_here(store) else None
     advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])

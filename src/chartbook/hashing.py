@@ -35,6 +35,7 @@ file rewritten with identical size and identical timestamp.
 
 from __future__ import annotations
 
+import contextlib
 import glob
 import hashlib
 import json
@@ -160,15 +161,20 @@ class HashCache:
             return  # nothing to add or drop; leave the file as it is
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_name(f"{self.path.name}.{uuid.uuid4().hex}.tmp")
-        with open(temporary, "w", encoding="utf-8", newline="\n") as f:
-            json.dump(
-                {"version": CACHE_VERSION, "files": self._used},
-                f,
-                indent=1,
-                sort_keys=True,
-            )
-            f.write("\n")
-        replace_when_let(temporary, self.path)
+        try:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
+                json.dump(
+                    {"version": CACHE_VERSION, "files": self._used},
+                    f,
+                    indent=1,
+                    sort_keys=True,
+                )
+                f.write("\n")
+            replace_when_let(temporary, self.path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                temporary.unlink(missing_ok=True)
+            raise
 
 
 @dataclass(frozen=True)

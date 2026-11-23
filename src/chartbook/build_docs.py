@@ -567,7 +567,7 @@ def generate_docs(
     # FULLY clean temp_docs_src_dir first
     if temp_docs_src_dir.exists():
         shutil.rmtree(temp_docs_src_dir)
-    temp_docs_src_dir.mkdir(exist_ok=True)
+    temp_docs_src_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         # The index first, once: the pages' provenance panels read it, and
@@ -713,7 +713,7 @@ def _generate_docs_mkdocs(
     pipeline_theme = manifest["project"]["type"]
     if temp_docs_src_dir.exists():
         shutil.rmtree(temp_docs_src_dir)
-    temp_docs_src_dir.mkdir(exist_ok=True)
+    temp_docs_src_dir.mkdir(parents=True, exist_ok=True)
     try:
         code_times = apply_code_change_times(manifest)
         pages_dir = _docs_dir / mkdocs_writer.PAGES_DIR
@@ -1034,7 +1034,7 @@ def _generate_docs_incremental(
     # FULLY clean temp_docs_src_dir first
     if temp_docs_src_dir.exists():
         shutil.rmtree(temp_docs_src_dir)
-    temp_docs_src_dir.mkdir(exist_ok=True)
+    temp_docs_src_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         with tempfile.TemporaryDirectory(prefix="chartbook_staging_") as staging:

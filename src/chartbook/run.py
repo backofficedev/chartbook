@@ -186,26 +186,39 @@ def _in_python(text: str) -> Optional[tuple[int, str]]:
         tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
     except (tokenize.TokenError, SyntaxError, IndentationError):
         return None
+    def _flush() -> Optional[tuple[int, str]]:
+        if len(strings) >= 2:
+            for i in range(len(strings) - 1):
+                if strings[i][1] == "chartbook" and strings[i + 1][1] == "build":
+                    joined = " ".join(s for _, s in strings[i:])
+                    if _runs_build(joined):
+                        return strings[i][0], "chartbook build"
+        return None
+
     for token in tokens:
         if token.type == tokenize.STRING:
             raw = token.string
             body = raw.lstrip("rRbBuUfF")
             if body.startswith(('"""', "'''")):
+                hit = _flush()
+                if hit is not None:
+                    return hit
                 strings = []
                 continue
             value = body[1:-1] if len(body) >= 2 else body
             if _runs_build(value):
                 return token.start[0], value
             strings.append((token.start[0], value))
-            if len(strings) >= 2 and strings[-2][1] == "chartbook" and strings[-1][1] == "build":
-                return strings[-2][0], "chartbook build"
         elif token.type == tokenize.OP and token.string == ",":
             continue
         elif token.type in (tokenize.NL, tokenize.NEWLINE, tokenize.COMMENT, tokenize.INDENT, tokenize.DEDENT):
             continue
         else:
+            hit = _flush()
+            if hit is not None:
+                return hit
             strings = []
-    return None
+    return _flush()
 
 
 def _in_recipes(text: str) -> Optional[tuple[int, str]]:
