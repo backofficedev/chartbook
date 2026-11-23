@@ -699,6 +699,31 @@ def _valued_with(files, folder: Path, characters: str, by_file: Optional[dict] =
     return any(character in value for parent in parents for _, value in _keys_of(parent) for character in characters)
 
 
+def _agreed(files: list[str], folder: Path, by_file: Optional[dict] = None) -> tuple:
+    """The Hive keys every file of a folder names, and where each file sits.
+
+    The keys are those the first file's path names, in that order. Folders
+    that name different keys (``a=1/b=x/`` beside ``a=2/``), or the same key
+    twice, have none, as polars reads none of them.
+
+    :returns: ``(keys, {file: its folders}, {folders: [(key, value as written)]})``;
+        three empties when there is no key.
+    """
+    if not files:
+        return [], {}, {}
+    relative = {file: _below(file, folder, by_file) for file in files}
+    named = {parent: _keys_of(parent) for parent in set(relative.values())}
+    keys = [key for key, _ in named[relative[files[0]]]]
+    if not keys or len(set(keys)) < len(keys) or any(sorted(key for key, _ in each) != sorted(keys) for each in named.values()):
+        return [], {}, {}
+    return keys, relative, named
+
+
+def _key_names(files: list[str], folder: Path, by_file: Optional[dict] = None) -> list:
+    """The Hive key names of a folder's files (:func:`_agreed`); none when the files do not share them."""
+    return _agreed(files, folder, by_file)[0]
+
+
 def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None, own: Optional[Mapping] = None) -> dict:
     """The Hive keys of a folder's files, from the folders below it and none above: ``year`` of ``year=2024/a.parquet``.
 
@@ -722,10 +747,8 @@ def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None, 
     :returns: ``{key: (polars type, {file: value})}``; empty when there is no key.
     :raises RuntimeError: If no scratch file can be written (:func:`_scratch`).
     """
-    relative = {file: _below(file, folder, by_file) for file in files}
-    named = {parent: _keys_of(parent) for parent in set(relative.values())}
-    keys = [key for key, _ in named[relative[files[0]]]] if files else []
-    if not keys or len(set(keys)) < len(keys) or any(sorted(key for key, _ in each) != sorted(keys) for each in named.values()):
+    keys, relative, named = _agreed(files, folder, by_file)
+    if not keys:
         return {}
     with _scratch() as scratch:
         read = {
@@ -974,7 +997,8 @@ def _csv(read: Reading, sources, named=None) -> tuple:
         names = [f"column_{i}" for i in range(1, len(polars_names) + 1)]
     named = dict(zip(names, polars_names))
     # True or false is read as text and then as one of the words DuckDB
-    # takes for one (yes, t, 1...), where polars would take true and false alone
+    # takes for one (yes, t, 1...), whatever the capitals and the spaces
+    # around them. A word that is not one of them is null, and is not false.
     truths = [named.get(column, column) for column, kind in overrides.items() if kind == pl.Boolean]
     if overrides:
         options["schema_overrides"] = {
@@ -982,9 +1006,7 @@ def _csv(read: Reading, sources, named=None) -> tuple:
         }
     frame = pl.scan_csv(sources, **options)
     if truths:
-        frame = frame.with_columns(
-            pl.col(column).str.to_lowercase().replace_strict(_BOOLEANS, return_dtype=pl.Boolean) for column in truths
-        )
+        frame = frame.with_columns(_as_boolean(pl.col(column)).alias(column) for column in truths)
     return frame, (polars_names, names)
 
 
@@ -1077,11 +1099,20 @@ def scan(
     return frame
 
 
-#: The words a cast of text to Boolean takes, whatever their capitals.
+#: The words a cast of text to Boolean takes, whatever their capitals and the spaces around them.
 _BOOLEANS = {
     "true": True, "false": False, "t": True, "f": False, "yes": True, "no": False,
     "y": True, "n": False, "1": True, "0": False,
 }
+
+
+def _as_boolean(value):
+    """Text as true or false: trimmed, one of :data:`_BOOLEANS`, and null where the word is not one of them.
+
+    The same words in a CSV file, a JSON lines file and a Hive key. A word
+    that is not one of them is null, and is not false.
+    """
+    return value.str.strip_chars().str.to_lowercase().replace_strict(_BOOLEANS, default=None, return_dtype=pl.Boolean)
 
 
 def _cast(frame, schema, overrides: dict, shown: str, path):
@@ -1092,8 +1123,9 @@ def _cast(frame, schema, overrides: dict, shown: str, path):
     otherwise than polars' do. Text is trimmed; a number in it is read
     whole or refused; a date is ``YYYY-MM-DD``, as both engines write one,
     and not a guess between day and month; a time with a date is ISO 8601,
-    an offset made UTC; true or false is one of :data:`_BOOLEANS`. A struct
-    or a list is no one type, and is refused.
+    an offset made UTC; true or false is one of :data:`_BOOLEANS`, and a word
+    that is not one of them is null. A struct or a list is no one type, and
+    is refused.
     """
     given = []
     for column, kind in overrides.items():
@@ -1114,7 +1146,7 @@ def _cast(frame, schema, overrides: dict, shown: str, path):
             elif kind == pl.Time:
                 value = value.str.to_time()
             elif kind == pl.Boolean:
-                value = value.str.to_lowercase().replace_strict(_BOOLEANS, return_dtype=pl.Boolean)
+                value = _as_boolean(value)
             else:
                 value = value.cast(kind)
         else:
@@ -1136,13 +1168,34 @@ def scan_location(location, where: Optional[str] = None):
     )
 
 
+def _pandas_of(frame):
+    """A scan collected as pandas.
+
+    A 128-bit integer, which a Hive key past 64 bits is, has no pandas type.
+    It is text, so its digits survive: ``99999999999999999999`` is that, and
+    not a number pandas cannot hold.
+    """
+    collected = frame.collect()
+    wide_kinds = tuple(kind for kind in (getattr(pl, "Int128", None), getattr(pl, "UInt128", None)) if kind is not None)
+    wide = [name for name, kind in collected.schema.items() if kind in wide_kinds]
+    if wide:
+        collected = collected.with_columns(pl.col(name).cast(pl.String) for name in wide)
+    return collected.to_pandas()
+
+
 def to_pandas(location, where: Optional[str] = None):
     """A file location as a pandas DataFrame.
 
-    A parquet file or folder is read as pandas reads one, with a folder's
-    Hive keys, from below it, as categories, and the folder as the parts
-    :func:`scan` reads of it. Everything else, a glob among them, is read as
-    :func:`scan` reads it and collected.
+    A parquet folder is the rows :func:`scan` reads of it. Its Hive keys,
+    from below it, are categories, which is how pandas reads a folder, and
+    they are the values the scan gives them: a key the part file also stores
+    (what ``partition_by`` writes) is that column, and a key that is only a
+    folder name is a boolean, a date or a time when the scan reads it so.
+    PyArrow's dictionary Hive types are not used. They will not merge with a
+    key the part also stores, and they leave a key that is only a folder
+    name as text. A glob, and the files a store keeps in several folders,
+    are collected from :func:`scan`. A parquet file is read as pandas reads
+    one, which keeps an index.
     """
     frame = scan_location(location, where)  # says now if it cannot be read
     read = reading_of(location, where)
@@ -1155,14 +1208,23 @@ def to_pandas(location, where: Optional[str] = None):
     if isinstance(sources, list) and inside:
         # Files the store keeps in several folders have no one base for pyarrow to read keys below
         return frame.collect().to_pandas()
-    if isinstance(sources, list) and folder is not None:
-        import pyarrow.dataset as ds
+    if folder is not None:
+        if isinstance(sources, list):
+            files = sources
+        else:
+            from chartbook.utils import directory_tables
 
-        # As pandas reads a folder: hive partitions as categories
-        partitioning = ds.HivePartitioning.discover(infer_dictionary=True)
-        # Each path with `/`, as pyarrow writes a file's and not the folder it is told keys start below
-        posix = [Path(source).as_posix() for source in sources]
-        return ds.dataset(posix, format="parquet", partitioning=partitioning, partition_base_dir=Path(folder).as_posix()).to_table().to_pandas()
+            files = [str(file) for file in directory_tables(folder)]
+        keys = _key_names(files, folder)
+        # A folder with keys, or one read as its parts: the scan's rows. A
+        # folder of files and nothing else, with no key, stays pandas' own
+        # read, which keeps an index the scan would leave as a column.
+        if keys or isinstance(sources, list):
+            collected = _pandas_of(frame)
+            for key in keys:
+                if key in collected.columns:
+                    collected[key] = collected[key].astype("category")
+            return collected
     import pandas as pd
 
     return pd.read_parquet(location.path)
@@ -1415,15 +1477,26 @@ def sql(location) -> str:
     if names != polars_names or not options.get("has_header", True) or any("_duplicated_" in name for name in names):
         # The names as polars gives them, which DuckDB gives otherwise
         given.append("names = [" + ", ".join(quote_literal(name) for name in names) + "]")
-    overrides = {column: TYPES[_type(name)] for column, name in (options.get("schema_overrides") or {}).items()}
+    written = list((options.get("schema_overrides") or {}).items())
+    overrides = {column: TYPES[_type(name)] for column, name in written}
+    # Boolean is read as text and cast with the same words polars uses. DuckDB's
+    # own BOOLEAN refuses a space around a word and refuses a word it does not know.
+    booleans = [column for column, name in written if _type(name) == "Boolean"]
     if overrides:
-        given.append("types = {" + ", ".join(f"{quote_literal(c)}: {quote_literal(t)}" for c, t in overrides.items()) + "}")
+        typed = {column: "VARCHAR" if column in booleans else kind for column, kind in overrides.items()}
+        given.append("types = {" + ", ".join(f"{quote_literal(c)}: {quote_literal(t)}" for c, t in typed.items()) + "}")
     if "skip_lines" in options:
         given.append(f"skip = {options['skip_lines']}")
     if options.get("decimal_comma"):
         given.append("decimal_separator = ','")
     given.append("hive_partitioning = false")
-    return f"read_csv({text}, {', '.join(given)})"
+    read_csv = f"read_csv({text}, {', '.join(given)})"
+    if not booleans:
+        return read_csv
+    replaced = ", ".join(
+        f"try_cast(trim(lower({_identifier(column)})) as boolean) as {_identifier(column)}" for column in booleans
+    )
+    return f"(select * replace ({replaced}) from {read_csv})"
 
 
 def handed(location):

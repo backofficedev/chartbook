@@ -351,6 +351,55 @@ class TestLoad:
         # As pandas reads a folder: its Hive keys as categories
         assert isinstance(data.load("parts", format="pandas", project_dir=directory)["year"].dtype, pd.CategoricalDtype)
 
+    def test_pandas_reads_a_hive_folder_as_the_scan_does(self, tmp_path):
+        """A key the part also stores used to crash pandas, and a key that is only a folder name came back as text.
+
+        ``partition_by`` leaves the key in each part. PyArrow's dictionary Hive
+        type will not merge with that column. ``flag=true`` and ``day=2024-01-05``
+        with the key only in the folder name are a boolean and a date in the
+        scan, and were the strings ``'true'`` and ``'2024-01-05'`` in pandas.
+        """
+        from datetime import date
+
+        directory = _pipeline(
+            tmp_path / "rates",
+            {
+                "kept": {"path": "./_data/kept"},
+                "plain": {"path": "./_data/plain"},
+                "flags": {"path": "./_data/flags"},
+                "days": {"path": "./_data/days"},
+                "times": {"path": "./_data/times"},
+            },
+        )
+        pl.DataFrame({"year": [2024, 2025], "v": [1, 3]}).write_parquet(directory / "_data" / "plain", partition_by="year")
+        pl.DataFrame({"year": [2024, 2024, 2025], "v": [1, 2, 3]}).write_parquet(directory / "_data" / "kept", partition_by="year")
+        (directory / "_data" / "kept" / "_SUCCESS").write_bytes(b"")
+        for label, bit in (("true", True), ("false", False)):
+            _write(pl.DataFrame({"v": [1 if bit else 0]}), directory / "_data" / "flags" / f"flag={label}" / "p.parquet")
+        for day, value in ((date(2024, 1, 5), 1), (date(2024, 1, 6), 2)):
+            _write(pl.DataFrame({"v": [value]}), directory / "_data" / "days" / f"day={day.isoformat()}" / "p.parquet")
+        for stamp, value in (("2024-01-05 15:00:00", 1), ("2024-01-05 16:00:00", 2)):
+            _write(pl.DataFrame({"v": [value]}), directory / "_data" / "times" / f"t={stamp}" / "p.parquet")
+
+        def same(name, key):
+            scanned = data.load(name, project_dir=directory).collect().to_pandas()
+            loaded = data.load(name, format="pandas", project_dir=directory)
+            assert isinstance(loaded[key].dtype, pd.CategoricalDtype), name
+            assert not pd.api.types.is_string_dtype(loaded[key].cat.categories), name
+            assert loaded[key].tolist() == scanned[key].tolist(), name
+            return loaded
+
+        plain = same("plain", "year")
+        assert sorted(plain["year"].tolist()) == [2024, 2025]
+        kept = same("kept", "year")
+        assert sorted(kept["year"].tolist()) == [2024, 2024, 2025]
+        flags = same("flags", "flag")
+        assert flags.loc[flags["flag"].eq(True), "v"].tolist() == [1]
+        days = same("days", "day")
+        assert days.loc[days["day"] == pd.Timestamp("2024-01-05"), "v"].tolist() == [1]
+        times = same("times", "t")
+        assert times.loc[times["t"] == pd.Timestamp("2024-01-05 15:00:00"), "v"].tolist() == [1]
+
     @pytest.mark.parametrize("declared", ["./env=prod/data", "./_data/prices/year=2024"])
     @pytest.mark.parametrize("junk", [False, True])
     def test_a_folder_has_no_keys_from_the_folders_above_it(self, tmp_path, declared, junk):
@@ -1014,6 +1063,23 @@ class TestSql:
         (directory / "_data" / "b.csv").write_text("b\nyes\nNo\nt\n0\n\n", encoding="utf-8", newline="\n")
         loaded = data.load("b", project_dir=directory).collect()
         assert loaded["b"].to_list() == [True, False, True, False, None]
+        assert data.sql("select * from {b}", project_dir=directory).collect().equals(loaded)
+
+    def test_a_boolean_override_trims_a_word_and_an_unknown_one_is_null(self, tmp_path):
+        """A space around yes is still true, in both engines. maybe is null, and is not false, and does not stop the read."""
+        directory = _pipeline(tmp_path / "rates", {"b": {"path": "./_data/b.csv", "read_options": {"schema_overrides": {"b": "Boolean"}}}})
+        (directory / "_data" / "b.csv").write_text("b\n YES \nmaybe\n \nno\n", encoding="utf-8", newline="\n")
+        loaded = data.load("b", project_dir=directory).collect()
+        assert loaded["b"].to_list() == [True, None, None, False]
+        assert data.sql("select * from {b}", project_dir=directory).collect().equals(loaded)
+
+    def test_a_json_boolean_override_trims_and_an_unknown_word_is_null(self, tmp_path):
+        """The same words as a CSV override, after the read: padding is ignored, and maybe is null in data.sql too."""
+        directory = _pipeline(tmp_path / "rates", {"b": {"path": "./_data/b.jsonl", "read_options": {"schema_overrides": {"b": "Boolean"}}}})
+        lines = "".join(json.dumps({"b": word}) + "\n" for word in (" YES ", "maybe", "", "no"))
+        (directory / "_data" / "b.jsonl").write_text(lines, encoding="utf-8", newline="\n")
+        loaded = data.load("b", project_dir=directory).collect()
+        assert loaded["b"].to_list() == [True, None, None, False]
         assert data.sql("select * from {b}", project_dir=directory).collect().equals(loaded)
 
     @pytest.mark.parametrize(
