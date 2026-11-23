@@ -118,10 +118,20 @@ def get_pipeline_publishing_plan(manifest, publish_dir):
         if (file_path == "") or (file_path is None):
             pass
         else:
-            full_path = base_dir / file_path
+            full_path = (base_dir / file_path).resolve()
             # Check if the file exists before adding it to the plan
             if full_path.exists():
-                publishing_plan[full_path] = publish_dir / file_path
+                try:
+                    rel = full_path.relative_to(base_dir.resolve())
+                except ValueError:
+                    safe_parts = [
+                        part for part in Path(file_path).parts
+                        if part not in ("", ".", "..", "/", "\\") and not part.endswith(":")
+                    ]
+                    rel = Path("_external", *safe_parts) if safe_parts else Path("_external", full_path.name)
+                dest = publish_dir / rel
+                if dest.resolve() != full_path:
+                    publishing_plan[full_path] = dest
 
     for pipeline_id in pipeline_ids:
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)

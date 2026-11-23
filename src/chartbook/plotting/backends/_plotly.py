@@ -27,8 +27,11 @@ class PlotlyBackend(BaseBackend):
         if config.color:
             if isinstance(config.color, str):
                 return [config.color] * n_series
-            return list(config.color)[:n_series]
-        return get_config().color_palette[:n_series]
+            palette = list(config.color)
+            if palette:
+                return [palette[i % len(palette)] for i in range(n_series)]
+        palette = get_config().color_palette
+        return [palette[i % len(palette)] for i in range(n_series)]
 
     def _apply_layout(self, fig: "go.Figure", config: "ChartConfig") -> None:
         """Apply common layout configuration."""
@@ -104,8 +107,9 @@ class PlotlyBackend(BaseBackend):
             )
 
         if annotations:
+            for annotation in annotations:
+                fig.add_annotation(**annotation)
             fig.update_layout(
-                annotations=annotations,
                 margin=dict(b=100),  # Extra bottom margin for annotations
             )
 
@@ -234,12 +238,17 @@ class PlotlyBackend(BaseBackend):
         if config.size and config.size in df.columns:
             sizes = df[config.size]
             # Normalize to reasonable marker sizes
-            sizes = (sizes - sizes.min()) / (sizes.max() - sizes.min()) * 30 + 5
+            span = sizes.max() - sizes.min()
+            if span == 0 or span != span:
+                sizes = sizes.map(lambda _: 15.0)
+            else:
+                sizes = (sizes - sizes.min()) / span * 30 + 5
 
         # Handle color by category
         if config.color_by and config.color_by in df.columns:
             categories = df[config.color_by].unique()
-            colors = get_config().color_palette[: len(categories)]
+            palette = get_config().color_palette
+            colors = [palette[i % len(palette)] for i in range(len(categories))]
 
             for cat, color in zip(categories, colors):
                 mask = df[config.color_by] == cat
@@ -351,8 +360,8 @@ class PlotlyBackend(BaseBackend):
                     fill="tonexty" if config.stacked else "tozeroy",
                     stackgroup=stackgroup,
                     line=dict(color=colors[i]),
-                    fillcolor=colors[i].replace(")", ", 0.5)").replace("rgb", "rgba")
-                    if colors[i].startswith("rgb")
+                    fillcolor=colors[i].replace(")", ", 0.5)").replace("rgb", "rgba", 1)
+                    if colors[i].startswith("rgb(")
                     else colors[i],
                 )
             )
@@ -387,14 +396,14 @@ class PlotlyBackend(BaseBackend):
 
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
+        palette = get_config().color_palette
         left_colors = (
-            config.left_colors or get_config().color_palette[: len(config.left_y)]
+            config.left_colors
+            or [palette[i % len(palette)] for i in range(len(config.left_y))]
         )
         right_colors = (
             config.right_colors
-            or get_config().color_palette[
-                len(config.left_y) : len(config.left_y) + len(config.right_y)
-            ]
+            or [palette[(len(config.left_y) + i) % len(palette)] for i in range(len(config.right_y))]
         )
 
         # Add left axis traces
@@ -443,6 +452,7 @@ class PlotlyBackend(BaseBackend):
         from chartbook.plotting._overlays import apply_overlays_plotly
 
         apply_overlays_plotly(fig, overlay, df, config.x)
+        self._add_annotations(fig, config)
 
         return fig
 

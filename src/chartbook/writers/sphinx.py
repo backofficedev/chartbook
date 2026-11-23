@@ -1287,7 +1287,7 @@ class SphinxWriter:
             if (pipeline.get("location") or {}).get("kind") == "store" and "metadata_present" in pipeline:
                 project = {field: True for field in pipeline["metadata_present"]}
             missing = _collect_missing_fields(project, required["project"])
-            pipeline_link = "./" + self.pipeline_page_path(pipeline).removeprefix("cb/").removesuffix(".md") + ".html" if self.index.get("stores") is not None else "../index.html"
+            pipeline_link = "./" + self.pipeline_page_path(pipeline).removeprefix("cb/").removesuffix(".md") + ".html"
             rows.append(self._row("pipeline", pipeline.get("name", pipeline_id), pipeline_id, pipeline_id, missing, pipeline_link))
             for kind, table in kinds.items():
                 if kind == "Notebook" and not required.get("notebooks"):

@@ -613,8 +613,8 @@ def _render_site(
     # trusted is rendered as a build of files from a store is
     untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
 
-    # Convert output_dir to Path
-    output_dir = Path(output_dir).resolve()
+    # Convert output_dir to Path (relative paths resolve against project_dir, matching `docs open`)
+    output_dir = (project_dir / Path(output_dir)).resolve()
 
     # Prevent deleting the current working directory
     if output_dir == Path.cwd():
@@ -1168,8 +1168,7 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
             pipeline_id = manifest["project"]["id"]
 
             if publish_dir is None:
-                BASE_DIR = Path(".").resolve()
-                publish_dir = BASE_DIR / Path("./_output/to_be_published")
+                publish_dir = project_dir / Path("./_output/to_be_published")
             else:
                 publish_dir = Path(publish_dir) / pipeline_id
 
@@ -1288,6 +1287,8 @@ def _check_pipeline(project_dir, within_days, policy_path):
             click.echo(f"warning: {agents.notice(*old)}", err=True)
     except Exception:  # noqa: BLE001 - a note about the skill never stops a check
         pass
+    from chartbook.store import StoreError
+
     try:
         # Manifest warnings (e.g. unknown [project] keys) belong in the
         # report, not in Python's warning format
@@ -1316,7 +1317,7 @@ def _check_pipeline(project_dir, within_days, policy_path):
                 policy_label = f"the policy in {machine_catalog}" if policy_given else "the default policy"
             else:
                 policy_label = "the default policy"
-    except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
+    except (ValueError, FileNotFoundError, TypeError, KeyError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
@@ -2305,9 +2306,11 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
     # A site built with MkDocs is built whole: the kept build directory is Sphinx's
     from chartbook.manifest import load_manifest
 
+    from chartbook.store import StoreError
+
     try:
         incremental = load_manifest(project_dir)["project"].get("writer", "sphinx") != "mkdocs"
-    except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
+    except (ValueError, FileNotFoundError, TypeError, KeyError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     if not incremental and watch:
@@ -2443,6 +2446,7 @@ def data_get_path(pipeline, dataframe, catalog):
         chartbook data get-path --pipeline yield_curve --dataframe repo_public
     """
     from chartbook.data import get_data_path
+    from chartbook.store import StoreError
 
     if catalog is None:
         _catalog_or_make_one()
@@ -2450,7 +2454,7 @@ def data_get_path(pipeline, dataframe, catalog):
         # The command is in the working directory's pipeline: the calling file is this one
         path = get_data_path(pipeline, dataframe, catalog_path=catalog, project_dir=Path.cwd())
         click.echo(str(path))
-    except (LookupError, OSError, ValueError) as e:
+    except (LookupError, OSError, ValueError, StoreError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
@@ -6515,9 +6519,10 @@ def install_agents(ctx, force):
 def catalog_migrate(catalog_path):
     """Replace a folder catalog with catalog.toml, keeping an exact backup."""
     from chartbook.catalog_config import migrate
+    from chartbook.store import StoreError
     try:
         target, missing = migrate(catalog_path)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, StoreError) as error:
         raise click.ClickException(str(error)) from None
     click.echo(f"Migrated to {target}")
     from chartbook.config import get_store_setting, get_global_settings_path, get_system_settings_path

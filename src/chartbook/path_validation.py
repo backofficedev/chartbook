@@ -178,7 +178,19 @@ def diagnose_path(raw_path: str, env: ShellEnvironment) -> list[PathDiagnostic]:
         )
         return diagnostics  # No need for further checks
 
-    # Check 2: Backslashes in a non-Windows runtime
+    # Check 2: UNC paths in POSIX-like shell (before generic backslash check so WSL/Cygwin reaches it)
+    if _UNC_PATH_RE.match(raw_path) and env.is_posix_on_windows:
+        diagnostics.append(
+            PathDiagnostic(
+                level="warning",
+                message=f"UNC path detected in {env.shell_label}.",
+                hint="UNC paths may not resolve correctly. Consider mapping to a drive letter or using the POSIX mount point.",
+                original_path=raw_path,
+            )
+        )
+        return diagnostics
+
+    # Check 3: Backslashes in a non-Windows runtime
     if _has_backslashes(raw_path) and env.os_name != "Windows":
         diagnostics.append(
             PathDiagnostic(
@@ -191,7 +203,7 @@ def diagnose_path(raw_path: str, env: ShellEnvironment) -> list[PathDiagnostic]:
         )
         return diagnostics
 
-    # Check 3: Backslashes in MINGW with native Windows Python
+    # Check 4: Backslashes in MINGW with native Windows Python
     # (Python can resolve them, but it's fragile and confusing)
     if _has_backslashes(raw_path) and env.is_mingw and env.os_name == "Windows":
         suggested = suggest_posix_path(raw_path, env) if _looks_like_windows_path(raw_path) else raw_path.replace("\\", "/")
@@ -205,17 +217,6 @@ def diagnose_path(raw_path: str, env: ShellEnvironment) -> list[PathDiagnostic]:
                 hint=f"Use forward slashes for consistency. Try: {suggested}",
                 original_path=raw_path,
                 suggested_path=suggested,
-            )
-        )
-
-    # Check 4: UNC paths in POSIX-like shell
-    if _UNC_PATH_RE.match(raw_path) and env.is_posix_on_windows:
-        diagnostics.append(
-            PathDiagnostic(
-                level="warning",
-                message=f"UNC path detected in {env.shell_label}.",
-                hint="UNC paths may not resolve correctly. Consider mapping to a drive letter or using the POSIX mount point.",
-                original_path=raw_path,
             )
         )
 

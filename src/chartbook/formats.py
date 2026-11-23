@@ -975,7 +975,7 @@ def _csv(read: Reading, sources, named=None) -> tuple:
     named = dict(zip(names, polars_names))
     # True or false is read as text and then as one of the words DuckDB
     # takes for one (yes, t, 1...), where polars would take true and false alone
-    truths = [named.get(column, column) for column, kind in overrides.items() if kind == pl.Boolean]
+    truths = [named[column] for column, kind in overrides.items() if kind == pl.Boolean and column in named]
     if overrides:
         options["schema_overrides"] = {
             named.get(column, column): pl.String if kind == pl.Boolean else kind for column, kind in overrides.items()

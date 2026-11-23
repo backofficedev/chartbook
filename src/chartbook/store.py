@@ -2390,7 +2390,8 @@ class FolderStore(Store):
         """
         self.check_writable()
         path = Path(path)
-        if not path.is_file():
+        on_disk = Path(_any_length(path))
+        if not on_disk.is_file():
             return False
         folder = path.parent.parent
         self._forget()
@@ -2403,7 +2404,7 @@ class FolderStore(Store):
             )
         kept = read_kept_record(path)
         try:
-            _remove_file(path)  # read-only, as the store keeps its files: Windows removes no such file as it is
+            _remove_file(on_disk)  # read-only, as the store keeps its files: Windows removes no such file as it is
         except OSError as error:
             raise StoreError(
                 f"Cannot remove the snapshot record {self._shown(path)}: {error.strerror or error}. "

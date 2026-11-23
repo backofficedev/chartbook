@@ -4098,7 +4098,17 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     named = [taken.documents.get("content_hash")]
     named += [
         r["content_hash"] for r in taken.assets.values()
-        if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file" and (data or r.get("kind") not in DATA_KINDS)
+        if r.get("content_hash")
+        and (
+            ((r.get("location") or {}).get("kind") == "file" and (data or r.get("kind") not in DATA_KINDS))
+            or (
+                data
+                and r.get("kind") == "Dataframe"
+                and (r.get("location") or {}).get("kind") in ("table", "query")
+                and isinstance(r.get("ref", {}).get("name"), str)
+                and plain_name(materialized_name(r)) is not None
+            )
+        )
     ]
     # The snapshot's own index: without its data laid out, a version's pages are built from it
     index_record = None
@@ -4118,8 +4128,16 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     # Each object whole as its record has it: a site built from a file a
     # sync has half delivered would be wrong, and kept
     for record in [taken.documents, *taken.assets.values(), *([index_record] if index_record else [])]:
+        location_kind = (record.get("location") or {}).get("kind")
         declared = (record.get("location") or {}).get("path")
-        if record is not taken.documents and record is not index_record and safe_relative(declared) is None:
+        is_materialized_table = (
+            data
+            and record.get("kind") == "Dataframe"
+            and location_kind in ("table", "query")
+            and isinstance(record.get("ref", {}).get("name"), str)
+            and plain_name(materialized_name(record)) is not None
+        )
+        if record is not taken.documents and record is not index_record and not is_materialized_table and safe_relative(declared) is None:
             continue  # not laid out at all, and said so below
         if record.get("content_hash") in named:
             unsynced = not_whole(store, record, taken.pipeline)

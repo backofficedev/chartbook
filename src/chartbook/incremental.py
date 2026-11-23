@@ -159,9 +159,10 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
                     continue
                 declared_path = base_dir / declared
                 if is_glob_pattern(declared):
+                    pattern = os.path.join(glob.escape(str(base_dir)), declared)
                     files.update(
                         Path(match)
-                        for match in glob.glob(str(declared_path), recursive=True)
+                        for match in glob.glob(pattern, recursive=True)
                     )
                 elif declared_path.is_dir():
                     # A model or a files asset may be a directory: every file in it counts

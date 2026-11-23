@@ -196,6 +196,7 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
         if why is not None:
             if pending is not None:
                 pending.discard()
+            done.size_bytes = counted
             done.refused.append((what, why))
             continue
         done.copied.append(moment)
