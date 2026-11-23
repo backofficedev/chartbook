@@ -378,8 +378,10 @@ class TestLoad:
             _write(pl.DataFrame({"v": [1 if bit else 0]}), directory / "_data" / "flags" / f"flag={label}" / "p.parquet")
         for day, value in ((date(2024, 1, 5), 1), (date(2024, 1, 6), 2)):
             _write(pl.DataFrame({"v": [value]}), directory / "_data" / "days" / f"day={day.isoformat()}" / "p.parquet")
-        for stamp, value in (("2024-01-05 15:00:00", 1), ("2024-01-05 16:00:00", 2)):
-            _write(pl.DataFrame({"v": [value]}), directory / "_data" / "times" / f"t={stamp}" / "p.parquet")
+        if os.name != "nt":
+            # Colons are illegal in Windows folder names
+            for stamp, value in (("2024-01-05 15:00:00", 1), ("2024-01-05 16:00:00", 2)):
+                _write(pl.DataFrame({"v": [value]}), directory / "_data" / "times" / f"t={stamp}" / "p.parquet")
 
         def same(name, key):
             scanned = data.load(name, project_dir=directory).collect().to_pandas()
@@ -397,8 +399,9 @@ class TestLoad:
         assert flags.loc[flags["flag"].eq(True), "v"].tolist() == [1]
         days = same("days", "day")
         assert days.loc[days["day"] == pd.Timestamp("2024-01-05"), "v"].tolist() == [1]
-        times = same("times", "t")
-        assert times.loc[times["t"] == pd.Timestamp("2024-01-05 15:00:00"), "v"].tolist() == [1]
+        if os.name != "nt":
+            times = same("times", "t")
+            assert times.loc[times["t"] == pd.Timestamp("2024-01-05 15:00:00"), "v"].tolist() == [1]
 
     def test_a_partition_value_of_another_type_is_null_in_sql_too(self, tmp_path):
         """``partition_by`` leaves the key in the part, so the column's type is the file's.
@@ -435,9 +438,14 @@ class TestLoad:
         wide = "99999999999999999999"
         directory = _pipeline(tmp_path / "rates", {"parts": {"path": "./_data/parts/**/*.parquet"}})
         _write(pl.DataFrame({"v": [1]}), directory / "_data" / "parts" / f"id={wide}" / "a.parquet")
+        try:
+            scanned = data.load("parts", project_dir=directory).collect()
+        except UnreadableTableError:
+            # Polars 1.33's Hive parser fails on >64-bit integer folder names instead of returning Int128
+            pytest.skip("Polars on this floor does not parse >64-bit Hive partition keys")
         loaded = data.load("parts", format="pandas", project_dir=directory)
         assert loaded["id"].tolist() == [wide]
-        assert data.load("parts", project_dir=directory).collect()["id"].to_list() == [int(wide)]
+        assert scanned["id"].to_list() == [int(wide)]
 
     @pytest.mark.parametrize("declared", ["./env=prod/data", "./_data/prices/year=2024"])
     @pytest.mark.parametrize("junk", [False, True])

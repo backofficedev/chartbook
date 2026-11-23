@@ -463,8 +463,10 @@ class TestTheCache:
         body = client.get_object(Bucket=BUCKET, Key=note)["Body"].read()
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (1).json"), Body=body)
         client.put_object(Bucket=BUCKET, Key=f"{HERE}/_chartbook/snapshot (1).json", Body=Path(written).read_bytes())
+        # _root_path keeps POSIX paths without adding a Windows drive letter
+        expected_lockfile = str(Path("/somewhere/chartbook.lock"))
         assert sorted((str(root.lockfile), root.copy) for root in store.roots()) == [
-            (os.path.abspath("/somewhere/chartbook.lock"), False), (os.path.abspath("/somewhere/chartbook.lock"), True)  # with a drive on Windows
+            (expected_lockfile, False), (expected_lockfile, True)
         ]
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"), Body=b'{"lock')
         with pytest.raises(StoreError, match="if it is a copy nobody needs"):
