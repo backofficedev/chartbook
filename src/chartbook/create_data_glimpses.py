@@ -211,7 +211,7 @@ def get_dataset_report(
         report["n_rows"] = row_count_df["count"][0]
 
         # Get null counts - skip for large files to avoid OOM
-        if not is_large_file:
+        if not is_large_file and len(schema) > 0:
             null_count_exprs = [pl.col(col).null_count().alias(col) for col in schema]
             null_counts = lf.select(null_count_exprs).collect().to_dicts()[0]
         else:
@@ -240,12 +240,15 @@ def get_dataset_report(
         report["sample_values"] = sample
 
         # Capture polars text representation of first 5 rows
-        output = StringIO()
-        with redirect_stdout(output):
-            sample_df.glimpse()
-        sample_text = output.getvalue()
-        # Fix row count in sample text to show actual total rows
-        report["sample_text"] = fix_glimpse_row_count(sample_text, report["n_rows"])
+        if sample_df.width > 0:
+            output = StringIO()
+            with redirect_stdout(output):
+                sample_df.glimpse()
+            sample_text = output.getvalue()
+            # Fix row count in sample text to show actual total rows
+            report["sample_text"] = fix_glimpse_row_count(sample_text, report["n_rows"])
+        else:
+            report["sample_text"] = f"Rows: {report['n_rows']}\nColumns: 0\n"
 
         # Numeric stats (only if requested)
         numeric_types = {
@@ -299,12 +302,15 @@ def get_dataset_report(
             # For small files, collect more data for better representation
             glimpse_df = lf.head(100).collect()
 
-        output = StringIO()
-        with redirect_stdout(output):
-            glimpse_df.glimpse(max_items_per_column=0)
-        glimpse_text = output.getvalue()
-        # Fix row count in glimpse to show actual total rows
-        report["glimpse"] = fix_glimpse_row_count(glimpse_text, report["n_rows"])
+        if glimpse_df.width > 0:
+            output = StringIO()
+            with redirect_stdout(output):
+                glimpse_df.glimpse(max_items_per_column=0)
+            glimpse_text = output.getvalue()
+            # Fix row count in glimpse to show actual total rows
+            report["glimpse"] = fix_glimpse_row_count(glimpse_text, report["n_rows"])
+        else:
+            report["glimpse"] = f"Rows: {report['n_rows']}\nColumns: 0\n"
 
     # A panic in polars is a BaseException: one dataframe's error, not the report's end
     except (Exception, pl.exceptions.PanicException) as e:

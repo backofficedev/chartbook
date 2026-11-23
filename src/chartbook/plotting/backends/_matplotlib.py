@@ -152,8 +152,11 @@ class MatplotlibBackend(BaseBackend):
         if config.color:
             if isinstance(config.color, str):
                 return [config.color] * n_series
-            return list(config.color)[:n_series]
-        return get_config().color_palette[:n_series]
+            palette = list(config.color)
+            if palette:
+                return [palette[i % len(palette)] for i in range(n_series)]
+        palette = get_config().color_palette
+        return [palette[i % len(palette)] for i in range(n_series)]
 
     def _build_line_figure(
         self,
@@ -259,12 +262,17 @@ class MatplotlibBackend(BaseBackend):
         if config.size and config.size in df.columns:
             sizes = df[config.size]
             # Normalize sizes to reasonable marker sizes
-            sizes = (sizes - sizes.min()) / (sizes.max() - sizes.min()) * 200 + 20
+            span = sizes.max() - sizes.min()
+            if span == 0 or span != span:
+                sizes = sizes.map(lambda _: 60.0)
+            else:
+                sizes = (sizes - sizes.min()) / span * 200 + 20
 
         # Handle color by category
         if config.color_by and config.color_by in df.columns:
             categories = df[config.color_by].unique()
-            colors = get_config().color_palette[: len(categories)]
+            palette = get_config().color_palette
+            colors = [palette[i % len(palette)] for i in range(len(categories))]
             for cat, color in zip(categories, colors):
                 mask = df[config.color_by] == cat
                 cat_sizes = sizes[mask] if sizes is not None else None
@@ -400,24 +408,30 @@ class MatplotlibBackend(BaseBackend):
         fig, ax1 = self._setup_figure(size)
         ax2 = ax1.twinx()
 
+        palette = get_config().color_palette
         left_colors = (
-            config.left_colors or get_config().color_palette[: len(config.left_y)]
+            config.left_colors
+            or [palette[i % len(palette)] for i in range(len(config.left_y))]
         )
         right_colors = (
             config.right_colors
-            or get_config().color_palette[
-                len(config.left_y) : len(config.left_y) + len(config.right_y)
-            ]
+            or [palette[(len(config.left_y) + i) % len(palette)] for i in range(len(config.right_y))]
         )
+
+        # If either axis uses bars, both axes share integer positional x coordinates
+        # so datetime/categorical x-axes don't mismatch epoch days vs 0..N-1.
+        use_positional_x = config.left_type == "bar" or config.right_type == "bar"
 
         # Plot left axis
         self._plot_series_on_axis(
-            ax1, df, config.x, config.left_y, config.left_type, left_colors
+            ax1, df, config.x, config.left_y, config.left_type, left_colors,
+            use_positional_x=use_positional_x,
         )
 
         # Plot right axis
         self._plot_series_on_axis(
-            ax2, df, config.x, config.right_y, config.right_type, right_colors
+            ax2, df, config.x, config.right_y, config.right_type, right_colors,
+            use_positional_x=use_positional_x,
         )
 
         # Configure axes
@@ -468,15 +482,19 @@ class MatplotlibBackend(BaseBackend):
         y_cols: list[str],
         chart_type: str,
         colors: list[str],
+        *,
+        use_positional_x: bool = False,
     ) -> None:
         """Plot series on the given axis based on chart type."""
         import numpy as np
+
+        x_vals = np.arange(len(df)) if use_positional_x else df[x_col]
 
         for i, y_col in enumerate(y_cols):
             color = colors[i] if i < len(colors) else colors[0]
 
             if chart_type == "line":
-                ax.plot(df[x_col], df[y_col], label=y_col, color=color)
+                ax.plot(x_vals, df[y_col], label=y_col, color=color)
             elif chart_type == "bar":
                 x = np.arange(len(df))
                 width = 0.8 / len(y_cols)
@@ -485,9 +503,9 @@ class MatplotlibBackend(BaseBackend):
                 ax.set_xticks(x)
                 ax.set_xticklabels(df[x_col], rotation=45, ha="right")
             elif chart_type == "scatter":
-                ax.scatter(df[x_col], df[y_col], label=y_col, color=color, alpha=0.7)
+                ax.scatter(x_vals, df[y_col], label=y_col, color=color, alpha=0.7)
             elif chart_type == "area":
                 ax.fill_between(
-                    df[x_col], df[y_col], alpha=0.5, label=y_col, color=color
+                    x_vals, df[y_col], alpha=0.5, label=y_col, color=color
                 )
-                ax.plot(df[x_col], df[y_col], color=color)
+                ax.plot(x_vals, df[y_col], color=color)

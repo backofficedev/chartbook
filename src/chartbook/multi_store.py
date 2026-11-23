@@ -281,7 +281,10 @@ class Stores:
         return store.size_of(content_hash)
 
     def age_of(self, content_hash, now=None):
-        return min(s.age_of(content_hash, now) for s in self._holding(content_hash))
+        ages = [s.age_of(content_hash, now) for s in self._holding(content_hash)]
+        if not ages:
+            raise ObjectNotFoundError(f"No reachable store holds {content_hash}")
+        return min(ages)
 
     def roots(self):
         return self._collect("roots")
@@ -307,9 +310,16 @@ class Stores:
             unheld.difference_update(held)
             if held:
                 problems.extend(entry.store.verify(held) if pipeline is None else entry.store.verify(held, pipeline))
-        if unheld and first is not None:
+        if unheld:
             missing = [content_hash for content_hash in wanted if content_hash in unheld]
-            problems.extend(first.verify(missing) if pipeline is None else first.verify(missing, pipeline))
+            if first is not None:
+                problems.extend(first.verify(missing) if pipeline is None else first.verify(missing, pipeline))
+            else:
+                from chartbook.store import StoreProblem
+                problems.extend(
+                    StoreProblem(content_hash, Path(str(self)), f"No configured store is reachable to verify {content_hash}")
+                    for content_hash in missing
+                )
         return problems
 
     def begin(self, *args, **kwargs):

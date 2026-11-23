@@ -697,6 +697,10 @@ def validate_series(dataframe_manifest: dict, dataframe_id: str) -> dict:
             raise ValueError(
                 f"{where}: {key!r} has both docs_path and docs. Only one is allowed."
             )
+        if "docs_path" in entry and not isinstance(entry["docs_path"], str):
+            raise ValueError(
+                f"{where}: {key!r} has a 'docs_path' that is not a string."
+            )
     return series
 
 
@@ -1808,9 +1812,13 @@ def _load_pipeline_manifest(raw_manifest):
     for notebook_id in manifest.get("notebooks", {}):
         nb_manifest = manifest["notebooks"][notebook_id]
         if "name" not in nb_manifest:
-            nb_path = base_dir / nb_manifest.get("path", "")
-            if nb_path.exists():
-                title = extract_notebook_title(nb_path)
+            nb_rel = nb_manifest.get("path", "")
+            nb_path = base_dir / nb_rel if isinstance(nb_rel, str) and nb_rel else None
+            if nb_path is not None and nb_path.is_file():
+                try:
+                    title = extract_notebook_title(nb_path)
+                except (OSError, ValueError):
+                    title = None
                 if title:
                     nb_manifest["name"] = title
 
@@ -1884,6 +1892,11 @@ def _load_pipeline_manifest(raw_manifest):
                     raise ValueError(
                         f"Chart '{chart_id}' has no 'dataframe' key linking it "
                         f"to a dataframe in the [dataframes] section."
+                    )
+                if not isinstance(dataframe_id, str):
+                    raise ValueError(
+                        f"Chart '{chart_id}' has a 'dataframe' key that must be a string, "
+                        f"got {type(dataframe_id).__name__}."
                     )
                 if dataframe_id in dataframe_to_charts:
                     dataframe_to_charts[dataframe_id].append(chart_id)

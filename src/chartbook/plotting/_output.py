@@ -159,52 +159,40 @@ def save_chart_from_result(
         result.html_path = html_path
 
     # Generate static formats (Matplotlib)
-    matplotlib_backend = get_backend("matplotlib")
-
-    # PNG single format
     png_path = out_dir / f"{chart_id}.png"
-    if is_dual:
-        matplotlib_backend.create_dual_axis(
-            df, config, overlay, png_path, global_config.figure_size_single
-        )
-    else:
-        matplotlib_backend.create_chart(
-            df, config, overlay, png_path, global_config.figure_size_single
-        )
-    result.png_path = png_path
-
-    # PNG wide format
     png_wide_path = out_dir / f"{chart_id}_wide.png"
-    if is_dual:
-        matplotlib_backend.create_dual_axis(
-            df, config, overlay, png_wide_path, global_config.figure_size_wide
-        )
-    else:
-        matplotlib_backend.create_chart(
-            df, config, overlay, png_wide_path, global_config.figure_size_wide
-        )
-    result.png_wide_path = png_wide_path
-
-    # PDF single format
     pdf_path = out_dir / f"{chart_id}.pdf"
-    if is_dual:
-        matplotlib_backend.create_dual_axis(
-            df, config, overlay, pdf_path, global_config.figure_size_single
-        )
-    else:
-        matplotlib_backend.create_chart(
-            df, config, overlay, pdf_path, global_config.figure_size_single
-        )
-    result.pdf_path = pdf_path
-
-    # PDF wide format
     pdf_wide_path = out_dir / f"{chart_id}_wide.pdf"
-    if is_dual:
-        matplotlib_backend.create_dual_axis(
-            df, config, overlay, pdf_wide_path, global_config.figure_size_wide
-        )
+
+    if result._mpl_figure is not None:
+        # Preserve user customizations made via result.mpl_figure / result.mpl_axes
+        orig_size = result._mpl_figure.get_size_inches().copy()
+        try:
+            for path, target_size in (
+                (png_path, global_config.figure_size_single),
+                (png_wide_path, global_config.figure_size_wide),
+                (pdf_path, global_config.figure_size_single),
+                (pdf_wide_path, global_config.figure_size_wide),
+            ):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                result._mpl_figure.set_size_inches(*target_size)
+                result._mpl_figure.savefig(path, bbox_inches="tight", dpi=300)
+        finally:
+            result._mpl_figure.set_size_inches(*orig_size)
     else:
-        matplotlib_backend.create_chart(
-            df, config, overlay, pdf_wide_path, global_config.figure_size_wide
-        )
+        matplotlib_backend = get_backend("matplotlib")
+        for path, target_size in (
+            (png_path, global_config.figure_size_single),
+            (png_wide_path, global_config.figure_size_wide),
+            (pdf_path, global_config.figure_size_single),
+            (pdf_wide_path, global_config.figure_size_wide),
+        ):
+            if is_dual:
+                matplotlib_backend.create_dual_axis(df, config, overlay, path, target_size)
+            else:
+                matplotlib_backend.create_chart(df, config, overlay, path, target_size)
+
+    result.png_path = png_path
+    result.png_wide_path = png_wide_path
+    result.pdf_path = pdf_path
     result.pdf_wide_path = pdf_wide_path

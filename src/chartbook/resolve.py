@@ -1548,9 +1548,10 @@ def _resolve_pinned_version(
     from chartbook import lock as locks
 
     entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
+    by_hash_pipeline = locks.pinned_pipeline(entry)
+    if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"], by_hash_pipeline):
+        return _held(store, by_label[0], by_hash_pipeline)
     of_pipeline = locks.pinned_pipeline(entry, _folder_of(dependency))
-    if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"], of_pipeline):
-        return _held(store, by_label[0], of_pipeline)
     commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")
     if not (commit and made_at):
         raise AssetNotPinnedError(
@@ -1832,13 +1833,14 @@ def resolve(
             raise why_not from None
         raise error from None
 
-    if catalog is not None and (catalog.parent / "catalog.toml").is_file() and (manifest_dir is None or (manifest_dir / "catalog.toml").is_file()):
+    catalog_stores = listed["stores"] if catalog is not None and (catalog.parent / "catalog.toml").is_file() else None
+    if catalog_stores is not None and not in_pipeline:
         from chartbook import lock
         if why_not is not None:
             raise why_not from None
         # The same rule as a reference: a batch run outside any pipeline reads nothing
         _refuse_a_batch_read_outside_a_pipeline(asset)
-        stores = listed["stores"]
+        stores = catalog_stores
         found = _snapshots_in(stores)
         repository = listed.get("pipeline_notes", {}).get(key, {}).get("repository")
         newest, why, _ = lock._newest_in_store(key, None, stores, repository, found=found, named=bool(repository))
@@ -1850,7 +1852,7 @@ def resolve(
         if location is None:
             raise AssetNotPinnedError(str(asset), "no_snapshot", str(why))
         return location
-    return _read_another(asset, manifest_dir, from_the_catalog, folder=folder)
+    return _read_another(asset, manifest_dir, from_the_catalog, folder=folder, store=catalog_stores)
 
 
 #: Set to ``1`` for a pipeline's ``build`` script under ``chartbook run``,
@@ -1937,7 +1939,7 @@ def _own_id(folder: Path) -> Optional[str]:
         return None
 
 
-def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder=None) -> Location:
+def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder=None, store=None) -> Location:
     """Another pipeline's asset, read from where the caller is: in a pipeline, or not.
 
     A catalog's folder is no pipeline, so a notebook there reads as one in
@@ -1965,7 +1967,7 @@ def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder
                 asset = asset.in_pipeline(key)
     if manifest_dir is None:
         return _read_outside_a_pipeline(asset, working)
-    return _read_in_a_pipeline(asset, manifest_dir, working)
+    return _read_in_a_pipeline(asset, manifest_dir, working, store=store)
 
 
 def _names_this_pipeline(asset: AssetRef, manifest_dir: Path) -> Optional[str]:
@@ -2048,7 +2050,7 @@ def _read_snapshots(files) -> list:
     return found
 
 
-def _newest_snapshot_of(asset: AssetRef):
+def _newest_snapshot_of(asset: AssetRef, store=None):
     """The asset as the newest snapshot of its pipeline in the store holds it.
 
     The pipeline is found by its ID, or by a bare name that only one ID in
@@ -2067,7 +2069,7 @@ def _newest_snapshot_of(asset: AssetRef):
     from chartbook.store import default_store
 
     try:
-        store = default_store()
+        store = default_store() if store is None else store
         found = _snapshots_in(store)
     except Exception as error:  # noqa: BLE001 - an unreadable store is a reason, said in the error
         return None, f"the store cannot be read ({error})", None, True
@@ -2397,7 +2399,7 @@ _tried: dict[tuple[str, str], tuple[float, int, str, str]] = {}
 _TRY_AGAIN_SECONDS = 30
 
 
-def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Location:
+def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working, store=None) -> Location:
     """Another pipeline's asset, read from a pipeline: through its lockfile, with the interactive rules.
 
     - Declared and pinned: the pinned copy.
@@ -2423,7 +2425,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     except DependencyNotDeclaredError as error:
         key = _declared_as(asset.pipeline_id, manifest_dir)
         if key is not None:
-            return _read_in_a_pipeline(asset.in_pipeline(key), manifest_dir, working)
+            return _read_in_a_pipeline(asset.in_pipeline(key), manifest_dir, working, store=store)
         own = _names_this_pipeline(asset, manifest_dir)
         if own is not None:
             # Never this pipeline's own snapshot read as another's
@@ -2431,7 +2433,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         if batch():
             _note_an_undeclared_read(asset, manifest_dir)
             raise
-        location, why, newest, settled = _newest_snapshot_of(asset)
+        location, why, newest, settled = _newest_snapshot_of(asset, store=store)
         if location is None:
             if settled:
                 raise AssetNotPinnedError(str(asset), "no_snapshot", f"{asset} cannot be read: {why}.") from None

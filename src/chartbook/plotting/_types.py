@@ -251,7 +251,13 @@ class ChartResult:
         :returns: HTML representation of the Plotly figure.
         :rtype: str
         """
-        return self.figure.to_html(include_plotlyjs="cdn", full_html=False, div_id="chartbook-figure")
+        import uuid
+
+        return self.figure.to_html(
+            include_plotlyjs="cdn",
+            full_html=False,
+            div_id=f"chartbook-figure-{uuid.uuid4().hex[:12]}",
+        )
 
     def save(
         self,

@@ -99,11 +99,13 @@ RUN_STACK_ENV_VAR = "CHARTBOOK_RUN_STACK"
 def _stack() -> list[tuple[str, str]]:
     """The scripts this process is running inside, outermost first."""
     text = os.environ.get(RUN_STACK_ENV_VAR, "")
-    if not text:
-        return []
-    try:
-        entries = json.loads(text)
-    except ValueError:
+    entries: object = []
+    if text:
+        try:
+            entries = json.loads(text)
+        except ValueError:
+            entries = []
+    if not isinstance(entries, list):
         entries = []
     found = [
         (entry[0], entry[1])

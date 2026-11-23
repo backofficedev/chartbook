@@ -990,7 +990,12 @@ def _generate_docs_incremental(
     # read other pipelines' records, so whether its pages can be reused
     # depends on what those panels would say as well as on its own files
     cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
-    built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    built = index.build_index(
+        manifest,
+        cache=cache,
+        skip_pipelines=skip_pipelines,
+        size_threshold=size_threshold,
+    )
     _refuse_unreadable(built)
     rendered = _render_versions(manifest, built, (_docs_dir / incremental.SPHINX_BUILD_DIR / "html", output_dir))
     records = {record["id"]: record for record in built["records"]}

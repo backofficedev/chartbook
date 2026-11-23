@@ -1769,7 +1769,7 @@ def _sync_now(
             gone = dict(next(entry for entry in before.dependencies if entry["id"] == key))
             stays = still_pinned(before.earlier_of(key), gone, store, snapshots_in_store) if before.earlier else {}  # its folder is no longer declared
             had_gone = {**before.assets_of(key), **stays}
-            if stays and "pinned_hash" in gone:
+            if stays:
                 records = [v for v in had_gone.values() if isinstance(v, dict) and v.get("content_hash")]
                 if records:
                     gone["pinned_hash"] = pinned_hash(records)
@@ -1794,7 +1794,7 @@ def _sync_now(
         if only is not None and key not in only:
             if key in locked:
                 kept_entry = dict(locked[key])
-                if stays and "pinned_hash" in kept_entry:
+                if stays:
                     records = [v for v in had.values() if isinstance(v, dict) and v.get("content_hash")]
                     if records:
                         kept_entry["pinned_hash"] = pinned_hash(records)
@@ -2418,7 +2418,7 @@ def _noted_as() -> Optional[str]:
     """
     from chartbook.config import MACHINE_ENV_VAR
 
-    if os.environ.get("CI", "").strip() and not os.environ.get(MACHINE_ENV_VAR, "").strip():
+    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false") and not os.environ.get(MACHINE_ENV_VAR, "").strip():
         return ""
     return None
 
@@ -5226,10 +5226,14 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
     for taken, _ in plan.pinned_delete:
         if taken.path not in still_pinned:
             continue
+        if str(taken.path) in kept_bases:
+            kept_back |= taken.hashes()
+            continue
         try:
             removed_pinned += 1 if snapshot.remove(store, taken) else 0
         except (StoreError, OSError) as error:
             failures.append((f"where a pin kept {taken.pipeline} at {taken.commit[:7]}", str(error)))
+            kept_back |= taken.hashes()
     # What the cleared snapshots held goes now, file by file, but what a
     # snapshot that stays uses
     stuck: dict = {}

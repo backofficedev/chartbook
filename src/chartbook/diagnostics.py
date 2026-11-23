@@ -188,7 +188,7 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
     elif object_type == "file":
         return f"./files/{pipeline_slug}/{identifier}.html"
     elif object_type == "pipeline":
-        return "../index.html"
+        return f"./pipelines/{pipeline_slug}_README.html"
     else:
         return ""
 

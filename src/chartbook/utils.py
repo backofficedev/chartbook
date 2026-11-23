@@ -345,8 +345,11 @@ def most_recent_valid_datapoints(
         frame = frame.with_columns(pl.col(date_col).str.to_datetime(strict=False))  # text dates, as a CSV has them
     elif frame[date_col].dtype != pl.Datetime:
         frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
+    other_cols = [col for col in frame.columns if col != date_col]
+    if not other_cols:
+        return "N/A", "N/A"
     latest = frame.select(
-        [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in frame.columns if col != date_col]
+        [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in other_cols]
     )
     dates = [date for date in latest.row(0) if date is not None]
     if not dates:

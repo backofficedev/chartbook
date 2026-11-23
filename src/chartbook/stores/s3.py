@@ -1654,7 +1654,7 @@ class S3Store(Store):
         return sorted(found.items())
 
     def listing(self, content_hash: str, single: bool):
-        held = [asset for asset in _held_in(self.records(), content_hash) if asset.single == single]
+        held = [asset for asset in self._held(self._seen(), content_hash) if asset.single == single]
         return kept_listing(held[0]) if held else None
 
     def size_of(self, content_hash: str) -> int:

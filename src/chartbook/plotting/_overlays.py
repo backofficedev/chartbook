@@ -320,34 +320,43 @@ def apply_overlays_plotly(
     if overlay.regression_line:
         import numpy as np
 
-        # Calculate regression for the first y column
-        # (assumes x is numeric or can be converted)
-        try:
-            x_numeric = pd.to_numeric(df[x_col], errors="coerce")
-            if x_numeric.isna().all():
-                # Try converting datetime to numeric
-                x_numeric = pd.to_datetime(df[x_col]).astype(int) / 10**9
-        except Exception:
-            x_numeric = np.arange(len(df))
-
-        # Get the y data from the figure's first trace
         if fig.data:
-            y_data = fig.data[0].y
-            mask = ~(np.isnan(x_numeric) | pd.isna(y_data))
-            if mask.sum() > 1:
-                coeffs = np.polyfit(x_numeric[mask], np.array(y_data)[mask], 1)
-                trend_line = np.polyval(coeffs, x_numeric)
+            if len(fig.data) > 1 and len(fig.data[0].y) != len(df):
+                marker_traces = [t for t in fig.data if getattr(t, "mode", None) == "markers"]
+                traces = marker_traces or list(fig.data)
+                x_raw = [v for t in traces for v in (t.x if t.x is not None else [])]
+                y_raw = [v for t in traces for v in (t.y if t.y is not None else [])]
+            else:
+                x_raw = list(fig.data[0].x) if fig.data[0].x is not None else df[x_col].tolist()
+                y_raw = list(fig.data[0].y) if fig.data[0].y is not None else []
 
-                fig.add_trace(
-                    dict(
-                        type="scatter",
-                        x=df[x_col].tolist(),
-                        y=trend_line.tolist(),
-                        mode="lines",
-                        line=dict(color="red", dash="dash", width=2),
-                        name="Trend",
+            if len(x_raw) == len(y_raw) and len(x_raw) > 1:
+                x_series = pd.Series(x_raw)
+                try:
+                    x_numeric = pd.to_numeric(x_series, errors="coerce")
+                    if x_numeric.isna().all():
+                        x_numeric = pd.to_datetime(x_series).astype("int64") / 10**9
+                except Exception:
+                    x_numeric = pd.Series(np.arange(len(x_raw), dtype=float))
+                x_arr = np.asarray(x_numeric, dtype=float)
+                y_arr = pd.to_numeric(pd.Series(y_raw), errors="coerce").to_numpy(dtype=float)
+                mask = ~(np.isnan(x_arr) | np.isnan(y_arr))
+                if mask.sum() > 1:
+                    coeffs = np.polyfit(x_arr[mask], y_arr[mask], 1)
+                    order = np.argsort(x_arr[mask])
+                    x_valid = [x_raw[i] for i in np.flatnonzero(mask)[order]]
+                    trend_line = np.polyval(coeffs, x_arr[mask][order])
+
+                    fig.add_trace(
+                        dict(
+                            type="scatter",
+                            x=x_valid,
+                            y=trend_line.tolist(),
+                            mode="lines",
+                            line=dict(color="red", dash="dash", width=2),
+                            name="Trend",
+                        )
                     )
-                )
 
 
 def apply_overlays_matplotlib(
@@ -357,6 +366,10 @@ def apply_overlays_matplotlib(
     x_col: str,
 ) -> None:
     """Apply all overlays to a matplotlib axes."""
+    # Capture plotted data artists before overlays (hlines/vlines) add lines
+    data_lines = list(ax.get_lines())
+    data_collections = list(ax.collections)
+
     # NBER recession shading
     if overlay.nber_recessions:
         try:
@@ -434,27 +447,40 @@ def apply_overlays_matplotlib(
     if overlay.regression_line:
         import numpy as np
 
-        # Get the plotted data from the axes
-        lines = ax.get_lines()
-        if lines:
-            x_line = lines[0].get_xdata()
-            y_line = lines[0].get_ydata()
+        x_line = None
+        y_line = None
+        if data_lines:
+            x_line = np.asarray(data_lines[0].get_xdata())
+            y_line = pd.to_numeric(pd.Series(data_lines[0].get_ydata()), errors="coerce").to_numpy(dtype=float)
+        elif data_collections:
+            offsets = [
+                np.asarray(col.get_offsets(), dtype=float)
+                for col in data_collections
+                if len(col.get_offsets()) > 0
+            ]
+            if offsets:
+                pts = np.vstack(offsets)
+                x_line = pts[:, 0]
+                y_line = pts[:, 1]
 
+        if x_line is not None and y_line is not None and len(x_line) == len(y_line) and len(x_line) > 1:
             # Convert to numeric if needed
             try:
-                x_numeric = pd.to_numeric(x_line, errors="coerce")
-                if pd.isna(x_numeric).all():
-                    x_numeric = np.arange(len(x_line))
+                x_numeric = pd.to_numeric(pd.Series(x_line), errors="coerce").to_numpy(dtype=float)
+                if np.isnan(x_numeric).all():
+                    x_numeric = np.arange(len(x_line), dtype=float)
             except Exception:
-                x_numeric = np.arange(len(x_line))
+                x_numeric = np.arange(len(x_line), dtype=float)
 
             mask = ~(np.isnan(x_numeric) | np.isnan(y_line))
             if mask.sum() > 1:
                 coeffs = np.polyfit(x_numeric[mask], y_line[mask], 1)
-                trend_line = np.polyval(coeffs, x_numeric)
+                order = np.argsort(x_numeric[mask])
+                x_plot = x_line[mask][order]
+                trend_line = np.polyval(coeffs, x_numeric[mask][order])
 
                 ax.plot(
-                    x_line,
+                    x_plot,
                     trend_line,
                     color="red",
                     linestyle="--",

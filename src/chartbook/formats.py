@@ -999,7 +999,7 @@ def _csv(read: Reading, sources, named=None) -> tuple:
     # True or false is read as text and then as one of the words DuckDB
     # takes for one (yes, t, 1...), whatever the capitals and the spaces
     # around them. A word that is not one of them is null, and is not false.
-    truths = [named.get(column, column) for column, kind in overrides.items() if kind == pl.Boolean]
+    truths = [named[column] for column, kind in overrides.items() if kind == pl.Boolean and column in named]
     if overrides:
         options["schema_overrides"] = {
             named.get(column, column): pl.String if kind == pl.Boolean else kind for column, kind in overrides.items()

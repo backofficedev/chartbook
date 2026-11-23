@@ -76,12 +76,16 @@ def migrate(path=None):
     except BaseException:
         target.unlink(missing_ok=True)
         raise
-    from chartbook.config import read_global_settings, write_global_settings
+    from chartbook.config import get_global_settings_path, read_global_settings, write_global_settings
     settings = read_global_settings()
     configured = settings.get("catalog", {}).get("path")
-    if isinstance(configured, str) and Path(configured).expanduser().resolve() == source.resolve():
-        settings["catalog"]["path"] = str(target.resolve())
-        write_global_settings(settings)
+    if isinstance(configured, str):
+        configured_path = Path(configured).expanduser()
+        if not configured_path.is_absolute():
+            configured_path = get_global_settings_path().parent / configured_path
+        if configured_path.resolve() == source.resolve():
+            settings["catalog"]["path"] = str(target.resolve())
+            write_global_settings(settings)
     source.unlink()
     return target, missing
 

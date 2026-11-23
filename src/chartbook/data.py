@@ -894,6 +894,7 @@ def sql(
                 f"Load them apart with data.load() and join the frames in Polars."
             )
     arrow = {}
+    replacements = {}
     for text, location in locations.items():
         handed = formats.handed(location) if location.kind == "file" else None
         cut = _cut(location) if location.kind == "file" else None
@@ -929,7 +930,8 @@ def sql(
                 replacement = f"(select * from {replacement} where {kept})"
         else:
             replacement = engine.ref(location)
-        query = query.replace("{" + text + "}", replacement)
+        replacements[text] = replacement
+    query = _REFERENCE_IN_SQL.sub(lambda match: replacements.get(match.group(1), match.group(0)), query)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
     return engine.sql(query, arrow=arrow) if arrow else engine.sql(query)
 

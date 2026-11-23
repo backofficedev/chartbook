@@ -394,6 +394,8 @@ class _Walk:
                 wanted = None
                 if not snapshot.builds_at(self.snapshots(), pipeline, place.commit):
                     in_local = (place.clone / beside_it if beside_it else place.clone) if place.base is not None and place.clone is not None else None
+                    if in_local is not None and not (in_local / MANIFEST_NAME).is_file():
+                        in_local = None
                     wanted = Wanted(
                         pipeline, place.commit, place.repository,
                         folder=in_local, clone=place.clone, subdirectory=beside_it, given=True,
