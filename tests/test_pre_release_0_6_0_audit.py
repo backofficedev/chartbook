@@ -491,6 +491,44 @@ def test_get_data_path_with_repository_url_and_batch_resolve_validation(tmp_path
         resolve.resolve("df", pipeline="https://github.com/acme/rates", catalog_path=cat, start_dirs=[outside])
 
 
+def test_coerced_boolean_words_keep_their_meaning():
+    """yes, t, y and 1 are true. A word that is not one of the boolean words is null, and is not false."""
+    written = ["true", "TRUE", "yes", "Yes", "t", "y", "1", "false", "no", "f", "n", "0", "maybe", "YES"]
+    expected = [True, True, True, True, True, True, True, False, False, False, False, False, None, True]
+    assert formats._coerced_key_values(pl.String, written, written, pl.Boolean) == expected
+    assert formats._coerced_key_values(pl.Int64, [1, 0], ["1", "0"], pl.Boolean) == [True, False]
+
+
+def test_hive_boolean_partition_words_survive_a_read(tmp_path):
+    """A boolean column partitioned as yes/t/y is that value in a scan and in SQL, including when a key sits above the folder."""
+    root = tmp_path / "parent=above" / "ds"
+    words = {"yes": True, "no": False, "t": True, "f": False, "y": True, "n": False, "1": True, "0": False}
+    for label, bit in words.items():
+        part = root / f"flag={label}"
+        part.mkdir(parents=True)
+        pl.DataFrame({"flag": [bit], "v": [1]}).write_parquet(part / "a.parquet")
+
+    got = formats.scan(root, "parquet").collect()
+    # Four true words and four false ones. Before the fix every word but "true" came back false.
+    assert sorted(got["flag"].to_list()) == sorted(words.values())
+
+    sql = formats.sql(resolve.FileLocation(path=root, format="parquet"))
+    con = duckdb.connect()
+    try:
+        out = con.sql(f"SELECT flag FROM {sql}").pl()
+    finally:
+        con.close()
+    assert sorted(out["flag"].to_list()) == sorted(words.values())
+    assert "'False'::BOOLEAN" in sql  # no, f, n, 0
+    assert sql.count("'True'::BOOLEAN") == 4  # yes, t, y, 1
+
+    alone = tmp_path / "yes-cap"
+    part = alone / "flag=YES"
+    part.mkdir(parents=True)
+    pl.DataFrame({"flag": [True], "v": [1]}).write_parquet(part / "a.parquet")
+    assert formats.scan(alone, "parquet").collect()["flag"].to_list() == [True]
+
+
 def test_coerced_key_values_handles_dates_and_naive_datetimes():
     from datetime import date, datetime, timezone
 
@@ -509,6 +547,32 @@ def test_coerced_key_values_handles_dates_and_naive_datetimes():
     assert formats._coerced_key_values(
         pl.Date, [None, date(2024, 1, 1)], ["", "2024-01-01"], pl.Datetime("us")
     ) == [None, datetime(2024, 1, 1, 0, 0)]
+
+
+def test_gc_names_what_went_when_the_note_cannot_be_forgotten(tmp_path, monkeypatch):
+    """A note that cannot be forgotten after the removal does not report that nothing was removed."""
+    store = FolderStore(tmp_path / "store")
+    monkeypatch.setenv(config.STORE_ENV_VAR, str(store.root))
+    pipeline = _make_pipeline(tmp_path, pid="acme/gcnote")
+    taken = snapshot.make(pipeline, store=store, complete=True, made_at="2026-01-01T00:00:00Z").snapshot
+    lockfile = tmp_path / "proj" / "chartbook.lock"
+    machine = this_machine()
+    store.add_root(lockfile, taken.hashes(), [("acme/gcnote", taken.commit, taken.made_at)], machine=machine)
+    (note,) = store.roots()
+    done = lock.GcDone(snapshots=2, objects=1, freed_bytes=4096, pinned=1)
+
+    def boom(*_args, **_kwargs):
+        raise OSError("note is busy")
+
+    monkeypatch.setattr(lock, "carry_out_gc", lambda *_args, **_kwargs: done)
+    monkeypatch.setattr("chartbook.cli._forget_root", boom)
+    result = CliRunner().invoke(main, ["store", "gc", "--forget-note", note.note, "--yes", "--keep-days", "0"])
+    assert result.exit_code == 1, result.output
+    assert "Nothing was removed." not in result.output
+    assert "Removed 2 snapshot(s), 1 snapshot(s) a pin made from a repository and 1 object(s), 4.0 KB." in result.output
+    assert note.note in result.output
+    assert "is still there" in result.output
+    assert store.root_of(lockfile, machine) is not None
 
 
 def test_write_note_cleans_stale_store_and_note_matches_handles_none_snapshots(tmp_path):

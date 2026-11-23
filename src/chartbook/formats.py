@@ -576,11 +576,9 @@ def _coerced_key_values(kind, values: list, written: list[str], target) -> list:
     if target == pl.Boolean:
         if kind != pl.String:
             return pl.Series(values, dtype=kind).cast(pl.Boolean, strict=False).to_list()
-        return [
-            True if item is not None and item in _BOOLEANS and item.lower() == "true"
-            else (False if item is not None and item in _BOOLEANS else None)
-            for item in text
-        ]
+        # The same words a JSON lines cast takes (:data:`_BOOLEANS`), whatever their capitals.
+        # "yes" and "t" are true. A word that is not one of them is null, and is not false.
+        return [None if item is None else _BOOLEANS.get(item.strip().lower()) for item in text]
     if target == pl.Time:
         if kind != pl.String:
             return pl.Series(values, dtype=kind).cast(pl.Time, strict=False).to_list()

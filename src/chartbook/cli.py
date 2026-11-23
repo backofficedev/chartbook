@@ -5601,11 +5601,24 @@ def store_gc(dry_run, yes, forget_missing, forget_note=None, keep_days=None, kee
         _forget_root(the_store, pending)
         forgotten = True
 
+    def _say_removed(snapshots: int, objects: int, pinned: int, size: int) -> None:
+        by_pins = f", {pinned} snapshot(s) a pin made from a repository" if pinned else ""
+        click.echo(f"Removed {snapshots} snapshot(s){by_pins} and {objects} object(s), {_format_bytes(size)}.")
+
+    def _say_note_stayed(error: BaseException) -> None:
+        """The removals are done, and forgetting the note failed: say both, and where the note still is."""
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+        if pending is not None:
+            click.echo(
+                f"The note {_note_path(the_store, pending.note)} is still there. "
+                f"`chartbook store gc --forget-note {pending.note}` forgets it.",
+                err=True,
+            )
+
     def carry_out():
         """Remove what the plan says to, and say what could not be removed, if anything could not."""
         try:
             done = lock.carry_out_gc(plan, the_store)
-            drop_note()
         except lock.GcError as e:
             try:
                 drop_note()
@@ -5613,8 +5626,7 @@ def store_gc(dry_run, yes, forget_missing, forget_note=None, keep_days=None, kee
                 e.failures.append(("the note", note_error))
             # Everything else went: say so, then each thing that stayed and what to do
             if e.removed_snapshots or e.removed or e.pinned:
-                by_pins = f", {e.pinned} snapshot(s) a pin made from a repository" if e.pinned else ""
-                click.echo(f"Removed {e.removed_snapshots} snapshot(s){by_pins} and {e.removed} object(s), {_format_bytes(e.size_bytes)}.")
+                _say_removed(e.removed_snapshots, e.removed, e.pinned, e.size_bytes)
             click.echo(click.style("Error: ", fg="red", bold=True) + f"{len(e.failures)} thing(s) could not be removed:", err=True)
             for _, why in e.failures:
                 click.echo(f"  {_printable(_said(why))}", err=True)  # the store's words name the thing and say what to do
@@ -5627,6 +5639,14 @@ def store_gc(dry_run, yes, forget_missing, forget_note=None, keep_days=None, kee
                 "The note was forgotten. Nothing else was removed." if forgotten else "Nothing was removed.",
                 err=True,
             )
+            raise SystemExit(1)
+        try:
+            drop_note()
+        except (StoreError, lock.LockError, ValueError, OSError) as error:
+            # The store is already changed. "Nothing was removed" would deny that.
+            if done.snapshots or done.objects or done.pinned or done.freed_bytes:
+                _say_removed(done.snapshots, done.objects, done.pinned, done.freed_bytes)
+            _say_note_stayed(error)
             raise SystemExit(1)
         return done
 
