@@ -404,13 +404,15 @@ def _hash_cache(declared: Path):
     return hashing.HashCache(get_cache_path() / "hashes" / f"{name}.json")
 
 
-def _rows(asset: AssetRef, location: FileLocation) -> list[tuple[Path, str, int, str]]:
+def _rows(asset: AssetRef, location: FileLocation, start_dirs=()) -> list[tuple[Path, str, int, str]]:
     """Each file of an asset with its path in the asset, its size and its hash.
 
     From the store's record when the store holds what is read: nothing is
     read but the record. Otherwise the files are hashed, each read only if
     it has changed since it was last hashed.
     """
+    import contextlib
+
     from chartbook import hashing
     from chartbook.files import listing_root
     from chartbook.store import default_store, on_disk, plain_parts
@@ -419,7 +421,17 @@ def _rows(asset: AssetRef, location: FileLocation) -> list[tuple[Path, str, int,
     declared = Path(location.path)
     inside = getattr(location, "inside", None)
     single = not location.listed if inside else not is_glob_pattern(str(declared)) and declared.is_file()
-    listed = default_store().listing(location.content_hash, single) if location.content_hash else None
+    listed = None
+    if location.content_hash:
+        with contextlib.suppress(Exception):
+            store = default_store()
+            if start_dirs:
+                with contextlib.suppress(Exception):
+                    from chartbook.multi_store import with_dependencies
+                    from chartbook.resolve import find_manifest_dir
+
+                    store = with_dependencies(find_manifest_dir(*start_dirs), store)
+            listed = store.listing(location.content_hash, single)
     if listed is not None and inside:
         if single:
             # One file, read by the name its asset gives it: the same bytes may be two assets'
@@ -437,6 +449,20 @@ def _rows(asset: AssetRef, location: FileLocation) -> list[tuple[Path, str, int,
             if plain_parts(entry.path)
         ]
     cache = _hash_cache(declared)
+    if inside:
+        rows = []
+        for relative, where in inside.items():
+            file_path = Path(where)
+            if not file_path.is_file():
+                raise _not_there(asset, location)
+            try:
+                content = hashing.hash_file(file_path, cache)
+            except OSError as error:
+                raise FileNotFoundError(f"The {asset.kind} {str(asset)!r} could not be read: {error}") from None
+            rows.append((file_path, relative, content.size_bytes, content.content_hash))
+        with contextlib.suppress(OSError):
+            cache.save()
+        return rows
     try:
         content = hashing.hash_path(declared, cache)
     except OSError as error:
@@ -493,8 +519,9 @@ def index(
 
     from chartbook.files import partitions
 
-    asset, location = _located(ref, kind, caller_start_dirs(project_dir, sys._getframe(1)))
-    rows = sorted(_rows(asset, location), key=lambda row: row[1])
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    asset, location = _located(ref, kind, start_dirs)
+    rows = sorted(_rows(asset, location, start_dirs), key=lambda row: row[1])
     keys: dict = {}
     for _, relative, _, _ in rows:
         for key in partitions(relative):

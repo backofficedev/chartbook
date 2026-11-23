@@ -155,9 +155,12 @@ def find(entry: Mapping, records: Mapping, store, snapshots: list, folder=None) 
     :param snapshots: The store's snapshots.
     :param folder: The folder of a ``path`` dependency (:func:`candidates`).
     """
+    from chartbook import lock
+
     best = None
+    pinned_pipeline = lock.pinned_pipeline(entry)
     for taken in candidates(entry, snapshots, folder):
-        found = compare(taken, records, store)
+        found = compare(taken, records, store, pinned_pipeline=pinned_pipeline)
         if found.stands_in:
             return found
         if all(unmet.lost for unmet in found.unmet):
@@ -168,24 +171,26 @@ def find(entry: Mapping, records: Mapping, store, snapshots: list, folder=None) 
     return best or Found()
 
 
-def compare(taken, records: Mapping, store) -> Found:
+def compare(taken, records: Mapping, store, *, pinned_pipeline: Optional[str] = "") -> Found:
     """One snapshot of yours against a dependency's pins: how it meets each, or why it does not."""
     from chartbook import lock, snapshot
 
+    if pinned_pipeline == "":
+        pinned_pipeline = taken.pipeline
     found = Found(snapshot=taken)
     for asset_id in sorted(records):
         record = records[asset_id]
         pinned = record.get("content_hash")
         if not pinned:
             continue  # not built when it was pinned: nothing to meet, and the check says so itself
-        if not lock.in_lockfile(record) and not store.has(pinned, taken.pipeline):
+        if not lock.in_lockfile(record) and not store.has(pinned, pinned_pipeline):
             continue  # kept of an earlier lockfile, for a store that had its bytes: no pin here (lock.still_pinned)
         labelled = bool((record.get("ref") or {}).get("rev"))
         theirs = None if labelled else taken.assets.get(snapshot.local_name(record))
-        if store.has(pinned, taken.pipeline):
+        if store.has(pinned, pinned_pipeline):
             # The cheapest check, wherever the bytes came from. In part, they are on their
             # way: waiting gives the pinned file, and no build is read in its place
-            in_part = snapshot.not_whole(store, record, taken.pipeline)
+            in_part = snapshot.not_whole(store, record, pinned_pipeline)
             if in_part:
                 found.unmet.append(Unmet(asset_id, f"the store has the pinned file in part: {in_part}", lost=True))
             else:
@@ -284,14 +289,17 @@ class _NotRead(Exception):
 
 def reads_here(store) -> bool:
     """Whether a store's files are on this machine's disks, so that reading a table of it fetches nothing: a folder store, or several of them."""
+    from chartbook.multi_store import Stores
     from chartbook.store import FolderStore
 
     # What a pin wraps a store in, to hold its writes back, reads as the store itself
-    while not isinstance(store, FolderStore) and getattr(store, "_store", None) is not None:
-        store = store._store
-    entries = getattr(store, "entries", None)
-    if entries is not None:
-        return all(isinstance(getattr(entry, "store", None), FolderStore) for entry in entries)
+    while not isinstance(store, (FolderStore, Stores)):
+        wrapped = getattr(store, "__dict__", {}).get("_store")
+        if wrapped is None:
+            break
+        store = wrapped
+    if isinstance(store, Stores):
+        return all(isinstance(getattr(entry, "store", None), FolderStore) for entry in store.entries)
     return isinstance(store, FolderStore)
 
 
@@ -372,8 +380,19 @@ def _since(before: Mapping, after: Mapping, taken, store, read: bool, at_hand=No
         return f"{new}; earlier rows unchanged" if compared.newer else "the same rows, in other bytes"
     told = f"earlier rows changed: {said(compared, before, 'the earlier one', 'it')}" + (f"; {new}" if compared.newer else "")
     if compared.index_column:
+        from chartbook.resolve import _held
+
+        columns = []
+        if at_hand is not None and (table := at_hand()) is not None:
+            columns = rowhash.index_columns_of(table)
+        if not columns:
+            try:
+                columns = rowhash.index_columns_of(rowhash.Table.at(_held(store, dict(after), taken.pipeline)))
+            except Exception:  # noqa: BLE001
+                columns = []
+        named_index = columns[0] if columns else rowhash.INDEX_COLUMN
         told += (
-            f". It has the column pandas makes of an index with no name ({rowhash.INDEX_COLUMN}), which may be "
+            f". It has the column pandas makes of an index with no name ({named_index}), which may be "
             f"the whole difference"
         )
     return told

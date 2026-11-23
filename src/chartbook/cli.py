@@ -173,7 +173,7 @@ class _Ls(_Group):
 
         try:
             return super().invoke(ctx)
-        except StoreError as error:  # a store this version does not read, or one with two layouts in it
+        except (StoreError, ValueError, OSError) as error:  # a store this version does not read, or one with two layouts in it
             click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
             raise SystemExit(1)
 
@@ -2087,6 +2087,8 @@ def _say_where_a_snapshot_shows():
             click.echo("`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.", err=True)
     except click.ClickException as error:
         click.echo(f"Note: no catalog to show it in: {error.format_message()}", err=True)
+    except PermissionError:
+        pass
 
 
 def _resolve_catalog_toml_path(catalog_path):
@@ -2160,15 +2162,22 @@ def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
     if catalog_toml.name == "catalog.toml":
         import tomlkit
         from chartbook.identity import validate_pipeline_id
-        validate_pipeline_id(pipeline_id)
-        document = tomlkit.parse(catalog_toml.read_text(encoding="utf-8"))
-        notes = document.setdefault("pipelines", tomlkit.table())
-        note = notes.setdefault(pipeline_id, tomlkit.table())
-        if disabled:
-            note["disabled"] = True
-        else:
-            note.pop("disabled", None)
-        catalog_toml.write_text(tomlkit.dumps(document), encoding="utf-8", newline="\n")
+        try:
+            validate_pipeline_id(pipeline_id)
+            document = tomlkit.parse(catalog_toml.read_text(encoding="utf-8"))
+            notes = document.setdefault("pipelines", tomlkit.table())
+            if not isinstance(notes, dict):
+                raise ValueError(f"{catalog_toml}: [pipelines] must be a table.")
+            note = notes.setdefault(pipeline_id, tomlkit.table())
+            if not isinstance(note, dict):
+                raise ValueError(f"{catalog_toml}: [pipelines.{pipeline_id!r}] must be a table.")
+            if disabled:
+                note["disabled"] = True
+            else:
+                note.pop("disabled", None)
+            catalog_toml.write_text(tomlkit.dumps(document), encoding="utf-8", newline="\n")
+        except (ValueError, OSError) as error:
+            raise click.ClickException(str(error)) from None
         click.echo(f"{pipeline_id}: {'disabled' if disabled else 'enabled'} in {catalog_toml}")
         return
 
@@ -2331,7 +2340,10 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
         return  # built by `chartbook catalog open`, which opens it now
     click.echo("Run 'chartbook catalog open' to open it in your browser.")
     if run_gc:
-        ctx.invoke(store_gc, dry_run=False, yes=True, forget_missing=False, keep_days=None, keep_lineage=False, aggressive=False)
+        ctx.invoke(
+            store_gc, dry_run=False, yes=True, forget_missing=False, forget_note=None,
+            keep_days=None, keep_lineage=False, aggressive=False,
+        )
     else:
         _remind_of_gc(no_gc_reminder)
 
@@ -3490,8 +3502,14 @@ def _held_against_its_build(project_dir, here: str, deep: bool, store_names, com
     from chartbook.missing import _quoted
 
     try:
-        if snapshots.uncommitted(project_dir) or not built.built_files(project_dir):
-            return False  # not committed, or nothing built at all: the snapshot names each thing
+        if snapshots.uncommitted(project_dir):
+            return False
+        if not built.built_files(project_dir):
+            from chartbook import hashing
+            from chartbook.resolve import declared_files
+
+            if not any((found := hashing.find_files(abs_path)) and found.files for _, _, abs_path in declared_files(project_dir)):
+                return False  # not committed, or nothing built at all: the snapshot names each thing
         pipeline = snapshots.pipeline_in(project_dir)
     except (snapshots.SnapshotError, OSError, ValueError):
         return False  # no pipeline there, no repository, a manifest that is no TOML: the snapshot says so
@@ -4269,7 +4287,7 @@ def store_ls(pipeline, store_name):
         from chartbook.store import pipeline_folder
 
         for record in every:
-            if record.readable or (pipeline is not None and pipeline_folder(pipeline) not in record.path.parts):
+            if record.readable or (pipeline is not None and record.folder.parent.name != pipeline_folder(pipeline)):
                 continue
             try:
                 snapshots.read(record.path)
@@ -4813,6 +4831,7 @@ def _move_from_0_5(the_store, dry_run: bool, yes: bool) -> None:
     synced = "In a synced folder, let the sync finish before another machine uses the store."
     try:
         started = migrate_0_5.journal_of(root)
+        migrate_0_5._check_before_plan(root)
         found = migrate_0_5.plan(root)
         migrate_0_5.check(root, found)
         moved = migrate_0_5.marker_of(root) == FOLDER_SCHEMA
@@ -5338,14 +5357,17 @@ def _note_to_forget(the_store, name: str):
     if len(match) > 1:
         raise ValueError(f"More than one note matches {wanted}: refuse to guess.")
     (root,) = match
+    from chartbook.lock import _users_own_store
+
     here = this_machine(create=False)
     if root.copy:
         raise ValueError(
             f"{root.note} is a sync service's copy of a note, not one this machine wrote. "
             f"Remove {_note_path(the_store, root.note)} by hand once no machine needs it."
         )
-    if root.machine and root.machine != here:
-        whose = f"on {root.host}" if root.host else f"under machine {root.machine}"
+    old_and_mine = _users_own_store(the_store) and root.machine == ""
+    if root.machine != here and not old_and_mine:
+        whose = f"on {root.host}" if root.host else (f"under machine {root.machine}" if root.machine else "from before notes named their machine")
         raise ValueError(
             f"{root.note} is another machine's note ({whose}). "
             f"Refuse to forget it from here: remove {_note_path(the_store, root.note)} "
@@ -5442,7 +5464,7 @@ def _format_bytes(size):
     is_flag=True,
     help="Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label",
 )
-def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage, aggressive):
+def store_gc(dry_run, yes, forget_missing, forget_note=None, keep_days=None, keep_lineage=False, aggressive=False):
     """Remove from the store what nothing needs any more.
 
     The store is shared by every project of yours. Two things keep what is
@@ -5583,8 +5605,12 @@ def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage,
         """Remove what the plan says to, and say what could not be removed, if anything could not."""
         try:
             done = lock.carry_out_gc(plan, the_store)
-        except lock.GcError as e:
             drop_note()
+        except lock.GcError as e:
+            try:
+                drop_note()
+            except (StoreError, lock.LockError, ValueError, OSError) as note_error:
+                e.failures.append(("the note", note_error))
             # Everything else went: say so, then each thing that stayed and what to do
             if e.removed_snapshots or e.removed or e.pinned:
                 by_pins = f", {e.pinned} snapshot(s) a pin made from a repository" if e.pinned else ""
@@ -5595,14 +5621,13 @@ def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage,
             if any(what.startswith("the snapshot") for what, _ in e.failures):
                 click.echo("What a record that stayed names stays with it.", err=True)
             raise SystemExit(1)
-        except (StoreError, lock.LockError, ValueError) as e:
+        except (StoreError, lock.LockError, ValueError, OSError) as e:
             click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
             click.echo(
                 "The note was forgotten. Nothing else was removed." if forgotten else "Nothing was removed.",
                 err=True,
             )
             raise SystemExit(1)
-        drop_note()
         return done
 
     # A kept snapshot keeps objects too, which no lockfile may name
@@ -6496,9 +6521,12 @@ def catalog_migrate(catalog_path):
 def ls_stores(ctx, as_json):
     """List stores in catalog order."""
     from chartbook.multi_store import Stores
-    if ctx.obj.get("catalog") is None:
+    catalog_arg = ctx.obj.get("catalog")
+    if catalog_arg is None:
         _catalog_or_make_one()
-    stores = Stores.configured(ctx.obj.get("catalog"))
+    else:
+        _resolve_catalog_toml_path(catalog_arg)
+    stores = Stores.configured(catalog_arg)
     if as_json or ctx.obj.get("json"):
         _echo_json([
             {"name": entry.name, "url": str(entry.store), "read_only": bool(entry.read_only), "reachable": bool(entry.reachable)}
@@ -6519,9 +6547,12 @@ def ls_versions(ctx, as_json):
     """List every snapshot, newest first, with its store."""
     from chartbook.multi_store import Stores
     from chartbook.snapshot import readable_snapshots
-    if ctx.obj.get("catalog") is None:
+    catalog_arg = ctx.obj.get("catalog")
+    if catalog_arg is None:
         _catalog_or_make_one()
-    stores = Stores.configured(ctx.obj.get("catalog"))
+    else:
+        _resolve_catalog_toml_path(catalog_arg)
+    stores = Stores.configured(catalog_arg)
     found, unreadable = readable_snapshots(stores)  # a store that is not read is said by the group (_Ls)
     if as_json or ctx.obj.get("json"):
         _echo_json([
@@ -6685,6 +6716,19 @@ def _store_selection(command, all_stores=False):
                 raise click.ClickException(said + "). Select a store with --store NAME to work in it all the same.")
             # The note is in one store. Forget it there, and plan every store, as `store gc` does.
             holding_note = holding[0]
+            if holding_note.read_only:
+                raise click.ClickException(f"Store {holding_note.name!r} is read-only")
+            if not holding_note.reachable:
+                raise click.ClickException(f"Store {holding_note.name!r} is unreachable")
+            from chartbook.store import StoreError
+
+            try:
+                holding_note.store.check_writable()
+                _note_to_forget(holding_note.store, forget_note)
+            except (StoreError, ValueError, OSError) as error:
+                click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+                click.echo("Nothing was removed.", err=True)
+                raise SystemExit(1)
             entries = configured.entries
         elif all_stores:
             entries = configured.entries

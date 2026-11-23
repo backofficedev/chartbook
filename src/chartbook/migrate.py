@@ -47,6 +47,7 @@ from chartbook.store import (
     _check_length,
     plain_parts,
     FOLDER_SCHEMA,
+    INCREMENTS_DIR,
     MARKER_FILE,
     OBJECTS_DIR,
     ORIGINS_FILE,
@@ -60,13 +61,16 @@ from chartbook.store import (
     UNOWNED_DIR,
     V1_SCHEMA,
     V2_LAYOUT,
+    V3_LAYOUT,
     FolderStore,
     Layout,
     StoreError,
     _FolderPending,
+    _FULL_COMMIT,
     _HEX,
     _read_marker,
     _remove_tree,
+    _snapshot_folder_in,
     declared_name,
     is_record_name,
 )
@@ -210,9 +214,17 @@ def plan(root) -> MigrationPlan:
         layout = None
     except (OSError, ValueError, AttributeError) as error:
         raise MigrateError(f"Cannot read {root / MARKER_FILE}: {error}") from None
+    from chartbook import migrate_0_5
+
     found = MigrationPlan(root, layout)
-    if layout == FOLDER_SCHEMA:
-        # Laid out as this version lays a store out: nothing of 0.2's to move, and its snapshots/ is its own
+    if (
+        layout == FOLDER_SCHEMA
+        or (root / OWN_DIR / "move-to-v3.jsonl").is_file()
+        or _snapshot_folder_in(root, V3_LAYOUT) is not None
+        or _snapshot_folder_in(root, V3_LAYOUT, INCREMENTS_DIR) is not None
+        or migrate_0_5.is_moved(root)
+    ):
+        # Laid out as this version lays a store out, or being moved to it from 0.5: nothing of 0.2's to move, and its snapshots/ is its own
         return found
     if layout not in (None, V1_SCHEMA):
         if layout != SCHEMA:
@@ -518,6 +530,7 @@ class _Moving(_FolderPending):
 
     def discard(self) -> None:
         """A migrate never takes back what it moved: the journal says where it is, and the next run goes on."""
+        self._drop_note()
 
 
 class _Opened(FolderStore):
@@ -778,9 +791,18 @@ def _switch(root: Path) -> None:
     temporary = root / f"{MARKER_FILE}.migrate.tmp"
     temporary.write_text(json.dumps({"schema": SCHEMA}) + "\n", encoding="utf-8", newline="\n")
     replace_when_let(temporary, root / MARKER_FILE)
-    for name in (OBJECTS_DIR, SNAPSHOTS_DIR, "builds"):
+    for name in (OBJECTS_DIR, "builds"):
         if (root / name).exists():
             _remove_tree(root / name)
+    snapshots_dir = root / SNAPSHOTS_DIR
+    if snapshots_dir.is_dir() and not snapshots_dir.is_symlink():
+        for child in list(snapshots_dir.iterdir()):
+            if _FULL_COMMIT.match(child.name):
+                _remove_tree(child)
+        try:
+            snapshots_dir.rmdir()
+        except OSError:
+            pass
     sentinel = root / SNAPSHOTS_DIR / ("0" * 40) / "_top" / "20261028T000000.000000Z.json"
     sentinel.parent.mkdir(parents=True, exist_ok=True)
     sentinel.write_text(
@@ -791,6 +813,13 @@ def _switch(root: Path) -> None:
         encoding="utf-8",
         newline="\n",
     )
+    tmp_dir = root / TMP_DIR
+    if tmp_dir.is_dir():
+        for pending in tmp_dir.glob("*.pending"):
+            try:
+                pending.unlink()
+            except OSError:
+                pass
     try:
         (root / TMP_DIR / JOURNAL).unlink()
     except OSError:

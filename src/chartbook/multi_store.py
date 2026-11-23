@@ -193,16 +193,19 @@ class Stores:
         # Physical listings differ after a cross-store copy. Identity is the
         # logical record and hashes, never a path to bytes in another store.
         import json
+        from chartbook.store import _any_length
         found, seen = [], set()
         for path in paths:
             try:
-                content = Path(path).read_bytes()
+                content = Path(_any_length(path)).read_bytes()
                 try:
                     document = json.loads(content)
-                    parts = list(document.get("records", [])) + [document.get("documents"), document.get("index")]
-                    for part in parts:
-                        if isinstance(part, dict):
-                            part.pop("stored", None)
+                    if isinstance(document, dict):
+                        document.pop("stored", None)
+                        parts = list(document.get("records", [])) + [document.get("documents"), document.get("index")]
+                        for part in parts:
+                            if isinstance(part, dict):
+                                part.pop("stored", None)
                     content = json.dumps(document, sort_keys=True).encode()
                 except (ValueError, TypeError, AttributeError):
                     pass
@@ -305,7 +308,8 @@ class Stores:
             if held:
                 problems.extend(entry.store.verify(held) if pipeline is None else entry.store.verify(held, pipeline))
         if unheld and first is not None:
-            problems.extend(first.verify([content_hash for content_hash in wanted if content_hash in unheld]))
+            missing = [content_hash for content_hash in wanted if content_hash in unheld]
+            problems.extend(first.verify(missing) if pipeline is None else first.verify(missing, pipeline))
         return problems
 
     def begin(self, *args, **kwargs):
@@ -328,10 +332,38 @@ class Stores:
             )
         ]
 
-    def add_root(self, lockfile, hashes, snapshots=(), machine=None, labelled=(), *, host=None, node=None):
-        hashes, snapshots, labelled = list(hashes), list(snapshots), list(labelled)
-        for entry in self._root_entries(hashes, snapshots):
-            entry.store.add_root(lockfile, hashes, snapshots, machine, labelled, host=host, node=node)
+    def writable_stores(self):
+        """Every writable store a note may be written to."""
+        return [entry.store for entry in self._available() if not entry.read_only]
+
+    def note_targets(self, hashes, snapshots=()):
+        """The writable stores a note of these pins is written to: the default, and any that already hold the objects or the commits."""
+        return [
+            entry.store
+            for entry in self._root_entries(hashes, () if snapshots is None else snapshots)
+        ]
+
+    def add_root(self, lockfile, hashes, snapshots=(), machine=None, labelled=(), *, host=None, node=None, keep_newest=False):
+        snap_for_targets = () if snapshots is None else snapshots
+        hashes, labelled = list(hashes), list(labelled)
+        snap_list = None if snapshots is None else list(snap_for_targets)
+        targets = self._root_entries(hashes, snap_for_targets)
+        target_ids = {id(entry) for entry in targets}
+        first_error = None
+        for entry in targets:
+            try:
+                entry.store.add_root(
+                    lockfile, hashes, snap_list, machine, labelled, host=host, node=node, keep_newest=keep_newest,
+                )
+            except (StoreError, OSError) as error:
+                if first_error is None:
+                    first_error = error
+        for entry in self._available():
+            if not entry.read_only and id(entry) not in target_ids:
+                with contextlib.suppress(StoreError, OSError):
+                    entry.store.remove_root(lockfile, machine)
+        if first_error is not None:
+            raise first_error
 
     def root_of(self, lockfile, machine=None):
         from chartbook.store import Root
@@ -344,11 +376,11 @@ class Stores:
             return roots[0]
         first = roots[0]
         hashes = tuple(sorted(set().union(*(r.hashes for r in roots))))
-        snapshots = (
-            tuple(sorted(set().union(*(r.snapshots for r in roots if r.snapshots is not None))))
-            if any(r.snapshots is not None for r in roots)
-            else None
-        )
+        explicit = [set(r.snapshots) for r in roots if r.snapshots is not None]
+        snapshots = tuple(sorted(set().union(*explicit))) if explicit else None
+        # A note with no snapshot list keeps the newest holder of each object. Merging it with a list
+        # keeps that rule and the listed snapshots; dropping the rule would let gc remove what it held.
+        keep_newest = snapshots is not None and any(r.keeps_newest() for r in roots)
         labelled = (
             tuple(sorted(set().union(*(r.labelled for r in roots if r.labelled is not None))))
             if any(r.labelled is not None for r in roots)
@@ -356,30 +388,43 @@ class Stores:
         )
         return Root(
             first.lockfile, hashes, first.machine, first.host, first.note,
-            snapshots, first.node, labelled, written=first.written,
+            snapshots, first.node, labelled, written=first.written, keep_newest=keep_newest,
         )
 
-    def note_matches(self, lockfile, hashes, snapshots, machine, labelled) -> bool:
+    def note_matches(self, lockfile, hashes, snapshots, machine, labelled, *, keep_newest=False) -> bool:
         """Whether every writable store that would receive this note already holds it identically."""
-        targets = self._root_entries(hashes, snapshots)
+        targets = self._root_entries(hashes, () if snapshots is None else snapshots)
+        target_ids = {id(entry) for entry in targets}
+        wanted = set() if snapshots is None else set(snapshots)
         for entry in targets:
             root = entry.store.root_of(lockfile, machine)
+            held = set() if root is None or root.snapshots is None else set(root.snapshots)
             if (
                 root is None
-                or set(root.hashes) != hashes
-                or root.snapshots is None
-                or set(root.snapshots) != snapshots
-                or root.labelled is None
-                or set(root.labelled) != labelled
+                or set(root.hashes) != set(hashes)
+                or root.keeps_newest() != (snapshots is None or bool(keep_newest))
+                or held != wanted
+                or set(root.labelled or ()) != set(labelled or ())
             ):
                 return False
+        for entry in self._available():
+            if not entry.read_only and id(entry) not in target_ids:
+                if entry.store.root_of(lockfile, machine) is not None:
+                    return False
         return True
 
     def remove_root(self, lockfile, machine=None):
         removed = False
+        first_error = None
         for entry in self._available():
             if not entry.read_only:
-                removed = entry.store.remove_root(lockfile, machine) or removed
+                try:
+                    removed = entry.store.remove_root(lockfile, machine) or removed
+                except (StoreError, OSError) as error:
+                    if first_error is None:
+                        first_error = error
+        if first_error is not None:
+            raise first_error
         return removed
 
     @contextlib.contextmanager
@@ -411,8 +456,11 @@ def with_dependencies(folder, store=None):
         return store if store is not None else default_store()
     base = store if store is not None else Stores.configured()
     raw = tomli.loads((folder / "chartbook.toml").read_text(encoding="utf-8"))
+    deps = raw.get("dependencies")
+    if not isinstance(deps, dict):
+        return base
     urls = []
-    for key, entry in raw.get("dependencies", {}).items():
+    for key, entry in deps.items():
         if isinstance(entry, dict) and entry.get("store"):
             url = entry["store"]
             if not isinstance(url, str) or not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url) or store_kind(url) == "folder":

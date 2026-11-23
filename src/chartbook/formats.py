@@ -562,6 +562,57 @@ def _kept_apart(sources, inside) -> list:
     return [] if whole else pairs
 
 
+def _coerced_key_values(kind, values: list, written: list[str], target) -> list:
+    """A Hive key's values cast to the file's own column type *target*, preserving written text for strings and categories and avoiding Polars Utf8->Boolean/Time/Datetime(tz) pitfalls."""
+    from urllib.parse import unquote
+
+    if target == kind:
+        return list(values)
+    text = [None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in written]
+    if target == pl.String:
+        return text
+    if isinstance(target, (pl.Categorical, pl.Enum)):
+        return pl.Series(text, dtype=pl.String).cast(target, strict=False).to_list()
+    if target == pl.Boolean:
+        if kind != pl.String:
+            return pl.Series(values, dtype=kind).cast(pl.Boolean, strict=False).to_list()
+        return [
+            True if item is not None and item in _BOOLEANS and item.lower() == "true"
+            else (False if item is not None and item in _BOOLEANS else None)
+            for item in text
+        ]
+    if target == pl.Time:
+        if kind != pl.String:
+            return pl.Series(values, dtype=kind).cast(pl.Time, strict=False).to_list()
+        return pl.Series(text, dtype=pl.String).str.to_time(strict=False).to_list()
+    if target == pl.Date:
+        if isinstance(kind, (pl.Date, pl.Datetime)):
+            return pl.Series(values, dtype=kind).cast(pl.Date, strict=False).to_list()
+        return pl.Series(text, dtype=pl.String).str.to_date(strict=False).to_list()
+    if isinstance(target, pl.Datetime):
+        if isinstance(kind, pl.Date):
+            return pl.Series(values, dtype=kind).cast(target, strict=False).to_list()
+        if isinstance(kind, pl.Datetime):
+            s = pl.Series(values, dtype=kind)
+            if kind.time_zone and not target.time_zone:
+                s = s.dt.replace_time_zone(None)
+            elif not kind.time_zone and target.time_zone:
+                s = s.dt.replace_time_zone(target.time_zone)
+            elif kind.time_zone and target.time_zone and kind.time_zone != target.time_zone:
+                s = s.dt.convert_time_zone(target.time_zone)
+            return s.cast(target, strict=False).to_list()
+        return pl.Series(text, dtype=pl.String).str.to_datetime(
+            time_unit=target.time_unit, time_zone=target.time_zone, strict=False,
+        ).to_list()
+    try:
+        series = pl.Series(values, dtype=kind).cast(target, strict=False)
+        if series.null_count() <= sum(item is None for item in values):
+            return series.to_list()
+    except pl.exceptions.PolarsError:
+        pass
+    return pl.Series(text, dtype=pl.String).cast(target, strict=False).to_list()
+
+
 def _keys_of_pairs(pairs: list, own: Optional[Mapping] = None) -> dict:
     """The Hive keys of files kept apart (:func:`_kept_apart`), each pair's from its path inside the asset: ``{key: (type, [value of each pair])}``.
 
@@ -569,19 +620,12 @@ def _keys_of_pairs(pairs: list, own: Optional[Mapping] = None) -> dict:
     schema) is of the column's type, as in polars' Hive read: its value as
     written, cast to it.
     """
-    from urllib.parse import unquote
-
     relatives = [relative for _, relative in pairs]
-    keys = _partitions(relatives, Path("."), {relative: relative for relative in relatives})
-    found = {}
-    for key, (kind, values) in keys.items():
-        if own is not None and key in own:
-            written = [dict(_keys_of(Path(relative).parent))[key] for relative in relatives]
-            text = [None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in written]
-            found[key] = (own[key], pl.Series(text, dtype=pl.String).cast(own[key], strict=False).to_list())
-        else:
-            found[key] = (kind, [values[relative] for relative in relatives])
-    return found
+    keys = _partitions(relatives, Path("."), {relative: relative for relative in relatives}, own=own)
+    return {
+        key: (kind, [values[relative] for relative in relatives])
+        for key, (kind, values) in keys.items()
+    }
 
 
 def _joined_to_keys(scan, pairs: list):
@@ -657,7 +701,7 @@ def _valued_with(files, folder: Path, characters: str, by_file: Optional[dict] =
     return any(character in value for parent in parents for _, value in _keys_of(parent) for character in characters)
 
 
-def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None) -> dict:
+def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None, own: Optional[Mapping] = None) -> dict:
     """The Hive keys of a folder's files, from the folders below it and none above: ``year`` of ``year=2024/a.parquet``.
 
     The keys are those every folder below names, once each, in the order
@@ -675,6 +719,8 @@ def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None) 
 
     :param by_file: Each file's path inside its asset, for files the store
         keeps in several folders (:func:`_by_location`).
+    :param own: Optional schema mapping of the files' own columns; when a
+        key is also in *own*, its type and values are coerced to ``own[key]``.
     :returns: ``{key: (polars type, {file: value})}``; empty when there is no key.
     :raises RuntimeError: If no scratch file can be written (:func:`_scratch`).
     """
@@ -688,10 +734,15 @@ def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None) 
             key: _key_values(key, sorted({dict(each)[key] for each in named.values()}), Path(scratch) / str(i))
             for i, key in enumerate(keys)
         }
-    return {
-        key: (kind, {file: values[dict(named[parent])[key]] for file, parent in relative.items()})
-        for key, (kind, values) in read.items()
-    }
+    found = {}
+    for key, (kind, values) in read.items():
+        if own is not None and key in own and own[key] != kind:
+            written = list(values.keys())
+            coerced = _coerced_key_values(kind, [values[w] for w in written], written, own[key])
+            values = dict(zip(written, coerced))
+            kind = own[key]
+        found[key] = (kind, {file: values[dict(named[parent])[key]] for file, parent in relative.items()})
+    return found
 
 
 def _key_values(key: str, values: list[str], scratch: Path) -> tuple:
@@ -796,16 +847,16 @@ def _by_file(scan, files: list[str], folder: Path, by_file: Optional[dict] = Non
     """
     import inspect
 
-    keys = _partitions(files, folder, by_file)
+    takes = inspect.signature(scan).parameters
+    first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema() if "schema" in takes and files else None
+    keys = _partitions(files, folder, by_file, own=first)
     if not keys:
         return _scan_files(scan, files, hive_partitioning=False)
     given = {}
-    takes = inspect.signature(scan).parameters
-    if "schema" in takes:
+    if first is not None:
         # A file's own column of a key's name is the key's, so one file may
         # have it and another not, as in polars' own Hive read: each is in
         # the schema, and is never read
-        first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema()
         given["schema"] = {**first, **{key: kind for key, (kind, _) in keys.items() if key not in first}}
         if "missing_columns" in takes:
             # Which polars 1 looks for in every file, read or not: a column a file has not is nulls
@@ -1228,17 +1279,19 @@ def _folder_sql(tables: list[str], folder: Path, by_file: Optional[dict] = None)
                 # Polars cannot read these files with their keys (a key that
                 # is a file's column too, say, or a time of day): its types
                 # of the keys alone, text where it has none
-                hive = {key: kind for key, (kind, _) in _partitions(tables, folder, by_file).items()}
+                first = pl.scan_parquet(tables[0], hive_partitioning=False, glob=False).collect_schema()
+                hive = {key: kind for key, (kind, _) in _partitions(tables, folder, by_file, own=first).items()}
         keys = {key: kind for key, kind in hive.items() if all(key in each for each in named)}
         if not keys:
             return f"read_parquet({_listed(tables)}, hive_partitioning = false)"
         types = ", ".join(f"{quote_literal(key)}: {quote_literal(_duckdb_type(kind))}" for key, kind in keys.items())
         return f"read_parquet({_listed(tables)}, hive_partitioning = true, hive_types = {{{types}}})"
-    keys = _partitions(tables, folder, by_file)
+    first = pl.scan_parquet(tables[0], hive_partitioning=False, glob=False).collect_schema()
+    keys = _partitions(tables, folder, by_file, own=first)
     read_parquet = f"read_parquet({_listed(tables)}, hive_partitioning = false"
     if not keys:
         return read_parquet + ")"
-    own = set(pl.scan_parquet(tables[0], hive_partitioning=False, glob=False).collect_schema().names())
+    own = set(first.names())
     rows = ", ".join(
         "(" + ", ".join([quote_literal(Path(file).as_posix())] + [_literal(values[file], kind) for kind, values in keys.values()]) + ")"
         for file in tables

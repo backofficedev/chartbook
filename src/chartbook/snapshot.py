@@ -3083,11 +3083,17 @@ def make(
         if ask and store_names is None and stores.catalog and not any(pipeline in e.pipelines for e in stores.entries):
             writable = [e for e in stores.entries if not e.read_only]
             import sys
-            if len(writable) > 1 and sys.stdin.isatty() and not os.environ.get("CI") and not os.environ.get("CHARTBOOK_BATCH"):
+            try:
+                is_tty = sys.stdin is not None and sys.stdin.isatty()
+            except (AttributeError, ValueError, OSError):
+                is_tty = False
+            if len(writable) > 1 and is_tty and not os.environ.get("CI") and not os.environ.get("CHARTBOOK_BATCH"):
                 import click
                 choices = ", ".join(e.name for e in writable)
                 answer = click.prompt(f"Write snapshots of {pipeline} to which stores? ({choices}; comma-separated)", default=writable[0].name)
                 store_names = [name.strip() for name in answer.split(",") if name.strip()]
+                if not store_names:
+                    raise ValueError("No store name given")
                 stores.for_writing(pipeline, store_names)
                 from chartbook.catalog_config import route
                 route(pipeline, store_names, stores.catalog)
@@ -4176,7 +4182,8 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             if not _copy_regular_file(written, folder / relative):
                 continue
         # The manifest names the database; here the table is a parquet file (laid out, or shown from the index)
-        entry = raw.get("dataframes", {}).get(name)
+        dataframes_table = raw.get("dataframes")
+        entry = dataframes_table.get(name) if isinstance(dataframes_table, dict) else None
         if isinstance(entry, dict):
             for key in ("source", "table", "query", "format", "read_options"):
                 entry.pop(key, None)
@@ -4404,7 +4411,8 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
         raw = _read_manifest_file(folder) if (folder / MANIFEST_NAME).is_file() else {}
     except (OSError, ValueError):
         return  # the docs build says what is wrong with a manifest
-    for name, entry in (raw.get("models") or {}).items():
+    models_table = raw.get("models")
+    for name, entry in (models_table if isinstance(models_table, dict) else {}).items():
         record = taken.assets.get(f"model/{name}") or {}
         plain = safe_relative(entry.get("metrics_path")) if isinstance(entry, dict) else None
         if plain is None or plain.split("/")[0] == VERSION_FILE:
@@ -4417,7 +4425,8 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
             target.write_text(json.dumps(record["metrics"], indent=2) + "\n", encoding="utf-8", newline="\n")
         except OSError:
             report.left_out.append((f"model/{name}", f"its scores could not be written to {plain}"))
-    site_dir = safe_relative((raw.get("project") or {}).get("site_dir"))
+    project_table = raw.get("project")
+    site_dir = safe_relative((project_table if isinstance(project_table, dict) else {}).get("site_dir"))
     if site_dir is not None and site_dir.split("/")[0] != VERSION_FILE:
         try:
             (folder / site_dir).mkdir(parents=True, exist_ok=True)

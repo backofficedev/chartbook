@@ -421,7 +421,7 @@ def check_index_columns(manifest: dict, base_dir: Path, skip_outputs: bool = Fal
 _NUMBER_OR_DATE = re.compile(r"[0-9]+(?:[-_][0-9]+)*")
 
 #: The sections and fields whose files belong to an asset already
-_DECLARING = ("dataframes", "charts", "notebooks", "notes", "models")
+_DECLARING = ("dataframes", "charts", "notebooks", "notes", "models", "files")
 _DECLARING_FIELDS = ("path", "docs_path", "metrics_path", "excel_path")
 
 
@@ -792,12 +792,14 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
         locked = lock.read_lock(pipeline_dir)
     except lock.LockError:
         locked = None  # said already, by _pinned_keys
+    from chartbook import standins
+
     pinned = next((e for e in (locked.dependencies if locked else []) if e.get("id") == key), None)
     try:
         store, unopened = default_store(), None
     except (ValueError, StoreError) as error:  # a URL no store is made from
         store, unopened = None, error
-    folder = store if isinstance(store, FolderStore) else None
+    folder = store if standins.reads_here(store) else None
     advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])
     records = [r for r in locked.assets_of(key).values() if r.get("content_hash")] if pinned else []
     if pinned and locked.earlier and folder is not None:
@@ -1002,10 +1004,12 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
     store: list = []  # the user's store, read once some pipeline here has dependencies
 
     def folder_store():
+        from chartbook import standins
+
         if not store:
             try:
                 found = default_store()
-                store.append(found if isinstance(found, FolderStore) else None)
+                store.append(found if standins.reads_here(found) else None)
             except (StoreError, OSError, ValueError):
                 store.append(None)
         return store[0]
@@ -1230,10 +1234,12 @@ def _snapshot_folders():
     read: list = []
 
     def folders(pipeline_id: str) -> list:
+        from chartbook import standins
+
         if not read:
             try:
                 store = default_store()
-                found = snapshot.readable_snapshots(store)[0] if isinstance(store, FolderStore) else []
+                found = snapshot.readable_snapshots(store)[0] if standins.reads_here(store) else []
             except (StoreError, OSError, ValueError):
                 store, found = None, []
             read.append((store, found))
@@ -1652,7 +1658,10 @@ def check_links(manifest, base_dir):
         linked = read(base_dir, active=False)
     except ValueError as error:
         return [Problem(path, "links", "", str(error))]
-    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", "--", NAME], cwd=base_dir, capture_output=True).returncode == 0
+    try:
+        tracked = subprocess.run(["git", "ls-files", "--error-unmatch", "--", NAME], cwd=base_dir, capture_output=True).returncode == 0
+    except OSError:
+        tracked = False
     if tracked:
         return [Problem(path, "links", "", "A tracked chartbook.links.toml is not portable. Remove it from git and add it to .gitignore.")]
     for pipeline, folder in linked.items():

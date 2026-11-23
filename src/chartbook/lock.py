@@ -771,6 +771,9 @@ def see_to_the_floor(project_dir: Union[str, Path], write: bool = False) -> Opti
     except OSError as error:
         floor.why_not = f"the file could not be written ({error.strerror or error})"
         return floor
+    with contextlib.suppress(Exception):
+        from chartbook import built
+        built.note_manifest_written(Path(project_dir), text)
     floor.written = True
     return floor
 
@@ -1763,11 +1766,15 @@ def _sync_now(
     for key in sorted(locked_before - set(dependencies)):
         if only is not None:
             # Only what was asked is looked at: the rest stays as it was
-            gone = next(entry for entry in before.dependencies if entry["id"] == key)
-            after.dependencies.append(gone)
-            after.assets.update(before.assets_of(key))
+            gone = dict(next(entry for entry in before.dependencies if entry["id"] == key))
             stays = still_pinned(before.earlier_of(key), gone, store, snapshots_in_store) if before.earlier else {}  # its folder is no longer declared
-            after.assets.update(stays)
+            had_gone = {**before.assets_of(key), **stays}
+            if stays and "pinned_hash" in gone:
+                records = [v for v in had_gone.values() if isinstance(v, dict) and v.get("content_hash")]
+                if records:
+                    gone["pinned_hash"] = pinned_hash(records)
+            after.dependencies.append(gone)
+            after.assets.update(had_gone)
             kept_earlier.update(stays)
             continue
         report.events.append(PinEvent("removed", key))
@@ -1777,6 +1784,7 @@ def _sync_now(
         entry = dependencies[key]
         may_move = key in moving
         had = before.assets_of(key)
+        stays = {}
         if before.earlier:
             # What an earlier lockfile held of it that this one does not: one that
             # nothing else names stays a pin, as it was (still_pinned)
@@ -1785,7 +1793,12 @@ def _sync_now(
             kept_earlier.update(stays)
         if only is not None and key not in only:
             if key in locked:
-                after.dependencies.append(locked[key])
+                kept_entry = dict(locked[key])
+                if stays and "pinned_hash" in kept_entry:
+                    records = [v for v in had.values() if isinstance(v, dict) and v.get("content_hash")]
+                    if records:
+                        kept_entry["pinned_hash"] = pinned_hash(records)
+                after.dependencies.append(kept_entry)
                 after.assets.update(had)
             continue
         # A label's record is pinned from a snapshot and only from one; a
@@ -2432,36 +2445,10 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     noted_as = _noted_as()
     try:
         pins = pins_for_note(lock_path, locked)
-        before = store.root_of(lock_path, machine=noted_as)
-        if not pins.complete and before is not None:
-            # A partial answer must not drop pins the note already held
-            pins.hashes |= set(before.hashes)
-            pins.snapshots |= set(before.snapshots or ())
-            pins.labelled |= set(before.labelled or ())
-        if not pins.hashes and not pins.snapshots:
-            if before is None:
-                return False, ""
-            if pins.complete:
-                store.remove_root(lock_path, machine=noted_as)
-                return True, ""
-            return False, ""
-        note_matches = getattr(store, "note_matches", None)
-        if note_matches is not None:
-            if note_matches(lock_path, pins.hashes, pins.snapshots, noted_as, pins.labelled):
-                return False, ""
-        elif (
-            before is not None
-            and set(before.hashes) == pins.hashes
-            and before.snapshots is not None
-            and set(before.snapshots) == pins.snapshots
-            and before.labelled is not None
-            and set(before.labelled) == pins.labelled
-        ):
-            return False, ""
-        store.add_root(lock_path, pins.hashes, pins.snapshots, machine=noted_as, labelled=pins.labelled)
+        wrote = _put_note(store, lock_path, pins, noted_as, if_changed=True)
     except Exception as error:  # noqa: BLE001 - a note is best effort, whatever the store raised
         return False, without_credentials(str(error))
-    return True, ""
+    return wrote, ""
 
 
 @dataclass
@@ -2476,12 +2463,16 @@ class NotePins:
             resolved or clearly absent). True also when the project is not
             in a git clone. False means merge into the note that is there;
             True means replace it.
+        keep_newest: Whether a note that already keeps the newest snapshot
+            holding each of its objects must go on doing so. Set only when
+            merging a partial answer into such a note.
     """
 
     hashes: set[str] = field(default_factory=set)
     snapshots: set[tuple[str, str, str]] = field(default_factory=set)
     labelled: set[tuple[str, str, str, str]] = field(default_factory=set)
     complete: bool = True
+    keep_newest: bool = False
 
 
 def pins_for_note(lock_path: Path, locked: Lock) -> NotePins:
@@ -2534,11 +2525,17 @@ def pins_for_note(lock_path: Path, locked: Lock) -> NotePins:
 def _lockfile_at_tip(top: Path, tip: str, relative: str) -> tuple[Optional[Lock], str]:
     """The lockfile at *relative* on *tip*, and whether git answered: ``ok``, ``absent``, or ``failed``."""
     try:
-        text = snapshot._git(top, "show", f"{tip}:{relative}")
+        text = snapshot._git(top, "-c", "i18n.logOutputEncoding=UTF-8", "show", f"{tip}:{relative}")
     except snapshot.SnapshotError as error:
         said = str(error).lower()
         # Git's words when the path is not in that commit: a clear answer, not a failure
         if "does not exist" in said or "exists on disk" in said or "not in '" in said or 'not in "' in said:
+            return None, "absent"
+        try:
+            listed = snapshot._git(top, "ls-tree", "--", tip, relative)
+        except snapshot.SnapshotError:
+            return None, "failed"
+        if not listed.strip():
             return None, "absent"
         return None, "failed"
     try:
@@ -2556,25 +2553,120 @@ def _lock_from_text(text: str) -> Lock:
     return _lock_from_document(document, "git show")
 
 
+def _writable_stores(store):
+    """Every store a note may be written to: this one, or each writable store of a catalog."""
+    listed = getattr(store, "writable_stores", None)
+    if listed is None:
+        return [store]
+    return list(listed())
+
+
+def _note_targets(store, hashes, snapshots):
+    """The stores among :func:`_writable_stores` that a note of these pins is written to."""
+    listed = getattr(store, "note_targets", None)
+    if listed is None:
+        return [store]
+    return list(listed(hashes, () if snapshots is None else snapshots))
+
+
+def _same_pins(root, pins: NotePins) -> bool:
+    """Whether *root* already records *pins*, including the newest-holder rule."""
+    if root is None or set(root.hashes) != set(pins.hashes):
+        return False
+    if set(root.labelled or ()) != set(pins.labelled):
+        return False
+    if root.keeps_newest() != bool(pins.keep_newest):
+        return False
+    held = set() if root.snapshots is None else set(root.snapshots)
+    return held == set(pins.snapshots)
+
+
+def _put_note(store, lock_path: Path, pins: NotePins, machine: Optional[str], *, if_changed: bool) -> bool:
+    """Write *pins* onto each store that should hold the note. A partial answer is merged per store.
+
+    Hashes and listed snapshots are the union of the answer and every note
+    already held, so one store's pins are not dropped from another's. A note
+    that keeps the newest snapshot of each object keeps doing so on that
+    store: the snapshots the partial answer saw are recorded beside that
+    rule, and a store whose note already listed its snapshots is not given
+    the rule. A complete answer replaces every target note.
+
+    :param if_changed: Whether a note that already says this is left as it is.
+    :returns: Whether a note was written or removed.
+    """
+    wrote = False
+    pairs = [(one, one.root_of(lock_path, machine=machine)) for one in _writable_stores(store)]
+    roots = [root for _, root in pairs if root is not None]
+    if pins.complete or not roots:
+        merged_hashes = set(pins.hashes)
+        merged_snaps = set(pins.snapshots)
+        merged_labels = set(pins.labelled)
+    else:
+        # A partial answer must not drop pins any of these notes already held
+        merged_hashes = set(pins.hashes).union(*(root.hashes for root in roots))
+        merged_snaps = set(pins.snapshots).union(*(set(root.snapshots) for root in roots if root.snapshots is not None))
+        merged_labels = set(pins.labelled).union(*(set(root.labelled) for root in roots if root.labelled is not None))
+    if not merged_hashes and not merged_snaps:
+        if pins.complete:
+            first_error = None
+            for one, before in pairs:
+                if before is not None:
+                    try:
+                        if one.remove_root(lock_path, machine=machine):
+                            wrote = True
+                    except (StoreError, OSError) as error:
+                        if first_error is None:
+                            first_error = error
+            if first_error is not None:
+                raise first_error
+        return wrote
+    targets = {id(one) for one in _note_targets(store, merged_hashes, merged_snaps)}
+    first_error = None
+    for one, before in pairs:
+        if id(one) not in targets:
+            if pins.complete and before is not None:
+                with contextlib.suppress(StoreError, OSError):
+                    if one.remove_root(lock_path, machine=machine):
+                        wrote = True
+            continue
+        # Only the note that had the rule keeps it. A complete answer replaces the note.
+        this_newest = (
+            not pins.complete and before is not None and before.keeps_newest()
+        )
+        merged = NotePins(
+            hashes=merged_hashes, snapshots=merged_snaps, labelled=merged_labels,
+            complete=pins.complete, keep_newest=this_newest,
+        )
+        if if_changed and _same_pins(before, merged):
+            continue
+        # No list and the rule: leave the list out, as the note was written. A list and the rule: record both.
+        snaps = None if this_newest and not merged_snaps else merged_snaps
+        try:
+            one.add_root(
+                lock_path, merged_hashes, snaps, machine=machine, labelled=merged_labels,
+                keep_newest=this_newest and bool(merged_snaps),
+            )
+            wrote = True
+        except (StoreError, OSError) as error:
+            if first_error is None:
+                first_error = error
+    if first_error is not None:
+        raise first_error
+    return wrote
+
+
 def write_note(lock_path: Path, locked: Lock, store: Store, machine: Optional[str] = None) -> None:
     """Write the store's note of a lockfile: what it pins, and what every local branch and tag of its clone pins.
 
     Replaces the note when git answered for the whole clone (or the project
     is not in one). Merges into the note that is there when the answer is
-    partial, so pins are not dropped. Removes the note when nothing is pinned.
+    partial, so pins are not dropped, and a note that keeps the newest
+    snapshot of each object goes on doing so. Removes the note when nothing
+    is pinned.
     """
     pins = pins_for_note(lock_path, locked)
     noted_as = _noted_as() if machine is None else machine
-    if not pins.complete:
-        before = store.root_of(lock_path, machine=noted_as)
-        if before is not None:
-            pins.hashes |= set(before.hashes)
-            pins.snapshots |= set(before.snapshots or ())
-            pins.labelled |= set(before.labelled or ())
-    if not pins.hashes and not pins.snapshots:
-        store.remove_root(lock_path, machine=noted_as)
-        return
-    store.add_root(lock_path, pins.hashes, pins.snapshots, machine=noted_as, labelled=pins.labelled)
+    _put_note(store, lock_path, pins, noted_as, if_changed=False)
 
 
 def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, note: bool = False) -> FrozenReport:
@@ -3600,7 +3692,7 @@ def _sync_from_snapshots(
     for name, label, start, why in unresolved:
         ref = dataclasses.replace(AssetRef.from_dict(snapshot.renamed(newest.assets[name], key)["ref"]), rev=label)
         asset_id = str(ref)
-        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files", "keep")}
+        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files", "trained_on", "keep")}
         missing = f"the label names version {start}, and {why}"
         records[asset_id] = {**record, "id": asset_id, "ref": ref.to_dict(), "label": label, "missing": missing}
         report.events.append(
@@ -4662,7 +4754,8 @@ def _plan_gc(
                 noted.setdefault((commit, made_at), why)
                 if root.note:
                     noted_by.setdefault((commit, made_at), root.note)
-        else:
+        # No list, or a list a partial read merged into such a note: the newest snapshot holding each object
+        if root.keeps_newest():
             fallback.update(root.hashes if hashes is None else hashes)
         for version in root.labelled or ():
             labelled.setdefault(version, why.replace("pins it", "pins a labelled version in it"))
@@ -4933,7 +5026,12 @@ def _holders_with_other_bytes(store: Store, plan: "GcPlan", keep: frozenset) -> 
     if check is None or getattr(type(store), "holes_of", Store.holes_of) is Store.holes_of:
         return {}  # several stores read as one; or one that keeps each file once, where nothing that goes takes a file that stays
     staying: dict = {}
-    for taken, _ in sorted(plan.snapshots_kept + plan.pinned_kept, key=lambda pair: pair[0].made_at, reverse=True):
+    builds_on = getattr(store, "builds_on", lambda _: None)
+    for taken, _ in sorted(
+        plan.snapshots_kept + plan.pinned_kept,
+        key=lambda pair: (builds_on(pair[0].path) is None, pair[0].made_at),
+        reverse=True,
+    ):
         staying.setdefault(taken.pipeline, []).append(taken)
     found: dict = {}
     read: dict = {}
@@ -5097,15 +5195,23 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
     still_removable = {taken.path for taken, _ in now.snapshots_delete}
     removed_snapshots = 0
     kept_back: set[str] = set()  # what a record that could not be removed still names
+    kept_bases: set[str] = set()  # complete base snapshots that an unremoved increment still builds on
+    builds_on = getattr(store, "builds_on", lambda record: None)
     # Increments first: what one builds on is there for as long as it is
-    for taken, _ in sorted(plan.snapshots_delete, key=lambda pair: getattr(store, "builds_on", lambda record: None)(pair[0].path) is None):
+    for taken, _ in sorted(plan.snapshots_delete, key=lambda pair: builds_on(pair[0].path) is None):
         if taken.path not in still_removable:
+            continue
+        if str(taken.path) in kept_bases:
+            kept_back |= taken.hashes()
             continue
         try:
             gone = snapshot.remove(store, taken)
         except (StoreError, OSError) as error:
             failures.append((f"the snapshot of {taken.pipeline} at {taken.commit[:7]}, made {taken.made_at}", str(error)))
             kept_back |= taken.hashes()
+            base = builds_on(taken.path)
+            if base is not None:
+                kept_bases.add(str(base))
             continue
         if gone:
             removed_snapshots += 1

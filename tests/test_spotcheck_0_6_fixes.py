@@ -498,3 +498,145 @@ def test_store_info_multistore_includes_store_flag_in_gc_hint(tmp_path, monkeypa
     result = CliRunner().invoke(main, ["store", "info"])
     assert result.exit_code == 0, result.output
     assert "`chartbook store gc --store one` would clear" in result.output
+
+
+def _omit_snapshot_list(store: FolderStore, lockfile: Path, machine: str) -> None:
+    """Rewrite a note as one from before notes recorded snapshots: no snapshot list."""
+    root = store.root_of(lockfile, machine=machine)
+    path = store.roots_path() / root.note
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document.pop("snapshots", None)
+    document.pop("newest", None)
+    path.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
+    assert store.root_of(lockfile, machine=machine).snapshots is None
+
+
+def _lock_pinning(folder: Path, dependency: str, taken, content_hash: str) -> Path:
+    locked = lock.Lock(root=folder.name)
+    locked.dependencies = [{
+        "id": dependency,
+        "via": "store",
+        "location": {
+            "kind": "store",
+            "pipeline": dependency,
+            "commit": taken.commit,
+            "first_commit": taken.commit,
+        },
+        "snapshot": taken.made_at,
+    }]
+    locked.assets = {
+        f"{dependency}:data": {
+            "id": f"{dependency}:data",
+            "kind": "Dataframe",
+            "pipeline": dependency,
+            "content_hash": content_hash,
+        }
+    }
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / lock.LOCK_FILE
+    lock.write_lock(locked, path)
+    return path
+
+
+def test_partial_read_keeps_newest_holder_of_an_old_note(tmp_path):
+    """A note with no snapshot list keeps the newest snapshot of each object. A partial git answer must not replace that with only the snapshots it saw."""
+    store = FolderStore(tmp_path / "store")
+    pipeline = _make_pipeline(tmp_path, pid="acme/aged", files={"data.bin": b"old" * 40})
+    old = snapshot.make(pipeline, store=store, complete=True, made_at="2020-01-01T00:00:00Z").snapshot
+    (pipeline / "data.bin").write_bytes(b"new" * 40)
+    _git(pipeline, "add", ".")
+    _git(pipeline, "commit", "-m", "v2")
+    new = snapshot.make(pipeline, store=store, complete=True, made_at="2020-06-01T00:00:00Z").snapshot
+    h_old = old.assets["file/data"]["content_hash"]
+    h_new = new.assets["file/data"]["content_hash"]
+    assert h_old != h_new
+
+    machine = this_machine()
+    lockfile = _lock_pinning(tmp_path / "consumer", "acme/aged", new, h_new)
+    store.add_root(lockfile, [h_old], machine=machine)
+    _omit_snapshot_list(store, lockfile, machine)
+
+    partial = lock.NotePins(
+        hashes={h_new},
+        snapshots={("acme/aged", new.commit, new.made_at)},
+        labelled=set(),
+        complete=False,
+    )
+    with patch.object(lock, "pins_for_note", return_value=partial):
+        wrote, err = lock.note_this_machine(lockfile, lock.Lock(lockfile, []), store)
+    assert (wrote, err) == (True, "")
+    noted = store.root_of(lockfile, machine=machine)
+    assert noted.keeps_newest()
+    assert h_old in noted.hashes and h_new in noted.hashes
+    assert ("acme/aged", new.commit, new.made_at) in set(noted.snapshots)
+
+    plan = lock.plan_gc(store, recent_seconds=0, keep_days=0, aggressive=True)
+    kept = {(taken.commit, taken.made_at) for taken, _ in plan.snapshots_kept}
+    assert (old.commit, old.made_at) in kept
+
+    with patch.object(lock, "pins_for_note", return_value=partial):
+        again, err = lock.note_this_machine(lockfile, lock.Lock(lockfile, []), store)
+    assert (again, err) == (False, "")
+    assert store.root_of(lockfile, machine=machine).keeps_newest()
+
+
+def test_partial_read_keeps_newest_on_the_store_that_had_it(tmp_path):
+    """Across stores, a note with no snapshot list keeps that rule, and a note that listed snapshots keeps its list."""
+    s1 = FolderStore(tmp_path / "s1")
+    s2 = FolderStore(tmp_path / "s2")
+    p1 = _make_pipeline(tmp_path, pid="acme/p1", files={"data.bin": b"one"})
+    p2 = _make_pipeline(tmp_path, pid="acme/p2", files={"data.bin": b"two"})
+    t1 = snapshot.make(p1, store=s1, complete=True, made_at="2026-01-01T00:00:00Z").snapshot
+    t2 = snapshot.make(p2, store=s2, complete=True, made_at="2026-01-01T00:00:00Z").snapshot
+    machine = this_machine()
+    lockfile = tmp_path / "consumer" / "chartbook.lock"
+    lockfile.parent.mkdir()
+    h1 = next(iter(t1.hashes()))
+    h2 = next(iter(t2.hashes()))
+    s1.add_root(lockfile, [h1], machine=machine)
+    _omit_snapshot_list(s1, lockfile, machine)
+    s2.add_root(lockfile, [h2], [("acme/p2", t2.commit, t2.made_at)], machine=machine)
+
+    stores = Stores([NamedStore("one", str(s1.root), s1), NamedStore("two", str(s2.root), s2)])
+    merged = stores.root_of(lockfile, machine=machine)
+    assert merged.keeps_newest()
+    assert ("acme/p2", t2.commit, t2.made_at) in set(merged.snapshots)
+
+    partial = lock.NotePins(
+        hashes={h1}, snapshots={("acme/p1", t1.commit, t1.made_at)}, labelled=set(), complete=False,
+    )
+    with patch.object(lock, "pins_for_note", return_value=partial):
+        lock.write_note(lockfile, lock.Lock(lockfile, []), stores, machine=machine)
+
+    left = s1.root_of(lockfile, machine=machine)
+    right = s2.root_of(lockfile, machine=machine)
+    assert left.keeps_newest() and {h1, h2} <= set(left.hashes)
+    assert ("acme/p2", t2.commit, t2.made_at) in set(left.snapshots)
+    assert not right.keeps_newest()
+    assert {("acme/p1", t1.commit, t1.made_at), ("acme/p2", t2.commit, t2.made_at)} <= set(right.snapshots)
+    assert {h1, h2} <= set(right.hashes)
+
+
+def test_move_preserves_a_note_that_names_no_snapshots(tmp_path):
+    pipeline = _make_pipeline(tmp_path, pid="acme/moved")
+    src = FolderStore(tmp_path / "src")
+    (tmp_path / "dst").mkdir()
+    dst = FolderStore(tmp_path / "dst")
+    taken = snapshot.make(pipeline, store=src, complete=True, made_at="2026-01-01T00:00:00Z").snapshot
+    machine = this_machine()
+    lockfile = tmp_path / "consumer" / "chartbook.lock"
+    lockfile.parent.mkdir()
+    src.add_root(lockfile, list(taken.hashes()), machine=machine)
+    _omit_snapshot_list(src, lockfile, machine)
+    pin = ("acme/moved", taken.commit, taken.made_at)
+    dst.add_root(lockfile, ["sha256:" + "ab" * 32], [pin], machine=machine)
+
+    stores = Stores([
+        NamedStore("src", str(src.root), src),
+        NamedStore("dst", str(dst.root), dst),
+    ])
+    transfer.move("acme/moved", stores, "dst", keep=True, route=False)
+    moved = dst.root_of(lockfile, machine=machine)
+    assert moved.keeps_newest()
+    assert pin in set(moved.snapshots)
+    assert set(taken.hashes()) <= set(moved.hashes)

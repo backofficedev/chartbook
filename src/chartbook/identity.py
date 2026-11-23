@@ -410,7 +410,7 @@ def strip_url_credentials(url: str) -> str:
     :param url: The URL as written.
     :returns: The URL without credentials.
     """
-    match = re.match(r"^(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://(?P<user>[^@/]*)@", url)
+    match = re.match(r"^\s*(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://(?P<user>[^@/]*)@", url)
     if not match:
         return url
     user = match["user"].split(":", 1)[0]

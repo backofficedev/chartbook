@@ -720,6 +720,9 @@ class Table:
                 except (OSError, MemoryError):
                     raise  # the scratch folder, or this machine: no fault of the table's
                 except Exception as error:  # noqa: BLE001 - whatever polars raises for a file it cannot read through
+                    trouble = _this_machines(error)
+                    if trouble is not None:
+                        raise trouble from None
                     raise NotRead(f"it could not be read ({_first_line(error)})") from None
             yield from _parquet_batches(copy, target, None)
             return
@@ -734,6 +737,9 @@ class Table:
             except (OSError, MemoryError):
                 raise
             except Exception as error:  # noqa: BLE001 - whatever the reader raises for files it cannot read
+                trouble = _this_machines(error)
+                if trouble is not None:
+                    raise trouble from None
                 raise NotRead(f"its files could not be read ({_first_line(error)})") from None
             for place, (location, _) in enumerate(apart):
                 put = {key: pl.Series(key, [values[place]], dtype=kind) for key, (kind, values) in keys.items() if key in target.names}
@@ -746,6 +752,9 @@ class Table:
             except (OSError, MemoryError, NotHashed):
                 raise
             except Exception as error:  # noqa: BLE001 - whatever the reader raises for files it cannot read
+                trouble = _this_machines(error)
+                if trouble is not None:
+                    raise trouble from None
                 raise NotRead(f"its files could not be read ({_first_line(error)})") from None
         for file in found:
             added = self._added.get(str(file))
@@ -772,7 +781,7 @@ class Table:
         by_file = formats._by_location(self.inside)
         wanted = self.schema()
         if folder is not None:
-            keys = formats._partitions([str(file) for file in found], Path(folder), by_file) if found else {}
+            keys = formats._partitions([str(file) for file in found], Path(folder), by_file, own=wanted) if found else {}
             return {
                 str(file): (
                     pl.DataFrame([pl.Series(key, [values[str(file)]], dtype=kind) for key, (kind, values) in keys.items() if key in wanted])
@@ -832,19 +841,22 @@ def _text_bytes(file, most: int) -> int:
         import pyarrow as pa
 
         opened = pa.CompressedInputStream(pa.OSFile(str(file), "rb"), "zstd")
-    elif len(begins) >= 2 and begins[0] == 0x78 and (begins[0] * 256 + begins[1]) % 31 == 0:
+    elif len(begins) >= 2 and begins[0] == 0x78 and (begins[1] & 0x20) == 0 and (begins[0] * 256 + begins[1]) % 31 == 0:
         import zlib
 
-        count, unpack = 0, zlib.decompressobj()
-        with open(file, "rb") as held:
-            while count <= most:
-                packed = held.read(256 * 1024)
-                if not packed:
-                    break
-                while packed and count <= most:
-                    count += len(unpack.decompress(packed, 1024 * 1024))
-                    packed = unpack.unconsumed_tail
-        return count
+        try:
+            count, unpack = 0, zlib.decompressobj()
+            with open(file, "rb") as held:
+                while count <= most:
+                    packed = held.read(256 * 1024)
+                    if not packed:
+                         break
+                    while packed and count <= most:
+                        count += len(unpack.decompress(packed, 1024 * 1024))
+                        packed = unpack.unconsumed_tail
+            return count
+        except zlib.error:
+            return os.path.getsize(file)
     else:
         return os.path.getsize(file)
     count = 0
@@ -865,14 +877,14 @@ def _as_the_table_has_it(value, kind, written: Optional[str]):
     where the types differ, text is taken as the folder wrote it, and
     anything else is put in the table's type.
     """
-    from urllib.parse import unquote
+    from chartbook import formats
 
     pl = _polars()
     if value.dtype == kind:
         return value
-    if kind == pl.String and written is not None:
-        text = None if written == "__HIVE_DEFAULT_PARTITION__" else unquote(written)
-        return pl.Series(value.name, [text], dtype=pl.String)
+    if written is not None:
+        coerced = formats._coerced_key_values(value.dtype, value.to_list(), [written], kind)
+        return pl.Series(value.name, coerced, dtype=kind)
     return value.cast(kind, strict=False)
 
 
@@ -882,15 +894,23 @@ def _this_machines(error: BaseException) -> Optional[BaseException]:
     ChartBook's reader says what a file could not be read as, and keeps
     what the system said as the cause.
     """
+    from chartbook import formats
+
     seen = 0
     while error is not None and seen < 8:
         if isinstance(error, MemoryError):
+            return error
+        if isinstance(error, RuntimeError) and str(error).startswith(formats._SCRATCH):
             return error
         if isinstance(error, OSError) and not isinstance(error, FileNotFoundError):
             # What the system says of the machine has a number, or is one of its own kinds. An OSError
             # with neither is a library's word for bytes that are not what they should be
             # ("Corrupt snappy compressed data"), which is the file's, and the same at every try
-            if error.errno is not None or isinstance(error, (PermissionError, ConnectionError, TimeoutError, InterruptedError, BlockingIOError)):
+            if (
+                error.errno is not None
+                or isinstance(error, (PermissionError, ConnectionError, TimeoutError, InterruptedError, BlockingIOError))
+                or re.search(r"\(os error \d+\)", str(error)) is not None
+            ):
                 return error
         error, seen = error.__cause__ or error.__context__, seen + 1
     return None
@@ -1401,26 +1421,46 @@ def _read_plan(held, group, wanted: dict, file, walked: Optional[list] = None, a
     return most, ([first] if first else []) + apart
 
 
+def _is_arrow_text_or_binary(kind) -> bool:
+    import pyarrow as pa
+
+    return (
+        pa.types.is_string(kind)
+        or pa.types.is_large_string(kind)
+        or pa.types.is_binary(kind)
+        or pa.types.is_large_binary(kind)
+        or getattr(pa.types, "is_string_view", lambda _: False)(kind)
+        or getattr(pa.types, "is_binary_view", lambda _: False)(kind)
+    )
+
+
+def _arrow_binary_length(array):
+    import pyarrow as pa
+    import pyarrow.compute as pc
+
+    kind = array.type
+    if getattr(pa.types, "is_string_view", lambda _: False)(kind) or getattr(pa.types, "is_binary_view", lambda _: False)(kind):
+        array = array.cast(pa.large_binary())
+    return pc.binary_length(array)
+
+
 def _row_sizes(batch):
     """What each row of a batch takes once every value is written out, in bytes: its own bytes for text, a dictionary's value for each row that names it, and its width for anything else."""
     import numpy as np
     import pyarrow as pa
     import pyarrow.compute as pc
 
-    def of_text(kind) -> bool:
-        return pa.types.is_string(kind) or pa.types.is_large_string(kind) or pa.types.is_binary(kind) or pa.types.is_large_binary(kind)
-
     sizes = np.zeros(batch.num_rows, dtype="int64")
     for column in batch.columns:
         kind = column.type
         if pa.types.is_dictionary(kind):
-            if of_text(column.dictionary.type) and len(column.dictionary):
-                long = pc.binary_length(column.dictionary)
+            if _is_arrow_text_or_binary(column.dictionary.type) and len(column.dictionary):
+                long = _arrow_binary_length(column.dictionary)
                 sizes += pc.fill_null(pc.take(long, column.indices), 0).to_numpy(zero_copy_only=False).astype("int64") + 8
             else:
                 sizes += 8
-        elif of_text(kind):
-            sizes += pc.fill_null(pc.binary_length(column), 0).to_numpy(zero_copy_only=False).astype("int64") + 8
+        elif _is_arrow_text_or_binary(kind):
+            sizes += pc.fill_null(_arrow_binary_length(column), 0).to_numpy(zero_copy_only=False).astype("int64") + 8
         else:
             try:
                 sizes += max(1, kind.bit_width // 8)
@@ -1485,6 +1525,7 @@ def _parquet_batches(file, target, added) -> Iterator:
             constant = {name: plain.column(name)[0] for name in plain.column_names}
         stored = opened.schema_arrow
         own = [name for name in target.names if name in stored.names and name not in constant]
+        own_set = set(own)
 
         def finished(batch):
             count = batch.num_rows
@@ -1492,8 +1533,10 @@ def _parquet_batches(file, target, added) -> Iterator:
             for item in target:
                 if item.name in constant:
                     array = pa.repeat(constant[item.name], count)
-                else:
+                elif item.name in own_set:
                     array = batch.column(item.name)
+                else:
+                    array = pa.nulls(count, type=item.type)
                 if array.type != item.type:
                     array = array.cast(item.type)
                 arrays.append(array)
@@ -1509,7 +1552,7 @@ def _parquet_batches(file, target, added) -> Iterator:
         wanted = {}
         for name in own:
             kind = target.field(name).type
-            if pa.types.is_string(kind) or pa.types.is_large_string(kind) or pa.types.is_binary(kind) or pa.types.is_large_binary(kind):
+            if _is_arrow_text_or_binary(kind):
                 wanted[name] = None
             else:
                 try:
@@ -1712,8 +1755,7 @@ def _weighed(schema) -> tuple:
 
     text = [
         place for place, item in enumerate(schema)
-        if pa.types.is_string(item.type) or pa.types.is_large_string(item.type)
-        or pa.types.is_binary(item.type) or pa.types.is_large_binary(item.type)
+        if _is_arrow_text_or_binary(item.type)
     ]
     decimal = [place for place, item in enumerate(schema) if pa.types.is_decimal(item.type)]
     return text, decimal
@@ -1736,14 +1778,13 @@ def row_bytes(batch, weighed: Optional[tuple] = None):
     eight a row whatever type its writer gave it.
     """
     import numpy as np
-    import pyarrow.compute as pc
 
     text, decimal = _weighed(batch.schema) if weighed is None else weighed
     size = np.full(batch.num_rows, COLUMN_BYTES * batch.num_columns, dtype="int64")
     for place in text:
         column = batch.column(place)
         held = column.is_valid().to_numpy(zero_copy_only=False)
-        long = pc.binary_length(column).fill_null(0).to_numpy(zero_copy_only=False).astype("int64", copy=False)
+        long = _arrow_binary_length(column).fill_null(0).to_numpy(zero_copy_only=False).astype("int64", copy=False)
         size += np.where(held, COLUMN_BYTES + long, 0)
     for place in decimal:
         size += np.where(batch.column(place).is_valid().to_numpy(zero_copy_only=False), COLUMN_BYTES, 0)
@@ -1860,7 +1901,7 @@ def fields_of(table: "Table", date_col: Optional[str] = None) -> dict:
         return {}
     except NotHashed as error:
         return {"not_hashed": _first_line(error)}  # a file written so that it is not read: its footer too large
-    except (OSError, MemoryError) as error:
+    except (OSError, MemoryError, RuntimeError) as error:
         if _this_machines(error) is None:
             return {}  # no table the reader reads: nothing to say of one
         raise NotNow(f"{type(error).__name__}: {_first_line(error)}") from None
@@ -1869,7 +1910,7 @@ def fields_of(table: "Table", date_col: Optional[str] = None) -> dict:
     except NotHashed as error:
         # One the reader reads, so there is something to say: why no rebuild can meet a pin of it
         return {**({"date_col": dated} if dated else {}), "not_hashed": _first_line(error)}
-    except (OSError, MemoryError) as error:
+    except (OSError, MemoryError, RuntimeError) as error:
         if _this_machines(error) is None:
             # A library's word for bytes that are not what they should be: the same at every try
             return {
@@ -2295,15 +2336,21 @@ def _hash_in(
 
     pl = _polars()
     schema = table.schema()
-    index_column = bool(index_columns(schema.names()))
-    if ALL in rows or not _dated_by(schema, date_col):
+    index_column = has_index_column(table)
+    if ALL not in rows and not _dated_by(schema, date_col):
+        try:
+            total = int(table.scan().select(pl.len()).collect().item())
+        except Exception:  # noqa: BLE001
+            total = 0
+        return Compared(sorted(rows) or [ALL], 0, 0, total, index_column, undated=True)
+    if ALL in rows:
         # No date column, here or in the record: all the rows, or nothing to compare by
         whole, total = _whole(table, scratch, MOST_BYTES)
         if whole is None:
             raise _too_many("its rows")
         same = set(rows) == {ALL} and hash_frame(whole) == rows[ALL]
         # Never the same for want of a period to differ in: a record of no rows says nothing of a table
-        return Compared([] if same else (sorted(rows) or [ALL]), 0, 0, total, index_column, undated=ALL not in rows)
+        return Compared([] if same else (sorted(rows) or [ALL]), 0, 0, total, index_column, undated=False)
     fine = isinstance(schema[date_col], pl.Datetime) and schema[date_col].time_unit == "ns"
     firsts = np.array([_bound(first, fine, first=True) for _, first, _ in periods], dtype="int64")
     lasts = np.array([_bound(last, fine) for _, _, last in periods], dtype="int64")

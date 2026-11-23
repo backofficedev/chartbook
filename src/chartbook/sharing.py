@@ -158,7 +158,7 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             done.refused.append((what, why))
             continue
         try:
-            document = json.loads(record.path.read_text(encoding="utf-8"))
+            document = json.loads(Path(_any_length(record.path)).read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
             done.refused.append((what, f"its record cannot be read: {error}"))
             continue
@@ -183,7 +183,7 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
                 pending.discard()
                 pending = into.begin(record.pipeline, record.commit, record.made_at)
                 done.size_bytes = counted  # what the increment had counted is counted once
-                document = json.loads(record.path.read_text(encoding="utf-8"))
+                document = json.loads(Path(_any_length(record.path)).read_text(encoding="utf-8"))
                 why = _copy_parts(document, record, pending, done)
                 if why is None:
                     pending.write(document)
@@ -363,7 +363,8 @@ def import_snapshots(store: FolderStore, source: Union[str, Path], echo: Callabl
         raise SharingError(f"{source} is not a folder.")
     store.check_writable()
     inside = Path(os.path.realpath(store.root))
-    if source == inside or source.is_relative_to(inside / store.pipelines_path().relative_to(store.root)):
+    trees = [inside / tree.relative_to(store.root) for tree in store._trees()]
+    if source == inside or source.is_relative_to(inside) or any(source.is_relative_to(tree) for tree in trees):
         raise SharingError(f"{source} is in the store it would be imported into.")
     records = [record for folder in _pipeline_folders(source) for record in _records_in(folder)]
     if not records:

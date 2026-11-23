@@ -350,11 +350,18 @@ def get_default_catalog_path() -> Optional[Path]:
 
     # Fall back to the global catalog if it exists
     global_catalog = get_global_catalog_path()
-    if global_catalog.is_file():
-        return global_catalog
+    try:
+        if global_catalog.is_file():
+            return global_catalog
+    except PermissionError:
+        return None
 
     legacy = get_global_config_dir() / "chartbook.toml"
-    if legacy.is_file():
+    try:
+        is_legacy = legacy.is_file()
+    except PermissionError:
+        is_legacy = False
+    if is_legacy:
         raise ValueError(f"{legacy} is an old catalog. Run `chartbook catalog migrate`.")
     return None
 
@@ -1201,7 +1208,17 @@ def set_default_catalog_path(catalog_path: Path) -> None:
     if detect_v1_format(manifest):
         raise V1FormatError(catalog_path)
 
-    config_type = resolve_project_type(manifest, source=str(catalog_path))
+    if catalog_path.name == "catalog.toml":
+        project = manifest.get("project")
+        explicit_type = project.get("type") if isinstance(project, dict) else None
+        if explicit_type not in (None, "catalog"):
+            raise ValueError(
+                f"Expected a catalog-type manifest in {catalog_path}, but found type={explicit_type!r}. "
+                f"The config command requires a catalog project, not a pipeline."
+            )
+        config_type = "catalog"
+    else:
+        config_type = resolve_project_type(manifest, source=str(catalog_path))
     if config_type != "catalog":
         raise ValueError(
             f"Expected a catalog-type chartbook.toml, but found type={config_type!r}. "
@@ -1209,7 +1226,8 @@ def set_default_catalog_path(catalog_path: Path) -> None:
         )
 
     settings = read_global_settings()
-    settings.setdefault("catalog", {})
+    if not isinstance(settings.get("catalog"), dict):
+        settings["catalog"] = {}
     settings["catalog"]["path"] = str(catalog_path)
     write_global_settings(settings)
 

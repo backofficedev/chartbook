@@ -61,12 +61,20 @@ def resolve(asset, folder):
     if target is None:
         manifest = Path(folder) / "chartbook.toml"
         raw = tomli.loads(manifest.read_text(encoding="utf-8"))
-        entry = raw.get("dependencies", {}).get(actual, {})
+        deps = raw.get("dependencies")
+        entry = deps.get(actual, {}) if isinstance(deps, dict) else {}
         if isinstance(entry, dict):
-            actual = entry.get("id", actual)
+            if isinstance(entry.get("id"), str) and entry["id"]:
+                actual = entry["id"]
             if entry.get("path"):
+                from chartbook.manifest import resolve_platform_path
                 from chartbook.resolve import _own_id
-                actual = _own_id(Path(folder) / entry["path"]) or actual
+                try:
+                    rel_path = resolve_platform_path(entry["path"])
+                    if isinstance(rel_path, str) and rel_path:
+                        actual = _own_id((Path(folder) / Path(rel_path).expanduser()).resolve()) or actual
+                except (ValueError, OSError):
+                    pass
             target = links.get(actual)
     if target is None:
         return None
@@ -78,7 +86,7 @@ def resolve(asset, folder):
         warnings.warn(f"{actual} reads working files at {target}; its pin is not in use ({NAME}).", LinkedDependencyWarning, stacklevel=3)
         _warned.add(key)
     from chartbook.refs import AssetRef
-    return _resolve_local(AssetRef(name=asset.name, kind=asset.kind), target)
+    return _resolve_local(AssetRef(name=asset.name, kind=asset.kind, rev=asset.rev), target)
 
 
 def provenance(folder):

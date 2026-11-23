@@ -1524,12 +1524,16 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
 
     source = base_dir / "chartbook.toml"
     named: list[tuple[str, object]] = []
-    project = raw_manifest.get("project") or {}
-    for key in _PROJECT_PATH_KEYS:
-        if key in project:
-            named.append((f"[project] {key}", project[key]))
+    project = raw_manifest.get("project")
+    if isinstance(project, dict):
+        for key in _PROJECT_PATH_KEYS:
+            if key in project:
+                named.append((f"[project] {key}", project[key]))
     for table in ASSET_TABLES:
-        for name, entry in (raw_manifest.get(table) or {}).items():
+        entries = raw_manifest.get(table)
+        if not isinstance(entries, dict):
+            continue
+        for name, entry in entries.items():
             if not isinstance(entry, dict):
                 continue
             for key, value in entry.items():

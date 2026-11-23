@@ -1100,9 +1100,12 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
             # Git in the script stands on the letter: the folder it is to look no further up than, by that name
             # too. Only where that folder is this one's own, as it is set for a git dependency's copy: one the
             # person set for themselves is theirs, and is left as it is
+            parent_dir = directory.rstrip("\\").rsplit("\\", 1)[0]
+            if len(parent_dir) == 2 and parent_dir[1] == ":":
+                parent_dir += "\\"
             environment = {
                 **environment,
-                "GIT_CEILING_DIRECTORIES": environment["GIT_CEILING_DIRECTORIES"] + os.pathsep + directory.rstrip("\\").rsplit("\\", 1)[0],
+                "GIT_CEILING_DIRECTORIES": environment["GIT_CEILING_DIRECTORIES"] + os.pathsep + parent_dir,
             }
         if "\n" not in script.strip():
             return subprocess.run(
@@ -1459,6 +1462,11 @@ def run(
         for step in steps:
             snapshotted = (snapshot and step.source == "asked") or step.snapshot_first
             if snapshotted and step.directory and script in step.scripts:
+                if os.path.lexists(step.directory / "chartbook.links.toml"):
+                    raise RunError(
+                        f"{step.id}: Cannot snapshot while chartbook.links.toml exists. Delete it, run "
+                        f"`chartbook pin --update`, then try again. Nothing was built."
+                    )
                 try:
                     code = snapshots.require_committed(
                         step.directory, step.id, ignoring=(lock.LOCK_FILE,)

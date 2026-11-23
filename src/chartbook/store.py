@@ -603,6 +603,11 @@ class Root:
         written: The lockfile's path as the note writes it, for a person to
             read: another machine's may be another system's path, which
             :attr:`lockfile` would spell with this one's separators.
+        keep_newest: Whether, beside any snapshots it lists, the note still
+            keeps the newest snapshot holding each of its objects. A note
+            from before notes recorded snapshots has no list, which means
+            the same (:meth:`keeps_newest`). A partial read must not replace
+            that with the snapshots it happened to see.
     """
 
     lockfile: Path
@@ -614,6 +619,16 @@ class Root:
     node: str = field(default="", compare=False)
     labelled: Optional[tuple[tuple[str, str, str, str], ...]] = field(default=None, compare=False)
     written: str = field(default="", compare=False)
+    keep_newest: bool = field(default=False, compare=False)
+
+    def keeps_newest(self) -> bool:
+        """Whether ``store gc`` keeps the newest snapshot holding each object this note names.
+
+        True when the note lists no snapshots (one from before notes recorded
+        them) and when it lists some and still says to keep that newest holder
+        (a partial read merged into such a note).
+        """
+        return self.snapshots is None or self.keep_newest
 
     @property
     def copy(self) -> bool:
@@ -953,35 +968,46 @@ def root_document(
     *,
     host: Optional[str] = None,
     node: Optional[str] = None,
+    keep_newest: bool = False,
 ) -> dict:
     """A note of a lockfile on this machine, named *machine*, as a store keeps it.
 
     :param snapshots: Each pin, ``(pipeline, commit, made_at)`` or the older
-        ``(commit, made_at)``; the pipeline is the dependency's ID.
+        ``(commit, made_at)``; the pipeline is the dependency's ID. None
+        leaves the list out: the note keeps the newest snapshot holding
+        each of its objects, as a note from before notes recorded snapshots.
     :param labelled: The model versions the lockfile pins by label, each
         ``(commit, made_at, name, content_hash)`` (:attr:`Root.labelled`);
         the moment may be empty for a pin that names no snapshot.
     :param host: The host name to record (this machine's by default; kept
         from the source note when moving another machine's note).
     :param node: The hardware address to record (this machine's by default).
+    :param keep_newest: With a snapshot list, also keep the newest snapshot
+        holding each object. A partial read of a note that named no snapshots
+        records the snapshots it did see and still keeps that newest holder.
     """
-    return {
+    document = {
         "lockfile": _root_path(lockfile),
         "machine": machine,
         "host": this_host() if host is None else host,
         "node": this_node() if node is None else node,
         "hashes": list(hashes),
-        "snapshots": [
+    }
+    if snapshots is not None:
+        document["snapshots"] = [
             entry for entry in (
                 _snapshot_entry(item) for item in sorted(set(snapshots), key=_snapshot_sort_key)
             ) if entry is not None
-        ],
-        "labelled": [
-            {"commit": commit, "made_at": made_at, "name": name, "content_hash": content_hash}
-            for commit, made_at, name, content_hash in sorted(set(labelled))
-            if _is_labelled_entry(commit, made_at, name, content_hash)
-        ],
-    }
+        ]
+        if keep_newest:
+            # Beside the snapshots a partial read saw: the newest holder of each object stays kept
+            document["newest"] = True
+    document["labelled"] = [
+        {"commit": commit, "made_at": made_at, "name": name, "content_hash": content_hash}
+        for commit, made_at, name, content_hash in sorted(set(labelled))
+        if _is_labelled_entry(commit, made_at, name, content_hash)
+    ]
+    return document
 
 
 def _snapshot_entry(item: tuple) -> Optional[dict]:
@@ -1033,6 +1059,7 @@ def read_root(stored: dict, note: str = "") -> Root:
     if not isinstance(machine, str) or not isinstance(host, str) or not isinstance(node, str):
         raise ValueError("its machine, host and node are not names")
     snapshots = None
+    keep_newest = stored.get("newest") is True
     if isinstance(stored.get("snapshots"), list):
         # A pair that is not a full commit and a time (a lockfile edited by
         # hand) is passed over: the note's objects are kept all the same.
@@ -1059,7 +1086,7 @@ def read_root(stored: dict, note: str = "") -> Root:
         }))
     root = Root(
         Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots, node, labelled,
-        written=stored["lockfile"],
+        written=stored["lockfile"], keep_newest=keep_newest,
     )
     for content_hash in root.hashes:
         _split_hash(content_hash)
@@ -1465,11 +1492,14 @@ class Store(abc.ABC):
         *,
         host: Optional[str] = None,
         node: Optional[str] = None,
+        keep_newest: bool = False,
     ) -> None:
         """Note that a lockfile names these objects, pins these snapshots, and pins these model versions by label (:attr:`Root.labelled`), so that they are kept: under this machine's name, or *machine* (``""`` names the path alone).
 
         :param snapshots: Each ``(pipeline, commit, made_at)``, or the older
-            ``(commit, made_at)``.
+            ``(commit, made_at)``. None leaves the list out, so the note
+            keeps the newest snapshot holding each object.
+        :param keep_newest: With a snapshot list, also keep that newest holder.
         """
 
     @abc.abstractmethod
@@ -2640,7 +2670,10 @@ class FolderStore(Store):
         # folder had not come yet was not, and the message says a sync may
         # explain it
         held = self._held(content_hash, pipeline)
-        return any(_exists(file.location) for asset in held for file in asset.files) or (
+        return any(
+            _exists(_on_disk_where_kept(file, asset.record.folder.parent))
+            for asset in held for file in asset.files
+        ) or (
             self.unowned_path(content_hash).is_dir()
         )
 
@@ -2694,14 +2727,15 @@ class FolderStore(Store):
         for asset in held:
             # A link first, there or not: what it leads to is never read, nor taken for a sync to wait for
             for file in asset.files:
-                tree = next((tree for tree in self._trees() if file.location.is_relative_to(tree)), self.root / places.pipelines)
-                if _is_or_under_a_link(file.location, tree, checked) or not self._in_a_tree(file.location):
+                location = _on_disk_where_kept(file, asset.record.folder.parent)
+                tree = next((tree for tree in self._trees() if location.is_relative_to(tree)), self.root / places.pipelines)
+                if _is_or_under_a_link(location, tree, checked) or not self._in_a_tree(location):
                     raise StoreError(
                         f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of the "
                         f"store, or is under a link; it is not read. `chartbook store verify` checks a store."
                     )
             for file in asset.files:
-                _check_length(file.location)  # written by a machine that takes longer paths than this one
+                _check_length(_on_disk_where_kept(file, asset.record.folder.parent))  # written by a machine that takes longer paths than this one
             missing = _unsynced_file(asset)
             if missing is not None:
                 continue  # the one `incomplete` judges whole is the one read
@@ -2864,6 +2898,12 @@ class FolderStore(Store):
         try:
             schema = _read_marker(marker)
         except FileNotFoundError:
+            v2_found = _snapshot_folder_in(self.root, V2_LAYOUT) or (
+                self.root / ROOTS_DIR if ROOTS_DIR in of_0_5(self.root) else None
+            )
+            v3_found = _snapshot_folder_in(self.root, V3_LAYOUT) or _snapshot_folder_in(
+                self.root, V3_LAYOUT, INCREMENTS_DIR
+            )
             both = [_snapshot_folder_in(self.root, layout) for layout in (V2_LAYOUT, V3_LAYOUT)]
             if all(both):
                 # Read as either, the other's snapshots would be passed over without a word
@@ -2871,6 +2911,16 @@ class FolderStore(Store):
                     f"The store at {self} has no store.json, and holds snapshots of both layouts: laid out as "
                     f"ChartBook 0.5 laid them out under {V2_LAYOUT.pipelines}/ ({self._shown(both[0])}), and as this "
                     f"version lays them out under {V3_LAYOUT.pipelines}/ ({self._shown(both[1])}). It is neither read nor "
+                    f"written as it is. If the store, or a move of it to this version's layout, may still be arriving by a "
+                    f"sync, wait for the sync to finish. If its store.json is lost for good, put one back that holds "
+                    f"{json.dumps({'schema': SCHEMA})}. Then run `chartbook store migrate`, which goes on from the folders "
+                    f"as they are."
+                )
+            if v2_found is not None and v3_found is not None:
+                raise StoreError(
+                    f"The store at {self} has no store.json, and holds snapshots of both layouts: laid out as "
+                    f"ChartBook 0.5 laid them out under {V2_LAYOUT.pipelines}/ ({self._shown(v2_found)}), and as this "
+                    f"version lays them out under {V3_LAYOUT.pipelines}/ ({self._shown(v3_found)}). It is neither read nor "
                     f"written as it is. If the store, or a move of it to this version's layout, may still be arriving by a "
                     f"sync, wait for the sync to finish. If its store.json is lost for good, put one back that holds "
                     f"{json.dumps({'schema': SCHEMA})}. Then run `chartbook store migrate`, which goes on from the folders "
@@ -2909,6 +2959,11 @@ class FolderStore(Store):
                 if not marker.is_file():
                     raise
                 return self._check_layout()
+            for empty_name in (V2_LAYOUT.pipelines, V2_LAYOUT.roots, V2_LAYOUT.origins, V2_LAYOUT.tmp):
+                empty_dir = self.root / empty_name
+                if empty_dir.is_dir() and next(_files_in(empty_dir), None) is None:
+                    with contextlib.suppress(OSError):
+                        _remove_tree(empty_dir)
             self._layout, self._layout_checked = V3_LAYOUT, True
             write_readme(self.root, STORE_README)  # once, when the store is made
             return
@@ -3020,6 +3075,7 @@ class FolderStore(Store):
         *,
         host: Optional[str] = None,
         node: Optional[str] = None,
+        keep_newest: bool = False,
     ) -> None:
         """Note that a lockfile on this machine names these objects, and pins these snapshots, so that they are kept.
 
@@ -3059,7 +3115,13 @@ class FolderStore(Store):
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
-                json.dump(root_document(lockfile, hashes, snapshots, machine, labelled, host=host, node=node), f, indent=1)
+                json.dump(
+                    root_document(
+                        lockfile, hashes, snapshots, machine, labelled,
+                        host=host, node=node, keep_newest=keep_newest,
+                    ),
+                    f, indent=1,
+                )
                 f.write("\n")
             replace_when_let(temporary, note)
         except BaseException:
@@ -3734,10 +3796,11 @@ def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     """
     trees = [Path(os.path.realpath(tree)) for tree in _trees_beside(asset.record.folder.parent.parent)]
     for file in asset.files:
-        if os.path.islink(file.location) or not any(Path(os.path.realpath(file.location)).is_relative_to(tree) for tree in trees):
+        location = _on_disk_where_kept(file, asset.record.folder.parent)
+        if os.path.islink(location) or not any(Path(os.path.realpath(location)).is_relative_to(tree) for tree in trees):
             continue
         try:
-            size = os.stat(file.location).st_size
+            size = os.stat(_any_length(location)).st_size
         except OSError:
             return f"does not have {file.path} yet"
         if size != file.size_bytes:
@@ -3830,16 +3893,18 @@ def what_is_wrong_in(asset: KeptAsset, read: Optional[dict] = None) -> list[tupl
         what reading it raised: a file two records name is read once.
     """
     wrong, entries = [], []
+    pipeline_folder = asset.record.folder.parent
     for file in asset.files:
-        if os.path.islink(file.location):
-            wrong.append((file.location, f"{file.path} is a link to {link_target(file.location)}, not a file the store keeps"))
+        location = _on_disk_where_kept(file, pipeline_folder)
+        if os.path.islink(location):
+            wrong.append((file.location, f"{file.path} is a link to {link_target(location)}, not a file the store keeps"))
             continue
-        key = str(file.location)
+        key = str(location)
         if read is not None and key in read:
             actual = read[key]
         else:
             try:
-                actual = hashing.format_hash(hashing.HashCache().file_hex(file.location))  # fresh, so every byte is read
+                actual = hashing.format_hash(hashing.HashCache().file_hex(Path(_any_length(location))))  # fresh, so every byte is read
             except OSError as error:
                 actual = error
             if read is not None:
@@ -4343,6 +4408,13 @@ class _FolderPending(PendingSnapshot):
             target = self._claim().joinpath(*entry["path"].split("/"))
             failed = []
             for origin in itertools.chain((str(kept), source), self._other_copies(entry, kept)):
+                if origin != source and not (os.path.islink(origin) or os.path.isfile(origin)):
+                    origin = str(
+                        _on_disk_where_kept(
+                            KeptFile("", "", entry["size_bytes"], entry["content_hash"], Path(origin)),
+                            self.pipeline_path,
+                        )
+                    )
                 if os.path.islink(origin) or not os.path.isfile(origin):
                     continue
                 try:

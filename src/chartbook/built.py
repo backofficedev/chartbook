@@ -158,7 +158,10 @@ def _hash(path: Path) -> str:
 
 def _within(directory: Path, path: Path) -> str:
     """A file by its path in the pipeline's folder, with ``/``; one outside it by its path from there."""
-    return os.path.relpath(path, directory).replace(os.sep, "/")
+    try:
+        return os.path.relpath(path, directory).replace(os.sep, "/")
+    except ValueError:
+        return os.fspath(path).replace(os.sep, "/")
 
 
 def built_files(directory: Union[str, Path]) -> dict:
@@ -192,6 +195,13 @@ def _listed_by_git(directory: Path, *how: str) -> Optional[list]:
     return [name for name in listed.split("\0") if name]
 
 
+def _same_file(a: Path, b: Path) -> bool:
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
 def source_files(directory: Union[str, Path], built: Optional[dict] = None) -> Optional[dict]:
     """The source files of a pipeline's folder that are on disk, by their paths in it; None where that cannot be asked.
 
@@ -215,10 +225,15 @@ def source_files(directory: Union[str, Path], built: Optional[dict] = None) -> O
             built = built_files(directory)
         except (OSError, ValueError):
             built = {}
+    built_by_case = {k.casefold(): v for k, v in built.items()}
     found = {}
     for name in dict.fromkeys([*listed, LOCK_FILE]):
         path = directory / name
-        if name in built or not path.is_file():
+        if (
+            name in built
+            or (name.casefold() in built_by_case and _same_file(path, built_by_case[name.casefold()]))
+            or not path.is_file()
+        ):
             continue  # built, or not there: a file that was removed and not committed, a folder of another repository
         found[name] = path
     return found
@@ -341,8 +356,9 @@ def began(directory: Union[str, Path], pipeline: str) -> Optional[Building]:
     """
     directory = Path(os.path.abspath(directory))
     earlier = read(directory) or {}
-    was = earlier.get("source") if isinstance(earlier.get("source"), dict) else {}
-    hashed_before = earlier.get("hashed_at") if isinstance(earlier.get("hashed_at"), int) else None
+    same_machine = earlier.get("machine") == _machine()
+    was = earlier.get("source") if same_machine and isinstance(earlier.get("source"), dict) else {}
+    hashed_before = earlier.get("hashed_at") if same_machine and isinstance(earlier.get("hashed_at"), int) else None
     moment = _now()
     source = source_files(directory)
     if source is None:
@@ -402,12 +418,13 @@ def finished(building: Building) -> dict:
     """
     directory = building.directory
     tracked = _tracked(directory)
+    tracked_by_case = {t.casefold(): directory / t for t in tracked}
     outputs = {}
     for name, path in sorted(built_files(directory).items()):
         try:
             stat = path.stat()
             outputs[name] = {"size": stat.st_size, "time": int(stat.st_mtime)}
-            if name in tracked:
+            if name in tracked or (name.casefold() in tracked_by_case and _same_file(path, tracked_by_case[name.casefold()])):
                 # Git writes such a file again, with the same bytes, at a stash, a rebase, a checkout of
                 # another branch and back: a time that differs is settled by its hash
                 outputs[name]["hash"] = _hash(path)
@@ -448,7 +465,7 @@ def _differences(directory: Path, note: dict) -> tuple[list, list]:
             of_source.append(f"{name} (gone)")
     for name in sorted(was):
         # Only what is gone from disk: one that is ignored now, or declared as built now, is not source now
-        if name not in source and not os.path.lexists(directory / name):
+        if name not in source and not (directory / name).is_file():
             of_source.append(f"{name} (gone)")
     left = note.get("outputs") if isinstance(note.get("outputs"), dict) else {}
     of_outputs = []
@@ -504,8 +521,15 @@ def check(directory: Union[str, Path], pipeline: str) -> bool:
         raise NotHeld("unreadable", detail=(str(error).strip().splitlines() or [""])[0].rstrip(".")) from None
     if BUILD_SCRIPT not in scripts:
         tracked = _tracked(directory)
+        tracked_by_case = {t.casefold(): directory / t for t in tracked}
         # A file outside the pipeline's folder is not asked of here: the snapshot says of it what is to be said
-        loose = sorted(name for name in built_files(directory) if name not in tracked and not name.startswith("../"))
+        loose = sorted(
+            name for name, path in built_files(directory).items()
+            if name not in tracked
+            and not (name.casefold() in tracked_by_case and _same_file(path, tracked_by_case[name.casefold()]))
+            and not name.startswith("../")
+            and not os.path.isabs(name)
+        )
         if loose:
             raise NotHeld("not_committed", outputs=loose)
         return False
@@ -529,6 +553,30 @@ def would_hold(directory: Union[str, Path], pipeline: str) -> bool:
     except (NotHeld, OSError, ValueError):
         return False
     return True
+
+
+def note_manifest_written(directory: Union[str, Path], before_text: str) -> None:
+    """Keep a finished build note valid when ChartBook itself rewrites ``requires_chartbook`` in ``chartbook.toml``."""
+    from chartbook.resolve import MANIFEST_NAME
+
+    directory = Path(os.path.abspath(directory))
+    path = note_path(directory)
+    note = _read(path)
+    if note is None or note.get("state") != "built" or note.get("machine") != _machine():
+        return
+    source = note.get("source")
+    if not isinstance(source, dict) or not isinstance(source.get(MANIFEST_NAME), dict):
+        return
+    before_hash = hashlib.sha256(before_text.encode("utf-8")).hexdigest()
+    if source[MANIFEST_NAME].get("hash") != before_hash:
+        return
+    try:
+        manifest_path = directory / MANIFEST_NAME
+        stat = manifest_path.stat()
+        source[MANIFEST_NAME] = {"hash": _hash(manifest_path), "size": stat.st_size, "time": stat.st_mtime_ns}
+        _write(path, note)
+    except OSError:
+        pass
 
 
 def _named(files: tuple) -> str:

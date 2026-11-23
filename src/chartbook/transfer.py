@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from chartbook import snapshot
-from chartbook.store import BuiltOnGoneError, PathTooLongError, StoreError
+from chartbook.store import BuiltOnGoneError, PathTooLongError, StoreError, _any_length
 
 
 class NotWholeThere(StoreError):
@@ -94,7 +94,7 @@ def copy_snapshot(taken, source, target, complete=False, whole=None, decides=Fal
                 raise NotWholeThere(taken, target, held.path, problems)
             whole.add(str(held.path))
             return held.path
-    document = json.loads(Path(taken.path).read_text(encoding="utf-8"))
+    document = json.loads(Path(_any_length(taken.path)).read_text(encoding="utf-8"))
     # Where the target decides, its kind is said once every file of it is put, as for the store it was made in
     by_rule = (
         decides and not complete and document.get("made_by", "snapshot") == "snapshot"
@@ -234,14 +234,21 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
             if hashes.intersection(root.hashes) or moments.intersection(noted):
                 raw_lockfile = root.written or root.lockfile
                 previous = target.root_of(raw_lockfile, root.machine)
+                # A note with no snapshot list keeps the newest holder of each object. Copying it as an
+                # empty list would drop that. Listed pins on either side are kept beside the rule.
+                snapshots = set(root.snapshots or ())
+                if previous is not None:
+                    snapshots |= set(previous.snapshots or ())
+                keep_newest = root.keeps_newest() or (previous is not None and previous.keeps_newest())
                 target.add_root(
                     raw_lockfile,
                     set(root.hashes) | set(previous.hashes if previous else ()),
-                    set(root.snapshots or ()) | set(previous.snapshots or () if previous else ()),
+                    None if keep_newest and not snapshots else snapshots,
                     root.machine,
                     set(root.labelled or ()) | set(previous.labelled or () if previous else ()),
                     host=root.host or (previous.host if previous else ""),
                     node=root.node or (previous.node if previous else ""),
+                    keep_newest=keep_newest and bool(snapshots),
                 )
         # Each snapshot was verified where it is: one written just now by each file's hash as it was written,
         # one that was there already by reading its own files (copy_snapshot). And now every asset of them,

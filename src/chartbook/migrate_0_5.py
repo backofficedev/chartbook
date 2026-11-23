@@ -415,7 +415,7 @@ def _read(record: Path, name: str) -> tuple[dict, frozenset]:
     why = None
     if not kept.readable:
         why = "it is not a record this ChartBook reads"
-    elif not kept.whole or _not_followed(kept):
+    elif not kept.whole:
         why = "it names a file by a path that is no plain path inside its pipeline's folder, or says nothing of where one is"
     elif pipeline_folder(kept.pipeline) != name or not kept.folder.name.endswith("_" + kept.commit[:12]):
         why = "it is not in the folder of its pipeline and its commit"
@@ -981,17 +981,7 @@ def _tells_case_apart(root: Path) -> bool:
     return not (marker.is_file() and (root / "STORE.JSON").exists() and "STORE.JSON" not in os.listdir(root))
 
 
-def check(root: Path, found: Plan) -> None:
-    """Stop before anything moves, saying what and what to do (:class:`MoveError`).
-
-    Whatever was true before a move and would stop it half way is found
-    here: a link, a snapshot being made, a file where a folder is made, a
-    folder that may not be written, a file that must be copied and may not
-    be read, a locked file, a path too long, two names the disk does not
-    tell apart, too little room. A file a record names that is missing, or
-    of another size, is no such thing: it was so before, and is counted.
-    """
-    root = Path(root)
+def _check_before_plan(root: Path) -> None:
     started = journal_of(root)
     if started is not None and started["machine"] != this_machine(create=False):
         raise MoveError(
@@ -1006,8 +996,23 @@ def check(root: Path, found: Plan) -> None:
             f"If a sync is still bringing the file, wait for it; if it is lost for good, put one back that holds "
             f"{json.dumps({'schema': SCHEMA})}, and run this again."
         )
+
+
+def check(root: Path, found: Plan) -> None:
+    """Stop before anything moves, saying what and what to do (:class:`MoveError`).
+
+    Whatever was true before a move and would stop it half way is found
+    here: a link, a snapshot being made, a file where a folder is made, a
+    folder that may not be written, a file that must be copied and may not
+    be read, a locked file, a path too long, two names the disk does not
+    tell apart, too little room. A file a record names that is missing, or
+    of another size, is no such thing: it was so before, and is counted.
+    """
+    root = Path(root)
+    _check_before_plan(root)
     old = root / V2_LAYOUT.pipelines
-    links = [p for p in ([old] + list(old.glob("*")) + list(old.glob("*/*")) if old.exists() or old.is_symlink() else []) if p.is_symlink()]
+    links = [root / name for name in OLD_TOP if (root / name).is_symlink()]
+    links += [p for p in (list(old.glob("*")) + list(old.glob("*/*")) if old.exists() and not old.is_symlink() else []) if p.is_symlink()]
     if not links:
         # And at any depth on the way to a file a record names: no part of a path a file is taken from is a link
         asked: set = set()
@@ -1061,11 +1066,25 @@ def check(root: Path, found: Plan) -> None:
     folders = {root, own}
     for step in found.steps:
         for place in (step.source, step.target):
-            if place and step.op != "note":
+            if place:
                 folder = (root / place).parent
                 while not folder.is_dir() and folder != root:
                     folder = folder.parent
                 folders.add(folder)
+        if step.op == "movedir":
+            for extra in (root / step.target, root / LEFT_ASIDE):
+                while not extra.is_dir() and extra != root:
+                    extra = extra.parent
+                folders.add(extra)
+            if (root / step.source).is_dir() and not (root / step.source).is_symlink():
+                for p in (root / step.source).rglob("*"):
+                    if p.is_dir() and not p.is_symlink():
+                        folders.add(p)
+                    if not p.is_dir() or p.is_symlink():
+                        dest_parent = (root / step.target / p.relative_to(root / step.source)).parent
+                        while not dest_parent.is_dir() and dest_parent != root:
+                            dest_parent = dest_parent.parent
+                        folders.add(dest_parent)
         if step.op in ("movedir", "aside") and (root / step.source).is_dir() and not (root / step.source).is_symlink():
             # A folder changes its parent only where this user may write the folder itself: the old folders, which go
             # under _chartbook/, and pipelines/ last of all
@@ -1099,6 +1118,7 @@ def check(root: Path, found: Plan) -> None:
         # A file this system will not rename because it is locked (the Finder's "Locked" box; `chflags uchg`), or a
         # folder that lets nothing out for the same reason: its folder may be written, and the rename is refused
         taken_from = [root / step.source for step in found.steps if step.op in ("rename", "movedir", "aside") and step.source]
+        taken_from += [p for p in (root / "store.json", root / JOURNAL) if os.path.lexists(p)]
         held = next((path for path in taken_from + sorted(folders) if _locked(path)), None)
         if held is not None:
             raise MoveError(
@@ -1107,24 +1127,65 @@ def check(root: Path, found: Plan) -> None:
             )
     # Each place a step writes to; and where a file is written first, which is as long for every file and shorter
     # than the path of any file of a snapshot
-    long = next((why for step in found.steps if step.target for why in [too_long(root / step.target)] if why), None)
+    targets_to_check = [root / step.target for step in found.steps if step.target]
+    for step in found.steps:
+        if step.op == "movedir" and (root / step.source).is_dir() and not (root / step.source).is_symlink():
+            targets_to_check.extend(
+                root / step.target / p.relative_to(root / step.source)
+                for p in (root / step.source).rglob("*")
+                if not p.is_dir() or p.is_symlink()
+            )
+    def _too_long_folder(path: Path):
+        try:
+            return too_long(path, folder=True)
+        except TypeError:
+            return too_long(path)
+
+    long = next(
+        (
+            why
+            for target_path in targets_to_check
+            for why in (too_long(target_path), _too_long_folder(target_path.parent))
+            if why
+        ),
+        None,
+    )
     long = long or too_long(_temporary_of(root, root / "store.json"))
     if long is not None:
         raise MoveError(f"The store is not moved: {long}")
     if not _tells_case_apart(root):
+        import unicodedata
+
         seen: dict = {}
+        parent_dirs: dict = {}
         for step in found.steps:
-            if step.op in ("rename", "copy"):
-                other = seen.setdefault(step.target.casefold(), step.target)
+            if step.op in ("rename", "copy", "write", "note") and step.target:
+                norm_target = unicodedata.normalize("NFC", step.target).casefold()
+                other = seen.setdefault(norm_target, step.target)
                 if other != step.target:
                     raise MoveError(
                         f"{other} and {step.target} would be two files in one folder of the store, and this disk does not "
                         f"tell their names apart: the store is not moved here. Move it on a machine whose disk does."
                     )
+                if norm_target in parent_dirs:
+                    raise MoveError(
+                        f"{step.target} and {parent_dirs[norm_target]} would be a file and a folder of the same name, and this disk does not "
+                        f"tell their names apart: the store is not moved here. Move it on a machine whose disk does."
+                    )
+                parts = norm_target.split("/")
+                for depth in range(1, len(parts)):
+                    prefix = "/".join(parts[:depth])
+                    parent_dirs.setdefault(prefix, step.target)
+                    if prefix in seen:
+                        raise MoveError(
+                            f"{seen[prefix]} and {step.target} would be a file and a folder of the same name, and this disk does not "
+                            f"tell their names apart: the store is not moved here. Move it on a machine whose disk does."
+                        )
     free = shutil.disk_usage(root).free
-    if found.copied_bytes > free:
+    still_needed = max(0, found.store_after - found.store_bytes) if found.store_after else found.copied_bytes
+    if still_needed > free:
         raise MoveError(
-            f"The store at {root} is not moved: the copies need {found.copied_bytes:,} bytes and its disk has {free:,} "
+            f"The store at {root} is not moved: the copies need {still_needed:,} bytes and its disk has {free:,} "
             f"free. Make room, and run this again."
         )
 
@@ -1141,6 +1202,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     journal = root / JOURNAL
     first_move = marker_of(root) != FOLDER_SCHEMA
     started = journal_of(root)
+    _check_before_plan(root)
     found = plan(root)
     check(root, found)
     done = Plan()
@@ -1221,8 +1283,15 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
     # The move's own folder of temporaries, with whatever a run cut short left in it; and the journal after it, so
     # that a run cut short between the two is still told to run again, and removes it then
     _clear_temporaries(root)
-    if journal.is_file():
-        journal.unlink()
+    for attempt in range(_EMPTY_TRIES):
+        try:
+            if journal.is_file():
+                journal.unlink()
+            break
+        except PermissionError:
+            if sys.platform != "win32" or attempt == _EMPTY_TRIES - 1:
+                raise
+            time.sleep(_EMPTY_WAIT_SECONDS)
     for key in _COUNTS + ("elsewhere",):
         setattr(done, key, so_far.get(key, 0))
     for key in ("set_aside", "in_place", "second", "no_record", "second_folders", "elsewhere_under"):

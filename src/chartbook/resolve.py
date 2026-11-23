@@ -538,7 +538,10 @@ def declared_assets(manifest_dir: Union[str, Path]) -> dict[str, list[str]]:
     :raises ValueError: If it is not valid TOML.
     """
     raw = _read_raw_manifest(Path(manifest_dir) / MANIFEST_NAME)
-    return {table: sorted(raw.get(table) or {}) for table in ASSET_TABLES}
+    return {
+        table: sorted(entries) if isinstance(entries := raw.get(table), dict) else []
+        for table in ASSET_TABLES
+    }
 
 
 def declared_files(
@@ -1129,9 +1132,10 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
         # build is the one read, whole: a chart from the build its table is read from, not a
         # newer one. And where the dependency has pins that no build of yours meets, none is
         # read: a chart drawn from rows that are not the pinned ones is not the pinned chart
-        stood = locks.your_build(entry, locked.assets_of(dependency.id), store, lambda: every, folder)
+        dep_records = locked.assets_of(dependency.id)
+        stood = locks.your_build(entry, dep_records, store, lambda: every, folder)
         if stood is not None and stood.stands_in:
-            at_commit = [stood.snapshot] + [taken for taken in at_commit if taken is not stood.snapshot]
+            at_commit = [stood.snapshot]
         elif stood is not None:
             raise AssetNotPinnedError(
                 asset_id, "differs",
@@ -1139,6 +1143,27 @@ def _read_unlocked(pinned: AssetRef, dependency: PipelineLocation, entry: dict, 
                 f"names, which the store at {store} does not have. "
                 f"{_your_build_differs(asset_id, dependency.id, stood, manifest_dir)}",
             )
+        else:
+            from chartbook import snapshot as snapshots
+
+            pinned_pipe = locks.pinned_pipeline(entry)
+            for rec in dep_records.values():
+                content_hash = rec.get("content_hash")
+                if not content_hash:
+                    continue
+                if not locks.in_lockfile(rec) and not store.has(content_hash, pinned_pipe):
+                    continue
+                if not store.has(content_hash, pinned_pipe):
+                    raise AssetNotPinnedError(
+                        asset_id, "not_in_store",
+                        f"{not_pinned}. {rec.get('id', content_hash)!r} is pinned at {content_hash}, and the store at {store} does not have it.",
+                    )
+                in_part = snapshots.not_whole(store, rec, pinned_pipe)
+                if in_part:
+                    raise AssetNotPinnedError(
+                        asset_id, "not_synced",
+                        f"{not_pinned}. {rec.get('id', content_hash)!r}: {in_part}.",
+                    )
     name = pinned.local_name
     not_built = lacking = ""
 
@@ -1474,7 +1499,7 @@ def _resolve_pinned_version(
     pipeline pinned; ``chartbook pin --update`` pins it.
     """
     from chartbook import snapshot
-    from chartbook.store import default_store
+    from chartbook.multi_store import with_dependencies
 
     asset_id = str(pinned)
     without = str(dataclasses.replace(pinned, rev=None))
@@ -1484,7 +1509,7 @@ def _resolve_pinned_version(
         if other.get("ref", {}).get("rev") and other.get("ref", {}).get("name") == pinned.name
         and other.get("ref", {}).get("kind") == pinned.kind
     )
-    digits = pinned.rev.split(":", 1)[-1]
+    algorithm, _, digits = pinned.rev.rpartition(":")
     if dependency.kind == "git":
         raise AssetNotPinnedError(
             asset_id,
@@ -1494,7 +1519,12 @@ def _resolve_pinned_version(
             f"snapshot, so no label of its models is pinned and no version of them "
             f"is in the store. {without!r} is its model as pinned.",
         )
-    if pinned.kind != "model" or not all(c in "0123456789abcdef" for c in digits) or len(digits) < 4:
+    if (
+        pinned.kind != "model"
+        or (algorithm and algorithm != "sha256")
+        or not all(c in "0123456789abcdef" for c in digits)
+        or len(digits) < 4
+    ):
         raise AssetNotPinnedError(
             asset_id,
             "not_in_lockfile",
@@ -1503,7 +1533,7 @@ def _resolve_pinned_version(
             f"{', '.join(labels) or '(none)'}. If its owner has given the label "
             f"since, and made a snapshot, `chartbook pin --update {dependency.id}` pins it.",
         )
-    store = default_store()
+    store = with_dependencies(manifest_dir)
     local = str(AssetRef(kind=pinned.kind, name=pinned.name))
     # A version a label of this lockfile pins is at hand whatever has become
     # of the snapshot that made it: the lockfile's root note keeps the bytes
@@ -1518,7 +1548,7 @@ def _resolve_pinned_version(
     from chartbook import lock as locks
 
     entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
-    of_pipeline = locks.pinned_pipeline(entry)
+    of_pipeline = locks.pinned_pipeline(entry, _folder_of(dependency))
     if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"], of_pipeline):
         return _held(store, by_label[0], of_pipeline)
     commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")
@@ -1531,8 +1561,10 @@ def _resolve_pinned_version(
             f"versions cannot be looked up in the store. `chartbook pin --update "
             f"{dependency.id}` pins it from a snapshot.",
         )
+    every = _snapshots_in(store)
     pinned_snapshot = next(
-        (t for t in snapshot.all_snapshots(store) if t.same_moment(commit, made_at)), None
+        (t for t in every if t.same_moment(commit, made_at) and (of_pipeline is None or t.pipeline == of_pipeline)),
+        None,
     )
     if pinned_snapshot is None:
         raise AssetNotPinnedError(
@@ -1543,8 +1575,11 @@ def _resolve_pinned_version(
             f"cannot be looked up there. `chartbook pin --update {dependency.id}` pins "
             f"one that is.",
         )
+    of_it = [t for t in every if t.pipeline == pinned_snapshot.pipeline and t.subdirectory == pinned_snapshot.subdirectory]
+    named_groups, unnamed_group = snapshot.repository_groups(of_it)
+    group = next((g for g in named_groups if any(t is pinned_snapshot for t in g)), []) + unnamed_group
     versions = snapshot.versions_of_pipeline(
-        store, pinned_snapshot.pipeline, pinned_snapshot.subdirectory, local
+        store, pinned_snapshot.pipeline, pinned_snapshot.subdirectory, local, group
     )
     hashes = [h for h, _ in versions]
     matches = [(h, t) for h, t in versions if h.split(":", 1)[-1].startswith(digits)]
@@ -1588,7 +1623,8 @@ def _declared_in_source(dependency: PipelineLocation, name: str) -> Optional[str
         raw = _read_raw_manifest(Path(dependency.path) / MANIFEST_NAME)
     except (OSError, ValueError):
         return None
-    entry = (raw.get("dataframes") or {}).get(name)
+    dataframes = raw.get("dataframes")
+    entry = dataframes.get(name) if isinstance(dataframes, dict) else None
     if not isinstance(entry, dict):
         return None
     return "table" if "table" in entry else "query" if "query" in entry else None
@@ -1755,16 +1791,37 @@ def resolve(
     # dataframe, by the ID its own chartbook.toml gives it. The catalog is
     # where its working version is read from when there is no snapshot to
     # read, with what it says when it has not got it.
+    from chartbook.config import get_default_catalog_path
+    from chartbook.manifest import resolve_project_type
+
+    try:
+        manifest_dir = find_manifest_dir(*start_dirs)
+    except ManifestNotFoundError:
+        manifest_dir = None
+    in_pipeline = False
+    if manifest_dir is not None and not (manifest_dir / "catalog.toml").is_file():
+        try:
+            raw_here = _read_raw_manifest(manifest_dir / MANIFEST_NAME)
+            in_pipeline = resolve_project_type(raw_here, source=str(manifest_dir / MANIFEST_NAME)) != "catalog"
+        except (OSError, ValueError):
+            in_pipeline = True
     catalog, key, folder, why_not = None, pipeline, None, None
     try:
-        catalog = resolve_catalog_path(catalog_path)
+        if (in_pipeline or batch()) and catalog_path is None:
+            candidate = get_default_catalog_path()
+            if candidate is None or not candidate.is_file():
+                raise FileNotFoundError(candidate or "catalog.toml")
+            catalog = candidate
+        else:
+            catalog = resolve_catalog_path(catalog_path)
         listed = _catalog_manifest(catalog)
         key = locate_in_catalog(listed, pipeline)
         folder = listed.get("pipelines", {}).get(key, {}).get("pipeline_base_dir")
     except (KeyError, OSError, ValueError) as error:
         why_not = error  # the store may still have it
+    base_ref = AssetRef(name=str(ref))
     try:
-        asset = AssetRef(name=str(ref)).in_pipeline((_own_id(Path(folder)) if folder else None) or key)
+        asset = base_ref.in_pipeline((_own_id(Path(folder)) if folder else None) or key)
     except ValueError:
         if why_not is not None:
             raise why_not from None
@@ -1775,10 +1832,6 @@ def resolve(
             raise why_not from None
         raise error from None
 
-    try:
-        manifest_dir = find_manifest_dir(*start_dirs)
-    except ManifestNotFoundError:
-        manifest_dir = None
     if catalog is not None and (catalog.parent / "catalog.toml").is_file() and (manifest_dir is None or (manifest_dir / "catalog.toml").is_file()):
         from chartbook import lock
         if why_not is not None:
@@ -1989,18 +2042,9 @@ def _read_snapshots(files) -> list:
     found = []
     for file in files:
         try:
-            stat = os.stat(file)
-        except OSError:
+            found.append(snapshot.read(file))
+        except (snapshot.SnapshotError, OSError):
             continue
-        stamp = (stat.st_mtime_ns, stat.st_size)
-        cached = _snapshot_cache.get(str(file))
-        if cached is None or cached[0] != stamp:
-            try:
-                cached = (stamp, snapshot.read(file))
-            except snapshot.SnapshotError:
-                continue
-            _snapshot_cache[str(file)] = cached
-        found.append(cached[1])
     return found
 
 
@@ -2261,12 +2305,18 @@ def _dependency_ids(manifest_dir: Path, dependencies: dict) -> dict[str, Optiona
     ids: dict[str, Optional[str]] = {}
     for name, entry in dependencies.items():
         own = entry.get("_store") or (_own_id(Path(entry["_resolved_path"])) if entry.get("_resolved_path") else None)
+        if own is None:
+            pinned_from = lockfile_entry(name).get("pinned_from")
+            if isinstance(pinned_from, str) and pinned_from:
+                own = pinned_from
         if own is None and "git" not in entry:
             pinned = lockfile_entry(name)
             commit, made_at = pinned.get("location", {}).get("commit"), pinned.get("snapshot")
             if commit and made_at:
                 try:
-                    found = found if found is not None else _snapshots_in(default_store())
+                    from chartbook.multi_store import with_dependencies
+
+                    found = found if found is not None else _snapshots_in(with_dependencies(manifest_dir))
                 except Exception:  # noqa: BLE001 - a store that cannot be read identifies nothing
                     found = []
                 own = next((t.pipeline for t in found if t.commit == commit and t.made_at == made_at), None)
@@ -2435,7 +2485,9 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         raise AssetNotPinnedError(
             not_pinned.asset, "no_snapshot", f"{dependency.id!r} is this pipeline itself: a pipeline cannot depend on itself."
         )
-    store = default_store()
+    from chartbook.multi_store import with_dependencies
+
+    store = with_dependencies(manifest_dir)
     try:
         found = _snapshots_in(store)
     except Exception as error:  # noqa: BLE001 - an unreadable store: no folder is read for want of it

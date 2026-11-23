@@ -323,7 +323,13 @@ def get_data_path(
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path, start_dirs=start_dirs)
     # A dataset of several files read from the store has no one path (as data.path says)
-    return require_single_path(location, f"Dataframe {dataframe!r}", f"{pipeline}:{dataframe}", "dataframe")
+    found = require_single_path(location, f"Dataframe {dataframe!r}", f"{pipeline}:{dataframe}", "dataframe")
+    try:
+        shown_ref = _assets.parse(f"{pipeline}:{dataframe}", kind="dataframe")
+    except ValueError:
+        shown_ref = f"{pipeline}:{dataframe}"
+    _assets._say_newer_rows(shown_ref, location)
+    return found
 
 
 def get_docs_path(
@@ -954,14 +960,17 @@ def _sql_up_to(location, date_col: str, as_of: Optional[str]) -> Optional[str]:
 
         if not files:
             return None
-        for file in files[:8]:
+        for file in files:
             written = pq.read_metadata(str(file)).schema
             names = list(written.names)
             if date_col not in names or sum(name.lower() == date_col.lower() for name in names) != 1:
                 return None
             if written.column(names.index(date_col)).physical_type == "INT96":
                 return None
-        kind = rowhash.Table.at(location).schema()[date_col]
+        schema = rowhash.Table.at(location).schema()
+        if sum(name.lower() == date_col.lower() for name in schema.names()) != 1:
+            return None
+        kind = schema[date_col]
     except Exception:  # noqa: BLE001 - whatever cannot be told of the files: left to polars
         return None
     if kind != pl.Date and not isinstance(kind, pl.Datetime):

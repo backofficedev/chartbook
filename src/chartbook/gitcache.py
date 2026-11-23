@@ -246,7 +246,7 @@ def repository_slug(url: str) -> Path:
         host, path = scp_like.group(1), scp_like.group(2)
     else:
         host, path = "local", re.sub(r"^file://", "", text)
-    path = re.sub(r"\.git/?$", "", path.rstrip("/"))
+    path = re.sub(r"\.git/?$", "", path.rstrip("/"), flags=re.IGNORECASE)
     if host == "local":
         # One folder: its name, and a hash of the whole path written one
         # way: with /, so that C:\\repos\\x, C:/repos/x and file:///C:/repos/x
@@ -363,7 +363,16 @@ class GitCache:
         """Run git, and return what it printed. Never shows a URL's credentials."""
 
         def shown(text: str) -> str:
-            return text.replace(url, strip_url_credentials(url)) if url else text
+            if url:
+                text = text.replace(url, strip_url_credentials(url))
+                stripped = url.strip()
+                if stripped != url:
+                    text = text.replace(stripped, strip_url_credentials(stripped))
+            return re.sub(
+                r"[A-Za-z][A-Za-z0-9+.-]*://[^@/\s'\"]+@",
+                lambda m: strip_url_credentials(m.group(0)),
+                text,
+            )
 
         environment = {
             # Not where a git hook's environment says the repository is: this

@@ -274,11 +274,13 @@ def behind(catalog: Path) -> Behind:
         # Each has a commit and a time a page can be named by: a record that has not is not read at all
         now.update((pipeline, taken.commit, taken.made_at) for taken in chosen)
     shown = set()
+    index_read = True
     if built:
         try:
             document = json.loads((site / index.INDEX_FILE).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             document = {}  # a site with no index beside it shows no snapshot that can be told
+            index_read = False
         records = document.get("records") if isinstance(document, dict) else None
         for record in records if isinstance(records, list) else []:
             if not isinstance(record, dict) or record.get("kind") != "Pipeline" or not isinstance(record.get("id"), str):
@@ -290,10 +292,10 @@ def behind(catalog: Path) -> Behind:
     unknown = ""
     if built and refused:
         unknown = refused
-    elif built and shown - now and away:
+    elif built and (shown - now or not index_read) and away:
         named = ", ".join(str(entry.store) for entry in away)
         unknown = f"the store at {named} is not there now" if len(away) == 1 else f"stores are not there now ({named})"
-    elif built and shown - now and unreadable:
+    elif built and (shown - now or not index_read) and unreadable:
         unknown = (
             "1 snapshot's record in the stores cannot be read now" if len(unreadable) == 1
             else f"{len(unreadable)} snapshots' records in the stores cannot be read now"
