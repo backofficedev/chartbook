@@ -26,6 +26,8 @@ def pytest_configure(config):
 
     from tests.fixtures import short_base_folder
 
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
     if config.option.basetemp:
         return
     folder = short_base_folder(os.name == "nt", bool(getattr(config.option, "numprocesses", None)))
