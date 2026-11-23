@@ -2445,7 +2445,11 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
                 store.remove_root(lock_path, machine=noted_as)
                 return True, ""
             return False, ""
-        if (
+        note_matches = getattr(store, "note_matches", None)
+        if note_matches is not None:
+            if note_matches(lock_path, pins.hashes, pins.snapshots, noted_as, pins.labelled):
+                return False, ""
+        elif (
             before is not None
             and set(before.hashes) == pins.hashes
             and before.snapshots is not None
@@ -4433,6 +4437,8 @@ class GcPlan:
     keep_lineage: bool = False
     aggressive: bool = False
     hashed: bool = False
+    #: Note file names left out of this plan (``--forget-note``), so a dry run can say what would go once the note is gone
+    without_notes: tuple = ()
 
     @property
     def size_bytes(self) -> int:
@@ -4468,6 +4474,7 @@ def plan_gc(
     hashed: bool = False,
     looks: bool = True,
     pipeline: Optional[str] = None,
+    without_notes: Optional[Iterable[str]] = None,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
@@ -4532,6 +4539,9 @@ def plan_gc(
         snapshots only: for the line after ``chartbook snapshot``, which
         says what ``store gc`` could remove of this pipeline and removes
         nothing. Whole-store ``store gc`` leaves it unset.
+    :param without_notes: Note file names to leave out of the plan, as
+        ``--forget-note`` does on a dry run: the note stays in the store,
+        and the plan says what would go once it is gone.
     :returns: The plan, for :func:`run_gc`.
     :raises StoreError: If the store's notes cannot be read.
     :raises LockError: If a lockfile that is there cannot be read. Nothing
@@ -4540,18 +4550,21 @@ def plan_gc(
     store = store if store is not None else default_store()
     # Asked many times over: the records are read once for the whole plan
     with store.reading():
-        plan = _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed, looks)
-    if pipeline is not None:
-        _narrow_to_pipeline(plan, pipeline)
+        plan = _plan_gc(
+            store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive, hashed, looks,
+            without_notes=tuple(without_notes or ()),
+        )
+        if pipeline is not None:
+            _narrow_to_pipeline(plan, pipeline, store)
     return plan
 
 
-def _narrow_to_pipeline(plan: GcPlan, pipeline: str) -> None:
+def _narrow_to_pipeline(plan: GcPlan, pipeline: str, store: Optional[Store] = None) -> None:
     """Leave only what of *pipeline* the plan would clear or keep: for the line after a snapshot of that pipeline.
 
     Objects nothing names, and unused files, are of no one pipeline: the
-    reminder of one says nothing of them. Copies that would go are only
-    those in this pipeline's snapshot folders.
+    reminder of one says nothing of them. Objects and copies that would go
+    are only those in this pipeline's snapshot folders.
     """
     from chartbook.store import pipeline_folder
 
@@ -4562,27 +4575,46 @@ def _narrow_to_pipeline(plan: GcPlan, pipeline: str) -> None:
     plan.kept_versions = [kept for kept in plan.kept_versions if kept.pipeline == pipeline]
     plan.held_back = {key: value for key, value in plan.held_back.items() if key == pipeline}
     plan.not_intact = plan.not_intact & {pipeline}
-    plan.delete = []
     plan.recent = []
     plan.unused = []
-    plan.files = {}
     plan.recent_files = set()
     folder = pipeline_folder(pipeline)
     markers = (f"snapshots/{folder}/", f"increments/{folder}/", f"pipelines/{folder}/")
-    plan.copies = {
-        name: size for name, size in plan.copies.items()
-        if any(marker in name.replace("\\", "/") for marker in markers)
-    }
+
+    def of_this(name: str) -> bool:
+        normalized = name.replace("\\", "/")
+        return any(normalized.startswith(marker) or f"/{marker}" in normalized for marker in markers)
+
+    plan.copies = {name: size for name, size in plan.copies.items() if of_this(name)}
+    if not plan.snapshots_delete and not plan.pinned_delete:
+        plan.delete = []
+        plan.files = {}
+        return
+    kept_delete = []
+    kept_files = {}
+    counted = set(plan.copies)
+    for content_hash, _ in plan.delete:
+        names = [name for name in plan.files.get(content_hash, ()) if of_this(name)]
+        if not names:
+            continue
+        sizes = dict(store.files_of(content_hash)) if store is not None else {}
+        freed = {name: sizes.get(name, 0) for name in names if name not in counted}
+        counted |= set(freed)
+        kept_files[content_hash] = names
+        kept_delete.append((content_hash, sum(freed.values())))
+    plan.delete = kept_delete
+    plan.files = kept_files
 
 
 def _plan_gc(
     store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool,
-    hashed: bool = False, looks: bool = True,
+    hashed: bool = False, looks: bool = True, without_notes: tuple = (),
 ) -> GcPlan:
     """The rest of :func:`plan_gc`, within one reading of the store's records."""
     plan = GcPlan(
         forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
         keep_lineage=keep_lineage, aggressive=aggressive, hashed=hashed and looks,
+        without_notes=tuple(without_notes),
     )
     keep: set[str] = set()
     pinned_snapshots: set[tuple[str, str]] = set()
@@ -4643,7 +4675,7 @@ def _plan_gc(
     # named their machine can only be this machine's; elsewhere it may be any
     # machine's, and is kept with care
     own_store = _users_own_store(store)
-    roots = store.roots()
+    roots = [root for root in store.roots() if root.note not in plan.without_notes]
     # The paths this machine has a note of: an old note of this user's own
     # store at one of them is superseded by it (a pin or a read writes this
     # machine's note in its place), and is removed
@@ -5057,6 +5089,7 @@ def carry_out_gc(plan: GcPlan, store: Optional[Store] = None) -> GcDone:
         keep_lineage=plan.keep_lineage,
         aggressive=plan.aggressive,
         hashed=True,  # whatever plan it is handed: nothing is removed on what was not read
+        without_notes=plan.without_notes,
     )
     from chartbook import versions
 

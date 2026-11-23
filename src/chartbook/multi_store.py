@@ -316,27 +316,64 @@ class Stores:
         self.for_writing("", [self.entries[0].name])
         return self.default().put(*args, **kwargs)
 
-    def add_root(self, lockfile, hashes, snapshots=(), machine=None, labelled=()):
+    def _root_entries(self, hashes, snapshots):
         from chartbook.store import _snapshot_triple
 
+        return [
+            entry for entry in self._available()
+            if not entry.read_only and (
+                entry is self.entries[0]
+                or any(entry.store.has(h) for h in hashes)
+                or any(_snapshot_triple(item)[1] in entry.store.snapshot_commits() for item in snapshots)
+            )
+        ]
+
+    def add_root(self, lockfile, hashes, snapshots=(), machine=None, labelled=(), *, host=None, node=None):
         hashes, snapshots, labelled = list(hashes), list(snapshots), list(labelled)
-        for entry in self._available():
-            if not entry.read_only and (entry is self.entries[0] or
-                    any(entry.store.has(h) for h in hashes) or
-                    any(_snapshot_triple(item)[1] in entry.store.snapshot_commits() for item in snapshots)):
-                entry.store.add_root(lockfile, hashes, snapshots, machine, labelled)
+        for entry in self._root_entries(hashes, snapshots):
+            entry.store.add_root(lockfile, hashes, snapshots, machine, labelled, host=host, node=node)
 
     def root_of(self, lockfile, machine=None):
+        from chartbook.store import Root
+
         entries = [e for e in self._available() if not e.read_only]
-        existing = [(e, e.store.root_of(lockfile, machine)) for e in entries]
-        roots = [root for _, root in existing if root is not None]
+        roots = [root for e in entries for root in (e.store.root_of(lockfile, machine),) if root is not None]
         if not roots:
             return None
-        hashes = set().union(*(set(root.hashes) for root in roots))
-        for entry, root in existing:
-            if any(entry.store.has(h) for h in hashes) and (root is None or not hashes.issubset(root.hashes)):
-                return None
-        return roots[0]
+        if len(roots) == 1:
+            return roots[0]
+        first = roots[0]
+        hashes = tuple(sorted(set().union(*(r.hashes for r in roots))))
+        snapshots = (
+            tuple(sorted(set().union(*(r.snapshots for r in roots if r.snapshots is not None))))
+            if any(r.snapshots is not None for r in roots)
+            else None
+        )
+        labelled = (
+            tuple(sorted(set().union(*(r.labelled for r in roots if r.labelled is not None))))
+            if any(r.labelled is not None for r in roots)
+            else None
+        )
+        return Root(
+            first.lockfile, hashes, first.machine, first.host, first.note,
+            snapshots, first.node, labelled, written=first.written,
+        )
+
+    def note_matches(self, lockfile, hashes, snapshots, machine, labelled) -> bool:
+        """Whether every writable store that would receive this note already holds it identically."""
+        targets = self._root_entries(hashes, snapshots)
+        for entry in targets:
+            root = entry.store.root_of(lockfile, machine)
+            if (
+                root is None
+                or set(root.hashes) != hashes
+                or root.snapshots is None
+                or set(root.snapshots) != snapshots
+                or root.labelled is None
+                or set(root.labelled) != labelled
+            ):
+                return False
+        return True
 
     def remove_root(self, lockfile, machine=None):
         removed = False

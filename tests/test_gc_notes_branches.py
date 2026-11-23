@@ -247,11 +247,26 @@ class TestForgetOneNote:
 
         result = CliRunner().invoke(main, ["store", "gc", "--forget-note", note.note, "--dry-run", "--keep-days", "0"])
         assert result.exit_code == 0, result.output
-        assert f"Forgot note" in result.output and note.note in result.output
-        assert old.made_at[:19].replace(":", "") in result.output.replace(":", "") or "Would remove" in result.output
-        # The note is gone: a fresh plan lets the old snapshot go
+        assert "Would forget note" in result.output and note.note in result.output
+        assert "Forgot note" not in result.output
+        assert "Would remove" in result.output
+        # A dry run leaves the note, so a fresh plan still keeps the pin
+        assert store.roots()
         plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
-        assert old.made_at in [t.made_at for t, _ in plan.snapshots_delete]
+        assert old.made_at not in [t.made_at for t, _ in plan.snapshots_delete]
+
+        declined = CliRunner().invoke(
+            main, ["store", "gc", "--forget-note", note.note, "--keep-days", "0"], input="n\n",
+        )
+        assert declined.exit_code == 0, declined.output
+        assert "Nothing was removed." in declined.output
+        assert store.roots()
+
+        gone = CliRunner().invoke(main, ["store", "gc", "--forget-note", note.note, "--yes", "--keep-days", "0"])
+        assert gone.exit_code == 0, gone.output
+        assert "Forgot note" in gone.output
+        assert store.roots() == []
+        assert not any(record.made_at == old.made_at for record in store.records())
 
     def test_refuses_another_machines_note(self, store, tmp_path):
         """Another machine's note is refused; remove its file by hand."""

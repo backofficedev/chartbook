@@ -1929,13 +1929,16 @@ class S3Store(Store):
         snapshots: Iterable[tuple] = (),
         machine: Optional[str] = None,
         labelled: Iterable[tuple[str, str, str, str]] = (),
+        *,
+        host: Optional[str] = None,
+        node: Optional[str] = None,
     ) -> None:
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
         machine = this_machine() if machine is None else machine
-        document = root_document(lockfile, hashes, snapshots, machine, labelled)
+        document = root_document(lockfile, hashes, snapshots, machine, labelled, host=host, node=node)
         self._write(self._root_key(lockfile, machine), (json.dumps(document, indent=1) + "\n").encode())
 
     def _read_note(self, key: str) -> Optional[Root]:

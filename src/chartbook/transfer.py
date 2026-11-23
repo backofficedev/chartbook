@@ -146,8 +146,9 @@ def copy_snapshot(taken, source, target, complete=False, whole=None, decides=Fal
             whole.add(str(path))
         return path
     except PathTooLongError:
+        was_increment = on is not None or getattr(pending, "builds_on", None) is not None
         pending.discard()
-        if on is None:
+        if not was_increment:
             raise  # it does not fit complete either
         # A file of its own does not fit under increments/, one letter longer than snapshots/: written complete
         return copy_snapshot(taken, source, target, complete=True, whole=whole)
@@ -231,10 +232,17 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
         for root in entry.store.roots():
             noted = {_snapshot_triple(item)[1:] for item in (root.snapshots or ())}
             if hashes.intersection(root.hashes) or moments.intersection(noted):
-                previous = target.root_of(root.lockfile, root.machine)
-                target.add_root(root.lockfile, set(root.hashes) | set(previous.hashes if previous else ()),
-                                set(root.snapshots or ()) | set(previous.snapshots or () if previous else ()), root.machine,
-                                set(root.labelled or ()) | set(previous.labelled or () if previous else ()))
+                raw_lockfile = root.written or root.lockfile
+                previous = target.root_of(raw_lockfile, root.machine)
+                target.add_root(
+                    raw_lockfile,
+                    set(root.hashes) | set(previous.hashes if previous else ()),
+                    set(root.snapshots or ()) | set(previous.snapshots or () if previous else ()),
+                    root.machine,
+                    set(root.labelled or ()) | set(previous.labelled or () if previous else ()),
+                    host=root.host or (previous.host if previous else ""),
+                    node=root.node or (previous.node if previous else ""),
+                )
         # Each snapshot was verified where it is: one written just now by each file's hash as it was written,
         # one that was there already by reading its own files (copy_snapshot). And now every asset of them,
         # by its hash, as a read of this pipeline finds it in the target: nothing is removed from the source

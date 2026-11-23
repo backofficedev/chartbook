@@ -878,13 +878,34 @@ def is_root_name(name: str) -> bool:
     return bool(_ROOT_NAME.match(name))
 
 
+_WINDOWS_ABS_PATH = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\)")
+
+
+def _root_path(lockfile: Union[str, Path]) -> str:
+    """The path a note records for *lockfile*, preserving an absolute path from another operating system verbatim.
+
+    On POSIX, a Windows drive or UNC path (``C:\\Users\\...``, ``\\\\server\\...``)
+    is not recognized as absolute by :func:`os.path.abspath`, which would
+    prepend this machine's working directory; on Windows, a POSIX path
+    (``/Users/...``) would gain a drive letter and backslashes. Either stays
+    as it was written so moving or looking up another machine's note keeps
+    both its stored path and its file name.
+    """
+    text = os.fspath(lockfile)
+    if os.name != "nt" and _WINDOWS_ABS_PATH.match(text):
+        return text
+    if os.name == "nt" and text.startswith("/") and not text.startswith("//"):
+        return text
+    return os.path.abspath(text)
+
+
 def root_name(lockfile: Union[str, Path], machine: str = "") -> str:
     """The name of a store's note of one lockfile: a hash of the machine and the lockfile's path.
 
     Two machines can have a lockfile at one path, and each keeps its own
     note. With no machine, the name a note had before notes named theirs.
     """
-    path = os.path.abspath(lockfile)
+    path = _root_path(lockfile)
     key = f"{machine}\n{path}" if machine else path
     return hashlib.sha256(key.encode("utf-8")).hexdigest()[:32] + ".json"
 
@@ -929,6 +950,9 @@ def root_document(
     snapshots: Iterable[tuple] = (),
     machine: str = "",
     labelled: Iterable[tuple[str, str, str, str]] = (),
+    *,
+    host: Optional[str] = None,
+    node: Optional[str] = None,
 ) -> dict:
     """A note of a lockfile on this machine, named *machine*, as a store keeps it.
 
@@ -937,12 +961,15 @@ def root_document(
     :param labelled: The model versions the lockfile pins by label, each
         ``(commit, made_at, name, content_hash)`` (:attr:`Root.labelled`);
         the moment may be empty for a pin that names no snapshot.
+    :param host: The host name to record (this machine's by default; kept
+        from the source note when moving another machine's note).
+    :param node: The hardware address to record (this machine's by default).
     """
     return {
-        "lockfile": os.path.abspath(lockfile),
+        "lockfile": _root_path(lockfile),
         "machine": machine,
-        "host": this_host(),
-        "node": this_node(),
+        "host": this_host() if host is None else host,
+        "node": this_node() if node is None else node,
         "hashes": list(hashes),
         "snapshots": [
             entry for entry in (
@@ -1435,6 +1462,9 @@ class Store(abc.ABC):
         snapshots: Iterable[tuple] = (),
         machine: Optional[str] = None,
         labelled: Iterable[tuple[str, str, str, str]] = (),
+        *,
+        host: Optional[str] = None,
+        node: Optional[str] = None,
     ) -> None:
         """Note that a lockfile names these objects, pins these snapshots, and pins these model versions by label (:attr:`Root.labelled`), so that they are kept: under this machine's name, or *machine* (``""`` names the path alone).
 
@@ -1453,8 +1483,8 @@ class Store(abc.ABC):
     def root_of(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Optional["Root"]:
         """This machine's note of a lockfile (or *machine*'s), if the store has one."""
         here = this_machine(create=False) if machine is None else machine
-        path = Path(os.path.abspath(lockfile))
-        return next((r for r in self.roots() if r.lockfile == path and r.machine == here and not r.copy), None)
+        key = _root_path(lockfile)
+        return next((r for r in self.roots() if (r.written or str(r.lockfile)) == key and r.machine == here and not r.copy), None)
 
     @abc.abstractmethod
     def snapshot_commits(self) -> set[str]:
@@ -2987,6 +3017,9 @@ class FolderStore(Store):
         snapshots: Iterable[tuple] = (),
         machine: Optional[str] = None,
         labelled: Iterable[tuple[str, str, str, str]] = (),
+        *,
+        host: Optional[str] = None,
+        node: Optional[str] = None,
     ) -> None:
         """Note that a lockfile on this machine names these objects, and pins these snapshots, so that they are kept.
 
@@ -3012,6 +3045,8 @@ class FolderStore(Store):
             which no note under a name then takes the place of.
         :param labelled: The model versions it pins by label, each
             ``(commit, made_at, name, content_hash)`` (:attr:`Root.labelled`).
+        :param host: The host name to record (this machine's by default).
+        :param node: The hardware address to record (this machine's by default).
         :raises ValueError: If one of *hashes* is not a content hash.
         """
         hashes = sorted(set(hashes))
@@ -3024,7 +3059,7 @@ class FolderStore(Store):
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
-                json.dump(root_document(lockfile, hashes, snapshots, machine, labelled), f, indent=1)
+                json.dump(root_document(lockfile, hashes, snapshots, machine, labelled, host=host, node=node), f, indent=1)
                 f.write("\n")
             replace_when_let(temporary, note)
         except BaseException:
@@ -4092,6 +4127,8 @@ class _FolderPending(PendingSnapshot):
         self._kept: Optional[dict] = None
         #: The hash of each file this snapshot has been given, by its path in the pipeline
         self._here: dict[str, str] = {}
+        #: The kept entry of each file already decided in :meth:`_keep`, so a second asset sharing the path gets the same ``kept_in`` and ``kept_as``
+        self._here_entries: dict[str, dict] = {}
         #: What :meth:`_complete` copies before the record: each file's entry, where an earlier snapshot keeps its bytes, and the file it was given from
         self._later: list = []
         #: For one begun undecided: each entry handed back for a file given a second time, with the first entry of that file
@@ -4510,29 +4547,34 @@ class _FolderPending(PendingSnapshot):
         _check_length(self.pipeline_path.joinpath(snapshot_folder_name(self.made_at, self.commit), *path.split("/")))
         target = self._claim().joinpath(*path.split("/"))
         if self._here.get(path) == content_hash:
-            # The same file given twice, as one that is of two assets: it is in the folder once
-            return {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
+            # The same file given twice, as one that is of two assets: it is in the folder once (or kept in builds_on)
+            return dict(self._here_entries[path])
         if path in self._here:
             raise StoreError(f"{target} is in the store already, with other bytes than {source}.")
         kept = self._held_whole(content_hash, size)
         if kept is not None and self.builds_on is not None:
             # Kept where it is, in the complete snapshot this one builds on: named there, and not copied
             there = kept.relative_to(self.store.pipeline_path(self.pipeline) / self.builds_on).as_posix()
-            self._here[path] = content_hash
-            return {
+            entry = {
                 "path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.builds_on,
                 **({"kept_as": there} if there != path else {}),
             }
+            self._here[path] = content_hash
+            self._here_entries[path] = entry
+            return dict(entry)
         if kept is not None:
             entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
             self._here[path] = content_hash
+            self._here_entries[path] = entry
             self._later.append((entry, kept, source))
             return entry
         written, kind = self._write_file(source, target, links)
         used.add(kind)
         self.placed = True
+        entry = {"path": path, "content_hash": written, "size_bytes": os.stat(target).st_size, "kept_in": self.name}
         self._here[path] = written
-        return {"path": path, "content_hash": written, "size_bytes": os.stat(target).st_size, "kept_in": self.name}
+        self._here_entries[path] = entry
+        return dict(entry)
 
     def _keep_for_later(self, source: str, path: str, content_hash: str, size: int, links: tuple, used: set) -> dict:
         """Take one file of a snapshot begun undecided, to come into its folder when its record is written (:meth:`_complete`); its entry, which says where it is kept only then.
@@ -4808,7 +4850,7 @@ class _FolderPending(PendingSnapshot):
             except OSError:
                 pass  # `store gc` clears what a writer left where the store keeps what is being written
         self.placed = False
-        self._here, self._later, self._again, self._held, self._there, self._aside = {}, [], [], [], {}, []
+        self._here, self._here_entries, self._later, self._again, self._held, self._there, self._aside = {}, {}, [], [], [], {}, []
         self._drop_note()
 
 
