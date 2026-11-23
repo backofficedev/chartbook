@@ -294,6 +294,10 @@ class TestPinUpdateAndAddRaiseTheLine:
             ("<0.1", ">=0.6.0,<0.1"),
             # One that lets in neither end of the line before it, and what lies between
             (">=0.5.1,!=0.5.99999", ">=0.6.0,!=0.5.99999"),
+            # The ends are the versions the probes ask, and neither is admitted, but 0.5.1 is
+            (">0.5.0,!=0.5.99999", ">=0.6.0,!=0.5.99999"),
+            (">=0.5.0,!=0.5.0,!=0.5.99999", ">=0.6.0,!=0.5.0,!=0.5.99999"),
+            (">0.5.1,!=0.5.2,!=0.5.99999", ">=0.6.0,!=0.5.2,!=0.5.99999"),
         ],
     )
     def test_the_rest_of_what_it_says_is_kept(self, was, now):
@@ -313,6 +317,8 @@ class TestPinUpdateAndAddRaiseTheLine:
         "enough",
         [
             ">=0.6.0", ">=0.6", ">=0.6,<1", "==0.6.*", ">=1.0", "~=0.6.0", ">0.6.0", "!=0.5.*,!=0.4.*,!=0.3.*,!=0.2.*,!=0.1.*,!=0.0.*",
+            # Nothing lies between these two, and nothing earlier is admitted
+            ">0.5.0,<0.5.1",
             # A release candidate of 0.6.0 itself is not an earlier ChartBook, however the line lets it in
             ">=0.6.0rc1",
         ],

@@ -219,6 +219,28 @@ OUTPUT_FILE_TYPES = frozenset(
 )
 
 
+def _output_is_there(path) -> bool:
+    """Whether a declared output is there, as ``chartbook run`` counts it.
+
+    A file is. So is a directory that holds a file. A directory with nothing
+    in it, or only a file a build ignores (``.DS_Store``, ``Thumbs.db``,
+    ``desktop.ini``), is not: ``chartbook run`` says the build did not write
+    it, and ``chartbook run --check`` lists it. A path that is not there at
+    all is not either.
+    """
+    from pathlib import Path
+
+    from chartbook.hashing import find_files
+
+    path = Path(path)
+    if path.is_file():
+        return True
+    if not path.is_dir():
+        return False
+    found = find_files(path)
+    return found is not None and bool(found.files)
+
+
 def validate_source_files(manifest: dict, base_dir) -> list:
     """Validate that all source files referenced in the manifest exist.
 
@@ -286,7 +308,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                         )
                 else:
                     full_path = (pipeline_base_dir / data_path).resolve()
-                    if not full_path.exists():
+                    if not _output_is_there(full_path):
                         missing_files.append(
                             MissingFile(
                                 file_path=full_path,
@@ -317,7 +339,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
             chart_path = chart_config.get("path")
             if chart_path and chart_path.strip():
                 full_path = (pipeline_base_dir / chart_path).resolve()
-                if not full_path.exists():
+                if not _output_is_there(full_path):
                     missing_files.append(
                         MissingFile(
                             file_path=full_path,
@@ -348,7 +370,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
             notebook_path = notebook_config.get("path")
             if notebook_path and notebook_path.strip():
                 full_path = (pipeline_base_dir / notebook_path).resolve()
-                if not full_path.exists():
+                if not _output_is_there(full_path):
                     missing_files.append(
                         MissingFile(
                             file_path=full_path,
@@ -383,7 +405,14 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                 declared = model_config.get(key)
                 if declared and declared.strip():
                     full_path = (pipeline_base_dir / declared).resolve()
-                    if not full_path.exists():
+                    # Scores are one file, as a run counts them. A model may be a file or a directory of them
+                    if key == "metrics_path":
+                        there = full_path.is_file()
+                    elif key == "docs_path":
+                        there = full_path.exists()
+                    else:
+                        there = _output_is_there(full_path)
+                    if not there:
                         missing_files.append(
                             MissingFile(
                                 file_path=full_path,

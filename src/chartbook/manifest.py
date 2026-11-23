@@ -219,13 +219,14 @@ def _versions_before(since: str) -> list:
 def admits_before(value: str, since: str) -> bool:
     """Whether a ``requires_chartbook`` admits a release of ChartBook earlier than *since*.
 
-    Asked of the versions that tell: each one the specifier names, and the
+    Asked of the versions that tell: each one the specifier names, the
     first and a last of every release line before *since*
-    (:func:`_versions_before`). So ``">=0.5.0"``, ``">0.5.1"``, ``"<1"``,
-    ``"!=0.5.3"`` and ``"!=0.5.*"`` admit one before ``0.6.0``, and
-    ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not. A release
-    candidate of *since* itself is not counted as before it, however the
-    specifier names it (``">=0.6.0rc1"``, as ``"==0.6.*"``).
+    (:func:`_versions_before`), and any other final release on those lines
+    (:func:`_final_release_before`). So ``">=0.5.0"``, ``">0.5.1"``, ``"<1"``,
+    ``"!=0.5.3"``, ``"!=0.5.*"`` and ``">0.5.0,!=0.5.99999"`` admit one before
+    ``0.6.0``, and ``">=0.6.0"``, ``">=0.6,<1"`` and ``"==0.6.*"`` do not. A
+    release candidate of *since* itself is not counted as before it, however
+    the specifier names it (``">=0.6.0rc1"``, as ``"==0.6.*"``).
 
     :raises Exception: packaging's, where the value is not a specifier.
     """
@@ -239,7 +240,154 @@ def admits_before(value: str, since: str) -> bool:
             probes.append(Version(clause.version.removesuffix(".*")))
         except InvalidVersion:
             continue  # an arbitrary one (===): it names no version to ask of
-    return any(Version(probe.base_version) < floor and wanted.contains(probe, prereleases=True) for probe in probes)
+    if any(Version(probe.base_version) < floor and wanted.contains(probe, prereleases=True) for probe in probes):
+        return True
+    # The ends of a line can both be shut out while a release between them is let in:
+    # ``>0.5.0,!=0.5.99999`` admits 0.5.1, and neither end is a version the probes ask
+    return _final_release_before(wanted, floor)
+
+
+def _final_release_before(wanted, floor) -> bool:
+    """Whether *wanted* contains a final release earlier than *floor*.
+
+    The probes in :func:`_versions_before` are the ends of each release line.
+    A specifier can shut both ends out and still admit a release between them
+    (``>0.5.0,!=0.5.99999`` admits ``0.5.1``). On each line the clauses that
+    are not ``!=`` leave one stretch of patch numbers, and each ``!=`` cuts a
+    stretch out of it. A patch left in the stretch is such a release.
+
+    :param wanted: A :class:`packaging.specifiers.SpecifierSet`.
+    :param floor: A :class:`packaging.version.Version`.
+    """
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+
+    if floor.epoch or floor.is_prerelease or floor.is_postrelease or floor.is_devrelease:
+        return False  # the probes cover an unusual floor; this pass is final releases before a final one
+    major, minor, patch = (list(floor.release) + [0, 0, 0])[:3]
+    allowing = [(clause, SpecifierSet(str(clause))) for clause in wanted if clause.operator != "!="]
+    excluding = []
+    for clause in wanted:
+        if clause.operator != "!=":
+            continue
+        try:
+            excluding.append((clause, SpecifierSet("==" + clause.version)))
+        except InvalidSpecifier:  # a != this packaging will not read as ==: the probes asked it
+            continue
+    lines = [(m, n, 99999) for m in range(min(major, 99) + 1) for n in range(100 if m < major else min(minor, 100))]
+    if patch:
+        lines.append((major, minor, patch - 1))
+    return any(_line_has_a_release(allowing, excluding, m, n, last) for m, n, last in lines)
+
+
+def _line_has_a_release(allowing, excluding, major: int, minor: int, last: int) -> bool:
+    """Whether some final ``major.minor.patch`` with patch from 0 to *last* satisfies the clauses."""
+    intervals = [(0, last)]
+    for clause, spec in allowing:
+        span = _patch_span(clause, spec, major, minor, last)
+        if span is None:
+            return False
+        intervals = _overlap(intervals, span)
+        if not intervals:
+            return False
+    for clause, spec in excluding:
+        span = _patch_span(clause, spec, major, minor, last)
+        if span is not None:
+            intervals = _cut(intervals, span)
+            if not intervals:
+                return False
+    return True
+
+
+def _patch_span(clause, spec, major: int, minor: int, last: int):
+    """The inclusive patch numbers on release line ``major.minor`` that one clause admits, or None if none.
+
+    One clause admits a single stretch of final releases on a line. *spec* is that clause as ``==`` when the
+    clause itself is ``!=``, so the stretch is what the exclusion removes.
+    """
+    def admits(number: int) -> bool:
+        return spec.contains(f"{major}.{minor}.{number}", prereleases=False)
+
+    if admits(0):
+        return (0, last) if admits(last) else (0, _last_admitted(admits, 0, last))
+    if admits(last):
+        return (_first_admitted(admits, 0, last), last)
+    named = _named_patch(clause, major, minor)
+    if named is None or not 0 <= named <= last or not admits(named):
+        return None
+    return (_first_admitted(admits, 0, named), _last_admitted(admits, named, last))
+
+
+def _named_patch(clause, major: int, minor: int):
+    """The final patch a clause names on release line ``major.minor``, or None when it names none there."""
+    from packaging.version import InvalidVersion, Version
+
+    text = clause.version[:-2] if clause.version.endswith(".*") else clause.version
+    try:
+        version = Version(text)
+    except InvalidVersion:
+        return None
+    if version.epoch or version.is_prerelease or version.is_postrelease or version.is_devrelease or version.local:
+        return None
+    if len(version.release) > 3:
+        return None
+    release = list(version.release) + [0, 0]
+    if (release[0], release[1]) != (major, minor):
+        return None
+    return release[2]
+
+
+def _last_admitted(admits, start: int, end: int) -> int:
+    """The greatest patch from *start* to *end* that *admits*, and *start* does."""
+    found = start
+    low, high = start + 1, end
+    while low <= high:
+        mid = (low + high) // 2
+        if admits(mid):
+            found = mid
+            low = mid + 1
+        else:
+            high = mid - 1
+    return found
+
+
+def _first_admitted(admits, start: int, end: int) -> int:
+    """The least patch from *start* to *end* that *admits*, and *end* does."""
+    found = end
+    low, high = start, end - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if admits(mid):
+            found = mid
+            high = mid - 1
+        else:
+            low = mid + 1
+    return found
+
+
+def _overlap(intervals, span):
+    """The stretches in *intervals* that also lie in *span*, each inclusive."""
+    start, end = span
+    kept = []
+    for low, high in intervals:
+        low, high = max(low, start), min(high, end)
+        if low <= high:
+            kept.append((low, high))
+    return kept
+
+
+def _cut(intervals, span):
+    """*intervals* with *span* taken out of each stretch. Both ends of a stretch are inclusive."""
+    start, end = span
+    kept = []
+    for low, high in intervals:
+        if high < start or low > end:
+            kept.append((low, high))
+            continue
+        if low < start:
+            kept.append((low, start - 1))
+        if high > end:
+            kept.append((end + 1, high))
+    return kept
 
 
 def raised_to(value: str, since: str) -> str:

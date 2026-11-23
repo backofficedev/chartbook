@@ -149,6 +149,15 @@ class TestCheckPaths:
         assert "file not found" in problem.message
         assert "dataframe_0.parquet" in problem.message
 
+    def test_an_empty_output_directory_holds_no_file(self, pipeline_project):
+        parquet = pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet"
+        parquet.unlink()
+        parquet.mkdir()
+        manifest = load_manifest(pipeline_project)
+        (problem,) = check_paths(manifest, pipeline_project)
+        assert (problem.table, problem.field) == ("dataframes.dataframe_0", "path")
+        assert problem.message.startswith("the folder holds no file:")
+
     def test_missing_chart_and_docs_files(self, pipeline_project):
         (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
         (pipeline_project / "docs_src" / "charts" / "chart_0_0.md").unlink()
@@ -794,6 +803,53 @@ class TestCheckCommand:
         assert result.exit_code == 1
         assert "Catalog member checks are gone" in result.output
         assert "Diagnostics" in result.output
+
+    def test_an_empty_output_directory_is_not_built_yet(self, pipeline_project, lenient_policy):
+        """A directory is an output when it holds a file. An empty one, or one whose only file is .DS_Store, is not built.
+
+        ``chartbook run`` says the build did not write it. The check lists it the same way, and does not pass it off as built.
+        """
+        parquet = pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet"
+        parquet.unlink()
+        parquet.mkdir()
+        (parquet / ".DS_Store").write_bytes(b"junk")
+        result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
+        assert result.exit_code == 0, result.output
+        assert "[dataframes.dataframe_0] path: not built yet:" in result.output
+        assert "file not found" not in result.output
+
+    def test_a_directory_that_holds_a_file_is_built(self, pipeline_project, lenient_policy):
+        data = pipeline_project / "_data" / "test_pipeline"
+        panel = data / "panel"
+        panel.mkdir()
+        (data / "dataframe_0.parquet").rename(panel / "part.parquet")
+
+        def edit(config):
+            config["dataframes"]["dataframe_0"]["path"] = "_data/test_pipeline/panel"
+
+        _edit_toml(pipeline_project, edit)
+        result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
+        assert result.exit_code == 0, result.output
+        assert "not built yet" not in result.output
+
+    def test_model_scores_are_a_file(self, pipeline_project):
+        """A directory of score files is not the scores file ``chartbook run`` looks for."""
+        from chartbook.conf_validation import validate_source_files
+        from chartbook.run import unwritten
+
+        scores = pipeline_project / "_models" / "scores"
+        scores.mkdir(parents=True)
+        (scores / "x.json").write_text("{}", encoding="utf-8")
+        model = pipeline_project / "_models" / "forecaster.bin"
+        model.write_bytes(b"model")
+
+        def edit(config):
+            config["models"] = {"forecaster": {"path": "_models/forecaster.bin", "metrics_path": "_models/scores"}}
+
+        _edit_toml(pipeline_project, edit)
+        missing = [item for item in validate_source_files(load_manifest(pipeline_project), pipeline_project) if item.file_type == "model_metrics"]
+        assert len(missing) == 1 and missing[0].item_id == "forecaster"
+        assert ("model/forecaster's scores", "_models/scores") in unwritten(pipeline_project)
 
     def test_a_pipeline_built_in_part_lacks_a_file(self, pipeline_project, lenient_policy):
         """Built, and one output missing: listed, and no "nothing is built" line. That it is a mistake is `chartbook run`'s to say, of its own build."""

@@ -289,7 +289,8 @@ def check_paths(
             message = f"{NOT_BUILT_YET}: {missing.file_path}"
         elif is_glob_pattern(str(missing.file_path)):
             message = f"no files match {missing.file_path}"
-        elif missing.file_type == "file" and Path(missing.file_path).is_dir():
+        elif Path(missing.file_path).is_dir() and missing.file_type != "model_metrics":
+            # A directory of scores is not the scores file. Every other output directory is empty of files that count
             message = f"the folder holds no file: {missing.file_path}"
         else:
             message = f"file not found: {missing.file_path}"
