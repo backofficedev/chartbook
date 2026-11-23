@@ -109,6 +109,9 @@ def test_p0_1_v2_migrate_refuses_v3_and_half_moved_v3_stores(tmp_path):
 
 
 def test_p0_2_and_p0_3_hive_partition_key_coercion_preserves_strings_and_types(tmp_path):
+    # A time of day in a folder name holds a colon, which Windows has no name for
+    if os.name == "nt":
+        pytest.skip("Windows has no folder name with a colon in it")
     # Put dataset under a `parent=above` folder so formats._hive uses _by_file and formats.sql uses _folder_sql
     parent = tmp_path / "parent=above"
     dataset = parent / "hive_ds"

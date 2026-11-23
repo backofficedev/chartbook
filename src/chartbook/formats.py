@@ -1200,14 +1200,14 @@ def to_pandas(location, where: Optional[str] = None):
     frame = scan_location(location, where)  # says now if it cannot be read
     read = reading_of(location, where)
     if read.format != "parquet":
-        return frame.collect().to_pandas()
+        return _pandas_of(frame)
     inside = getattr(location, "inside", None)
     sources, folder = _sources(Path(location.path), read, location.files, location.listed, inside)
     if isinstance(sources, str) and is_glob_pattern(sources):
-        return frame.collect().to_pandas()
+        return _pandas_of(frame)
     if isinstance(sources, list) and inside:
         # Files the store keeps in several folders have no one base for pyarrow to read keys below
-        return frame.collect().to_pandas()
+        return _pandas_of(frame)
     if folder is not None:
         if isinstance(sources, list):
             files = sources
@@ -1316,15 +1316,20 @@ def _folder_sql(tables: list[str], folder: Path, by_file: Optional[dict] = None)
     With no ``key=value`` in the folder's own path, DuckDB reads its keys
     itself, keeping its partition pruning, and is told the types polars
     gives them (``hive_types``), which it would infer otherwise (``007`` is
-    text to it). With one above, DuckDB would take that key for a column and
-    give a key above and below the folder the value above, in every row; so
-    it reads the files with no keys, and is given each file's. So too with a
+    text to it). Where polars cannot take those keys (a folder value that is
+    not of the column's type, such as ``year=oops`` beside a part that stores
+    ``year``), DuckDB would raise on the raw folder name, and the scan would
+    put null. SQL is then given each file's value, as it is when a key sits
+    above the folder: DuckDB would take that key for a column and give a key
+    above and below the folder the value above, in every row. So too with a
     ``?`` or a ``\\`` in a key's value, which DuckDB refuses or cuts short
     (``tag=q?``, ``tag=a\\b`` read as ``a``).
     """
     from chartbook.backends import quote_literal
 
-    if not _keys_above(tables, folder, by_file) and not _valued_with(tables, folder, "?\\", by_file):
+    # True once the raw folder names cannot be handed to DuckDB's own Hive read
+    explicit = _keys_above(tables, folder, by_file) or _valued_with(tables, folder, "?\\", by_file)
+    if not explicit:
         # The keys every file's path has below the folder, of polars' types
         named = [{key for key, _ in _keys_of(_below(file, folder, by_file))} for file in tables]
         hive = {}
@@ -1334,18 +1339,19 @@ def _folder_sql(tables: list[str], folder: Path, by_file: Optional[dict] = None)
                 try:
                     hive = pl.scan_parquet(tables, hive_partitioning=True, glob=False).collect_schema()
                 except READ_ERRORS:
-                    pass
-            if not hive:
+                    explicit = True
+            if not explicit and not hive:
                 # Polars cannot read these files with their keys (a key that
                 # is a file's column too, say, or a time of day): its types
                 # of the keys alone, text where it has none
                 first = pl.scan_parquet(tables[0], hive_partitioning=False, glob=False).collect_schema()
                 hive = {key: kind for key, (kind, _) in _partitions(tables, folder, by_file, own=first).items()}
-        keys = {key: kind for key, kind in hive.items() if all(key in each for each in named)}
-        if not keys:
-            return f"read_parquet({_listed(tables)}, hive_partitioning = false)"
-        types = ", ".join(f"{quote_literal(key)}: {quote_literal(_duckdb_type(kind))}" for key, kind in keys.items())
-        return f"read_parquet({_listed(tables)}, hive_partitioning = true, hive_types = {{{types}}})"
+        if not explicit:
+            keys = {key: kind for key, kind in hive.items() if all(key in each for each in named)}
+            if not keys:
+                return f"read_parquet({_listed(tables)}, hive_partitioning = false)"
+            types = ", ".join(f"{quote_literal(key)}: {quote_literal(_duckdb_type(kind))}" for key, kind in keys.items())
+            return f"read_parquet({_listed(tables)}, hive_partitioning = true, hive_types = {{{types}}})"
     first = pl.scan_parquet(tables[0], hive_partitioning=False, glob=False).collect_schema()
     keys = _partitions(tables, folder, by_file, own=first)
     read_parquet = f"read_parquet({_listed(tables)}, hive_partitioning = false"

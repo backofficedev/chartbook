@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
@@ -156,6 +157,12 @@ def test_root_path_preserves_foreign_os_paths_verbatim(monkeypatch):
 
     monkeypatch.setattr(os, "name", "nt")
     assert _root_path(posix_path) == posix_path
+    # pathlib on Windows rewrites the same path to "\Users\..." before fspath
+    from pathlib import PureWindowsPath
+
+    rewritten = PureWindowsPath(posix_path)
+    assert _root_path(rewritten) == posix_path
+    assert root_name(rewritten, "m") == root_name(posix_path, "m")
 
 
 def test_store_move_preserves_windows_root_paths_and_host_node(tmp_path, monkeypatch):
@@ -324,8 +331,9 @@ def test_multistore_verify_and_gc_check_remaining_stores_after_failure(tmp_path,
     snapshot.make(p2, store=healthy, complete=True, made_at="2026-01-01T00:00:00Z")
     _configure_catalog(tmp_path, monkeypatch, {"broken": {"url": str(broken.root)}, "healthy": {"url": str(healthy.root)}})
 
-    # Break a file in `broken` so `store verify` fails there
+    # Break a file in `broken` so `store verify` fails there. A store keeps it read-only, which Windows will not remove.
     broken_file = t1.path.parent.parent / "data.bin"
+    os.chmod(broken_file, stat.S_IWRITE | stat.S_IREAD)
     broken_file.unlink()
     verify_res = CliRunner().invoke(main, ["store", "verify"])
     assert verify_res.exit_code != 0

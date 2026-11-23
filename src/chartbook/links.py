@@ -70,9 +70,10 @@ def resolve(asset, folder):
                 from chartbook.manifest import resolve_platform_path
                 from chartbook.resolve import _own_id
                 try:
+                    # A Path, including one that is only ".": never a str
                     rel_path = resolve_platform_path(entry["path"])
-                    if isinstance(rel_path, str) and rel_path:
-                        actual = _own_id((Path(folder) / Path(rel_path).expanduser()).resolve()) or actual
+                    if rel_path:
+                        actual = _own_id((Path(folder) / rel_path.expanduser()).resolve()) or actual
                 except (ValueError, OSError):
                     pass
             target = links.get(actual)

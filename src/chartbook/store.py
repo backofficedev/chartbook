@@ -909,8 +909,13 @@ def _root_path(lockfile: Union[str, Path]) -> str:
     text = os.fspath(lockfile)
     if os.name != "nt" and _WINDOWS_ABS_PATH.match(text):
         return text
-    if os.name == "nt" and text.startswith("/") and not text.startswith("//"):
-        return text
+    if os.name == "nt":
+        # A string "/Users/..." still starts with "/". pathlib on Windows has
+        # already rewritten that to "\Users\..." by the time fspath sees it,
+        # and as_posix puts the slash back. A drive path stays a drive path.
+        posix = lockfile.as_posix() if hasattr(lockfile, "as_posix") else text
+        if posix.startswith("/") and not posix.startswith("//"):
+            return posix
     return os.path.abspath(text)
 
 

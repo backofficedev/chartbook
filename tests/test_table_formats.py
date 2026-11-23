@@ -400,6 +400,45 @@ class TestLoad:
         times = same("times", "t")
         assert times.loc[times["t"] == pd.Timestamp("2024-01-05 15:00:00"), "v"].tolist() == [1]
 
+    def test_a_partition_value_of_another_type_is_null_in_sql_too(self, tmp_path):
+        """``partition_by`` leaves the key in the part, so the column's type is the file's.
+
+        A folder value that is not of that type is null in the scan. DuckDB's own
+        Hive read raises on the raw name (``year=oops``, ``flag=maybe``), which
+        used to make ``data.sql`` raise where ``data.load`` returned null.
+        """
+        directory = _pipeline(
+            tmp_path / "rates",
+            {"years": {"path": "./_data/years"}, "flags": {"path": "./_data/flags"}},
+        )
+        _write(pl.DataFrame({"year": [2024], "v": [1]}), directory / "_data" / "years" / "year=2024" / "a.parquet")
+        _write(pl.DataFrame({"year": [2024], "v": [2]}), directory / "_data" / "years" / "year=oops" / "a.parquet")
+        _write(pl.DataFrame({"flag": [True], "v": [1]}), directory / "_data" / "flags" / "flag=true" / "a.parquet")
+        _write(pl.DataFrame({"flag": [True], "v": [2]}), directory / "_data" / "flags" / "flag=maybe" / "a.parquet")
+
+        def same(name):
+            loaded = data.load(name, project_dir=directory).collect().sort("v")
+            queried = data.sql(f"select * from {{{name}}}", project_dir=directory).collect().sort("v")
+            assert queried.equals(loaded), name
+            return loaded
+
+        years = same("years")
+        assert years["year"].to_list() == [2024, None]
+        flags = same("flags")
+        assert flags["flag"].to_list() == [True, None]
+
+    def test_pandas_reads_a_wide_hive_key_of_a_glob(self, tmp_path):
+        """A partition key past 64 bits is an Int128, which pandas cannot hold.
+
+        A folder is read as text. A glob used to raise ``ArrowInvalid`` on the way to pandas.
+        """
+        wide = "99999999999999999999"
+        directory = _pipeline(tmp_path / "rates", {"parts": {"path": "./_data/parts/**/*.parquet"}})
+        _write(pl.DataFrame({"v": [1]}), directory / "_data" / "parts" / f"id={wide}" / "a.parquet")
+        loaded = data.load("parts", format="pandas", project_dir=directory)
+        assert loaded["id"].tolist() == [wide]
+        assert data.load("parts", project_dir=directory).collect()["id"].to_list() == [int(wide)]
+
     @pytest.mark.parametrize("declared", ["./env=prod/data", "./_data/prices/year=2024"])
     @pytest.mark.parametrize("junk", [False, True])
     def test_a_folder_has_no_keys_from_the_folders_above_it(self, tmp_path, declared, junk):
