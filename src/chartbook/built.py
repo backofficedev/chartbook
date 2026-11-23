@@ -430,7 +430,9 @@ def finished(building: Building) -> dict:
 def _differences(directory: Path, note: dict) -> tuple[list, list]:
     """What differs from a finished note: the source files, and the built files, each as it is said."""
     built = built_files(directory)
-    source = source_files(directory, built) or {}
+    source = source_files(directory, built)
+    if source is None:
+        raise NotHeld("unreadable", detail="git could not list the folder's source files")
     was = note.get("source") if isinstance(note.get("source"), dict) else {}
     since = note.get("hashed_at") if isinstance(note.get("hashed_at"), int) else None
     of_source = []

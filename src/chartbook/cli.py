@@ -4237,23 +4237,28 @@ def store_ls(pipeline, store_name):
     except (ValueError, OSError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    shown = unreachable = unread = 0
+    shown = unreachable = unread = failed = 0
     said_complete = said_shared = said_lacking = False
     for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
             continue  # a store of a kind that keeps no folders to list
+        label = f"Store {name}: {the_store}" if name else f"Store: {the_store}"
         if not reachable:
             # A folder store that is not there lists nothing, which is not "no snapshots" (a Drive not mounted)
-            click.echo(f"Store {name or the_store}: {the_store}: unreachable", err=True)
+            click.echo(f"{label}: unreachable", err=True)
             unreachable += 1
             continue
         try:
             every = list(records())
             found = [r for r in every if r.readable and (pipeline is None or r.pipeline == pipeline)]
-        except (StoreUnreachableError, OSError, StoreError) as error:
-            click.echo(f"Store {name}: {the_store}: unreachable ({_said(error)})", err=True)
+        except (StoreUnreachableError, OSError) as error:
+            click.echo(f"{label}: unreachable ({_said(error)})", err=True)
             unreachable += 1
+            continue
+        except StoreError as error:
+            click.echo(f"{label}: not read ({_said(error)})", err=True)
+            failed += 1
             continue
         found.sort(key=lambda r: (r.pipeline, r.made_at))
         if len(stores) > 1 or name:
@@ -4301,14 +4306,14 @@ def store_ls(pipeline, store_name):
         said = "No snapshots" if pipeline is None else f"No snapshot of {pipeline}"
         if unread:
             said += " that this ChartBook can read"
-        click.echo(f"{said} in the stores that could be read." if unreachable else f"{said}.")
+        click.echo(f"{said} in the stores that could be read." if (unreachable or failed) else f"{said}.")
         for name, the_store, reachable in stores:
             root = getattr(the_store, "root", None)
             own = getattr(the_store, "is_users_own", None)
             if reachable and root is not None and not root.is_dir() and not (callable(own) and own()):
                 # A store is made by its first snapshot; a synced folder not mounted lists nothing either
                 click.echo(f"The store's folder {root} is not there: not made yet, or a synced folder that is not mounted.")
-        if unreachable and unreachable == len(stores):
+        if failed or (unreachable and unreachable + failed == len(stores)):
             raise SystemExit(1)
         return
     if said_complete or said_shared:
@@ -4316,6 +4321,10 @@ def store_ls(pipeline, store_name):
         click.echo("A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.")
     if said_lacking:
         click.echo("What a snapshot lacks is a file its record names that is not in the store, or not at its size: `chartbook store verify` names each one.")
+    if failed:
+        # A store that is there and cannot be read is a failure, even when another store listed snapshots.
+        # One that is not mounted is said above and does not, on its own, fail a listing that showed the rest.
+        raise SystemExit(1)
 
 
 def _held_here_and_elsewhere(record) -> tuple:
@@ -4504,6 +4513,8 @@ def store_info(store_name):
                         click.echo(f"  {len(unreadable)} unreadable record(s)")
                     clearable = _what_gc_would_clear(entry.store)
                     if clearable:
+                        if len(configured.entries) > 1:
+                            clearable = clearable.replace("`chartbook store gc`", f"`chartbook store gc --store {entry.name}`", 1)
                         click.echo(f"  {clearable}")
                 if entry.pipelines:
                     click.echo("  Routed: " + ", ".join(entry.pipelines))
@@ -5294,17 +5305,31 @@ def _note_path(the_store, name: str) -> str:
     return f"{the_store}/{ROOTS_DIR}/{name}"
 
 
-def _forget_one_note(the_store, name: str) -> None:
-    """Forget one note under ``_chartbook/roots/`` by its file name: this machine's only.
+def _normalize_note_name(name: str) -> tuple[str, str]:
+    """Strip a leading ``_chartbook/roots/`` or ``roots/`` prefix (as ``store gc`` prints); return ``(wanted, bare)``."""
+    bare = name.replace("\\", "/")
+    for prefix in ("_chartbook/roots/", "roots/"):
+        if bare.startswith(prefix):
+            bare = bare[len(prefix):]
+            break
+    wanted = bare if bare.endswith(".json") else f"{bare}.json"
+    return wanted, bare
 
-    Another machine's note, or a sync service's copy of one, is refused:
-    remove its file by hand once no machine needs it.
+
+def _note_to_forget(the_store, name: str):
+    """The note *name* names, when this machine may forget it. Nothing is removed.
+
+    :raises ValueError: If there is no such note, more than one, a sync
+        service's copy, or another machine's note.
+    :raises StoreError: If the store is one nothing is removed from (a layout of ChartBook 0.5).
     """
     from chartbook.store import this_machine
 
-    wanted = name if name.endswith(".json") else f"{name}.json"
+    # Check the store's layout before changing anything: an earlier layout (0.5) must be migrated first
+    the_store.check_tidy()
+    wanted, bare = _normalize_note_name(name)
     roots = the_store.roots()
-    match = [root for root in roots if root.note == wanted or root.note == name]
+    match = [root for root in roots if root.note in (wanted, bare, name)]
     if not match:
         raise ValueError(
             f"No note named {wanted} under _chartbook/roots/. "
@@ -5326,9 +5351,23 @@ def _forget_one_note(the_store, name: str) -> None:
             f"Refuse to forget it from here: remove {_note_path(the_store, root.note)} "
             f"by hand once no machine needs it."
         )
-    if not the_store.remove_root(root.lockfile, machine=root.machine):
+    return root
+
+
+def _forget_root(the_store, root) -> None:
+    """Remove *root* from *the_store* and say so."""
+    if not the_store.remove_root(root.written or root.lockfile, machine=root.machine):
         raise ValueError(f"Could not remove {_note_path(the_store, root.note)}.")
     click.echo(f"Forgot note {_note_path(the_store, root.note)}.")
+
+
+def _forget_one_note(the_store, name: str) -> None:
+    """Forget one note under ``_chartbook/roots/`` by its file name: this machine's only.
+
+    Another machine's note, or a sync service's copy of one, is refused:
+    remove its file by hand once no machine needs it.
+    """
+    _forget_root(the_store, _note_to_forget(the_store, name))
 
 
 def _when_it_goes(why: str) -> str:
@@ -5384,7 +5423,7 @@ def _format_bytes(size):
     "--forget-note",
     metavar="NAME",
     default=None,
-    help="Forget one note under _chartbook/roots/ (this machine's only; another machine's: remove its file by hand), then plan as usual",
+    help="Forget one note under _chartbook/roots/ (this machine's only; another machine's: remove its file by hand), then plan as usual. --dry-run lists the note and leaves it in place",
 )
 @click.option(
     "--keep-days",
@@ -5483,11 +5522,18 @@ def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage,
     from chartbook.store import StoreError, default_store
 
     days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
+    pending = None
+    forgotten = False
     try:
         the_store = default_store()
         if forget_note:
-            _forget_one_note(the_store, forget_note)
-        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive, hashed=True)
+            pending = _note_to_forget(the_store, forget_note)
+            if dry_run:
+                click.echo(f"Would forget note {_note_path(the_store, pending.note)}.")
+        plan = lock.plan_gc(
+            the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage,
+            aggressive=aggressive, hashed=True, without_notes=(pending.note,) if pending is not None else None,
+        )
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
@@ -5525,11 +5571,20 @@ def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage,
                 f"everything missing. If it is lost for good, that snapshot goes {_when_it_goes(why)}."
             )
 
+    def drop_note() -> None:
+        """Forget the note once a removal is actually carried out. A dry run, and a no to the question, leave it."""
+        nonlocal forgotten
+        if pending is None or forgotten:
+            return
+        _forget_root(the_store, pending)
+        forgotten = True
+
     def carry_out():
         """Remove what the plan says to, and say what could not be removed, if anything could not."""
         try:
-            return lock.carry_out_gc(plan, the_store)
+            done = lock.carry_out_gc(plan, the_store)
         except lock.GcError as e:
+            drop_note()
             # Everything else went: say so, then each thing that stayed and what to do
             if e.removed_snapshots or e.removed or e.pinned:
                 by_pins = f", {e.pinned} snapshot(s) a pin made from a repository" if e.pinned else ""
@@ -5542,8 +5597,13 @@ def store_gc(dry_run, yes, forget_missing, forget_note, keep_days, keep_lineage,
             raise SystemExit(1)
         except (StoreError, lock.LockError, ValueError) as e:
             click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
-            click.echo("Nothing was removed.", err=True)
+            click.echo(
+                "The note was forgotten. Nothing else was removed." if forgotten else "Nothing was removed.",
+                err=True,
+            )
             raise SystemExit(1)
+        drop_note()
+        return done
 
     # A kept snapshot keeps objects too, which no lockfile may name
     named_by = f"{len(plan.lockfiles) + len(plan.elsewhere)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
@@ -6576,6 +6636,24 @@ def _entries_holding(entries, pipeline):
     return found, unreadable
 
 
+def _entries_holding_note(entries, note_name: str):
+    """Stores among *entries* that hold a note matching *note_name*, and any store that could not be read."""
+    from chartbook.store import StoreUnreachableError
+
+    wanted, bare = _normalize_note_name(note_name)
+    found, unreadable = [], []
+    for entry in entries:
+        if not entry.reachable:
+            unreadable.append((entry.name, StoreUnreachableError(f"unreachable: {entry.store}")))
+            continue
+        try:
+            if any(root.note in (wanted, bare, note_name) for root in entry.store.roots()):
+                found.append(entry)
+        except Exception as error:  # noqa: BLE001 - reported below when no store holds the note
+            unreadable.append((entry.name, error))
+    return found, unreadable
+
+
 def _store_selection(command, all_stores=False):
     """Keep maintenance local to each store and its own retention notes."""
     original = command.callback
@@ -6588,8 +6666,26 @@ def _store_selection(command, all_stores=False):
             chosen = configured.named(store_name) if store_name else None
         except (ValueError, OSError) as error:
             raise click.ClickException(str(error)) from None
+        forget_note = kwargs.get("forget_note") if command.name == "gc" else None
+        scoped = store_name is not None
+        holding_note = None
         if store_name:
             entries = [chosen]
+        elif forget_note and len(configured.entries) > 1:
+            wanted, _ = _normalize_note_name(forget_note)
+            holding, unreadable = _entries_holding_note(configured.entries, forget_note)
+            if len(holding) > 1:
+                names = ", ".join(entry.name for entry in holding)
+                raise click.ClickException(f"Note {wanted} is in stores {names}: select one with --store NAME")
+            if not holding:
+                looked = ", ".join(entry.name for entry in configured.entries)
+                said = f"No store holds note {wanted} (looked in {looked}"
+                for name, error in unreadable:
+                    said += f"; {name} could not be read: {_said(error)}"
+                raise click.ClickException(said + "). Select a store with --store NAME to work in it all the same.")
+            # The note is in one store. Forget it there, and plan every store, as `store gc` does.
+            holding_note = holding[0]
+            entries = configured.entries
         elif all_stores:
             entries = configured.entries
         elif len(configured.entries) > 1:
@@ -6613,7 +6709,7 @@ def _store_selection(command, all_stores=False):
             entries = configured.entries
         failures = []
         for entry in entries:
-            if all_stores and store_name is None and entry.reachable:
+            if all_stores and not scoped and entry.reachable:
                 from chartbook.store import StoreError, StoreUnreachableError
                 try:
                     entry.store.all_snapshot_files()
@@ -6623,25 +6719,32 @@ def _store_selection(command, all_stores=False):
                 except StoreError:
                     pass  # the command reports a layout or integrity error below
             if command.name not in ("verify", "info", "export") and entry.read_only:
-                if all_stores and store_name is None:
+                if all_stores and not scoped and entry is not holding_note:
                     click.echo(f"Skipping store {entry.name}: read-only")
                     continue
                 raise click.ClickException(f"Store {entry.name!r} is read-only")
             if not entry.reachable:
-                if all_stores and store_name is None:
+                if all_stores and not scoped and entry is not holding_note:
                     click.echo(f"Skipping store {entry.name}: unreachable")
                     continue
                 raise click.ClickException(f"Store {entry.name!r} is unreachable")
             if len(configured.entries) > 1:
                 click.echo(f"Store {entry.name}: {entry.store}")
             token = selected_store.set(entry.store)
+            call_kwargs = kwargs
+            if holding_note is not None and entry is not holding_note:
+                call_kwargs = {**kwargs, "forget_note": None}
             try:
-                original(*args, **kwargs)
+                original(*args, **call_kwargs)
             except click.ClickException as error:
-                if not all_stores or store_name is not None or len(configured.entries) == 1:
+                if not all_stores or scoped or len(configured.entries) == 1:
                     raise
                 failures.append(entry.name)
                 click.echo(f"Store {entry.name}: {error.format_message()}", err=True)
+            except SystemExit as exit_:
+                if not exit_.code or not all_stores or scoped or len(configured.entries) == 1:
+                    raise
+                failures.append(entry.name)
             finally:
                 selected_store.reset(token)
         if failures:
