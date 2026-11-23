@@ -480,7 +480,7 @@ def generate_docs(
     # Validate that all source files exist
     from chartbook.config import untrusted_source
 
-    missing_files = validate_source_files(manifest, project_dir)
+    missing_files = validate_source_files(manifest, project_dir, allow_empty_dirs=True)
     if untrusted_source():
         missing_files = _not_shown_from_the_index(missing_files, project_dir)
     skip_pipelines: set[str] = set()

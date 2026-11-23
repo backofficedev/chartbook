@@ -219,14 +219,16 @@ OUTPUT_FILE_TYPES = frozenset(
 )
 
 
-def _output_is_there(path) -> bool:
+def _output_is_there(path, *, allow_empty_dir: bool = False) -> bool:
     """Whether a declared output is there, as ``chartbook run`` counts it.
 
     A file is. So is a directory that holds a file. A directory with nothing
     in it, or only a file a build ignores (``.DS_Store``, ``Thumbs.db``,
     ``desktop.ini``), is not: ``chartbook run`` says the build did not write
     it, and ``chartbook run --check`` lists it. A path that is not there at
-    all is not either.
+    all is not either. When *allow_empty_dir* is True (``docs build``), an
+    existing empty directory still renders its page instead of failing the
+    site build.
     """
     from pathlib import Path
 
@@ -237,11 +239,13 @@ def _output_is_there(path) -> bool:
         return True
     if not path.is_dir():
         return False
+    if allow_empty_dir:
+        return True
     found = find_files(path)
     return found is not None and bool(found.files)
 
 
-def validate_source_files(manifest: dict, base_dir) -> list:
+def validate_source_files(manifest: dict, base_dir, *, allow_empty_dirs: bool = False) -> list:
     """Validate that all source files referenced in the manifest exist.
 
     Checks for the existence of:
@@ -308,7 +312,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                         )
                 else:
                     full_path = (pipeline_base_dir / data_path).resolve()
-                    if not _output_is_there(full_path):
+                    if not _output_is_there(full_path, allow_empty_dir=allow_empty_dirs):
                         missing_files.append(
                             MissingFile(
                                 file_path=full_path,
@@ -411,7 +415,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                     elif key == "docs_path":
                         there = full_path.exists()
                     else:
-                        there = _output_is_there(full_path)
+                        there = _output_is_there(full_path, allow_empty_dir=allow_empty_dirs)
                     if not there:
                         missing_files.append(
                             MissingFile(
