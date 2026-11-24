@@ -678,12 +678,18 @@ class TestAPathDependencyOnAnotherMachine:
     def test_check_says_a_store_it_cannot_open(self, cloned, monkeypatch):
         from chartbook.check import check_dependencies
         from chartbook.manifest import load_manifest
+        from chartbook.store import StoreNotAvailableError
 
-        for url in ("s3://Bad_Bucket/x", "gs://bucket/x"):
-            monkeypatch.setenv("CHARTBOOK_STORE", url)
-            (problem,) = check_dependencies(load_manifest(cloned), cloned)
-            assert "the store cannot be opened" in problem.message
-            assert "does not have all that the lockfile pins" not in problem.message
+        # A bucket is withdrawn: the check stops on that line, rather than
+        # reporting the missing folder as a store that merely failed to open.
+        monkeypatch.setenv("CHARTBOOK_STORE", "s3://Bad_Bucket/x")
+        with pytest.raises(StoreNotAvailableError, match="not available"):
+            check_dependencies(load_manifest(cloned), cloned)
+
+        monkeypatch.setenv("CHARTBOOK_STORE", "gs://bucket/x")
+        (problem,) = check_dependencies(load_manifest(cloned), cloned)
+        assert "the store cannot be opened" in problem.message
+        assert "does not have all that the lockfile pins" not in problem.message
 
     def test_check_says_a_store_it_cannot_read(self, cloned):
         from chartbook.check import check_dependencies

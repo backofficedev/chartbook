@@ -843,8 +843,12 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
                 # Still at the old place, at the record's size. Another snapshot that
                 # names these bytes would be pointed here and its own copy set aside
                 # as a second one. Size is not the hash: read it when that copy exists.
-                others = [at for at in said.get(key, ()) if at != place and look(at)[1] == key[1]]
-                trusted = _same_bytes(root / place, key[0]) if others else True
+                # Whether another place names them is the length of the set, not a
+                # walk of it: the same bytes in every file would otherwise be asked
+                # of the disk once per file, and the plan would grow with their square.
+                places = said.get(key, ())
+                has_other = len(places) > (1 if place in places else 0)
+                trusted = _same_bytes(root / place, key[0]) if has_other else True
             else:
                 other = source_of(key, place, target)
                 trusted = other != place and look(other)[1] == key[1] and _same_bytes(root / other, key[0])
