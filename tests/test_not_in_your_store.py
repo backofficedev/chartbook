@@ -471,7 +471,7 @@ class TestALine:
             "",
             "Then here again:",
             f"     chartbook run --project-dir {_q(work / 'report')}",
-            "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
+            f"Or `chartbook run --upstream --project-dir {_q(work / 'report')}`, which builds and snapshots this folder itself.",
             SHARED.format("it"),
         ]
 
@@ -2104,14 +2104,14 @@ class TestWhatIsNotOnIt:
 class TestUpstream:
     """`chartbook run --upstream` is offered where it would build all of the list, and only there."""
 
-    OFFER = "Or `chartbook run --upstream` here, which builds and snapshots {} itself."
+    OFFER = "Or `chartbook run --upstream --project-dir {folder}`, which builds and snapshots {these} itself."
 
     def test_it_is_offered_for_folders_that_were_never_pinned(self, work, theirs, monkeypatch):
         _pipeline(work, "rates")
         _pipeline(work, "mid", {"acme/rates": {"path": "../rates"}})
         _pipeline(work, "report", {"acme/mid": {"path": "../mid"}})
         result = _run(work, monkeypatch, "run")
-        assert self.OFFER.format("these folders") in _said(result)
+        assert self.OFFER.format(folder=_q(work / "report"), these="these folders") in _said(result)
         # And it does: the same run with it builds them, and this one
         monkeypatch.setenv("CHARTBOOK_TRUST", "all")
         for name in ("mid", "report"):

@@ -2386,7 +2386,7 @@ def catalog_open(ctx):
     behind it is. `chartbook catalog build` builds it without opening.
     """
     from chartbook import versions
-    from chartbook.store import StoreError
+    from chartbook.store import StoreError, StoreNotAvailableError
 
     catalog_path = _catalog_or_make_one()
     if not catalog_path.is_file():
@@ -2403,6 +2403,8 @@ def catalog_open(ctx):
             # Worked out now, from the stores as they are: no run leaves a mark for this
             state = versions.behind(catalog_path)
             said, unknown = state.said(), state.unknown
+        except StoreNotAvailableError:
+            raise  # a store in a bucket stops the command; the site is not opened over it
         except (ValueError, OSError, StoreError) as e:
             # A catalog or a store that cannot be read now: what there is is opened, and its build says what is wrong
             unknown = (str(e).strip().splitlines() or ["it could not be read"])[0].rstrip(".")

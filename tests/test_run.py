@@ -1145,7 +1145,7 @@ class TestCommand:
             "",
             "Then here again:",
             f"     chartbook run --project-dir {typed(reader)}",
-            "Or `chartbook run --upstream` here, which builds and snapshots this folder itself.",
+            f"Or `chartbook run --upstream --project-dir {typed(reader)}`, which builds and snapshots this folder itself.",
             "Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has it, or wait for its sync to finish.",
         ]
         assert not (work / "upstream_runs.log").exists()

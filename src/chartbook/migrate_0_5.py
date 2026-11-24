@@ -839,8 +839,15 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
             # points at it; otherwise the increment keeps its own copy and the good one is not set aside.
             if look(target)[1] == key[1]:
                 trusted = _same_bytes(root / target, key[0])
+            elif not look(target)[0] and look(place)[1] == key[1]:
+                # Still at the old place, at the record's size. Another snapshot that
+                # names these bytes would be pointed here and its own copy set aside
+                # as a second one. Size is not the hash: read it when that copy exists.
+                others = [at for at in said.get(key, ()) if at != place and look(at)[1] == key[1]]
+                trusted = _same_bytes(root / place, key[0]) if others else True
             else:
-                trusted = will(place, target) == key[1] or source_of(key, place, target) != place
+                other = source_of(key, place, target)
+                trusted = other != place and look(other)[1] == key[1] and _same_bytes(root / other, key[0])
             if trusted:
                 base_has.setdefault(key, path)
     spare.clear()  # the places of what an increment keeps for itself are `own` from here on
@@ -927,18 +934,29 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
             copy_from = None
         planned: set = set()
         for target, content_hash, size, snapshot in targets:
+            # A file already where a copy goes, at the record's size, may be other bytes (a sync of a move
+            # made elsewhere). It is not counted as copied, and it is named: nothing is written over it.
+            wrong_bytes = False
             if target == first_target:
                 lacks = first != size and not in_place
             elif look(target)[0]:
-                lacks = look(target)[1] != size
+                if look(target)[1] != size:
+                    lacks = True
+                elif not _same_bytes(root / target, content_hash):
+                    lacks = True
+                    wrong_bytes = True
+                else:
+                    lacks = False
             else:
                 lacks = copy_from is None or size != first_size
-            if lacks:
+            if lacks and not wrong_bytes:
                 # Not at its size where its record names it: counted, said, and its record goes on naming it
                 lacking.add((snapshot, target.split("/", 3)[3]))
             if target in planned:
                 continue
             planned.add(target)
+            if wrong_bytes:
+                found.copied_as_is.append(target)
             # Planned whether the file is there or not: one that arrives before its step is put where its record names it
             if target == first_target:
                 found.steps.append(Step("rename", source, target))
@@ -1544,8 +1562,16 @@ def _do(root: Path, step: Step) -> Optional[str]:
         if os.path.lexists(target) or _size(source) != step.size:
             # Done; or the file was never there, and its record goes on naming it; or what is there is not the file
             # (a part of it, another file in its place): a copy is made only from a file at its size. And what a
-            # copy that was cut short left in the move's own folder goes, the file having come by itself or not at all
+            # copy that was cut short left in the move's own folder goes, the file having come by itself or not at all.
+            # A file already there at the record's size is read: other bytes of that size are named, and left.
             _own_temporary(root, target)
+            if (
+                os.path.lexists(target)
+                and _size(target) == step.size
+                and step.content_hash
+                and not _same_bytes(target, step.content_hash)
+            ):
+                return "as it is"
             return None
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = _own_temporary(root, target)

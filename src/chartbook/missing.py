@@ -1521,7 +1521,9 @@ def said(
     )]
     if again == "chartbook run" and all(line.by_path and line.builds for line in wanted):
         these = "this folder" if one else "these folders"
-        lines.append(f"Or `chartbook run --upstream` here, which builds and snapshots {these} itself.")
+        # The same folder the line above names, so the command builds this pipeline from any directory
+        where = " in this pipeline's folder" if own else _in(listing.directory, windows)
+        lines.append(f"Or `chartbook run --upstream{where}`, which builds and snapshots {these} itself.")
     # The other way on, and the likelier one where people share a store: nothing to build at all
     lines.append(
         f"Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has "

@@ -330,6 +330,21 @@ class TestWhatIsBuiltOn:
         theirs = dataclasses.replace(taken, made_at=_at(1), path=None)
         assert snapshot.to_be_kept(FolderStore(store.root), theirs).increment
 
+    def test_one_that_names_no_repository_does_not_build_on_one_that_does(self, store, work):
+        """An empty identity used to be a subset of every repository, so the increment built on another one's snapshot."""
+        import json
+
+        _sized(store, work / "files", [0] * 10, 0)
+        (taken,) = [snapshot.read(record.path) for record in _records(store.root)]
+        document = json.loads(taken.path.read_text(encoding="utf-8"))
+        document["repository"] = "https://example.org/acme/sized"
+        document["first_commit"] = "a" * 40
+        taken.path.write_text(json.dumps(document) + "\n", encoding="utf-8")
+        blank = dataclasses.replace(taken, made_at=_at(1), path=None, repository=None, first_commit=None)
+        assert not snapshot.to_be_kept(FolderStore(store.root), blank).increment
+        same = dataclasses.replace(blank, made_at=_at(2), first_commit="a" * 40)
+        assert snapshot.to_be_kept(FolderStore(store.root), same).increment
+
     def test_another_pipelines_snapshots_are_not_looked_at(self, store, work):
         _sized(store, work / "files", [0] * 10, 0)
         (taken,) = [snapshot.read(record.path) for record in _records(store.root)]

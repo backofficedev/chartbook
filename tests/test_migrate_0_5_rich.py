@@ -519,6 +519,47 @@ class TestAnImpostorAlreadyWhereTheNewestGoes:
         problems = [problem.format() for problem in fresh(root).verify()]
         assert any(new in problem and "_data/k.parquet" in problem for problem in problems), problems
 
+    def test_a_copy_already_at_its_size_with_other_bytes_is_named_and_not_counted_as_copied(self, tmp_path, monkeypatch):
+        """The pin's place under snapshots/ already holds other bytes of K's length. They stay, and the line names them."""
+        root = empty_store(tmp_path)
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+        good, bad = b"K" * 400, b"?" * 400
+        newest = folder_of("2025-11-01", "b")
+        put(root, "acme+p", newest, "_data/k.parquet", good)
+        record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", good, None, None)])
+        pin = record(root, "acme/p", "2025-11-15", "c", [("_data/k.parquet", good, newest, None)], made_by="pin")
+        put(root, "acme+p", pin, "_data/k.parquet", bad, tree="snapshots")
+        found = migrate_0_5.plan(root)
+        place = f"snapshots/acme+p/{pin}/_data/k.parquet"
+        assert place in found.copied_as_is and found.copied == 0
+        assert not any(path == "_data/k.parquet" and snapshot == pin for _, snapshot, path in found.missing)
+        done = migrate_0_5.run(root)
+        assert place in done.copied_as_is
+        assert (root / "snapshots" / "acme+p" / newest / "_data" / "k.parquet").read_bytes() == good
+        assert (root / place).read_bytes() == bad
+        problems = [problem.format() for problem in fresh(root).verify()]
+        assert any(pin in problem and "_data/k.parquet" in problem for problem in problems), problems
+
+    def test_a_same_size_wrong_base_does_not_send_the_good_copy_aside(self, tmp_path, monkeypatch):
+        """The newest file is the right length and the wrong bytes. The older snapshot still has the real file, and keeps it."""
+        root = empty_store(tmp_path)
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+        good, bad = b"K" * 400, b"?" * 400
+        old, new = folder_of("2025-10-01", "a"), folder_of("2025-11-01", "b")
+        put(root, "acme+p", old, "_data/k.parquet", good)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", good, None, None)])
+        put(root, "acme+p", new, "_data/k.parquet", bad)
+        record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", good, None, None)])
+        done = migrate_0_5.run(root)
+        kept = root / "increments" / "acme+p" / old / "_data" / "k.parquet"
+        occupant = root / "snapshots" / "acme+p" / new / "_data" / "k.parquet"
+        assert kept.read_bytes() == good and occupant.read_bytes() == bad
+        assert done.doubled == 0
+        aside = root / ASIDE / "pipelines" / "acme+p" / old / "_data" / "k.parquet"
+        assert not aside.exists()
+        problems = [problem.format() for problem in fresh(root).verify()]
+        assert any(new in problem and "_data/k.parquet" in problem for problem in problems), problems
+
     def test_a_lone_surrogate_in_a_record_does_not_stop_the_move(self, tmp_path):
         root = empty_store(tmp_path)
         data = b"x" * 20

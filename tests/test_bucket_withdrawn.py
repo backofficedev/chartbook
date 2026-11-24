@@ -67,6 +67,37 @@ class TestThroughTheEnvironment:
         assert result.exception is None or isinstance(result.exception, SystemExit), repr(result.exception)
         assert result.exit_code == 1 and LINE in result.output.replace("\n", ""), result.output
 
+    def test_run_check_stops(self, reader, monkeypatch):
+        """A pipeline with dependencies used to exit 0: the check swallowed the refusal and printed nothing."""
+        monkeypatch.setenv(config.STORE_ENV_VAR, URL)
+        result = CliRunner().invoke(main, ["run", "--check"])
+        assert result.exception is None or isinstance(result.exception, SystemExit), repr(result.exception)
+        assert result.exit_code == 1 and LINE in result.output.replace("\n", ""), result.output
+        assert ": OK" not in result.output
+
+    def test_catalog_open_stops_and_does_not_open_a_site(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(config.STORE_ENV_VAR, raising=False)
+        home = config.get_global_config_dir()
+        home.mkdir(parents=True, exist_ok=True)
+        (home / "catalog.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog", "name": "Catalog"}, "stores": {"team": {"url": URL}}}),
+            encoding="utf-8", newline="\n",
+        )
+        site = home / "docs"
+        site.mkdir()
+        (site / "index.html").write_text("<p>old</p>", encoding="utf-8")
+        result = CliRunner().invoke(main, ["catalog", "open"])
+        assert result.exception is None or isinstance(result.exception, SystemExit), repr(result.exception)
+        assert result.exit_code == 1 and LINE in result.output.replace("\n", ""), result.output
+        assert "Opening it as it is" not in result.output
+
+    def test_catalog_init_does_not_write_a_catalog_over_a_bucket(self, monkeypatch):
+        monkeypatch.setenv(config.STORE_ENV_VAR, URL)
+        result = CliRunner().invoke(main, ["catalog", "init"])
+        assert result.exception is None or isinstance(result.exception, SystemExit), repr(result.exception)
+        assert result.exit_code == 1 and LINE in result.output.replace("\n", ""), result.output
+        assert not config.get_global_catalog_path().is_file()
+
     def test_a_read_by_the_library_says_it(self, reader, monkeypatch):
         monkeypatch.setenv(config.STORE_ENV_VAR, URL)
         with pytest.raises(Exception) as refused:

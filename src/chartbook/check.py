@@ -44,6 +44,14 @@ from chartbook.utils import is_glob_pattern
 #: Default window, in days, inside which an unexpired license still fails.
 DEFAULT_WITHIN_DAYS = 30
 
+
+def _withdrawn(error: BaseException) -> None:
+    """A store this version does not open stops the command. Every other failure is the caller's to say."""
+    from chartbook.store import StoreNotAvailableError
+
+    if isinstance(error, StoreNotAvailableError):
+        raise error
+
 #: ``license_expiration`` values that mean "this license does not expire".
 #: Compared case-insensitively. Anything else must parse as a date.
 NO_EXPIRATION_VALUES = frozenset({"", "n/a", "na", "none", "never"})
@@ -806,6 +814,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     try:
         store, unopened = with_dependencies(pipeline_dir, default_store()), None
     except (OSError, ValueError, StoreError) as error:  # a URL no store is made from
+        _withdrawn(error)
         store, unopened = None, error
     folder = store if standins.reads_here(store) else None
     advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])
@@ -816,8 +825,8 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             records += list(
                 lock.still_pinned(locked.earlier_of(key), pinned, folder, lambda: snapshot.readable_snapshots(folder)[0]).values()
             )
-        except (StoreError, OSError, ValueError, snapshot.SnapshotError):
-            pass
+        except (StoreError, OSError, ValueError, snapshot.SnapshotError) as error:
+            _withdrawn(error)
     # A record kept of an earlier lockfile is a pin only where its bytes are (lock.still_pinned)
     records = [r for r in records if lock.in_lockfile(r) or folder is None or folder.has(r["content_hash"], lock.pinned_pipeline(pinned))]
     # Pinned, too, by the snapshot its entry names, with none of its assets in the lockfile
@@ -843,6 +852,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             stood = lock.your_build(pinned, {r["id"]: r for r in records}, folder, lambda: snapshot.readable_snapshots(folder)[0])
             whole = stood is not None and stood.stands_in
     except (StoreError, OSError, ValueError, snapshot.SnapshotError) as error:  # a store that cannot be read, a half-synced store.json
+        _withdrawn(error)
         # What the system says names the store's path, which may carry a password (//user:pw@host)
         return (
             f"directory not found: {directory}, and the store cannot be read "
@@ -1018,7 +1028,8 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
             try:
                 found = default_store()
                 store.append(found if standins.reads_here(found) else None)
-            except (StoreError, OSError, ValueError):
+            except (StoreError, OSError, ValueError) as error:
+                _withdrawn(error)
                 store.append(None)
         return store[0]
 
@@ -1248,7 +1259,8 @@ def _snapshot_folders():
             try:
                 store = default_store()
                 found = snapshot.readable_snapshots(store)[0] if standins.reads_here(store) else []
-            except (StoreError, OSError, ValueError):
+            except (StoreError, OSError, ValueError) as error:
+                _withdrawn(error)
                 store, found = None, []
             read.append((store, found))
         store, found = read[0]
@@ -1262,7 +1274,8 @@ def _snapshot_folders():
                 break
             try:
                 tops = snapshot.origins(store, taken)
-            except (StoreError, OSError):
+            except (StoreError, OSError) as error:
+                _withdrawn(error)
                 continue
             recorded = repository_key(taken.repository)
             now = {top: repository_key(get_git_remote_url(top)) for top in tops}
@@ -1514,6 +1527,7 @@ def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
             try:
                 found = staleness(pipeline_dir, model_id, model)
             except (StoreError, OSError, ValueError) as error:  # a store of 0.2, or one that cannot be read
+                _withdrawn(error)
                 warnings.warn(
                     f"{display_path(pipeline_dir / 'chartbook.toml', base_dir)}: [models.{model_id}] "
                     f"trained_on: not checked. {without_credentials(str(error))}",
@@ -1563,6 +1577,7 @@ def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
             try:
                 kept = versions_in(pipeline_dir, model_id, aliases)
             except (StoreError, OSError, ValueError) as error:  # a store of 0.2, or one that cannot be read
+                _withdrawn(error)
                 warnings.warn(
                     f"{toml_file}: [models.{model_id}.aliases] not checked. {without_credentials(str(error))}",
                     UserWarning,

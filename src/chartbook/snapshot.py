@@ -2943,7 +2943,11 @@ def _to_build_on(store: Store, taken: Snapshot, now: Optional[datetime] = None) 
             complete = read(record.path)
         except SnapshotError:
             continue
-        if not identity_keys(taken) <= identity_keys(complete) or made_in_the_future(complete, now) or store.holes_of(record.path):
+        keys, theirs = identity_keys(taken), identity_keys(complete)
+        # An empty identity is not the same repository as one that names one: it would
+        # build on any complete snapshot of this pipeline id, trusted by size alone.
+        same_repository = keys <= theirs if keys else not theirs
+        if not same_repository or made_in_the_future(complete, now) or store.holes_of(record.path):
             continue
         return record, max(
             (other.increments_bytes for other in records if other.increment and other.builds_on == record.folder.name), default=0

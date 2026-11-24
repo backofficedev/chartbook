@@ -1255,13 +1255,19 @@ def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
     if catalog_path.is_file():
         raise FileExistsError(f"Global catalog already exists: {catalog_path}")
 
+    url = get_store_url()
+    if store_kind(url) == "s3":
+        # Refused before a catalog is written that every later command would refuse
+        from chartbook.store import store_for_url
+
+        store_for_url(url)
     catalog = {
         "project": {
             "type": "catalog",
             "name": title,
             "maintainer": author,
         },
-        "stores": {"default": {"url": get_store_url()}},
+        "stores": {"default": {"url": url}},
     }
 
     # "x": two processes making it at once make one; the second gets
