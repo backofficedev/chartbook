@@ -3133,7 +3133,7 @@ def make(
                         f"is until a later snapshot of {pipeline} is sent there, and then goes with `chartbook "
                         f"store gc` there once nothing keeps it."
                     ) from error
-                except (StoreError, OSError) as error:
+                except (StoreError, SnapshotError, OSError) as error:
                     raise NotInEveryStore(f"Snapshot written to {targets[0]}, but copy to {target} failed: {error}. Rerun the snapshot to finish the remaining copies.") from error
         report.stores = [e.name for e in stores.entries if e.store in targets]
         report.several = len(stores.entries) > 1  # with one store there is nothing to tell apart

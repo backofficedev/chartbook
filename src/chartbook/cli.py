@@ -629,6 +629,11 @@ def _render_site(
             "Output directory cannot be the current directory '.' to prevent accidental project deletion"
         )
 
+    if output_dir.exists() and not output_dir.is_dir():
+        raise click.UsageError(
+            f"Output path '{output_dir}' exists and is not a directory"
+        )
+
     # Check if output directory exists and prompt for confirmation
     if output_dir.exists() and not force_write and any(output_dir.iterdir()):
         if not click.confirm(

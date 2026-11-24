@@ -1322,9 +1322,13 @@ def _duckdb_type(kind) -> str:
         zone = getattr(kind, "time_zone", None)
         unit = getattr(kind, "time_unit", "us")
         return "TIMESTAMPTZ" if zone else {"ns": "TIMESTAMP_NS", "ms": "TIMESTAMP_MS"}.get(unit, "TIMESTAMP")
+    if isinstance(kind, pl.Decimal) or kind == pl.Decimal:
+        precision = getattr(kind, "precision", None) or 38
+        scale = getattr(kind, "scale", 0) or 0
+        return f"DECIMAL({precision}, {scale})"
     names = {
         "Int8": "TINYINT", "Int16": "SMALLINT", "Int32": "INTEGER", "Int64": "BIGINT", "Int128": "HUGEINT",
-        "UInt8": "UTINYINT", "UInt16": "USMALLINT", "UInt32": "UINTEGER", "UInt64": "UBIGINT",
+        "UInt8": "UTINYINT", "UInt16": "USMALLINT", "UInt32": "UINTEGER", "UInt64": "UBIGINT", "UInt128": "UHUGEINT",
         "Float32": "FLOAT", "Float64": "DOUBLE", "Boolean": "BOOLEAN", "Date": "DATE", "Time": "TIME",
     }
     return names.get(kind.base_type().__name__, "VARCHAR")

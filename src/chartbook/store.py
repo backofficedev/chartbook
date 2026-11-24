@@ -2421,7 +2421,7 @@ class FolderStore(Store):
             if seen[0] == str(self.root) and (not kept.readable or seen[1] in kept.named)
         })
         try:
-            (path.parent / CLEARED_FILE).write_text(
+            (on_disk.parent / CLEARED_FILE).write_text(
                 f"Cleared by `chartbook store gc` on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC.\n"
                 f"{places.cleared}",
                 encoding="utf-8",
@@ -4986,7 +4986,9 @@ def pipeline_folder(pipeline: str) -> str:
     lowered = name.lower()
     if lowered == name and lowered.split(".")[0] not in _RESERVED_ON_WINDOWS and not lowered.endswith((".", " ")):
         return name
-    return f"{lowered}~{hashlib.sha256(pipeline.encode('utf-8')).hexdigest()[:8]}"
+    stem, dot, rest = lowered.partition(".")
+    safe = f"{stem}~.{rest}" if dot and stem in _RESERVED_ON_WINDOWS else lowered
+    return f"{safe}~{hashlib.sha256(pipeline.encode('utf-8')).hexdigest()[:8]}"
 
 
 def what_is_wrong(content_hash: str, path: Path) -> Optional[str]:

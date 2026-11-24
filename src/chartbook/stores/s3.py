@@ -1974,9 +1974,11 @@ class S3Store(Store):
             if not name.endswith(".json"):
                 continue
             body = self._read(entry["Key"])
+            if body is None:
+                continue
             try:
                 # A copy of a note, as a folder store a sync service kept brings, is read too
-                found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}, name))
+                found.append(read_root(json.loads(body.decode("utf-8")), name))
             except (ValueError, KeyError, TypeError) as error:
                 detail = "the file is empty" if body == b"" else str(error)
                 raise StoreError(

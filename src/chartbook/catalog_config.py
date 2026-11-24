@@ -129,13 +129,14 @@ def edit_store(name, spec=None, catalog=None):
         stream.write(tomlkit.dumps(doc))
     try:
         try:
-            Stores.configured(staged, named=path)
+            Stores.configured(staged, named=path, ignore_env=True)
         except StoreNotAvailableError:
             # A removal is not stopped because another store, of the catalog or of the settings, is not available:
             # each is taken out or put right in its turn, as its line says
             if spec is not None:
                 raise
-        staged.replace(path)
+        from chartbook.replacing import replace_when_let
+        replace_when_let(staged, path)
     finally:
         staged.unlink(missing_ok=True)
     return path
@@ -143,7 +144,9 @@ def edit_store(name, spec=None, catalog=None):
 
 def route(pipeline, names, catalog):
     """Set one pipeline's write destinations, preserving comments."""
+    import tempfile
     import tomlkit
+    from chartbook.replacing import replace_when_let
     path = Path(catalog)
     doc = tomlkit.parse(path.read_text(encoding="utf-8"))
     stores = doc.get("stores")
@@ -155,4 +158,10 @@ def route(pipeline, names, catalog):
             pipelines.append(pipeline)
         if pipelines or "pipelines" in table:
             table["pipelines"] = pipelines
-    path.write_text(tomlkit.dumps(doc), encoding="utf-8", newline="\n")
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", dir=path.parent, delete=False, encoding="utf-8", newline="\n") as stream:
+        staged = Path(stream.name)
+        stream.write(tomlkit.dumps(doc))
+    try:
+        replace_when_let(staged, path)
+    finally:
+        staged.unlink(missing_ok=True)

@@ -176,7 +176,7 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
                     written = pending.write(document)
                     if on is None:
                         whole.add(str(written))  # written in this run, each file hashed as it was written
-            except (BuiltOnGoneError, PathTooLongError):
+            except (BuiltOnGoneError, PathTooLongError) as error:
                 if on is None:
                     raise  # it does not fit complete either
                 # What it builds on went from the store meanwhile, or a file of its own does not fit under
@@ -185,7 +185,7 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
                 pending = into.begin(record.pipeline, record.commit, record.made_at)
                 done.size_bytes = counted  # what the increment had counted is counted once
                 document = json.loads(Path(_any_length(record.path)).read_text(encoding="utf-8"))
-                why = _copy_parts(document, record, pending, done)
+                why = _copy_parts(document, record, pending, done, allow_held=isinstance(error, PathTooLongError))
                 if why is None:
                     pending.write(document)
         except (OSError, ValueError, StoreError) as error:
@@ -262,7 +262,7 @@ def _not_to_copy(record: KeptRecord) -> Optional[str]:
     return None
 
 
-def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Optional[str]:
+def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied, *, allow_held: bool = False) -> Optional[str]:
     """Put each part a record names into the snapshot being written, and give the record where each is kept now; why not, if not."""
     parts = [part for part in document.get("records") or [] if isinstance(part, dict)]
     parts += [document[name] for name in ("index", "documents") if isinstance(document.get(name), dict)]
@@ -289,7 +289,7 @@ def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Op
         # A file an increment keeps in the complete one, where what was sent does not hold that one: the store's own
         # copy of it, in the complete snapshot this run found whole
         at_hand = {
-            file.location: (pending._held_whole(file.content_hash, file.size_bytes) if getattr(pending, "builds_on", None) and not os.path.isfile(_any_length(resolved[file.location])) else None) or resolved[file.location]
+            file.location: (pending._held_whole(file.content_hash, file.size_bytes) if (getattr(pending, "builds_on", None) or allow_held) and not os.path.isfile(_any_length(resolved[file.location])) else None) or resolved[file.location]
             for file in files
         }
         missing = next((file for file in files if not os.path.isfile(_any_length(at_hand[file.location]))), None)

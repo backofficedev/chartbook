@@ -864,12 +864,17 @@ def _text_bytes(file, most: int) -> int:
     else:
         return os.path.getsize(file)
     count = 0
-    with opened:
-        while count <= most:
-            read = opened.read(1024 * 1024)
-            if not read:
-                break
-            count += len(read)
+    try:
+        with opened:
+            while count <= most:
+                read = opened.read(1024 * 1024)
+                if not read:
+                    break
+                count += len(read)
+    except (EOFError, OSError) as error:
+        if isinstance(error, EOFError) or _this_machines(error) is None:
+            return os.path.getsize(file)
+        raise
     return count
 
 

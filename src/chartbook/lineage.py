@@ -224,8 +224,11 @@ class _Walker:
             node.gaps.append(f"its record is not one ChartBook wrote ({type(error).__name__}: {error})")
             return node
 
-    def _at(self, commit: str, made_at: str) -> list:
-        return [taken for taken in self.found if taken.same_moment(commit, made_at)]
+    def _at(self, commit: str, made_at: str, pipeline: Optional[str] = None) -> list:
+        return [
+            taken for taken in self.found
+            if taken.same_moment(commit, made_at) and (pipeline is None or taken.pipeline == pipeline)
+        ]
 
     def _missing(self, commit: str, made_at: str) -> str:
         why = next((reason for path, reason in self.unreadable if snapshot.is_at(path, commit)), None)
@@ -279,7 +282,7 @@ class _Walker:
         # by every build), the snapshot its entry names is what was read
         plain = [record for record in hashed.values() if not (record.get("ref") or {}).get("rev")]
         labels = {record["content_hash"] for record in hashed.values() if (record.get("ref") or {}).get("rev")}
-        at = self._at(node.commit, node.made_at)
+        at = self._at(node.commit, node.made_at, lock.pinned_pipeline(entry, folder))
         held = [
             taken for taken in at
             if all(taken.content().get(snapshot.local_name(record)) == record["content_hash"] for record in plain)
@@ -306,11 +309,12 @@ class _Walker:
         if location.get("kind") == "git":
             node.kind = "git"
             return node
+        pipeline = lock.pinned_pipeline(entry)
         expected = entry.get("pinned_hash")
         if not expected and lock.names_a_snapshot(entry):
             # Nothing of it was in the lockfile (its assets are all drawn anew
             # by every build): the snapshot the entry names is what was read
-            at = self._at(node.commit, node.made_at)
+            at = self._at(node.commit, node.made_at, pipeline)
             if not at:
                 yours = self._stood_in(entry, node)
                 if yours is not None:
@@ -331,7 +335,7 @@ class _Walker:
                 "its pin named no snapshot, so nothing says which commit its bytes came from"
             )
             return node
-        at = self._at(node.commit, node.made_at)
+        at = self._at(node.commit, node.made_at, pipeline)
         if not at:
             # The snapshot that recorded this input read a build of its maker's own in the
             # place of the one pinned, having checked that it met every pin: the lineage
@@ -994,26 +998,27 @@ class _Finder:
             except Exception:  # noqa: BLE001 - no clone to be found from this record: known by its ID
                 pass
             return Edge(pipeline, named, key, where), None, f"id:{named}"
-        below = self._pinned(_text(location.get("commit")), _text(entry.get("snapshot")))
+        below = self._pinned(_text(location.get("commit")), _text(entry.get("snapshot")), lock.pinned_pipeline(entry))
         if below is not None:
             return Edge(pipeline, below.pipeline, key, where), below, str(below.path)
         if location.get("kind") == "store" and _text(location.get("pipeline")):
             return Edge(pipeline, location["pipeline"], key, where), None, f"id:{location['pipeline']}"
         return None
 
-    def _pinned(self, commit: str, made_at: str):
+    def _pinned(self, commit: str, made_at: str, pipeline: Optional[str] = None):
         """The snapshot a pin names, if the store has one whose record names a pipeline."""
         if not (commit and made_at) or not self.follow_pins:
             return None
         if "found" not in self.shared:
             self._read()
+        key = (commit, made_at, pipeline)
         while True:
             for taken in self.shared["found"]:
-                if taken.same_moment(commit, made_at) and _text(taken.pipeline):
+                if taken.same_moment(commit, made_at) and _text(taken.pipeline) and (pipeline is None or taken.pipeline == pipeline):
                     return taken
             missing = self.shared.setdefault("missing", set())
-            if self.read_here or not self.shared.get("may_be_old") or (commit, made_at) in missing:
-                missing.add((commit, made_at))
+            if self.read_here or not self.shared.get("may_be_old") or key in missing:
+                missing.add(key)
                 return None
             # Another walk's reading, made before snapshots this pin may name: read once more
             self._read()

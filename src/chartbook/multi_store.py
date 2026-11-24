@@ -49,16 +49,18 @@ class Stores:
             raise ValueError("At least one store is required")
 
     @classmethod
-    def configured(cls, catalog=None, named=None):
+    def configured(cls, catalog=None, named=None, *, ignore_env: bool = False):
         """The stores a catalog lists, or the one the settings name.
 
         :param named: The catalog's path as a message names it, where
             *catalog* is a staged copy of it that is being checked.
+        :param ignore_env: When True, ignore ``CHARTBOOK_STORE`` so *catalog*
+            itself is validated (used when editing ``catalog.toml``).
         """
         from chartbook.config import (get_default_catalog_path, get_store_url,
                                       folder_of_store_url, store_kind)
         from chartbook.manifest import resolve_platform_path
-        override = os.environ.get("CHARTBOOK_STORE", "").strip()
+        override = "" if ignore_env else os.environ.get("CHARTBOOK_STORE", "").strip()
         if override:
             return cls([NamedStore("default", override, store_for_url(override), create=True)])
         path = Path(catalog) if catalog else get_default_catalog_path()
@@ -368,10 +370,9 @@ class Stores:
         ]
 
     def add_root(self, lockfile, hashes, snapshots=(), machine=None, labelled=(), *, host=None, node=None, keep_newest=False):
-        snap_for_targets = () if snapshots is None else snapshots
         hashes, labelled = list(hashes), list(labelled)
-        snap_list = None if snapshots is None else list(snap_for_targets)
-        targets = self._root_entries(hashes, snap_for_targets)
+        snap_list = None if snapshots is None else list(snapshots)
+        targets = self._root_entries(hashes, () if snap_list is None else snap_list)
         target_ids = {id(entry) for entry in targets}
         first_error = None
         for entry in targets:
@@ -425,9 +426,13 @@ class Stores:
 
     def note_matches(self, lockfile, hashes, snapshots, machine, labelled, *, keep_newest=False) -> bool:
         """Whether every writable store that would receive this note already holds it identically."""
-        targets = self._root_entries(hashes, () if snapshots is None else snapshots)
+        hashes = list(hashes)
+        snap_list = None if snapshots is None else list(snapshots)
+        labelled_set = set(labelled or ())
+        targets = self._root_entries(hashes, () if snap_list is None else snap_list)
         target_ids = {id(entry) for entry in targets}
-        wanted = set() if snapshots is None else set(snapshots)
+        wanted = set() if snap_list is None else set(snap_list)
+        hashes_set = set(hashes)
         for entry in targets:
             try:
                 root = entry.store.root_of(lockfile, machine)
@@ -437,10 +442,10 @@ class Stores:
             held = set() if root is None or root.snapshots is None else set(root.snapshots)
             if (
                 root is None
-                or set(root.hashes) != set(hashes)
-                or root.keeps_newest() != (snapshots is None or bool(keep_newest))
+                or set(root.hashes) != hashes_set
+                or root.keeps_newest() != (snap_list is None or bool(keep_newest))
                 or held != wanted
-                or set(root.labelled or ()) != set(labelled or ())
+                or set(root.labelled or ()) != labelled_set
             ):
                 return False
         for entry in self._available():

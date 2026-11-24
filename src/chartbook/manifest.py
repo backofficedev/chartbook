@@ -628,13 +628,14 @@ def validate_manifest_file(path: Path = BASE_DIR) -> bool:
         has an unresolvable project type.
     """
     path = Path(path)
+    manifest_name = "catalog.toml" if (path / "catalog.toml").is_file() else "chartbook.toml"
     try:
         raw_manifest = _read_manifest_file(path)
-        resolve_project_type(raw_manifest, source=str(path / "chartbook.toml"))
+        resolve_project_type(raw_manifest, source=str(path / manifest_name))
     except (V1FormatError, ValueError, FileNotFoundError):
         raise
     except Exception as e:
-        raise ValueError(f"Error loading chartbook.toml: {e}")
+        raise ValueError(f"Error loading {manifest_name}: {e}")
     return True
 
 
@@ -1539,7 +1540,9 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
     :param project_type: The resolved project type.
     :returns: A dict with every PROJECT_DEFAULTS key present and resolved.
     """
-    source = str(Path(base_dir) / "chartbook.toml")
+    base_path = Path(base_dir)
+    manifest_name = "catalog.toml" if (base_path / "catalog.toml").is_file() else "chartbook.toml"
+    source = str(base_path / manifest_name)
     project_raw = raw_manifest.get("project", {})
     _warn_unknown_project_keys(project_raw, source)
 
@@ -2566,9 +2569,10 @@ def load_manifest(base_dir=BASE_DIR):
     :rtype: dict
     """
     base_dir = Path(base_dir)
+    manifest_name = "catalog.toml" if (base_dir / "catalog.toml").is_file() else "chartbook.toml"
     raw_manifest = _read_manifest_file(base_dir)
     project_type = resolve_project_type(
-        raw_manifest, source=str(base_dir / "chartbook.toml")
+        raw_manifest, source=str(base_dir / manifest_name)
     )
     raw_manifest["base_dir"] = base_dir
 

@@ -828,7 +828,15 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
         except (StoreError, OSError, ValueError, snapshot.SnapshotError) as error:
             _withdrawn(error)
     # A record kept of an earlier lockfile is a pin only where its bytes are (lock.still_pinned)
-    records = [r for r in records if lock.in_lockfile(r) or folder is None or folder.has(r["content_hash"], lock.pinned_pipeline(pinned))]
+    try:
+        records = [r for r in records if lock.in_lockfile(r) or folder is None or folder.has(r["content_hash"], lock.pinned_pipeline(pinned))]
+    except (StoreError, OSError, ValueError, snapshot.SnapshotError) as error:
+        _withdrawn(error)
+        return (
+            f"directory not found: {directory}, and the store cannot be read "
+            f"({without_credentials(str(error))}). {advice}",
+            False,
+        )
     # Pinned, too, by the snapshot its entry names, with none of its assets in the lockfile
     if not (records or lock.names_a_snapshot(pinned)) or lock._declared_elsewhere(pinned, lock._dependency_entry(key, entry)):
         return (

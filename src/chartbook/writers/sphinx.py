@@ -1536,7 +1536,7 @@ class SphinxWriter:
             held = trained_from.get(input_id) or {}
             if held and self._version_page(from_path, input_id, held.get("commit"), held.get("made_at")):
                 note = f"as trained: the snapshot at {held['commit'][:7]}, made {held['made_at'][:10]}"
-                if pin and (pin["commit"], pin["made_at"]) != (held["commit"], held["made_at"]):
+                if pin.get("commit") and (pin["commit"], pin["made_at"]) != (held["commit"], held["made_at"]):
                     note += f"; the pin has since moved to {pin['commit'][:7]}"
                 entries.append(
                     {

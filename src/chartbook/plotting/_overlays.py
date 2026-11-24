@@ -405,7 +405,12 @@ def apply_overlays_plotly(
 
 def _mpl_x_coord(val: Any, x_series: pd.Series, use_positional_x: bool = False) -> Any:
     """Coerce an overlay x coordinate (e.g. date string or Timestamp) for Matplotlib."""
-    is_dt = pd.api.types.is_datetime64_any_dtype(x_series)
+    is_dt64 = pd.api.types.is_datetime64_any_dtype(x_series)
+    non_null = x_series.dropna()
+    is_dt = is_dt64 or (
+        not non_null.empty
+        and any(isinstance(v, (pd.Timestamp, date, datetime, np.datetime64)) for v in non_null)
+    )
     if is_dt and isinstance(val, str):
         val = pd.to_datetime(val)
     if use_positional_x:
@@ -414,16 +419,18 @@ def _mpl_x_coord(val: Any, x_series: pd.Series, use_positional_x: bool = False) 
         if is_dt or pd.api.types.is_numeric_dtype(x_series):
             x_num = _x_values_to_numeric(x_series)
             v_num = _x_values_to_numeric(pd.Series([val]))[0]
-            if np.isfinite(v_num) and np.isfinite(x_num).any():
-                order = np.argsort(x_num)
-                return float(np.interp(v_num, x_num[order], np.arange(len(x_series))[order]))
+            finite = np.isfinite(x_num)
+            if np.isfinite(v_num) and finite.any():
+                idx = np.flatnonzero(finite)
+                order = idx[np.argsort(x_num[idx])]
+                return float(np.interp(v_num, x_num[order], order))
         matches = np.where(x_series.astype(str).to_numpy() == str(val))[0]
         if len(matches) > 0:
             return float(matches[0])
         return val
     if is_dt and isinstance(val, (datetime, pd.Timestamp, np.datetime64)):
         ts = pd.Timestamp(val)
-        tz = getattr(x_series.dt, "tz", None)
+        tz = getattr(x_series.dt, "tz", None) if is_dt64 else None
         if tz is not None and ts.tzinfo is None:
             return ts.tz_localize("UTC").tz_convert(tz)
         if tz is None and ts.tzinfo is not None:

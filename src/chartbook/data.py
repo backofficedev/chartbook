@@ -550,6 +550,17 @@ def load(
             ) from None
         location = resolve(asset, start_dirs=start_dirs)
         dataframe = str(asset)
+    if format not in ("polars", "polars_eager", "pandas", "polars-lazyframe"):
+        raise ValueError(_invalid_format(format))
+    if format == "polars-lazyframe":
+        import warnings
+
+        warnings.warn(
+            "format='polars-lazyframe' is deprecated. Use format='polars' instead "
+            "(polars format now returns LazyFrame by default).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     if not isinstance(location, FileLocation):
         # A table or a query in a source: the backend binds it now, runs it
         # when the frame is collected, Arrow comes back, Polars wraps it.
@@ -560,11 +571,7 @@ def load(
             return frame
         if format == "polars_eager":
             return frame.collect()
-        if format == "pandas":
-            return frame.collect().to_pandas()
-        raise ValueError(_invalid_format(format))
-    if format not in ("polars", "polars_eager", "pandas", "polars-lazyframe"):
-        raise ValueError(_invalid_format(format))
+        return frame.collect().to_pandas()
     # A file, read as its format is: parquet, CSV, JSON lines or Arrow IPC
     from chartbook import formats
 
@@ -581,15 +588,6 @@ def load(
         return kept
     if format == "polars_eager":
         return _pinned(formats.scan_location(location, where), cut).collect()
-    if format == "polars-lazyframe":
-        import warnings
-
-        warnings.warn(
-            "format='polars-lazyframe' is deprecated. Use format='polars' instead "
-            "(polars format now returns LazyFrame by default).",
-            DeprecationWarning,
-            stacklevel=2,
-        )
     return _pinned(formats.scan_location(location, where), cut)
 
 

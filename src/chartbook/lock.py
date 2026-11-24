@@ -1902,6 +1902,31 @@ def _sync_now(
                             ),
                         )
                     )
+        elif (
+            "git" in entry
+            and not entry.get("_from_id")
+            and not may_move
+            and (was or {}).get("location", {}).get("kind") in ("path", "store")
+            and holds_a_pin(was, had)
+        ):
+            if _declared_elsewhere(was, listed):
+                report.events.append(PinEvent("relocated", key, detail=_describe(listed["location"])))
+            for asset_id, record in sorted(had.items()):
+                if record.get("content_hash"):
+                    _report_kept(record, key, store, report)
+                else:
+                    report.events.append(
+                        PinEvent("not_built", key, asset_id, detail=record.get("missing") or "not built when it was pinned")
+                    )
+            records = dict(had)
+            listed = {**was, "location": dict(was["location"])}
+            listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
+            overall = pinned_hash(records.values())
+            if overall is not None:
+                listed["pinned_hash"] = overall
+            after.dependencies.append(listed)
+            after.assets.update(records)
+            continue
         elif "git" in entry:
             if git_cache is None:
                 git_cache = default_git_cache()
@@ -3034,6 +3059,10 @@ def _fetch(
                 report.events.append(
                     PinEvent("relocated", key, detail=_describe(listed["location"]))
                 )
+            was_loc = (was or {}).get("location") or {}
+            if was_loc.get("kind") == "git" and was_loc.get("url"):
+                url = local_url(was_loc["url"], project_dir)
+                shown = strip_url_credentials(was_loc["url"])
             # Still the commit it was pinned at. The network is used only
             # if this disk has lost its copy of it. A working copy, where
             # `chartbook run` built it, has more in it than the checkout.
@@ -3542,6 +3571,8 @@ def _sync_from_snapshots(
                         ),
                     )
                 )
+            elif old and (unsynced := _incomplete(store, record, report.pipelines.get(key))):
+                report.events.append(PinEvent("unsynced", key, asset_id, old=old, new=old, detail=unsynced))
             elif old:
                 report.events.append(PinEvent("stale" if moved else "kept", key, asset_id, old=old, new=old))
             else:

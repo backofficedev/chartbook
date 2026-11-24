@@ -210,11 +210,11 @@ class MatplotlibBackend(BaseBackend):
             label = config.labels.get(y_col, y_col) if config.labels else y_col
             ax.plot(df[config.x], df[y_col], label=label, color=colors[i])
 
-        if len(config.y) > 1:
-            ax.legend()
-
+        pre_labels = len(ax.get_legend_handles_labels()[1])
         self._apply_config(ax, config)
         self._apply_overlays(ax, overlay, df, config.x)
+        if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+            ax.legend()
         self._add_annotations(fig, ax, config)
         return fig, ax
 
@@ -266,11 +266,11 @@ class MatplotlibBackend(BaseBackend):
         ax.set_xticks(x)
         ax.set_xticklabels(df[config.x], rotation=45, ha="right")
 
-        if len(config.y) > 1:
-            ax.legend()
-
+        pre_labels = len(ax.get_legend_handles_labels()[1])
         self._apply_config(ax, config)
         self._apply_overlays(ax, overlay, df, config.x, use_positional_x=True)
+        if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+            ax.legend()
         self._add_annotations(fig, ax, config)
         return fig, ax
 
@@ -333,13 +333,17 @@ class MatplotlibBackend(BaseBackend):
                     label=str(cat),
                     alpha=0.7,
                 )
-            ax.legend()
+            has_category_legend = True
         else:
             color = self._get_colors(config, 1)[0]
             ax.scatter(df[config.x], df[y_col], s=sizes, c=color, alpha=0.7)
+            has_category_legend = False
 
+        pre_labels = len(ax.get_legend_handles_labels()[1])
         self._apply_config(ax, config)
         self._apply_overlays(ax, overlay, df, config.x)
+        if has_category_legend or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+            ax.legend()
         self._add_annotations(fig, ax, config)
         return fig, ax
 
@@ -370,16 +374,19 @@ class MatplotlibBackend(BaseBackend):
 
         import pandas as pd
 
-        valid = pd.to_numeric(df[values_col], errors="coerce").notna()
+        numeric_vals = pd.to_numeric(df[values_col], errors="coerce")
+        valid = numeric_vals.notna()
+        valid_vals = numeric_vals[valid]
         valid_df = df.loc[valid]
-        colors = get_config().color_palette[: len(valid_df)]
-        wedges, texts, autotexts = ax.pie(
-            valid_df[values_col],
-            labels=valid_df[names_col],
-            colors=colors,
-            autopct="%1.1f%%",
-            startangle=90,
-        )
+        if not valid_vals.empty and valid_vals.sum() != 0:
+            colors = get_config().color_palette[: len(valid_df)]
+            wedges, texts, autotexts = ax.pie(
+                valid_vals,
+                labels=valid_df[names_col],
+                colors=colors,
+                autopct="%1.1f%%",
+                startangle=90,
+            )
 
         ax.axis("equal")
 
@@ -430,11 +437,11 @@ class MatplotlibBackend(BaseBackend):
                 )
                 ax.plot(df[config.x], df[y_col], color=colors[i])
 
-        if len(config.y) > 1:
-            ax.legend()
-
+        pre_labels = len(ax.get_legend_handles_labels()[1])
         self._apply_config(ax, config)
         self._apply_overlays(ax, overlay, df, config.x)
+        if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+            ax.legend()
         self._add_annotations(fig, ax, config)
         return fig, ax
 
@@ -505,15 +512,16 @@ class MatplotlibBackend(BaseBackend):
         if config.right_y_tickformat:
             self._apply_tickformat(ax2.yaxis, config.right_y_tickformat)
 
-        # Combine legends
-        lines1, labels1 = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
-        ax1.legend(lines1 + lines2, labels1 + labels2, loc="best")
-
-        # Apply overlays to left axis
+        # Apply overlays to left axis before collecting legend entries
         from chartbook.plotting._overlays import apply_overlays_matplotlib
 
         apply_overlays_matplotlib(ax1, overlay, df, config.x, use_positional_x=use_positional_x)
+
+        # Combine legends
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        if labels1 or labels2:
+            ax1.legend(lines1 + lines2, labels1 + labels2, loc="best")
         # Its caption, note and source, which were not drawn
         self._add_annotations(fig, ax1, config)
 
