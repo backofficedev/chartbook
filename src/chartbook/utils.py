@@ -340,15 +340,16 @@ def most_recent_valid_datapoints(
     if os.path.getsize(path) / (1024 * 1024) > size_threshold_mb:
         return "N/A (large file)", "N/A (large file)"
     frame = formats.scan(path, format, read_options).collect()
+    date_expr = formats._this_column(date_col)
     if frame[date_col].dtype == pl.String:
-        frame = frame.with_columns(pl.col(date_col).str.to_datetime(strict=False))  # text dates, as a CSV has them
+        frame = frame.with_columns(date_expr.str.to_datetime(strict=False).alias(date_col))  # text dates, as a CSV has them
     elif frame[date_col].dtype != pl.Datetime:
-        frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
+        frame = frame.with_columns(date_expr.cast(pl.Datetime, strict=False).alias(date_col))
     other_cols = [col for col in frame.columns if col != date_col]
     if not other_cols:
         return "N/A", "N/A"
     latest = frame.select(
-        [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in other_cols]
+        [date_expr.filter(formats._this_column(col).is_not_null()).max().alias(col) for col in other_cols]
     )
     dates = [date for date in latest.row(0) if date is not None]
     if not dates:
@@ -368,7 +369,9 @@ def glimpse_text(sample: pl.DataFrame) -> str:
     """
     broken = any("\n" in name or "\r" in name for name in sample.columns)
     narrow = set() if broken else {name for name, dtype in sample.schema.items() if dtype == pl.Float32}
-    shown = sample.with_columns(pl.col(sorted(narrow)).cast(pl.String).cast(pl.Float64))
+    shown = sample.with_columns(
+        [pl.nth(i).cast(pl.String).cast(pl.Float64) for i, name in enumerate(sample.columns) if name in narrow]
+    )
     shown = shown.with_columns(
         [
             pl.Series(name, [_for_display(value) for value in shown[name].to_list()], dtype=pl.Float64)

@@ -626,14 +626,19 @@ def _render_site(
     # Prevent deleting the current working directory or project directory
     resolved_project = project_dir.resolve()
     resolved_cwd = Path.cwd().resolve()
-    if output_dir == resolved_cwd or output_dir in resolved_cwd.parents:
-        raise click.UsageError(
-            "Output directory cannot be or contain the current directory to prevent accidental project deletion"
-        )
-    if output_dir == resolved_project or output_dir in resolved_project.parents:
-        raise click.UsageError(
-            "Output directory cannot be or contain the project directory to prevent accidental project deletion"
-        )
+    for label, target in (
+        ("Output directory", output_dir),
+        ("Docs build directory", docs_build_dir),
+        ("Temp docs source directory", temp_docs_src_dir),
+    ):
+        if target == resolved_cwd or target in resolved_cwd.parents:
+            raise click.UsageError(
+                f"{label} cannot be or contain the current directory to prevent accidental project deletion"
+            )
+        if target == resolved_project or target in resolved_project.parents:
+            raise click.UsageError(
+                f"{label} cannot be or contain the project directory to prevent accidental project deletion"
+            )
 
     if output_dir.exists() and not output_dir.is_dir():
         raise click.UsageError(

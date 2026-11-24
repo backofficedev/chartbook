@@ -29,8 +29,8 @@ def validate_dataframe(df) -> "pd.DataFrame":
             schema = df.collect_schema() if isinstance(df, pl.LazyFrame) else df.schema
             df = df.with_columns(
                 [
-                    pl.col(name).cast(pl.String if dtype.base_type() in (pl.Categorical, pl.Enum) else pl.Float64)
-                    for name, dtype in schema.items()
+                    pl.nth(i).cast(pl.String if dtype.base_type() in (pl.Categorical, pl.Enum) else pl.Float64)
+                    for i, (_, dtype) in enumerate(schema.items())
                     if dtype.base_type() in (pl.Categorical, pl.Enum, pl.Decimal)
                 ]
             )

@@ -212,7 +212,7 @@ def get_dataset_report(
 
         # Get null counts - skip for large files to avoid OOM
         if not is_large_file and len(schema) > 0:
-            null_count_exprs = [pl.col(col).null_count().alias(col) for col in schema]
+            null_count_exprs = [formats._this_column(col).null_count().alias(col) for col in schema]
             null_counts = lf.select(null_count_exprs).collect().to_dicts()[0]
         else:
             null_counts = {}
@@ -270,12 +270,13 @@ def get_dataset_report(
             # Only compute stats for small files - large files skip entirely to avoid OOM
             stats_exprs = []
             for c in numeric_cols:
+                expr = formats._this_column(c)
                 stats_exprs.extend(
                     [
-                        pl.col(c).min().alias(f"{c}_min"),
-                        pl.col(c).max().alias(f"{c}_max"),
-                        pl.col(c).mean().alias(f"{c}_mean"),
-                        pl.col(c).median().alias(f"{c}_median"),
+                        expr.min().alias(f"{c}_min"),
+                        expr.max().alias(f"{c}_max"),
+                        expr.mean().alias(f"{c}_mean"),
+                        expr.median().alias(f"{c}_median"),
                     ]
                 )
 
