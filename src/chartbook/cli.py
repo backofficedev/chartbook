@@ -623,10 +623,16 @@ def _render_site(
     if publish_dir is not None:
         publish_dir = (project_dir / Path(publish_dir)).resolve()
 
-    # Prevent deleting the current working directory
-    if output_dir == Path.cwd():
+    # Prevent deleting the current working directory or project directory
+    resolved_project = project_dir.resolve()
+    resolved_cwd = Path.cwd().resolve()
+    if output_dir == resolved_cwd or output_dir in resolved_cwd.parents:
         raise click.UsageError(
-            "Output directory cannot be the current directory '.' to prevent accidental project deletion"
+            "Output directory cannot be or contain the current directory to prevent accidental project deletion"
+        )
+    if output_dir == resolved_project or output_dir in resolved_project.parents:
+        raise click.UsageError(
+            "Output directory cannot be or contain the project directory to prevent accidental project deletion"
         )
 
     if output_dir.exists() and not output_dir.is_dir():
@@ -2015,6 +2021,9 @@ def _load_raw_catalog(catalog_toml_path):
             f"Run: python scripts/migrate_toml_v2.py {_quoted(catalog_toml_path.parent)}"
         )
     if catalog_toml_path.name == "catalog.toml":
+        project = data.get("project")
+        if project is not None and not isinstance(project, dict):
+            raise click.ClickException(f"{catalog_toml_path}: [project] must be a table")
         data.setdefault("project", {}).setdefault("type", "catalog")
     try:
         config_type = resolve_project_type(data, source=str(catalog_toml_path))
@@ -2536,7 +2545,7 @@ def data_get_docs_path(pipeline, dataframe, catalog):
     try:
         path = get_docs_path(pipeline, dataframe, catalog_path=catalog)
         click.echo(str(path))
-    except (KeyError, ValueError, StoreError) as e:
+    except (FileNotFoundError, KeyError, ValueError, StoreError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
@@ -6578,9 +6587,12 @@ def ls_stores(ctx, as_json):
     catalog_arg = ctx.obj.get("catalog")
     if catalog_arg is None:
         _catalog_or_make_one()
+        resolved = None
     else:
-        _resolve_catalog_toml_path(catalog_arg)
-    stores = Stores.configured(catalog_arg)
+        resolved = _resolve_catalog_toml_path(catalog_arg)
+        if not resolved.is_file():
+            raise click.ClickException(f"Catalog file not found: {resolved}")
+    stores = Stores.configured(resolved)
     if as_json or ctx.obj.get("json"):
         _echo_json([
             {"name": entry.name, "url": str(entry.store), "read_only": bool(entry.read_only), "reachable": bool(entry.reachable)}
@@ -6604,9 +6616,12 @@ def ls_versions(ctx, as_json):
     catalog_arg = ctx.obj.get("catalog")
     if catalog_arg is None:
         _catalog_or_make_one()
+        resolved = None
     else:
-        _resolve_catalog_toml_path(catalog_arg)
-    stores = Stores.configured(catalog_arg)
+        resolved = _resolve_catalog_toml_path(catalog_arg)
+        if not resolved.is_file():
+            raise click.ClickException(f"Catalog file not found: {resolved}")
+    stores = Stores.configured(resolved)
     found, unreadable = readable_snapshots(stores)  # a store that is not read is said by the group (_Ls)
     if as_json or ctx.obj.get("json"):
         _echo_json([

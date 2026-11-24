@@ -3710,8 +3710,15 @@ def _sync_from_snapshots(
     # And what the snapshot it was pinned to had, outside the lockfile, that
     # this one does not: a chart its owner no longer declares
     if locked_commit and locked_made and not newest.same_moment(locked_commit, locked_made):
+        earlier_pipeline = pinned_pipeline(was, directory) or newest.pipeline
         try:
-            earlier = next((taken for taken in (found() if found is not None else []) if taken.same_moment(locked_commit, locked_made)), None)
+            earlier = next(
+                (
+                    taken for taken in (found() if found is not None else [])
+                    if taken.same_moment(locked_commit, locked_made) and taken.pipeline == earlier_pipeline
+                ),
+                None,
+            )
         except (OSError, StoreError, snapshot.SnapshotError):
             earlier = None
         for name in sorted(set(earlier.assets) - set(newest.assets)) if earlier is not None else ():

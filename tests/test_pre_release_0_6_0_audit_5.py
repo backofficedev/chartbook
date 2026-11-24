@@ -231,7 +231,8 @@ class TestRowhashFormatsAndData:
 
     def test_duckdb_type_maps_decimal_and_uint128(self):
         assert formats._duckdb_type(pl.Decimal(10, 2)) == "DECIMAL(10, 2)"
-        assert formats._duckdb_type(pl.UInt128) == "UHUGEINT"
+        if hasattr(pl, "UInt128"):
+            assert formats._duckdb_type(pl.UInt128) == "UHUGEINT"
 
     def test_data_load_validates_format_before_backend_scan(self, tmp_path):
         from chartbook.resolve import TableLocation

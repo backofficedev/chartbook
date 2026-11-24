@@ -451,7 +451,7 @@ class DatabricksBackend(Backend):
                             frame = frame.select(
                                 [
                                     pl.col("^" + re.escape(c) + "$")
-                                    if len(c) >= 2 and c.startswith("^") and c.endswith("$")
+                                    if c == "*" or (len(c) >= 2 and c.startswith("^") and c.endswith("$"))
                                     else pl.col(c)
                                     for c in with_columns
                                 ]

@@ -2526,7 +2526,7 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
 def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None) -> tuple[list[str], dict]:
     """The gaps in a pipeline's lineage (:func:`lineage_gaps`); and, for each dependency whose pinned snapshot the store does not have, the snapshot of yours that stands in for it, by the dependency's key."""
     from chartbook import rowhash, standins
-    from chartbook.lock import LOCK_FILE, _read_pipeline, names_a_snapshot, read_lock, verify
+    from chartbook.lock import LOCK_FILE, _read_pipeline, names_a_snapshot, pinned_pipeline, read_lock, verify
 
     directory = Path(directory)
     store = store if store is not None else default_store()
@@ -2586,7 +2586,11 @@ def _lineage_of_pins(directory: Union[str, Path], store: Optional[Store] = None)
         labels = {a: r for a, r in hashed.items() if (r.get("ref") or {}).get("rev")}
         # The snapshot the lockfile names: at that moment, and holding each
         # asset pinned from it under its own name at its own hash
-        at_moment = [t for t in found if t.same_moment(commit, made_at)]
+        dep_pipeline = pinned_pipeline(entry, folders.get(key))
+        at_moment = [
+            t for t in found
+            if t.same_moment(commit, made_at) and (dep_pipeline is None or t.pipeline == dep_pipeline)
+        ]
         held = [t for t in at_moment if all(t.content().get(local_name(r)) == r["content_hash"] for r in plain.values())]
         if not at_moment:
             # A snapshot of yours of that commit that meets every pin of it, by

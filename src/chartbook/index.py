@@ -227,9 +227,10 @@ def _date_range(resolved: str, date_col: str, entry: Optional[dict] = None) -> O
     try:
         frame = formats.scan(resolved, entry.get("format"), entry.get("read_options"))
         schema = frame.collect_schema()
-        if date_col not in schema.names():
+        names = schema.names()
+        if date_col not in names:
             return None
-        column = pl.col(date_col)
+        column = pl.nth(names.index(date_col))
         if schema[date_col] == pl.String:
             column = column.str.to_datetime(strict=False)
         elif not schema[date_col].is_temporal():

@@ -4986,8 +4986,8 @@ def pipeline_folder(pipeline: str) -> str:
     lowered = name.lower()
     if lowered == name and lowered.split(".")[0] not in _RESERVED_ON_WINDOWS and not lowered.endswith((".", " ")):
         return name
-    stem, dot, rest = lowered.partition(".")
-    safe = f"{stem}~.{rest}" if dot and stem in _RESERVED_ON_WINDOWS else lowered
+    stem, dot, _ = lowered.partition(".")
+    safe = f"_{lowered}" if dot and stem in _RESERVED_ON_WINDOWS else lowered
     return f"{safe}~{hashlib.sha256(pipeline.encode('utf-8')).hexdigest()[:8]}"
 
 

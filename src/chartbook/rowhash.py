@@ -863,6 +863,8 @@ def _text_bytes(file, most: int) -> int:
             return os.path.getsize(file)
     else:
         return os.path.getsize(file)
+    import zlib
+
     count = 0
     try:
         with opened:
@@ -871,8 +873,8 @@ def _text_bytes(file, most: int) -> int:
                 if not read:
                     break
                 count += len(read)
-    except (EOFError, OSError) as error:
-        if isinstance(error, EOFError) or _this_machines(error) is None:
+    except (EOFError, OSError, zlib.error) as error:
+        if isinstance(error, (EOFError, zlib.error)) or _this_machines(error) is None:
             return os.path.getsize(file)
         raise
     return count

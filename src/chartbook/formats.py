@@ -1136,7 +1136,7 @@ def _this_column(name: str):
     Polars 1.33 and Polars 2.x (``cs.by_name`` still treats ``^...$`` as a
     regex on Polars 1.33).
     """
-    if len(name) >= 2 and name.startswith("^") and name.endswith("$"):
+    if name == "*" or (len(name) >= 2 and name.startswith("^") and name.endswith("$")):
         return pl.col("^" + re.escape(name) + "$")
     return pl.col(name)
 

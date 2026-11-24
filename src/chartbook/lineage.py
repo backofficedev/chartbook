@@ -882,7 +882,11 @@ class _Finder:
             named = derive_pipeline_id(project if isinstance(project, dict) else {}, there)
             children.append((Edge(pipeline, named, key, where), there, str(there)))
         # The snapshot its pin names, if the store has it
-        taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
+        taken = self._pinned(
+            _text(location.get("commit")),
+            _text(listed.get("snapshot")),
+            lock.pinned_pipeline(listed, there),
+        )
         if taken is not None:
             at = _text(taken.commit)[:7]
             said = f"{where}; it would now be pinned to its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
