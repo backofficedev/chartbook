@@ -1132,11 +1132,12 @@ def _this_column(name: str):
 
     ``pl.col`` reads a name that starts with ``^`` and ends with ``$`` as a
     regular expression, so a column named ``^b$`` would be read as ``b``.
+    Escaping it as ``^\\^b\\$$`` matches only the literal name in both
+    Polars 1.33 and Polars 2.x (``cs.by_name`` still treats ``^...$`` as a
+    regex on Polars 1.33).
     """
     if len(name) >= 2 and name.startswith("^") and name.endswith("$"):
-        import polars.selectors as cs
-
-        return cs.by_name(name)
+        return pl.col("^" + re.escape(name) + "$")
     return pl.col(name)
 
 

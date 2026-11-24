@@ -416,7 +416,9 @@ class TestWhatDiffers:
         assert _run().exit_code == 0  # out.csv is tracked now, so the note keeps its hash
         assert "hash" in _note(directory)["outputs"]["out.csv"]
         before = os.stat(directory / "out.csv")
-        _change(directory / "out.csv", "x,y\n")
+        original = (directory / "out.csv").read_bytes()
+        replacement = (b"z" if original[:1] != b"z" else b"y") * len(original)
+        (directory / "out.csv").write_bytes(replacement)
         os.utime(directory / "out.csv", ns=(before.st_atime_ns, before.st_mtime_ns))
         after = os.stat(directory / "out.csv")
         assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)

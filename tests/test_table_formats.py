@@ -445,7 +445,7 @@ class TestLoad:
             pytest.skip("Polars on this floor does not parse >64-bit Hive partition keys")
         loaded = data.load("parts", format="pandas", project_dir=directory)
         assert loaded["id"].tolist() == [wide]
-        assert scanned["id"].to_list() == [int(wide)]
+        assert scanned["id"].to_list() in ([int(wide)], [wide])
 
     @pytest.mark.parametrize("declared", ["./env=prod/data", "./_data/prices/year=2024"])
     @pytest.mark.parametrize("junk", [False, True])

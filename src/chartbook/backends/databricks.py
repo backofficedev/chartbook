@@ -448,9 +448,14 @@ class DatabricksBackend(Backend):
                         if predicate is not None:
                             frame = frame.filter(predicate)
                         if with_columns is not None:
-                            import polars.selectors as cs
-
-                            frame = frame.select(cs.by_name(with_columns))
+                            frame = frame.select(
+                                [
+                                    pl.col("^" + re.escape(c) + "$")
+                                    if len(c) >= 2 and c.startswith("^") and c.endswith("$")
+                                    else pl.col(c)
+                                    for c in with_columns
+                                ]
+                            )
                         if left is not None:
                             frame = frame.head(left)
                             left -= frame.height
