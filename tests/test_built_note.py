@@ -407,6 +407,22 @@ class TestWhatDiffers:
         os.utime(ignored / "out.csv", ns=(old.st_atime_ns, old.st_mtime_ns + 90 * 10**9))
         assert "these differ from what its build left: out.csv." in _snapshot().output
 
+    def test_a_tracked_file_rewritten_in_the_same_second_at_the_same_size_is_refused(self, work, store, monkeypatch):
+        """The note stores the hash, and a rewrite in that second keeps the size and the time."""
+        directory = _committed(_folder(work / "p", DEMO, "/build.log\n"))
+        monkeypatch.chdir(directory)
+        assert _run().exit_code == 0
+        _committed(directory)
+        assert _run().exit_code == 0  # out.csv is tracked now, so the note keeps its hash
+        assert "hash" in _note(directory)["outputs"]["out.csv"]
+        before = os.stat(directory / "out.csv")
+        _change(directory / "out.csv", "x,y\n")
+        os.utime(directory / "out.csv", ns=(before.st_atime_ns, before.st_mtime_ns))
+        after = os.stat(directory / "out.csv")
+        assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)
+        _committed(directory)
+        assert "these differ from what its build left: out.csv." in _snapshot().output
+
     def test_a_time_is_held_in_whole_seconds(self, demo, store):
         assert _run().exit_code == 0
         old = os.stat(demo / "out.csv")

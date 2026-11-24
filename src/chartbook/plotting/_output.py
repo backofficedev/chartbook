@@ -108,7 +108,7 @@ def create_dual_chart_result(
 def save_chart_from_result(
     result: ChartResult,
     output_dir: str | Path | None = None,
-    interactive: bool = True,
+    interactive: bool | None = None,
 ) -> None:
     """Save a ChartResult to multiple formats.
 
@@ -151,12 +151,16 @@ def save_chart_from_result(
 
     # Generate interactive HTML (Plotly) - use the existing figure
     # Note: No explicit dimensions set to enable responsive behavior in browser
+    if interactive is None:
+        interactive = global_config.default_interactive
     if interactive:
         html_path = out_dir / f"{chart_id}.html"
         # A fixed div id: Plotly would otherwise embed a fresh UUID on every
         # render, and the file's hash in the index would move with nothing changed
         result.figure.write_html(str(html_path), include_plotlyjs="cdn", div_id=f"chartbook-{chart_id}")
         result.html_path = html_path
+    else:
+        result.html_path = None
 
     # Generate static formats (Matplotlib)
     png_path = out_dir / f"{chart_id}.png"

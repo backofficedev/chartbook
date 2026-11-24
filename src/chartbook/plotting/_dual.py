@@ -187,8 +187,8 @@ def dual(
         right_y_range=right_y_range,
         left_y_tickformat=left_y_tickformat,
         right_y_tickformat=right_y_tickformat,
-        left_colors=list(left_colors) if left_colors else None,
-        right_colors=list(right_colors) if right_colors else None,
+        left_colors=[left_colors] if isinstance(left_colors, str) else (list(left_colors) if left_colors else None),
+        right_colors=[right_colors] if isinstance(right_colors, str) else (list(right_colors) if right_colors else None),
         extra_kwargs=kwargs,
     )
 

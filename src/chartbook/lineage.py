@@ -167,8 +167,10 @@ def walk(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, reh
         model version a label pinned, which reads all their bytes.
     :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.
     """
+    from chartbook.multi_store import with_dependencies
+
     directory = Path(project_dir).resolve()
-    store = store if store is not None else default_store()
+    store = with_dependencies(directory, store)
     pipeline = snapshot.pipeline_in(directory)
     root = Node(label=pipeline, pipeline=pipeline, kind="working")
     locked = None

@@ -315,6 +315,35 @@ class TestNamingAVersion:
             assert folder.is_dir() and (folder / "weights.bin").read_bytes() == b"w"
         assert not folder.exists()
 
+    def test_two_files_one_disk_keeps_as_one_are_not_collapsed(self, tmp_path):
+        """The store holds both. A folder on a disk that ignores capitals would keep the second's bytes under both names."""
+        import shutil
+        import tempfile
+
+        from chartbook import assets
+
+        one, two = tmp_path / "one.bin", tmp_path / "two.bin"
+        one.write_bytes(b"ONE")
+        two.write_bytes(b"TWO")
+        probe = Path(tempfile.mkdtemp(prefix="chartbook-case-"))
+        try:
+            (probe / "A").write_bytes(b"A")
+            (probe / "a").write_bytes(b"a")
+            tells_apart = (probe / "A").read_bytes() == b"A" and (probe / "a").read_bytes() == b"a"
+        finally:
+            shutil.rmtree(probe)
+        found = [("Model/Config.json", one), ("Model/config.json", two)]
+        laid = assets._Gathered(found, assets.parse("model/enc"))
+        if tells_apart:
+            with laid as folder:
+                assert (folder / "Model" / "Config.json").read_bytes() == b"ONE"
+                assert (folder / "Model" / "config.json").read_bytes() == b"TWO"
+            return
+        with pytest.raises(OSError, match="cannot tell apart") as error:
+            with laid:
+                pass
+        assert "Model/Config.json" in str(error.value) and "Model/config.json" in str(error.value)
+
     def test_only_models_have_versions_so_far(self, forecast):
         from chartbook import data
 

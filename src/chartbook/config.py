@@ -249,6 +249,8 @@ def _normalized(settings: dict, origin: Path) -> dict:
             # As the store, the git cache and the cache are: relative to the
             # settings file, not to wherever the command happens to be run
             catalog["path"] = str(_absolute_if_folder(path.strip(), origin))
+        else:
+            catalog["path"] = ""
     resolve = result.get("resolve")
     if resolve is not None and "default_host" in resolve:
         host = resolve["default_host"]
@@ -466,7 +468,7 @@ _ADDRESS = r"^\s*(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//|\\\\)"
 #: it, so that a message quoting an address and then an ``'@'`` keeps its
 #: words. Two backslashes (four, quoted) only where a path begins: those after
 #: ``C:`` begin none
-_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\s'\"<>]*?@"
+_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\s'\"<>]*@"
 
 
 def store_kind(url: str) -> str:

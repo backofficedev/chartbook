@@ -448,7 +448,9 @@ class DatabricksBackend(Backend):
                         if predicate is not None:
                             frame = frame.filter(predicate)
                         if with_columns is not None:
-                            frame = frame.select(with_columns)
+                            import polars.selectors as cs
+
+                            frame = frame.select(cs.by_name(with_columns))
                         if left is not None:
                             frame = frame.head(left)
                             left -= frame.height

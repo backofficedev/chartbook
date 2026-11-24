@@ -758,13 +758,18 @@ class SphinxWriter:
 
     def files_preview(self, record: dict) -> Optional[dict]:
         """What a files asset's page previews, from the files its record lists (:func:`chartbook.files.preview_of`)."""
+        from chartbook import hashing
         from chartbook.files import listing_root, preview_of
 
         resolved = (record.get("location") or {}).get("resolved_path")
         if not resolved or not record.get("content_hash"):
             return None
         # Only where the files are: an absent folder's listing root would be its parent, another asset's files
-        found = preview_of(record.get("files") or [], listing_root(resolved)) if Path(resolved).exists() else None
+        found = (
+            preview_of(record.get("files") or [], listing_root(resolved))
+            if hashing.is_pattern(resolved) or Path(resolved).exists()
+            else None
+        )
         if found is not None:
             return found
         # The files are not here (a version laid out from the store without
@@ -1077,7 +1082,14 @@ class SphinxWriter:
             lines.append("No snapshot of it is in the store yet.")
         return "\n".join(lines) + "\n"
 
-    def from_the_store_assets(self, kinds: tuple, from_path: str, pipeline_id: Optional[str] = None) -> list:
+    def from_the_store_assets(
+        self,
+        kinds: tuple,
+        from_path: str,
+        pipeline_id: Optional[str] = None,
+        *,
+        exclude_indexed: bool = False,
+    ) -> list:
         """The assets of the pipelines shown from the store alone, as each one's newest snapshot lists them.
 
         Each is linked to its page in that snapshot's site, relative to the
@@ -1106,6 +1118,8 @@ class SphinxWriter:
             for asset_id in pipeline.get("assets") or []:
                 ref = _own_asset(pipeline["id"], asset_id)
                 if ref is None or ref.kind not in kinds:
+                    continue
+                if exclude_indexed and asset_id in self.records:
                     continue
                 if asset_id in self.records:
                     import posixpath
@@ -1207,7 +1221,7 @@ class SphinxWriter:
         if page_path == "cb/dataframes.md":
             return environment.get_template("dataframes.md").render(
                 dataframe_file_list=[p.removeprefix("cb/") for p in dataframes],
-                stored_dataframes=self.from_the_store_assets(("dataframe",), page_path),
+                stored_dataframes=self.from_the_store_assets(("dataframe",), page_path, exclude_indexed=True),
             )
         if page_path == "cb/models.md":
             return environment.get_template("models.md").render(

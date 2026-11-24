@@ -338,8 +338,9 @@ def files(
 class _Gathered:
     """A temporary folder an asset's files are laid out in (:func:`gathered`)."""
 
-    def __init__(self, found: list):
+    def __init__(self, found: list, asset: AssetRef):
         self._found = found
+        self._asset = asset
         self._temporary = None
 
     def __enter__(self) -> Path:
@@ -349,10 +350,22 @@ class _Gathered:
         self._temporary = tempfile.TemporaryDirectory(prefix="chartbook-gathered-")
         root = Path(self._temporary.name)
         try:
+            laid: list[tuple[str, Path]] = []
             for relative, file in self._found:
                 target = root.joinpath(*relative.split("/"))
                 target.parent.mkdir(parents=True, exist_ok=True)
+                # A disk that does not tell capitals apart keeps Config.json and config.json as one file.
+                # normcase does not fold capitals here, so the disk is asked: the store holds both, each
+                # by its hash, and copying the second would replace the first.
+                other = next((name for name, path in laid if target.exists() and os.path.samefile(path, target)), None)
+                if other is not None:
+                    raise OSError(
+                        f"The {self._asset.kind} {str(self._asset)!r} has two files this disk cannot tell apart: "
+                        f"{other} and {relative}. assets.gathered lays them into one folder, and this disk "
+                        f"keeps one file under both names, so the second would replace the first. Rename one of them."
+                    )
                 shutil.copyfile(file, target)
+                laid.append((relative, target))
         except BaseException:
             self._temporary.cleanup()
             self._temporary = None
@@ -390,9 +403,10 @@ def gathered(
     :raises FileNotFoundError: If nothing is there: the asset is not built.
     :raises TypeError: If the asset is a table or a query in a source.
     :raises AssetNotDeclaredError: As for :func:`path`, and the rest of its errors.
+    :raises OSError: If two of its files are one file on this disk (``Config.json`` and ``config.json``).
     """
     asset, location = _located(ref, kind, caller_start_dirs(project_dir, sys._getframe(1)))
-    return _Gathered(_found(asset, location))
+    return _Gathered(_found(asset, location), asset)
 
 
 def _hash_cache(declared: Path):

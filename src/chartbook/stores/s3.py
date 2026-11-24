@@ -1086,6 +1086,7 @@ class S3Store(Store):
             return False
         self._delete_keys([key])
         self._drop_locally(local)
+        _found_whole.difference_update({seen for seen in _found_whole if seen[0] == self.url})
         self._write(
             self._key(PIPELINES_DIR, parts[1], parts[2], OWN_DIR, CLEARED_FILE),
             (
@@ -2347,7 +2348,10 @@ class _S3Pending(PendingSnapshot):
         seen = self.store._seen(self.folder, fresh=True)
         self._confirm(seen)
         self._refill(seen)
-        body = (json.dumps(document, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+        try:
+            body = (json.dumps(document, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+        except UnicodeEncodeError:
+            body = (json.dumps(document, indent=2, ensure_ascii=True) + "\n").encode("utf-8")
         key = self.store._key(PIPELINES_DIR, self.folder, self.name, _RECORD)
         if not self.store._put_new(key, body):
             raise StoreError(

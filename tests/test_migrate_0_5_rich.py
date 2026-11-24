@@ -499,6 +499,41 @@ class TestAFileAlreadyWhereARenameGoes:
         assert (root / old).read_bytes() == b"the same file, put back by a sync"
 
 
+class TestAnImpostorAlreadyWhereTheNewestGoes:
+    """A file of the right size already under snapshots/ is not the bytes an older snapshot still has."""
+
+    def test_the_older_snapshot_keeps_its_own_copy(self, tmp_path, monkeypatch):
+        root = empty_store(tmp_path)
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(root))
+        good, bad = b"K" * 400, b"?" * 400
+        old, new = folder_of("2025-10-01", "a"), folder_of("2025-11-01", "b")
+        put(root, "acme+p", old, "_data/k.parquet", good)
+        record(root, "acme/p", "2025-10-01", "a", [("_data/k.parquet", good, None, None)])
+        record(root, "acme/p", "2025-11-01", "b", [("_data/k.parquet", good, None, None)])
+        put(root, "acme+p", new, "_data/k.parquet", bad, tree="snapshots")
+        migrate_0_5.run(root)
+        kept = root / "increments" / "acme+p" / old / "_data" / "k.parquet"
+        occupant = root / "snapshots" / "acme+p" / new / "_data" / "k.parquet"
+        assert kept.read_bytes() == good
+        assert occupant.read_bytes() == bad
+        problems = [problem.format() for problem in fresh(root).verify()]
+        assert any(new in problem and "_data/k.parquet" in problem for problem in problems), problems
+
+    def test_a_lone_surrogate_in_a_record_does_not_stop_the_move(self, tmp_path):
+        root = empty_store(tmp_path)
+        data = b"x" * 20
+        name = folder_of("2025-10-01", "c")
+        put(root, "acme+p", name, "_data/f.parquet", data)
+        record(root, "acme/p", "2025-10-01", "c", [("_data/f.parquet", data, None, None)])
+        path = root / "pipelines" / "acme+p" / name / "_chartbook" / "snapshot.json"
+        document = json.loads(path.read_text(encoding="utf-8"))
+        document["title"] = "bad \ud800 name"
+        path.write_text(json.dumps(document), encoding="utf-8")
+        migrate_0_5.run(root)
+        written = json.loads((root / "snapshots" / "acme+p" / name / "_chartbook" / "snapshot.json").read_text(encoding="utf-8"))
+        assert written["title"] == "bad \ud800 name"
+
+
 class TestAPartTheReaderPassesOver:
     @pytest.mark.parametrize("said", [["sha256:" + "0" * 64], {"sha256": "0" * 64}])
     def test_a_hash_that_is_a_list_or_a_table_is_passed_over_as_the_stores_reader_passes_it_over(self, tmp_path, monkeypatch, said):

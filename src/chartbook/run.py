@@ -658,7 +658,7 @@ def plan(
     done: set[Path] = set()
     visiting: list[Path] = []
     caches = [git_cache]  # made only if some pipeline has a git dependency
-    found_in_store: list = [None]  # read only if some pipeline names a dependency by its ID
+    found_in_store: dict = {}  # read only if some pipeline names a dependency by its ID, keyed by directory
     host: list = [None]  # the default host, read likewise
     by_id: list = [None]
 
@@ -718,9 +718,11 @@ def plan(
                 host[0] = get_default_host()
 
             def in_store() -> list:
-                if found_in_store[0] is None:
-                    found_in_store[0] = snapshots.readable_snapshots(store if store is not None else default_store())[0]
-                return found_in_store[0]
+                if directory not in found_in_store:
+                    from chartbook.multi_store import with_dependencies
+
+                    found_in_store[directory] = snapshots.readable_snapshots(with_dependencies(directory, store))[0]
+                return found_in_store[directory]
 
             try:
                 locked = lock.read_lock(directory)
@@ -1796,8 +1798,20 @@ def run(
                 # that went wrong, whatever its script exited with, and nothing of it is a version
                 try:
                     forgotten = unwritten(step.directory)
-                except (ValueError, OSError):
-                    forgotten = []  # a manifest the build has made unreadable is found by what reads it next
+                except (ValueError, OSError) as error:
+                    # Nothing else in a plain run reads the manifest. A build that exits 0 and leaves
+                    # it gone or unreadable used to be a run that exited 0, with a missing output unsaid.
+                    if isinstance(error, FileNotFoundError):
+                        why = f"its build left no {MANIFEST_NAME}, so what it was to write cannot be checked"
+                    else:
+                        why = (
+                            f"its build left {MANIFEST_NAME} unreadable, so what it was to write cannot be "
+                            f"checked ({error})"
+                        )
+                    report.failed, report.exit_code = step, 1
+                    report.undeclared = its_own
+                    report.reason = why
+                    break
                 if forgotten:
                     things = "1 thing" if len(forgotten) == 1 else f"{len(forgotten)} things"
                     report.failed, report.exit_code = step, 1

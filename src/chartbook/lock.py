@@ -488,7 +488,7 @@ def _lock_from_document(document: dict, where: str) -> Lock:
                 if overall is not None:
                     entry["pinned_hash"] = overall
                 lock.dependencies[position] = entry
-    except (ValueError, KeyError, TypeError, AttributeError) as error:
+    except (ValueError, KeyError, TypeError, AttributeError, IndexError) as error:
         raise LockError(f"Cannot read {where}: {error}") from None
     return lock
 
@@ -967,11 +967,15 @@ def pinned_hash(records: Iterable[dict]) -> Optional[str]:
 
     :returns: The hash, or None if nothing of the dependency is pinned.
     """
-    lines = sorted(
-        (record["id"], record["content_hash"].split(":", 1)[1])
-        for record in records
-        if record.get("content_hash")
-    )
+    lines = []
+    for record in records:
+        content_hash = record.get("content_hash")
+        if not content_hash:
+            continue
+        if not isinstance(content_hash, str) or ":" not in content_hash:
+            raise ValueError(f"Invalid content_hash {content_hash!r} for {record.get('id')!r}")
+        lines.append((record["id"], content_hash.split(":", 1)[1]))
+    lines.sort()
     if not lines:
         return None
     listing = "".join(f"{digest}  {asset_id}\n" for asset_id, digest in lines)

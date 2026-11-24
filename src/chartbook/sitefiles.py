@@ -97,10 +97,15 @@ def copy_plan(
         elif kind == "Note":
             plan.append((Path(source), root / "cb" / f"{name}.md"))
         elif kind == "File":
+            from chartbook import hashing
             from chartbook.files import listing_root, preview_of
 
             # Only where the files are: an absent folder's listing root would be its parent
-            preview = preview_of(record.get("files") or [], listing_root(source)) if Path(source).exists() else None
+            preview = (
+                preview_of(record.get("files") or [], listing_root(source))
+                if hashing.is_pattern(source) or Path(source).exists()
+                else None
+            )
             if preview is not None and preview["kind"] == "image":
                 plan.append((preview["file"], root / thumbnail_path(record, preview)))
         elif enable_data_download and downloadable(record):

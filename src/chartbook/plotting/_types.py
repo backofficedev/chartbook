@@ -263,7 +263,7 @@ class ChartResult:
         self,
         chart_id: str,
         output_dir: str | Path | None = None,
-        interactive: bool = True,
+        interactive: bool | None = None,
     ) -> "ChartResult":
         """Save the chart to multiple formats.
 

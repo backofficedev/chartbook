@@ -1148,6 +1148,35 @@ class TestSql:
         )
         assert data.sql(query, project_dir=directory).collect().height in (2, 5)
 
+    def test_a_boolean_override_of_a_column_named_as_a_regex_is_that_column(self, tmp_path):
+        """``pl.col('^b$')`` is a regular expression for ``b``. The override is of the column named that."""
+        directory = _pipeline(tmp_path / "rates", {"t": {
+            "path": "./_data/t.csv", "read_options": {"schema_overrides": {"^b$": "Boolean"}},
+        }})
+        (directory / "_data" / "t.csv").write_text("b,^b$\nhello, yes \n", encoding="utf-8", newline="\n")
+        loaded = data.load("t", project_dir=directory).collect()
+        assert loaded.columns == ["b", "^b$"]
+        assert loaded.rows() == [("hello", True)]
+        assert data.sql("select * from {t}", project_dir=directory).collect().rows() == [("hello", True)]
+
+    def test_parquet_under_a_key_has_no_key_from_above_it(self, tmp_path):
+        """A folder was already read so. A file and a glob were not: ``env=prod`` above them became a column, in both readers."""
+        parent = tmp_path / "env=prod"
+        one = _pipeline(parent / "one", {"flat": {"path": "./_data/flat.parquet"}})
+        _write(pl.DataFrame({"d": ["2024-01-01"], "r": [1.0]}), one / "_data" / "flat.parquet")
+        assert data.load("flat", project_dir=one).collect().columns == ["d", "r"]
+        assert data.sql("select * from {flat}", project_dir=one).collect().columns == ["d", "r"]
+
+        globbed = _pipeline(parent / "globbed", {"parts": {"path": "./_data/parts/**/*.parquet"}})
+        _write(pl.DataFrame({"v": [1]}), globbed / "_data" / "parts" / "year=2024" / "a.parquet")
+        _write(pl.DataFrame({"v": [2]}), globbed / "_data" / "parts" / "year=2025" / "a.parquet")
+        loaded = data.load("parts", project_dir=globbed).collect()
+        assert loaded.columns == ["v", "year"]
+        assert sorted(loaded.rows()) == [(1, 2024), (2, 2025)]
+        queried = data.sql("select * from {parts}", project_dir=globbed).collect()
+        assert queried.columns == ["v", "year"]
+        assert sorted(queried.rows()) == [(1, 2024), (2, 2025)]
+
     def test_arrow_ipc_under_a_key_has_the_keys_below_it_in_both(self, tmp_path):
         """Found by a second review: a file under `env=prod/` gained `env` in data.load and not in data.sql."""
         directory = _pipeline(tmp_path / "rates", {"one": {"path": "./_data/env=prod/one.arrow"}, "parts": {"path": "./_data/env=prod/parts/*/p.arrow"}})

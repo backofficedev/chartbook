@@ -64,6 +64,13 @@ def validate_columns_exist(
             column=None,
             message=f"Missing columns{ctx}: {missing}. Available columns: {list(df.columns)}",
         )
+    duplicates = [col for col in dict.fromkeys(columns) if (df.columns == col).sum() > 1]
+    if duplicates:
+        ctx = f" for {context}" if context else ""
+        raise DataValidationError(
+            column=duplicates[0],
+            message=f"Duplicate columns{ctx}: {duplicates}. Column names must be unique.",
+        )
 
 
 def validate_numeric_columns(df: "pd.DataFrame", columns: Sequence[str]) -> None:

@@ -2416,6 +2416,10 @@ class FolderStore(Store):
                 f"{self._not_this_users_remedy()}"
             ) from None
         _forget_record(path)
+        _found_whole.difference_update({
+            seen for seen in _found_whole
+            if seen[0] == str(self.root) and (not kept.readable or seen[1] in kept.named)
+        })
         try:
             (path.parent / CLEARED_FILE).write_text(
                 f"Cleared by `chartbook store gc` on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC.\n"
@@ -4890,8 +4894,13 @@ class _FolderPending(PendingSnapshot):
         record = own / RECORD_FILE
         temporary = own / f"{uuid.uuid4().hex[:12]}.tmp"
         try:
+            try:
+                text = json.dumps(document, indent=2, ensure_ascii=False)
+                text.encode("utf-8")
+            except UnicodeEncodeError:
+                text = json.dumps(document, indent=2, ensure_ascii=True)
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
-                json.dump(document, f, indent=2, ensure_ascii=False)
+                f.write(text)
                 f.write("\n")
             replace_when_let(temporary, record)
         finally:

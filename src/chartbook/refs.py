@@ -304,6 +304,9 @@ def parse_asset_ref(
             raise KindMismatchError(str(text), text.kind, kind)
         return text
 
+    if not isinstance(text, str):
+        raise ValueError(f"A reference must be text, not {type(text).__name__}.")
+
     original = text
     text = text.strip()
     if not text:

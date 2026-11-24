@@ -935,17 +935,27 @@ def _scan(read: Reading, sources, folder: Optional[Path], by_file: Optional[dict
         if isinstance(sources, list) and folder is not None:
             return _hive(pl.scan_parquet, sources, folder, by_file)
         if isinstance(sources, list):
-            return _scan_files(pl.scan_parquet, sources, hive_partitioning=True)
-        # A file, a glob, or a folder handed whole: as parquet always was
-        frame = pl.scan_parquet(_pattern(sources) if is_glob_pattern(sources) and not os.path.exists(sources) else sources, hive_partitioning=True)
+            # A file whose name a glob would read: itself, and a key=value above it is no column
+            return _scan_files(pl.scan_parquet, sources, hive_partitioning=False)
+        if isinstance(sources, str) and is_glob_pattern(sources) and not os.path.exists(sources):
+            # Keys below the glob's own root, and none above it, as a folder's are
+            matched = _files(sources)
+            if matched:
+                from chartbook import hashing
+
+                return _hive(pl.scan_parquet, matched, hashing.split_glob(sources)[0])
         if folder is not None:
+            # A folder handed whole: polars' keys start below it
+            frame = pl.scan_parquet(sources, hive_partitioning=True)
             try:
                 frame.collect_schema()
             except READ_ERRORS:
                 from chartbook.utils import directory_tables
 
                 return _by_file(pl.scan_parquet, [str(file) for file in directory_tables(folder)], folder)
-        return frame
+            return frame
+        # A file. Its path gives no Hive column: DuckDB's default would take a key=value above it.
+        return pl.scan_parquet(sources, hive_partitioning=False)
     if read.format == "ipc":
         # A glob's or a folder's keys, below it, as DuckDB is given them
         # (arrow_dataset); a file's path gives none
@@ -992,7 +1002,18 @@ def _csv(read: Reading, sources, named=None) -> tuple:
         sources = _pattern(sources)
     polars_names = pl.scan_csv(sources, **{**options, "infer_schema_length": 0}).collect_schema().names()
     if options.get("has_header", True):
-        names = [name if name != "" else f"column_{i}" for i, name in enumerate(polars_names, start=1)]
+        used = {name for name in polars_names if name != ""}
+        names = []
+        for i, name in enumerate(polars_names, start=1):
+            if name != "":
+                names.append(name)
+            else:
+                k = i
+                while f"column_{k}" in used:
+                    k += 1
+                chosen = f"column_{k}"
+                used.add(chosen)
+                names.append(chosen)
     else:
         names = [f"column_{i}" for i in range(1, len(polars_names) + 1)]
     named = dict(zip(names, polars_names))
@@ -1006,7 +1027,7 @@ def _csv(read: Reading, sources, named=None) -> tuple:
         }
     frame = pl.scan_csv(sources, **options)
     if truths:
-        frame = frame.with_columns(_as_boolean(pl.col(column)).alias(column) for column in truths)
+        frame = frame.with_columns(_as_boolean(_this_column(column)).alias(column) for column in truths)
     return frame, (polars_names, names)
 
 
@@ -1106,6 +1127,19 @@ _BOOLEANS = {
 }
 
 
+def _this_column(name: str):
+    """The column of this name.
+
+    ``pl.col`` reads a name that starts with ``^`` and ends with ``$`` as a
+    regular expression, so a column named ``^b$`` would be read as ``b``.
+    """
+    if len(name) >= 2 and name.startswith("^") and name.endswith("$"):
+        import polars.selectors as cs
+
+        return cs.by_name(name)
+    return pl.col(name)
+
+
 def _as_boolean(value):
     """Text as true or false: trimmed, one of :data:`_BOOLEANS`, and null where the word is not one of them.
 
@@ -1129,7 +1163,7 @@ def _cast(frame, schema, overrides: dict, shown: str, path):
     """
     given = []
     for column, kind in overrides.items():
-        value, was = pl.col(column), schema[column]
+        value, was = _this_column(column), schema[column]
         if was.is_nested():
             raise UnreadableTableError(
                 path,
@@ -1179,7 +1213,7 @@ def _pandas_of(frame):
     wide_kinds = tuple(kind for kind in (getattr(pl, "Int128", None), getattr(pl, "UInt128", None)) if kind is not None)
     wide = [name for name, kind in collected.schema.items() if kind in wide_kinds]
     if wide:
-        collected = collected.with_columns(pl.col(name).cast(pl.String) for name in wide)
+        collected = collected.with_columns(_this_column(name).cast(pl.String) for name in wide)
     return collected.to_pandas()
 
 
@@ -1450,10 +1484,25 @@ def sql(location) -> str:
                 return _joined_sql(kept_apart)
             return _folder_sql(tables, folder, _by_location(inside))
         if isinstance(sources, list):
-            return f"read_parquet({quote_literal(_escaped(path.as_posix()))})"  # a file named as a glob would be
+            # A file named as a glob would be. A key=value above it is no column.
+            quoted = quote_literal(_escaped(path.as_posix()))
+            if _above(path.parent):
+                return f"read_parquet({quoted}, hive_partitioning = false)"
+            return f"read_parquet({quoted})"
         if is_glob_pattern(sources):
+            from chartbook import hashing
+
+            prefix = hashing.split_glob(sources)[0]
+            matched = _files(sources)
+            # DuckDB takes a key=value above the glob for a column, and disagrees with polars on
+            # Hive types and mismatched keys. The keys below the glob's root, only, as _scan reads them.
+            if matched:
+                return _folder_sql(matched, prefix)
             return f"read_parquet({quote_literal(Path(_pattern(sources)).as_posix())}, hive_partitioning = true)"
-        return f"read_parquet({quote_literal(path.as_posix())})"
+        quoted = quote_literal(path.as_posix())
+        if _above(path.parent):
+            return f"read_parquet({quoted}, hive_partitioning = false)"
+        return f"read_parquet({quoted})"
     many = isinstance(sources, list) and folder is not None or isinstance(sources, str) and is_glob_pattern(sources)
     text = _listed(sources) if isinstance(sources, list) else quote_literal(Path(_pattern(sources) if is_glob_pattern(sources) else sources).as_posix())
     options = read.options

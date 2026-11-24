@@ -79,6 +79,37 @@ class MatplotlibBackend(BaseBackend):
         fig, ax = plt.subplots(figsize=size)
         return fig, ax
 
+    @staticmethod
+    def _apply_tickformat(axis, fmt: str | None) -> None:
+        """Apply a Plotly/d3-style numeric or strftime tick format to a Matplotlib axis."""
+        if not fmt:
+            return
+        import matplotlib.dates as mdates
+        import matplotlib.ticker as mticker
+
+        # strftime date formats (e.g. "%Y-%m", "%b %Y") start with "%" or contain "%Y"/"%m"/"%d"
+        if any(tok in fmt for tok in ("%Y", "%y", "%m", "%b", "%B", "%d", "%H", "%M", "%S")):
+            axis.set_major_formatter(mdates.DateFormatter(fmt))
+            return
+        # Numeric format spec (e.g. ".1%", ",.0f", "$,.2f")
+        prefix = ""
+        spec = fmt
+        if spec.startswith("$"):
+            prefix = "$"
+            spec = spec[1:]
+        try:
+            format(1.0, spec)
+        except (ValueError, TypeError):
+            return
+
+        def _fmt(val, _pos, _prefix=prefix, _spec=spec):
+            try:
+                return f"{_prefix}{format(val, _spec)}"
+            except (ValueError, TypeError):
+                return str(val)
+
+        axis.set_major_formatter(mticker.FuncFormatter(_fmt))
+
     def _apply_config(self, ax: "matplotlib.axes.Axes", config: "ChartConfig") -> None:
         """Apply chart configuration to axes."""
         if config.title:
@@ -91,6 +122,10 @@ class MatplotlibBackend(BaseBackend):
             ax.set_xlim(config.x_range)
         if config.y_range:
             ax.set_ylim(config.y_range)
+        if config.x_tickformat:
+            self._apply_tickformat(ax.xaxis, config.x_tickformat)
+        if config.y_tickformat:
+            self._apply_tickformat(ax.yaxis, config.y_tickformat)
 
     def _apply_overlays(
         self,
@@ -98,11 +133,13 @@ class MatplotlibBackend(BaseBackend):
         overlay: "OverlayConfig",
         df: "pd.DataFrame",
         x_col: str,
+        *,
+        use_positional_x: bool = False,
     ) -> None:
         """Apply overlays to the axes."""
         from chartbook.plotting._overlays import apply_overlays_matplotlib
 
-        apply_overlays_matplotlib(ax, overlay, df, x_col)
+        apply_overlays_matplotlib(ax, overlay, df, x_col, use_positional_x=use_positional_x)
 
     def _add_annotations(
         self,
@@ -209,17 +246,21 @@ class MatplotlibBackend(BaseBackend):
         x = np.arange(len(df))
         width = 0.8 / len(config.y) if not config.stacked else 0.8
 
+        import pandas as pd
+
         bottom = np.zeros(len(df)) if config.stacked else None
 
         for i, y_col in enumerate(config.y):
             label = config.labels.get(y_col, y_col) if config.labels else y_col
+            vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
 
             if config.stacked:
-                ax.bar(x, df[y_col], width, label=label, color=colors[i], bottom=bottom)
-                bottom = bottom + df[y_col].values
+                stacked_vals = np.nan_to_num(vals, nan=0.0)
+                ax.bar(x, stacked_vals, width, label=label, color=colors[i], bottom=bottom)
+                bottom = bottom + stacked_vals
             else:
                 offset = (i - len(config.y) / 2 + 0.5) * width
-                ax.bar(x + offset, df[y_col], width, label=label, color=colors[i])
+                ax.bar(x + offset, vals, width, label=label, color=colors[i])
 
         # Set x-tick labels
         ax.set_xticks(x)
@@ -229,7 +270,7 @@ class MatplotlibBackend(BaseBackend):
             ax.legend()
 
         self._apply_config(ax, config)
-        self._apply_overlays(ax, overlay, df, config.x)
+        self._apply_overlays(ax, overlay, df, config.x, use_positional_x=True)
         self._add_annotations(fig, ax, config)
         return fig, ax
 
@@ -260,21 +301,29 @@ class MatplotlibBackend(BaseBackend):
         # Handle size mapping
         sizes = None
         if config.size and config.size in df.columns:
-            sizes = df[config.size]
+            import pandas as pd
+
+            sizes = pd.to_numeric(df[config.size], errors="coerce").astype(float)
             # Normalize sizes to reasonable marker sizes
             span = sizes.max() - sizes.min()
-            if span == 0 or span != span:
-                sizes = sizes.map(lambda _: 60.0)
+            if pd.isna(span) or span == 0:
+                sizes = pd.Series(60.0, index=df.index)
             else:
-                sizes = (sizes - sizes.min()) / span * 200 + 20
+                sizes = ((sizes - sizes.min()) / span * 200 + 20).fillna(60.0)
 
         # Handle color by category
         if config.color_by and config.color_by in df.columns:
+            import pandas as pd
+
             categories = df[config.color_by].unique()
             palette = get_config().color_palette
             colors = [palette[i % len(palette)] for i in range(len(categories))]
             for cat, color in zip(categories, colors):
-                mask = df[config.color_by] == cat
+                mask = (
+                    df[config.color_by].isna()
+                    if pd.isna(cat)
+                    else (df[config.color_by] == cat).fillna(False)
+                )
                 cat_sizes = sizes[mask] if sizes is not None else None
                 ax.scatter(
                     df.loc[mask, config.x],
@@ -319,10 +368,14 @@ class MatplotlibBackend(BaseBackend):
         names_col = config.names or config.x
         values_col = config.values or config.y[0]
 
-        colors = get_config().color_palette[: len(df)]
+        import pandas as pd
+
+        valid = pd.to_numeric(df[values_col], errors="coerce").notna()
+        valid_df = df.loc[valid]
+        colors = get_config().color_palette[: len(valid_df)]
         wedges, texts, autotexts = ax.pie(
-            df[values_col],
-            labels=df[names_col],
+            valid_df[values_col],
+            labels=valid_df[names_col],
             colors=colors,
             autopct="%1.1f%%",
             startangle=90,
@@ -447,6 +500,10 @@ class MatplotlibBackend(BaseBackend):
             ax1.set_ylim(config.left_y_range)
         if config.right_y_range:
             ax2.set_ylim(config.right_y_range)
+        if config.left_y_tickformat:
+            self._apply_tickformat(ax1.yaxis, config.left_y_tickformat)
+        if config.right_y_tickformat:
+            self._apply_tickformat(ax2.yaxis, config.right_y_tickformat)
 
         # Combine legends
         lines1, labels1 = ax1.get_legend_handles_labels()
@@ -456,7 +513,7 @@ class MatplotlibBackend(BaseBackend):
         # Apply overlays to left axis
         from chartbook.plotting._overlays import apply_overlays_matplotlib
 
-        apply_overlays_matplotlib(ax1, overlay, df, config.x)
+        apply_overlays_matplotlib(ax1, overlay, df, config.x, use_positional_x=use_positional_x)
         # Its caption, note and source, which were not drawn
         self._add_annotations(fig, ax1, config)
 

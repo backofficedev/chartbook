@@ -19,19 +19,26 @@ def migrate(path=None):
         raise ValueError(f"{target} already exists; migration did not change it")
     with source.open("rb") as stream:
         raw = tomli.load(stream)
-    if raw.get("project", {}).get("type") != "catalog" and "pipelines" not in raw:
+    project = raw.get("project")
+    if project is not None and not isinstance(project, dict):
+        raise ValueError(f"{source}: [project] must be a table")
+    if (project or {}).get("type") != "catalog" and "pipelines" not in raw:
         raise ValueError(f"{source} is not a catalog")
     # Discover before writing: a failure never leaves a half-migrated catalog.
     entries = _catalog_entries(raw, source.parent, str(source))
-    all_entries = raw.get("pipelines", {})
+    all_entries = raw.get("pipelines")
+    if all_entries is not None and not isinstance(all_entries, dict):
+        raise ValueError(f"{source}: [pipelines] must be a table")
+    all_entries = all_entries or {}
     # Disabled entries were omitted from ordinary member discovery. Discover
     # their identities too, so hiding a legacy alias still hides its snapshot.
     import copy
     discovery = copy.deepcopy(raw)
-    discovery.get("pipelines", {}).pop("disabled", None)
-    for entry in discovery.get("pipelines", {}).values():
-        if isinstance(entry, dict):
-            entry.pop("disabled", None)
+    if isinstance(discovery.get("pipelines"), dict):
+        discovery["pipelines"].pop("disabled", None)
+        for entry in discovery["pipelines"].values():
+            if isinstance(entry, dict):
+                entry.pop("disabled", None)
     discovered = _catalog_entries(discovery, source.parent, str(source))
     stores = Stores.configured(catalog=target)
     found, _ = readable_snapshots(stores)
@@ -139,7 +146,10 @@ def route(pipeline, names, catalog):
     import tomlkit
     path = Path(catalog)
     doc = tomlkit.parse(path.read_text(encoding="utf-8"))
-    for name, table in doc["stores"].items():
+    stores = doc.get("stores")
+    if not isinstance(stores, dict):
+        raise ValueError(f"{path} has no [stores] table")
+    for name, table in stores.items():
         pipelines = [p for p in table.get("pipelines", []) if p != pipeline]
         if name in names:
             pipelines.append(pipeline)

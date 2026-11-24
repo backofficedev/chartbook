@@ -834,6 +834,39 @@ class TestWhatWasDeclared:
         # And nothing is said of a snapshot of a build that went wrong
         assert _snapshots(store) == [] and _ran(demo) == 1
 
+    @posix
+    def test_a_build_that_removes_the_manifest_fails(self, demo, store):
+        """A script that exits 0 and deletes chartbook.toml used to be a run that exited 0, and the missing file was unsaid."""
+        _write(demo, {
+            **DEMO,
+            "scripts": {"build": "rm chartbook.toml"},
+            "dataframes": {**DEMO["dataframes"], "forgotten": {"path": "./_data/forgotten.csv", "docs": "d"}},
+        })
+        _committed(demo)
+        result = _run()
+        assert result.exit_code == 1
+        assert result.output.splitlines() == [
+            "acme/demo: build",
+            "Error: acme/demo: its build left no chartbook.toml, so what it was to write cannot be checked. "
+            "Nothing after it was run.",
+        ]
+        assert _snapshots(store) == []
+
+    @posix
+    def test_a_build_that_breaks_the_manifest_fails(self, demo, store):
+        _write(demo, {
+            **DEMO,
+            "scripts": {"build": "printf '%s\\n' 'this is [ not toml' > chartbook.toml"},
+            "dataframes": {**DEMO["dataframes"], "forgotten": {"path": "./_data/forgotten.csv", "docs": "d"}},
+        })
+        _committed(demo)
+        result = _run()
+        assert result.exit_code == 1
+        assert "its build left chartbook.toml unreadable, so what it was to write cannot be checked" in result.output
+        assert "Nothing after it was run." in result.output
+        assert "forgotten" not in result.output
+        assert _snapshots(store) == []
+
     def test_several(self, demo, store):
         self.forgetful(demo, also={"path": "./_data/also.csv", "docs": "d"})
         result = _run()

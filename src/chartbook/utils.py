@@ -331,12 +331,11 @@ def most_recent_valid_datapoints(
     the file, so a version rendered from the store shows it without the
     data (:mod:`chartbook.index`).
     """
-    from chartbook import formats
-    from chartbook.utils import is_glob_pattern as _is_glob
+    from chartbook import formats, hashing
 
     if date_col in ("", "NA", "N/A"):
         return "N/A", "N/A"
-    if _is_glob(str(path)) or os.path.isdir(path):
+    if hashing.is_pattern(path) or os.path.isdir(path):
         return "N/A", "N/A"  # a dataset of many parts is not read whole for two dates
     if os.path.getsize(path) / (1024 * 1024) > size_threshold_mb:
         return "N/A (large file)", "N/A (large file)"

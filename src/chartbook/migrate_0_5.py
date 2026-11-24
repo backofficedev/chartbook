@@ -834,8 +834,14 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
         for key, path, place in named_by(base):
             target = target_of(base, V3_LAYOUT.pipelines, path)
             # The base has a file only where it will be there at its size, from where its record says or from where
-            # another's does: an increment keeps its own good copy otherwise
-            if will(place, target) == key[1] or source_of(key, place, target) != place:
+            # another's does: an increment keeps its own good copy otherwise. A file of that size already where
+            # it goes may be other bytes (a sync of a move made elsewhere). Its hash is read before an increment
+            # points at it; otherwise the increment keeps its own copy and the good one is not set aside.
+            if look(target)[1] == key[1]:
+                trusted = _same_bytes(root / target, key[0])
+            else:
+                trusted = will(place, target) == key[1] or source_of(key, place, target) != place
+            if trusted:
                 base_has.setdefault(key, path)
     spare.clear()  # the places of what an increment keeps for itself are `own` from here on
     # Each file a snapshot keeps in its own folder: the complete one's first, then the increments', then those of what a pin made
@@ -961,12 +967,38 @@ def _plan_pipeline(root: Path, folder: Path, found: Plan) -> tuple[set, set, lis
                 "write", target=f"{own_folder}/{INCREMENT_FILE}",
                 text=f"The rest of this snapshot's files are in {V3_LAYOUT.pipelines}/{name}/{base}\n",
             ))
-        found.steps.append(Step("write", target=f"{own_folder}/{RECORD_FILE}", text=json.dumps(document, indent=2, ensure_ascii=False) + "\n"))
+        found.steps.append(Step("write", target=f"{own_folder}/{RECORD_FILE}", text=_json(document, indent=2) + "\n"))
     if any(not increment for _, _, _, increment in documents.values()):
         found.steps.append(Step("note", target=f"{V3_LAYOUT.pipelines}/{name}/{README_FILE}", text=V3_LAYOUT.readme))
     if any(increment for _, _, _, increment in documents.values()):
         found.steps.append(Step("note", target=f"{INCREMENTS_DIR}/{name}/{README_FILE}", text=INCREMENTS_README))
     return set(wanted), set().union(*said.values()), passed, moments
+
+
+def _same_bytes(path: Path, content_hash: str) -> bool:
+    """Whether a file already where a record's file goes is the bytes the record names.
+
+    Size is not enough: a sync can put other bytes of the same length there. An increment
+    points at the file only when this is true.
+    """
+    try:
+        return hashing.hash_file(path).content_hash == content_hash
+    except OSError:
+        return False
+
+
+def _json(value, **kwargs) -> str:
+    """JSON as text that can be written as UTF-8.
+
+    A lone surrogate (JSON ``\\ud800``, which ``json.loads`` keeps) cannot be encoded as
+    UTF-8. It is escaped, and the text reads back as the same string.
+    """
+    try:
+        text = json.dumps(value, ensure_ascii=False, **kwargs)
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        text = json.dumps(value, ensure_ascii=True, **kwargs)
+    return text
 
 
 def _text(path: Path) -> Optional[str]:
@@ -1357,9 +1389,9 @@ def _write_journal(root: Path, header: dict, steps: list) -> None:
     temporary = _own_temporary(root, journal)
     temporary.parent.mkdir(parents=True, exist_ok=True)
     with open(temporary, "w", encoding="utf-8", newline="\n") as f:
-        f.write(json.dumps(header, ensure_ascii=False) + "\n")
+        f.write(_json(header) + "\n")
         for step in steps:
-            f.write(json.dumps({key: value for key, value in vars(step).items() if value not in ("", 0)}, ensure_ascii=False) + "\n")
+            f.write(_json({key: value for key, value in vars(step).items() if value not in ("", 0)}) + "\n")
         f.flush()
         os.fsync(f.fileno())
     replace_when_let(temporary, journal)

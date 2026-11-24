@@ -780,6 +780,10 @@ class Table:
         pl = _polars()
         by_file = formats._by_location(self.inside)
         wanted = self.schema()
+        if folder is None and isinstance(sources, str) and formats.is_glob_pattern(sources) and not os.path.exists(sources):
+            from chartbook import hashing
+
+            folder = hashing.split_glob(sources)[0]
         if folder is not None:
             keys = formats._partitions([str(file) for file in found], Path(folder), by_file, own=wanted) if found else {}
             return {

@@ -616,8 +616,12 @@ def _render_site(
     # trusted is rendered as a build of files from a store is
     untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
 
-    # Convert output_dir to Path (relative paths resolve against project_dir, matching `docs open`)
+    # Convert output_dir and build dirs to Path (relative paths resolve against project_dir, matching `docs open`)
     output_dir = (project_dir / Path(output_dir)).resolve()
+    docs_build_dir = (project_dir / Path(docs_build_dir)).resolve()
+    temp_docs_src_dir = (project_dir / Path(temp_docs_src_dir)).resolve()
+    if publish_dir is not None:
+        publish_dir = (project_dir / Path(publish_dir)).resolve()
 
     # Prevent deleting the current working directory
     if output_dir == Path.cwd():
@@ -1316,8 +1320,11 @@ def _check_pipeline(project_dir, within_days, policy_path):
             from chartbook.config import get_default_catalog_path
             machine_catalog = get_default_catalog_path()
             if machine_catalog is not None:
-                manifest["policy"], policy_given = read_policy(machine_catalog)
-                policy_label = f"the policy in {machine_catalog}" if policy_given else "the default policy"
+                try:
+                    manifest["policy"], policy_given = read_policy(machine_catalog)
+                    policy_label = f"the policy in {machine_catalog}" if policy_given else "the default policy"
+                except FileNotFoundError:
+                    policy_label = "the default policy"
             else:
                 policy_label = "the default policy"
     except (ValueError, FileNotFoundError, TypeError, KeyError, StoreError) as e:

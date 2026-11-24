@@ -476,10 +476,14 @@ def _differences(directory: Path, note: dict) -> tuple[list, list]:
             continue
         try:
             stat = built[name].stat()
-            same = before.get("size") == stat.st_size and (
-                before.get("time") == int(stat.st_mtime)
-                or (isinstance(before.get("hash"), str) and _hash(built[name]) == before["hash"])
-            )
+            # A file git tracks has its hash in the note. That hash is what says it is the
+            # build's: a checkout writes it again at another time with the same bytes, and a
+            # rewrite in the same second keeps the time and may keep the size. One git does
+            # not track has its size and its time, and no more.
+            if isinstance(before.get("hash"), str):
+                same = before.get("size") == stat.st_size and _hash(built[name]) == before["hash"]
+            else:
+                same = before.get("size") == stat.st_size and before.get("time") == int(stat.st_mtime)
         except OSError:
             same = False
         if not same:

@@ -236,22 +236,30 @@ class PlotlyBackend(BaseBackend):
         # Handle size mapping
         sizes = None
         if config.size and config.size in df.columns:
-            sizes = df[config.size]
+            import pandas as pd
+
+            sizes = pd.to_numeric(df[config.size], errors="coerce").astype(float)
             # Normalize to reasonable marker sizes
             span = sizes.max() - sizes.min()
-            if span == 0 or span != span:
-                sizes = sizes.map(lambda _: 15.0)
+            if pd.isna(span) or span == 0:
+                sizes = pd.Series(15.0, index=df.index)
             else:
-                sizes = (sizes - sizes.min()) / span * 30 + 5
+                sizes = ((sizes - sizes.min()) / span * 30 + 5).fillna(15.0)
 
         # Handle color by category
         if config.color_by and config.color_by in df.columns:
+            import pandas as pd
+
             categories = df[config.color_by].unique()
             palette = get_config().color_palette
             colors = [palette[i % len(palette)] for i in range(len(categories))]
 
             for cat, color in zip(categories, colors):
-                mask = df[config.color_by] == cat
+                mask = (
+                    df[config.color_by].isna()
+                    if pd.isna(cat)
+                    else (df[config.color_by] == cat).fillna(False)
+                )
                 cat_sizes = sizes[mask] if sizes is not None else None
                 fig.add_trace(
                     go.Scatter(

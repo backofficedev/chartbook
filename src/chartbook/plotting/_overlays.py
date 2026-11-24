@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -176,6 +176,20 @@ def get_nber_recessions() -> pd.DataFrame:
         raise FREDAPIError(str(e))
 
 
+def _as_naive_utc(value: Any) -> pd.Timestamp | None:
+    """Convert a datetime-like bound to a tz-naive UTC Timestamp, or None if not datetime-like."""
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, (datetime, pd.Timestamp, np.datetime64)):
+        ts = pd.Timestamp(value)
+        if ts.tzinfo is not None:
+            return ts.tz_convert("UTC").tz_localize(None)
+        return ts
+    if isinstance(value, date):
+        return pd.Timestamp(value)
+    return None
+
+
 def filter_recessions_for_range(
     recessions: pd.DataFrame,
     x_min: datetime | pd.Timestamp | None = None,
@@ -188,9 +202,15 @@ def filter_recessions_for_range(
     result = recessions.copy()
 
     if x_min is not None:
-        result = result[result["end"] >= x_min]
+        bound_min = _as_naive_utc(x_min)
+        if bound_min is None:
+            return result.iloc[0:0]
+        result = result[result["end"] >= bound_min]
     if x_max is not None:
-        result = result[result["start"] <= x_max]
+        bound_max = _as_naive_utc(x_max)
+        if bound_max is None:
+            return result.iloc[0:0]
+        result = result[result["start"] <= bound_max]
 
     return result
 
@@ -383,11 +403,42 @@ def apply_overlays_plotly(
                     )
 
 
+def _mpl_x_coord(val: Any, x_series: pd.Series, use_positional_x: bool = False) -> Any:
+    """Coerce an overlay x coordinate (e.g. date string or Timestamp) for Matplotlib."""
+    is_dt = pd.api.types.is_datetime64_any_dtype(x_series)
+    if is_dt and isinstance(val, str):
+        val = pd.to_datetime(val)
+    if use_positional_x:
+        if len(x_series) == 0:
+            return val
+        if is_dt or pd.api.types.is_numeric_dtype(x_series):
+            x_num = _x_values_to_numeric(x_series)
+            v_num = _x_values_to_numeric(pd.Series([val]))[0]
+            if np.isfinite(v_num) and np.isfinite(x_num).any():
+                order = np.argsort(x_num)
+                return float(np.interp(v_num, x_num[order], np.arange(len(x_series))[order]))
+        matches = np.where(x_series.astype(str).to_numpy() == str(val))[0]
+        if len(matches) > 0:
+            return float(matches[0])
+        return val
+    if is_dt and isinstance(val, (datetime, pd.Timestamp, np.datetime64)):
+        ts = pd.Timestamp(val)
+        tz = getattr(x_series.dt, "tz", None)
+        if tz is not None and ts.tzinfo is None:
+            return ts.tz_localize("UTC").tz_convert(tz)
+        if tz is None and ts.tzinfo is not None:
+            return ts.tz_convert("UTC").tz_localize(None)
+        return ts
+    return val
+
+
 def apply_overlays_matplotlib(
     ax: "matplotlib.axes.Axes",
     overlay: "OverlayConfig",
     df: pd.DataFrame,
     x_col: str,
+    *,
+    use_positional_x: bool = False,
 ) -> None:
     """Apply all overlays to a matplotlib axes."""
     # Capture plotted data artists before overlays (hlines/vlines) add lines
@@ -403,8 +454,8 @@ def apply_overlays_matplotlib(
 
             for _, row in filtered.iterrows():
                 ax.axvspan(
-                    row["start"],
-                    row["end"],
+                    _mpl_x_coord(row["start"], df[x_col], use_positional_x),
+                    _mpl_x_coord(row["end"], df[x_col], use_positional_x),
                     alpha=0.2,
                     color="gray",
                     zorder=0,
@@ -416,8 +467,8 @@ def apply_overlays_matplotlib(
     # Custom shaded regions
     for region in overlay.shaded_regions:
         ax.axvspan(
-            region["x0"],
-            region["x1"],
+            _mpl_x_coord(region["x0"], df[x_col], use_positional_x),
+            _mpl_x_coord(region["x1"], df[x_col], use_positional_x),
             alpha=region.get("alpha", region.get("opacity", 0.3)),
             color=region.get("color", "gray"),
             label=region.get("label"),
@@ -444,7 +495,7 @@ def apply_overlays_matplotlib(
         linestyle = linestyle_map.get(vline.get("dash", "solid"), "-")
 
         ax.axvline(
-            x=vline["x"],
+            x=_mpl_x_coord(vline["x"], df[x_col], use_positional_x),
             color=vline.get("color", "gray"),
             linestyle=linestyle,
             linewidth=vline.get("width", 1),

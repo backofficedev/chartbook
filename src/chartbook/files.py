@@ -310,11 +310,10 @@ def _inside(relative: object) -> bool:
 def listing_root(declared: Union[str, Path]) -> Path:
     """The folder an asset's files are listed from: a folder itself, a glob's fixed prefix, a file's own folder."""
     from chartbook import hashing
-    from chartbook.utils import is_glob_pattern
 
     declared = str(declared)
-    if is_glob_pattern(declared):
-        return hashing.glob_root(declared)
+    if hashing.is_pattern(declared):
+        return hashing.split_glob(declared)[0]
     if os.path.isdir(declared):
         return Path(declared)
     return Path(declared).parent
