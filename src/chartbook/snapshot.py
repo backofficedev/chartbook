@@ -3726,14 +3726,28 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
     declared = declared if isinstance(declared, str) and declared else None
     reading = reading or {}
     table = rowhash.Table(path, reading.get("format"), reading.get("read_options"))
+
+    def folder_changed() -> None:
+        """The files the rows would be read from are not the ones that were put.
+
+        A read that fails is nothing to say of a file that was never a table.
+        The same failure after those files have gone, or been replaced, is
+        this snapshot's: the rows of the bytes it holds were not read, and
+        the report says why.
+        """
+        if put is not None and not _still_as_put(put):
+            raise rowhash.NotNow("its files in the pipeline's folder changed while the snapshot was made")
+
     try:
         dated = rowhash.dated_by(table, declared)
     except rowhash.NotRead:
+        folder_changed()
         return {}
     except rowhash.NotHashed:
         dated = None  # a file not read at all, its footer too large: said below, with why
     except (OSError, MemoryError, RuntimeError) as error:
         if rowhash._this_machines(error) is None:
+            folder_changed()
             return {}
         # A file that may not be opened now, no memory, no scratch dir: this machine's, this time
         raise rowhash.NotNow(f"{type(error).__name__}: {rowhash._first_line(error)}") from None
@@ -3745,8 +3759,7 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
         if ("rows" in said or "not_hashed" in said) and said.get("date_col") == dated:
             return said
     said = rowhash.fields_of(table, declared)
-    if put is not None and not _still_as_put(put):
-        raise rowhash.NotNow("its files in the pipeline's folder changed while the snapshot was made")
+    folder_changed()
     return said
 
 

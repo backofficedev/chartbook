@@ -275,17 +275,47 @@ def pipeline_owned_paths(pipeline_id: str, pipeline_manifest: dict) -> list[Path
     return owned
 
 
+def _has_path(entry: object) -> bool:
+    """Whether an entry declares a file a build copies beside its page."""
+    return isinstance(entry, dict) and isinstance(entry.get("path"), str) and bool(entry["path"].strip())
+
+
 def _pages_exist(build_dir: Path, pipeline_id: str, pipeline_manifest: dict) -> bool:
-    """Check the pages a pipeline should already have are really there."""
+    """Check the pages a pipeline should already have are really there.
+
+    The markdown pages, and the copies an incremental build does not write
+    again for a pipeline it keeps: each chart's HTML, which the page embeds
+    and links, and each notebook. A note is copied on every build, so a
+    missing one comes back without regenerating the pipeline. An entry with
+    no path has no such file. With nothing declared, there is nothing to be
+    missing.
+    """
     slug = _slug(pipeline_id)
     expected = [
         build_dir / "cb" / "dataframes" / slug / f"{dataframe_id}.md"
         for dataframe_id in pipeline_manifest.get("dataframes") or {}
     ]
+    charts = pipeline_manifest.get("charts") or {}
+    notebooks = pipeline_manifest.get("notebooks") or {}
+    if not isinstance(charts, dict):
+        charts = {}
+    if not isinstance(notebooks, dict):
+        notebooks = {}
     expected += [
         build_dir / "cb" / "charts" / f"{slug}.{chart_id}.md"
-        for chart_id in pipeline_manifest.get("charts") or {}
+        for chart_id in charts
     ]
+    for chart_id, entry in charts.items():
+        if not _has_path(entry):
+            continue
+        expected += [
+            build_dir / "cb" / "download_chart" / slug / f"{chart_id}.html",
+            build_dir / "_static" / slug / f"{chart_id}.html",
+        ]
+    for entry in notebooks.values():
+        if not _has_path(entry):
+            continue
+        expected.append(build_dir / "cb" / "notebooks" / slug / Path(entry["path"]).name)
     expected += [
         build_dir / "cb" / "models" / slug / f"{model_id}.md"
         for model_id in pipeline_manifest.get("models") or {}

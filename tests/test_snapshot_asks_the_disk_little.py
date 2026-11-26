@@ -1723,6 +1723,64 @@ class TestTheRecordsOwnRows:
         assert again.made and again.not_hashed_now == [] and said["content_hash"] == record["content_hash"]
         assert (said.get("row_count"), said.get("as_of")) == (15, "2019-01-05")
 
+    def test_one_removed_as_its_rows_are_hashed_has_none_said_this_time(self, one_file, store, monkeypatch):
+        """A file that is gone, or no longer a table, before its rows are read is the same miss.
+
+        The read fails, so it used to return nothing and say nothing. The
+        snapshot still holds the file that was put, and the command says why
+        the record has no rows.
+        """
+        from chartbook import snapshot
+
+        file = one_file / "_data" / "daily.parquet"
+        real, done = snapshot._rows_of, []
+
+        def a_build_takes_it(name, *arguments, **options):
+            if name == "daily" and not done:
+                file.unlink()
+                done.append(True)
+            return real(name, *arguments, **options)
+
+        monkeypatch.setattr(snapshot, "_rows_of", a_build_takes_it)
+        first = snapshot.make(one_file, store=store, made_at=LONG_AGO.format(0))
+        assert done and first.made
+        record = first.snapshot.assets["daily"]
+        held = pl.read_parquet(FolderStore(store.root).files(record["content_hash"], "acme/daily").one.location)
+        assert held.height == 15, "the snapshot holds the file that was put"
+        assert not any(key in record for key in rowhash.FIELDS)
+        assert first.not_hashed_now == [("acme/daily:daily", "its files in the pipeline's folder changed while the snapshot was made")]
+
+    def test_one_replaced_by_what_is_no_table_has_none_said_this_time(self, one_file, store, monkeypatch):
+        from chartbook import snapshot
+
+        file = one_file / "_data" / "daily.parquet"
+        real, done = snapshot._rows_of, []
+
+        def a_build_replaces_it(name, *arguments, **options):
+            if name == "daily" and not done:
+                file.write_text("not a table\n", encoding="utf-8")
+                done.append(True)
+            return real(name, *arguments, **options)
+
+        monkeypatch.setattr(snapshot, "_rows_of", a_build_replaces_it)
+        first = snapshot.make(one_file, store=store, made_at=LONG_AGO.format(0))
+        assert done and first.made
+        record = first.snapshot.assets["daily"]
+        assert not any(key in record for key in rowhash.FIELDS)
+        assert first.not_hashed_now == [("acme/daily:daily", "its files in the pipeline's folder changed while the snapshot was made")]
+
+    def test_a_file_that_is_no_table_and_did_not_change_says_nothing(self, tmp_path, store):
+        """A dataframe that was never a table still has nothing said of its rows, and no warning."""
+        from chartbook import snapshot
+
+        manifest = dict(MANIFEST, dataframes={"notes": {"path": "./_data/notes.txt", "docs": "Prose."}})
+        project = _pipeline(tmp_path.resolve() / "project", 1, manifest)
+        (project / "_data" / "notes.txt").write_text("not a table\n", encoding="utf-8")
+        made = snapshot.make(project, store=store, made_at=LONG_AGO.format(0))
+        record = made.snapshot.assets["notes"]
+        assert made.made and made.not_hashed_now == []
+        assert record.get("content_hash") and not any(key in record for key in rowhash.FIELDS)
+
     def test_the_command_says_why(self, one_file, store, monkeypatch):
         from chartbook import snapshot
 

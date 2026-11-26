@@ -358,6 +358,63 @@ class TestPlanBuild:
         assert "build options changed" in plan.reason
 
 
+    def test_a_missing_chart_file_is_rebuilt(self, pipeline_project, tmp_path):
+        """Markdown pages are not enough. A reused pipeline is not given its chart HTML again.
+
+        The page embeds one copy and links the other. With either gone, the
+        pipeline is regenerated. With both there, it is kept.
+        """
+        build_dir = tmp_path / "_docs"
+        manifest = load_manifest(pipeline_project)
+        theme = get_docs_src_path("pipeline")
+        first = plan_build(manifest, build_dir, theme, OPTIONS)
+        assert first.fresh and first.regenerate == ["test_pipeline"]
+        build_dir.mkdir(parents=True, exist_ok=True)
+        write_state(build_dir, first)
+        slug = "test_pipeline"
+        for relative in (
+            f"cb/dataframes/{slug}/dataframe_0.md",
+            f"cb/charts/{slug}.chart_0_0.md",
+        ):
+            page = build_dir / relative
+            page.parent.mkdir(parents=True, exist_ok=True)
+            page.write_text("page", encoding="utf-8", newline="\n")
+        missing = plan_build(manifest, build_dir, theme, OPTIONS)
+        assert missing.regenerate == ["test_pipeline"] and missing.reuse == []
+
+        for relative in (
+            f"cb/download_chart/{slug}/chart_0_0.html",
+            f"_static/{slug}/chart_0_0.html",
+        ):
+            page = build_dir / relative
+            page.parent.mkdir(parents=True, exist_ok=True)
+            page.write_text("chart", encoding="utf-8", newline="\n")
+        kept = plan_build(manifest, build_dir, theme, OPTIONS)
+        assert kept.reuse == ["test_pipeline"] and kept.regenerate == []
+        (build_dir / "_static" / slug / "chart_0_0.html").unlink()
+        assert plan_build(manifest, build_dir, theme, OPTIONS).regenerate == ["test_pipeline"]
+
+    def test_a_missing_notebook_is_not_treated_as_present(self, tmp_path):
+        """A pipeline whose only output is a notebook used to count as present: there was no page to look for."""
+        build_dir = tmp_path / "_docs"
+        manifest = {"notebooks": {"walk": {"path": "./_output/walk through.ipynb"}}}
+        assert incremental._pages_exist(build_dir, "acme/rates", manifest) is False
+        notebook = build_dir / "cb" / "notebooks" / "acme--rates" / "walk through.ipynb"
+        notebook.parent.mkdir(parents=True)
+        notebook.write_text("{}", encoding="utf-8", newline="\n")
+        assert incremental._pages_exist(build_dir, "acme/rates", manifest) is True
+        notebook.unlink()
+        assert incremental._pages_exist(build_dir, "acme/rates", manifest) is False
+        # No path: a notebook has no file to be missing. A chart still has its
+        # markdown page, and no HTML copies.
+        assert incremental._pages_exist(build_dir, "acme/rates", {"notebooks": {"remote": {}}}) is True
+        linked = {"charts": {"linked": {"docs": "x"}}}
+        assert incremental._pages_exist(build_dir, "acme/rates", linked) is False
+        page = build_dir / "cb" / "charts" / "acme--rates.linked.md"
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text("page", encoding="utf-8", newline="\n")
+        assert incremental._pages_exist(build_dir, "acme/rates", linked) is True
+
     def test_unreadable_or_outdated_state_is_ignored(self, tmp_path):
         assert read_state(tmp_path) is None
         (tmp_path / STATE_FILE).write_text("not json", encoding="utf-8", newline="\n")
