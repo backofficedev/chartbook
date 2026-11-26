@@ -401,6 +401,13 @@ def get(
     """
     base_dir = _defaults.get("BASE_DIR", Path.cwd())
 
+    def _cast_value(raw_value):
+        if cast is undefined:
+            return raw_value
+        if cast is bool:
+            return raw_value if isinstance(raw_value, bool) else _decouple_config._cast_boolean(raw_value)
+        return cast(raw_value)
+
     def _finalize(raw_value):
         if (
             "DIR" in var_name
@@ -409,9 +416,7 @@ def get(
             and isinstance(raw_value, (str, os.PathLike))
         ):
             raw_value = _if_relative_make_abs(Path(raw_value), base_dir)
-        if cast is not undefined:
-            raw_value = cast(raw_value)
-        return raw_value
+        return _cast_value(raw_value)
 
     # 1. Command line arguments (highest priority)
     if var_name in _cli_vars and _cli_vars[var_name] is not None:
@@ -429,9 +434,7 @@ def get(
     if var_name in _defaults:
         default_value = _defaults[var_name]
         # If default_value is directly usable (not a dict with metadata)
-        if cast is not undefined:
-            default_value = cast(default_value)
-        return default_value
+        return _cast_value(default_value)
 
     # 4. Use the default value provided by the caller. Error if not found
     raw_default = _decouple_config(var_name, default=default)

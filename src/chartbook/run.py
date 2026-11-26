@@ -79,7 +79,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME, UNDECLARED_ENV_VAR
-from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
+from chartbook.store import ReadOnlyStoreError, Store, StoreError, StoreNotAvailableError, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -943,6 +943,8 @@ def _nothing_to_pin(directory: Path, key: str, entry: dict, there: Path, store: 
         return True  # not in git: refused, saying so, before anything runs
     try:
         newest, _ = snapshots.newest_for(there, store if store is not None else default_store())
+    except StoreNotAvailableError:
+        raise
     except (snapshots.SnapshotError, StoreError, OSError, ValueError):
         return False  # a record that cannot be read now: the pin says so, and nothing is built for it
     return newest is None
@@ -1128,7 +1130,7 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
             }
         if "\n" not in script.strip():
             return subprocess.run(
-                script, shell=True, cwd=directory, env=environment
+                script.strip(), shell=True, cwd=directory, env=environment
             ).returncode
         # cmd takes one line; several go in a file, which cmd reads in the
         # console's code page (the OEM one), with \r\n line endings
@@ -1500,6 +1502,8 @@ def run(
                 try:
                     # A store that takes no snapshot (laid out as ChartBook 0.5 laid one out, say) says so now too
                     snapshots.check_store_takes_one(step.id, store)
+                except StoreNotAvailableError:
+                    raise
                 except StoreError as error:
                     raise RunError(f"{error} Nothing was built.") from None
                 except OSError:
@@ -1535,6 +1539,8 @@ def run(
                     continue  # it pins nothing in this run
                 try:
                     after = lock.would_pin(step.directory, store, git_cache, built_here=set(members))
+                except StoreNotAvailableError:
+                    raise
                 except (lock.LockError, StoreError, ValueError, OSError) as error:
                     # What its pin would say in its turn, said before anything is built
                     raise RunError(f"{step.id}: {error}\nNothing was pinned or built.") from None
@@ -1617,6 +1623,8 @@ def run(
                 # Another run may have made its snapshot while this one waited: then it is not built again
                 try:
                     newest, _ = snapshots.newest_for(step.directory, store if store is not None else default_store())
+                except StoreNotAvailableError:
+                    raise
                 except (snapshots.SnapshotError, StoreError, OSError, ValueError):
                     echo(f"{step.id}: its snapshots cannot be read now; not built")
                     report.skipped.append((step, "its snapshots cannot be read now"))

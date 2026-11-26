@@ -324,8 +324,11 @@ def _ends_in(sql: str) -> tuple:
             if escapes and c == "\\":
                 i += 1  # the character it escapes, whatever it is
             elif sql.startswith(closer, i):
-                state = "code"  # a doubled quote closes and reopens, which comes to the same
-                i += len(closer) - 1
+                if len(closer) == 1 and sql.startswith(closer * 2, i):
+                    i += 1  # a doubled quote stays in the literal and keeps its escape mode
+                else:
+                    state = "code"
+                    i += len(closer) - 1
         elif state == "line_comment":
             if c == "\n":
                 state, began = "code", None
@@ -554,6 +557,9 @@ class DuckDBBackend(Backend):
             return subselect(location.sql)
         return ParquetBackend.ref(location)
 
+    def _owns_connection(self) -> bool:
+        return self._connection is None and duckdb_path(self.url, Path.cwd()) != ":memory:"
+
     def sql(self, query: str, arrow: Optional[dict] = None):
         """Run SQL in this engine and return a Polars LazyFrame.
 
@@ -572,18 +578,24 @@ class DuckDBBackend(Backend):
         """
         import duckdb
 
+        connection = None
+        owned = self._owns_connection()
         try:
             connection = self.connect()
             for name, table in (arrow or {}).items():
                 connection.register(name, table)
             return connection.sql(query).pl(lazy=True)
         except duckdb.Error as error:
+            if owned and connection is not None:
+                connection.close()
             raise BackendError(str(error)) from None
 
     def describe(self, location: "Location") -> tuple[list[dict], int]:
         """A dataframe's columns, with DuckDB's type names, and its row count."""
         import duckdb
 
+        connection = None
+        owned = self._owns_connection()
         try:
             connection = self.connect()
             # Fetched whole: a relation has no fetchone from DuckDB 2.0, and a result read only in part keeps the connection busy
@@ -591,6 +603,9 @@ class DuckDBBackend(Backend):
             ((rows,),) = connection.sql(f"select count(*) from {self.ref(location)}").fetchall()
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
+        finally:
+            if owned and connection is not None:
+                connection.close()
         return [{"name": row[0], "dtype": row[1]} for row in described], int(rows)
 
     def span(self, location: "Location", column: str) -> tuple:
@@ -602,13 +617,19 @@ class DuckDBBackend(Backend):
         import duckdb
 
         name = '"' + column.replace('"', '""') + '"'
+        connection = None
+        owned = self._owns_connection()
         try:
-            return self.connect().sql(
+            connection = self.connect()
+            return connection.sql(
                 f"select min(try_cast({name} as timestamp)), max(try_cast({name} as timestamp)) "
                 f"from {self.ref(location)}"
             ).fetchall()[0]
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
+        finally:
+            if owned and connection is not None:
+                connection.close()
 
 
 def backend_for(location: "Location"):

@@ -322,7 +322,9 @@ def versions_in(
             sorted(
                 label
                 for label, points_at in (aliases or {}).items()
-                if digits.startswith(str(points_at).split(":", 1)[-1])
+                if isinstance(points_at, str)
+                and (prefix := points_at.strip().split(":", 1)[-1])
+                and digits.startswith(prefix)
             )
         )
         record = taken.assets[f"model/{model_id}"]

@@ -773,7 +773,7 @@ def stored_modified_at(was: object) -> Optional[str]:
 
 
 #: How the last dates a page shows are written: a date and time, or N/A.
-_LAST_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}:\d{2}(\.\d+)?)?|N/A( \(large file\))?)$")
+_LAST_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?|N/A( \(large file\))?)$")
 
 
 def _well_formed(key: str, value: object) -> bool:

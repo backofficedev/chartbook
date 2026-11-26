@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 from chartbook.plotting._config import get_config
+from chartbook.plotting._exceptions import DataValidationError
 from chartbook.plotting._output import create_dual_chart_result
 from chartbook.plotting._types import ChartResult, DualAxisConfig, OverlayConfig
 from chartbook.plotting._validation import (
@@ -28,7 +29,10 @@ def _normalize_y(y: str | Sequence[str]) -> list[str]:
     """
     if isinstance(y, str):
         return [y]
-    return list(y)
+    cols = list(y)
+    if not cols:
+        raise DataValidationError(column=None, message="At least one y column must be specified")
+    return cols
 
 
 def dual(

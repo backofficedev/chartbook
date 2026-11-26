@@ -85,7 +85,10 @@ class Stores:
             if isinstance(url, dict):
                 if set(url) - {"unix", "windows"} or not all(isinstance(v, str) and v.strip() for v in url.values()):
                     raise ValueError(f"[stores.{name}] platform URLs must be nonempty unix/windows strings")
-                url = str(resolve_platform_path(url))
+                platform_key = "windows" if os.name == "nt" else "unix"
+                if platform_key not in url:
+                    raise ValueError(f"[stores.{name}] has no URL for this platform ({platform_key})")
+                url = url[platform_key]
             if not isinstance(url, str) or not url.strip():
                 raise ValueError(f"[stores.{name}] needs a nonempty url")
             if store_kind(url) == "folder":

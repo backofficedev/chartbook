@@ -1034,6 +1034,8 @@ class _Finder:
         try:
             store = self.store if self.store is not None else default_store()
             self.shared["found"] = snapshot.readable_snapshots(store)[0]
+        except StoreNotAvailableError:
+            raise
         except (StoreError, OSError, ValueError):
             self.shared["found"] = []
         #: The pins this reading was found not to have: not read again for

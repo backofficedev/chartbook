@@ -1291,15 +1291,17 @@ def unsynced_part(
     present = [file for file in held if not file.is_symlink()]
     if files and len(files) == 1 and not every:
         ((relative, expected),) = files.items()
-        own = on_disk(path, list(PurePosixPath(relative).parts))
-        if not own.is_file() and not own.is_symlink():
-            same = [file for file in present if file.parent == path and size_of(file) == expected]
-            # The same bytes under other names, and this one on its way; or a
-            # directory pinned before records listed its files, with one file
-            # of the directory's size. Its hash tells which, in this rare case
-            if content_hash and present and len(same) == len(present) and _hash_once(same[0]) == content_hash:
-                return f"does not have {relative} yet", True
-            files = None
+        parts = plain_parts(relative)
+        if parts is not None:
+            own = on_disk(path, parts)
+            if not own.is_file() and not own.is_symlink():
+                same = [file for file in present if file.parent == path and size_of(file) == expected]
+                # The same bytes under other names, and this one on its way; or a
+                # directory pinned before records listed its files, with one file
+                # of the directory's size. Its hash tells which, in this rare case
+                if content_hash and present and len(same) == len(present) and _hash_once(same[0]) == content_hash:
+                    return f"does not have {relative} yet", True
+                files = None
     if files:
         listed = set()
         for relative, expected in sorted(files.items()):

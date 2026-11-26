@@ -50,7 +50,7 @@ from typing import Callable, Iterable, Optional, Union
 
 from chartbook import lock, snapshot
 from chartbook.gitcache import GitCache, GitError, default_git_cache
-from chartbook.store import Store, StoreError
+from chartbook.store import Store, StoreError, StoreNotAvailableError
 
 #: How far up the walk goes before it stops reading (as the walk for cycles: :data:`chartbook.lineage.DEEPEST`).
 DEEPEST = 64
@@ -934,6 +934,8 @@ def after_pin(
         return None
     try:
         listing = find(project_dir, store, git_cache, only=keys, echo=echo)
+    except StoreNotAvailableError:
+        raise
     except (snapshot.SnapshotError, StoreError, OSError, ValueError):
         return None  # what the pin said stands
     return listing if listing.wanted else None

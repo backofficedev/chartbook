@@ -79,6 +79,19 @@ def resolve(asset, folder):
                 except (ValueError, OSError, TypeError, AttributeError):
                     pass
             target = links.get(actual)
+        if target is None:
+            try:
+                from chartbook.lock import read_lock
+                locked = read_lock(folder)
+            except Exception:  # noqa: BLE001 - unreadable lockfile identifies no link
+                locked = None
+            for locked_entry in (locked.dependencies if locked else []):
+                if isinstance(locked_entry, dict) and locked_entry.get("id") == asset.pipeline_id:
+                    pinned_from = locked_entry.get("pinned_from")
+                    if isinstance(pinned_from, str) and pinned_from:
+                        actual = pinned_from
+                        target = links.get(actual)
+                    break
     if target is None:
         return None
     from chartbook.resolve import _own_id, _resolve_local

@@ -1630,6 +1630,8 @@ def arrow_dataset(location):
         schema = ds.dataset(found, format="ipc").schema
         plain = pa.schema([column.with_type(_plain(column.type)) for column in schema], metadata=schema.metadata)
         return ds.dataset(found, format="ipc", schema=plain)
+    if by_file and root is not None and _keys_above(found, Path(root), by_file):
+        return _arrow_kept_apart(location, [(file, by_file[file]) for file in found])
     # The keys of polars' types, as Arrow names them, text plain. A dataset
     # gives a key's value where a file has a column of its name too
     loaded = scan_location(location).collect_schema()

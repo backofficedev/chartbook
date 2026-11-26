@@ -1879,7 +1879,7 @@ def index_columns_of(table: "Table") -> list:
         if formats.reading(table.path, table.format, table.read_options).format != "parquet":
             return []
         return index_columns(table.schema().names())
-    except (NotHashed, ValueError, OSError):
+    except (NotHashed, ValueError, OSError, RuntimeError):
         return []  # no table, or one not read at all: a footer too large, a file that may not be opened
 
 

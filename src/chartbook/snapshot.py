@@ -782,7 +782,7 @@ def materialize_in_source(
     import duckdb
     import polars as pl
 
-    from chartbook.backends import MEMORY_URL, DuckDBBackend, duckdb_path
+    from chartbook.backends import MEMORY_URL, DuckDBBackend, duckdb_path, subselect
     from chartbook.manifest import validate_sources
     from chartbook.resolve import QueryLocation, TableLocation
 
@@ -850,7 +850,7 @@ def materialize_in_source(
                     # An unordered query's rows come out in whatever order the
                     # engine found them, and the file's hash must not depend on
                     # that: sorted on every column, the same rows give the same bytes
-                    typed = QueryLocation(entry["source"], "duckdb", url, f"select * from ({entry['query']}) as q order by all")
+                    typed = QueryLocation(entry["source"], "duckdb", url, f"select * from {subselect(entry['query'])} as q order by all")
                 # A table streams; a query the engine must sort is sorted there first
                 backend.scan(typed).sink_parquet(out)
             except (Exception, pl.exceptions.PanicException) as error:  # noqa: BLE001
@@ -3732,8 +3732,10 @@ def _rows_of(name: str, record: dict, path: Path, entry, reading: Optional[dict]
         return {}
     except rowhash.NotHashed:
         dated = None  # a file not read at all, its footer too large: said below, with why
-    except (OSError, MemoryError) as error:
-        # A file that may not be opened now, no memory: this machine's, this time
+    except (OSError, MemoryError, RuntimeError) as error:
+        if rowhash._this_machines(error) is None:
+            return {}
+        # A file that may not be opened now, no memory, no scratch dir: this machine's, this time
         raise rowhash.NotNow(f"{type(error).__name__}: {rowhash._first_line(error)}") from None
     for taken in reversed(earlier):
         before = taken.assets.get(name) or {}

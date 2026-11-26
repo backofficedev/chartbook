@@ -1063,7 +1063,8 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
         entry = dependencies.get(first.key) or {}
         if len(found.edges) == 1 and not found.way_in:
             there = Path(entry["_resolved_path"]) if entry.get("_resolved_path") else None
-            if entry.get("_store") or (there is not None and there.exists() and there.samefile(pipeline_dir)):
+            own_ids = (pipeline_id, get_pipeline_manifest(manifest, pipeline_id)["project"].get("id"))
+            if entry.get("_store") in own_ids or (there is not None and there.exists() and there.samefile(pipeline_dir)):
                 continue  # its own folder or its own ID: check_dependencies says so
         if found.way_in:
             lead = (
@@ -1678,6 +1679,7 @@ def run_checks(
 
 
 def check_links(manifest, base_dir):
+    from chartbook.identity import _git_environment
     from chartbook.links import NAME, read
     import subprocess
     if manifest["project"]["type"] != "pipeline":
@@ -1687,10 +1689,15 @@ def check_links(manifest, base_dir):
         return []
     try:
         linked = read(base_dir, active=False)
-    except ValueError as error:
+    except (OSError, ValueError) as error:
         return [Problem(path, "links", "", str(error))]
     try:
-        tracked = subprocess.run(["git", "ls-files", "--error-unmatch", "--", NAME], cwd=base_dir, capture_output=True).returncode == 0
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", NAME],
+            cwd=base_dir,
+            capture_output=True,
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
+        ).returncode == 0
     except OSError:
         tracked = False
     if tracked:

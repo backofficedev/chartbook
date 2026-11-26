@@ -141,7 +141,7 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 
 | File | Size |
 |------|------|
-{% for file in model_files %}| `{{file.path}}` | {{file.size}} |
+{% for file in model_files %}| {{file.path | literal}} | {{file.size}} |
 {% endfor %}
 {% endif %}
 
@@ -619,9 +619,8 @@ class SphinxWriter:
         # UTC is dated tomorrow in UTC. A time still to come (a skewed clock,
         # copied times, a commit dated ahead) is taken as now, for the same reason
         chart_updated = _as_utc(location.get("modified_at") or pipeline.get("code_changed_at"))
-        if chart_updated is not None:
-            chart_updated = min(chart_updated, datetime.now(timezone.utc))
-        chart_date = chart_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S") if chart_updated is not None else None
+        chart_updated = min(chart_updated or datetime.now(timezone.utc), datetime.now(timezone.utc))
+        chart_date = chart_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")
         if dataframe is not None:
             dataframe_manifest = self._dataframe_manifest(dataframe, base_dir)
             data_updated = (dataframe.get("location") or {}).get("modified_at")
@@ -1922,7 +1921,14 @@ def freshness_fact(label: str, moment: Optional[datetime]) -> Optional[dict]:
 
 def yaml_escape(value) -> str:
     """Escape a value for a YAML double-quoted scalar (the front matter of a chart page)."""
-    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+        .replace("\t", "\\t")
+    )
 
 
 def check_front_matter(page: Path, pipeline_id: str, chart_id: str) -> None:
@@ -1931,13 +1937,11 @@ def check_front_matter(page: Path, pipeline_id: str, chart_id: str) -> None:
     :raises SystemExit: Through :class:`ChartBookError`, with the field to look at.
     """
     content = Path(page).read_text(encoding="utf-8")
-    if not content.startswith("---"):
-        return
-    parts = content.split("---", 2)
-    if len(parts) < 3:
+    match = re.match(r"^---\r?\n(.*?)\r?\n---(?:\r?\n|$)", content, re.DOTALL)
+    if match is None:
         return
     try:
-        yaml.safe_load(parts[1])
+        yaml.safe_load(match.group(1))
     except yaml.YAMLError as error:
         ChartBookError(
             message="Generated chart has malformed YAML frontmatter",

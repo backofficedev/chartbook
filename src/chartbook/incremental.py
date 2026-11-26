@@ -169,6 +169,21 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
                     files.update(_walk_files(declared_path))
                 else:
                     files.add(declared_path)
+
+    from chartbook.backends import duckdb_path
+
+    for source in (pipeline_manifest.get("sources") or {}).values():
+        if not isinstance(source, dict) or source.get("backend") != "duckdb":
+            continue
+        url = source.get("url")
+        if not isinstance(url, str) or not url.strip():
+            continue
+        try:
+            resolved = duckdb_path(url, base_dir)
+        except ValueError:
+            continue
+        if resolved != ":memory:":
+            files.add(Path(resolved))
     return sorted(files)
 
 

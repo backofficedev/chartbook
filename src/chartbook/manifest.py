@@ -1582,7 +1582,7 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
         )
 
     if not project["name"]:
-        project["name"] = Path(base_dir).name
+        project["name"] = Path(base_dir).resolve().name
     if not project["copyright"]:
         project["copyright"] = str(datetime.now().year)
     if not project["maintainer"] and project["contributors"]:
@@ -1684,9 +1684,9 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
         for key in _PROJECT_PATH_KEYS:
             if key in project:
                 named.append((f"[project] {key}", project[key]))
-    if not isinstance(project, dict) or "readme" not in project:
+    if not isinstance(project, dict) or not (isinstance(project.get("readme"), str) and project["readme"].strip()):
         named.append(("[project] readme", "./README.md"))
-    if not isinstance(project, dict) or "site_dir" not in project:
+    if not isinstance(project, dict) or not (isinstance(project.get("site_dir"), str) and project["site_dir"].strip()):
         named.append(("[project] site_dir", "./docs_src/site"))
     for table in ASSET_TABLES:
         entries = raw_manifest.get(table)
@@ -2489,9 +2489,12 @@ def catalog_member_dirs(base_dir) -> dict:
     """
     base_dir = Path(base_dir)
     raw_manifest = _read_manifest_file(base_dir)
-    source = str(base_dir / "chartbook.toml")
+    is_store_catalog = (base_dir / "catalog.toml").is_file()
+    source = str(base_dir / ("catalog.toml" if is_store_catalog else "chartbook.toml"))
     if resolve_project_type(raw_manifest, source=source) != "catalog":
         raise ValueError(f"{source} is a pipeline's manifest, not a catalog's: it has no [pipelines].")
+    if is_store_catalog:
+        return {}
     found = {}
     for pipeline_id, entry in _catalog_entries(raw_manifest, base_dir, source).items():
         if entry.get("path") is None:
