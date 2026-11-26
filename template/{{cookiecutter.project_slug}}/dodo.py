@@ -56,7 +56,7 @@ def mv(from_path, to_path):
     if OS_TYPE == "nix":
         command = f'mv "{from_path}" "{to_path}"'
     else:
-        command = f'move "{from_path}" "{to_path}"'
+        command = f'move /Y "{from_path}" "{to_path}"'
     return command
 {%- endif %}
 
@@ -290,6 +290,8 @@ def task_chart_repo_rates():
         "./src/settings.py",
         "./src/pull_fred.py",
         "./src/chart_relative_repo_rates.py",
+        DATA_DIR / "fred.parquet",
+        DATA_DIR / "ofr_public_repo_data.parquet",
     ]
     targets = [
         DATA_DIR / "repo_public.parquet",

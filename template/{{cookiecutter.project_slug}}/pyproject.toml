@@ -1,9 +1,9 @@
 [project]
 name = "{{ cookiecutter.project_slug }}"
 version = "0.1.0"
-description = "{{ cookiecutter.project_description }}"
+description = {{ cookiecutter.project_description | tojson }}
 authors = [
-    { name = "{{ cookiecutter.author_name }}", email = "{{ cookiecutter.author_email }}" }
+    { name = {{ cookiecutter.author_name | tojson }}, email = {{ cookiecutter.author_email | tojson }} }
 ]
 requires-python = ">={{ cookiecutter.python_version }}"
 dependencies = [

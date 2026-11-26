@@ -1,8 +1,8 @@
 [project]
 name = "{{ cookiecutter.project_slug }}"
 version = "0.1.0"
-description = "{{ cookiecutter.project_description }}"
-authors = ["{{ cookiecutter.author_name }} <{{ cookiecutter.author_email }}>"]
+description = {{ cookiecutter.project_description | tojson }}
+authors = [{{ (cookiecutter.author_name ~ " <" ~ cookiecutter.author_email ~ ">") | tojson }}]
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
 

@@ -1725,11 +1725,13 @@ def _newest_stored(manifest):
         return None, {}
     from chartbook import snapshot
     from chartbook.hubs import selected_snapshots
-    from chartbook.store import StoreError, default_store
+    from chartbook.store import StoreError, StoreNotAvailableError, default_store
 
     try:
         store = manifest.get("stores") or default_store()
         found, _ = snapshot.readable_snapshots(store)
+    except StoreNotAvailableError:
+        raise
     except (StoreError, OSError, ValueError):
         return None, {pipeline_id: None for pipeline_id in pipeline_ids}
     newest = {}

@@ -1,8 +1,8 @@
 [project]
-name = "{{ cookiecutter.project_name }}"
-description = "{{ cookiecutter.project_description }}"
-maintainer = "{{ cookiecutter.author_name }}"
-contributors = ["{{ cookiecutter.author_name }}"]
+name = {{ cookiecutter.project_name | tojson }}
+description = {{ cookiecutter.project_description | tojson }}
+maintainer = {{ cookiecutter.author_name | tojson }}
+contributors = [{{ cookiecutter.author_name | tojson }}]
 os_compatibility = ["Windows", "Linux", "macOS"]
 # The ChartBook this project needs: an older one stops, and says how to upgrade
 requires_chartbook = ">={{ cookiecutter._chartbook_version }}"

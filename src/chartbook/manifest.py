@@ -2522,6 +2522,11 @@ def _load_catalog_manifest(raw_manifest):
     base_dir = manifest["base_dir"]
     source = str(Path(base_dir) / "catalog.toml")
 
+    from chartbook.config import untrusted_source
+
+    if untrusted_source():
+        _refuse_paths_outside(raw_manifest, Path(base_dir))
+
     manifest["project"] = _resolve_project(raw_manifest, base_dir, "catalog")
     manifest["project"]["_resolved_site_dir"] = None
     manifest["policy"] = _resolve_policy(raw_manifest, source)

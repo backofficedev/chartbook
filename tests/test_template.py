@@ -594,7 +594,7 @@ def test_dodo_quotes_every_path_it_hands_a_shell(template_dir, temp_dir):
     for quoted in (
         '--inplace "{notebook_path}"',
         '--output-dir="{output_dir}" "{notebook_path}"',
-        'move "{from_path}" "{to_path}"',
+        'move /Y "{from_path}" "{to_path}"',
         'mv "{from_path}" "{to_path}"',
         '--output "{notebook_path}" "{pyfile_path}"',
     ):
