@@ -57,7 +57,7 @@ from pathlib import Path
 from platform import system
 from typing import TYPE_CHECKING, Sequence
 
-from decouple import Config, RepositoryEnv, undefined
+from decouple import Config, RepositoryEnv, strtobool, undefined
 from decouple import config as _config_decouple
 
 from chartbook.errors import ProjectRootNotFoundError
@@ -363,6 +363,21 @@ def _build_defaults() -> dict[str, Any]:
 _defaults = _build_defaults()
 
 
+def _cast_bool(value: Any) -> bool:
+    """Cast the way python-decouple casts ``bool``.
+
+    ``decouple.config`` is an ``AutoConfig``. That object has no
+    ``_cast_boolean``; only a ``Config`` built from a ``.env`` file does.
+    ``false``, ``no``, ``off``, and ``0`` are false. An empty string is false.
+    """
+    if isinstance(value, bool):
+        return value
+    text = str(value)
+    if text == "":
+        return False
+    return bool(strtobool(text))
+
+
 def get(
     var_name: str,
     default: Any = undefined,
@@ -405,7 +420,7 @@ def get(
         if cast is undefined:
             return raw_value
         if cast is bool:
-            return raw_value if isinstance(raw_value, bool) else _decouple_config._cast_boolean(raw_value)
+            return _cast_bool(raw_value)
         return cast(raw_value)
 
     def _finalize(raw_value):
