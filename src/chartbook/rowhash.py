@@ -950,9 +950,13 @@ def _added_by_the_reader(one, file, wanted: list):
     pl = _polars()
     names = one.collect_schema().names()
     opened = pq.ParquetFile(str(file))
-    if not opened.metadata.num_rows:
-        return None  # no row to put anything on
-    own = set(opened.schema_arrow.names)
+    try:
+        if not opened.metadata.num_rows:
+            return None  # no row to put anything on
+        own = set(opened.schema_arrow.names)
+    finally:
+        with contextlib.suppress(Exception):
+            opened.close()
     extra = [name for name in names if name in wanted and name not in own]
     named = {key for key, _ in formats._keys_of(Path(str(file)).parent)}
     doubtful = [name for name in names if name in wanted and name in own and name in named]
@@ -1517,6 +1521,8 @@ def _parquet_batches(file, target, added) -> Iterator:
     import pyarrow.parquet as pq
 
     pl = _polars()
+    opened = None
+    others: dict = {}  # the file opened again, once for each few columns read apart
     try:
         _footer_within(file)
         # A little of each column at a time, and never a column chunk whole
@@ -1574,7 +1580,6 @@ def _parquet_batches(file, target, added) -> Iterator:
         described = metadata.schema
         lengths = {described.column(place).path: int(described.column(place).length or 0) for place in range(len(described.names))}
         walked = [0]
-        others: dict = {}  # the file opened again, once for each few columns read apart
 
         def reader_of(place: int):
             if place == 0:
@@ -1631,6 +1636,11 @@ def _parquet_batches(file, target, added) -> Iterator:
         raise NotRead(f"{Path(str(file)).name} could not be read a batch at a time ({_first_line(error)})") from None
     except Exception as error:  # noqa: BLE001 - whatever pyarrow raises for a file it cannot read, or a type it cannot cast
         raise NotRead(f"{Path(str(file)).name} could not be read a batch at a time ({_first_line(error)})") from None
+    finally:
+        for reader in (opened, *others.values()):
+            if reader is not None:
+                with contextlib.suppress(Exception):
+                    reader.close()
 
 
 # --- Periods ---------------------------------------------------------------------

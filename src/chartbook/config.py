@@ -1086,7 +1086,7 @@ def get_default_host() -> str:
 
 def _is_folder(host: str) -> bool:
     """Whether a default host is a folder of repositories: an absolute or explicitly relative path, on any system."""
-    return bool(re.match(r"^(/|\\\\|\./|\.\./|\.$|\.\.$|~|[A-Za-z]:[\\/])", host))
+    return bool(re.match(r"^(/|\\\\|\.[\\/]|\.\.[\\/]|\.$|\.\.$|~|[A-Za-z]:[\\/])", host))
 
 
 def clone_url_for(pipeline_id: str, host: Optional[str] = None) -> Optional[str]:

@@ -2087,11 +2087,18 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False, ask=True):
         return path
     from chartbook.config import get_store_url, make_default_catalog, shown_store_url
 
+    def _handle_catalog_error(e: Exception):
+        if not required:
+            if not isinstance(e, PermissionError):
+                click.echo(f"Note: no catalog to show it in: {_said(e)}", err=True)
+            return None
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+
     try:
         store = shown_store_url(get_store_url())
     except (ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
-        raise SystemExit(1)
+        return _handle_catalog_error(e)
     ctx = click.get_current_context(silent=True)
     if ctx is not None and (
         ctx.params.get("as_json")
@@ -2118,8 +2125,7 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False, ask=True):
         try:
             path, _ = make_default_catalog()
         except (ValueError, OSError) as e:
-            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
-            raise SystemExit(1)
+            return _handle_catalog_error(e)
         click.echo(f"Made {path}.", err=True)
         return path
     from chartbook.config import said_catalog_made
@@ -2127,8 +2133,7 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False, ask=True):
     try:
         path, made = make_default_catalog()
     except (ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
-        raise SystemExit(1)
+        return _handle_catalog_error(e)
     if made:
         click.echo(said_catalog_made(path), err=True)
     return path
@@ -6384,21 +6389,29 @@ def install_claude_skill(force, project):
         return [p for p in target_dir.iterdir() if p.is_file() and not p.name.startswith(".")]
 
     old_stamp = target_dir / claude_skill.OLD_STAMP
-    existed = target_dir.is_dir() and (any(_visible_files()) or old_stamp.is_file())
-    before = claude_skill._shown_version(target_dir) if existed else None
-    standing = claude_skill.relation(target_dir) if existed else None
     shown = claude_skill.shown(target_dir)
+    try:
+        existed = target_dir.is_dir() and (any(_visible_files()) or old_stamp.is_file())
+        before = claude_skill._shown_version(target_dir) if existed else None
+        standing = claude_skill.relation(target_dir) if existed else None
 
-    # Nothing to do: the installed files are the bundled ones. Hidden files
-    # (.DS_Store, ...) do not count; an old stamp beside them goes
-    if target_dir.is_dir():
-        current = _visible_files()
-        if {p.name for p in current} == expected_names and all(
-            (target_dir / p.name).read_bytes() == p.read_bytes() for p in skill_files
-        ):
-            old_stamp.unlink(missing_ok=True)
-            click.echo(f"Skill already up to date in {shown} (ChartBook {__version__})")
-            return
+        # Nothing to do: the installed files are the bundled ones. Hidden files
+        # (.DS_Store, ...) do not count; an old stamp beside them goes
+        if target_dir.is_dir():
+            current = _visible_files()
+            if {p.name for p in current} == expected_names and all(
+                (target_dir / p.name).read_bytes() == p.read_bytes() for p in skill_files
+            ):
+                old_stamp.unlink(missing_ok=True)
+                click.echo(f"Skill already up to date in {shown} (ChartBook {__version__})")
+                return
+    except OSError as e:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"the skill could not be installed: {_said(e)}",
+            err=True,
+        )
+        raise SystemExit(1)
 
     # A copy for an older version is an upgrade, and replaced; one for a
     # newer version, for this version but changed by hand, or naming none,

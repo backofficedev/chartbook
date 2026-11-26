@@ -29,7 +29,7 @@ def _normalize_y(y: str | Sequence[str]) -> list[str]:
     :returns: List of y column names.
     :rtype: list[str]
     """
-    if isinstance(y, str):
+    if isinstance(y, (str, bytes)) or not isinstance(y, Sequence):
         return [y]
     cols = list(y)
     if not cols:
@@ -404,9 +404,9 @@ def scatter(
     """
     df = validate_dataframe(df)
     cols_to_check = [x, y]
-    if size:
+    if size is not None:
         cols_to_check.append(size)
-    if color_by:
+    if color_by is not None:
         cols_to_check.append(color_by)
     validate_columns_exist(df, cols_to_check)
 

@@ -3334,7 +3334,7 @@ class FolderStore(Store):
         times = []
         for path in paths:
             try:
-                held = path.stat()
+                held = os.stat(_any_length(path))
             except FileNotFoundError:
                 continue
             times.append(max(held.st_mtime, held.st_ctime))
@@ -3815,10 +3815,11 @@ def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     trees = [Path(os.path.realpath(tree)) for tree in _trees_beside(asset.record.folder.parent.parent)]
     for file in asset.files:
         location = _on_disk_where_kept(file, asset.record.folder.parent)
-        if os.path.islink(location) or not any(Path(os.path.realpath(location)).is_relative_to(tree) for tree in trees):
+        disk_path = _any_length(location)
+        if os.path.islink(disk_path) or not any(Path(os.path.realpath(location)).is_relative_to(tree) for tree in trees):
             continue
         try:
-            size = os.stat(_any_length(location)).st_size
+            size = os.stat(disk_path).st_size
         except OSError:
             return f"does not have {file.path} yet"
         if size != file.size_bytes:
@@ -3859,7 +3860,8 @@ def _is_whole(file: KeptFile, pipeline_folder: Path) -> bool:
     """
     try:
         location = _on_disk_where_kept(file, pipeline_folder)
-        return not os.path.islink(location) and os.stat(_any_length(location)).st_size == file.size_bytes
+        disk_path = _any_length(location)
+        return not os.path.islink(disk_path) and os.stat(disk_path).st_size == file.size_bytes
     except (OSError, ValueError):
         return False
 

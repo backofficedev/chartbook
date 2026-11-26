@@ -113,7 +113,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, later_form_said, resolve_project_type
 from chartbook.refs import KIND_TABLES, AssetRef
 from chartbook.resolve import MANIFEST_NAME, RESOLVABLE_KINDS, declared_files
-from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store, plain_parts
+from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, StoreNotAvailableError, declared_name, default_store, plain_parts
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -2887,6 +2887,8 @@ def check_store_takes_one(pipeline: str, store: Optional[Store] = None) -> None:
     if store is None or isinstance(store, Stores):
         try:
             targets = (Stores.configured() if store is None else store).for_writing(pipeline, None)
+        except StoreNotAvailableError:
+            raise
         except (StoreError, OSError):
             return
     else:

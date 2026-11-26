@@ -321,7 +321,7 @@ class MatplotlibBackend(BaseBackend):
 
         # Handle size mapping
         sizes = None
-        if config.size and config.size in df.columns:
+        if config.size is not None and config.size in df.columns:
             import pandas as pd
 
             sizes = pd.to_numeric(df[config.size], errors="coerce").astype(float)
@@ -333,7 +333,7 @@ class MatplotlibBackend(BaseBackend):
                 sizes = ((sizes - sizes.min()) / span * 200 + 20).fillna(60.0)
 
         # Handle color by category
-        if config.color_by and config.color_by in df.columns:
+        if config.color_by is not None and config.color_by in df.columns:
             import pandas as pd
 
             categories = df[config.color_by].unique()

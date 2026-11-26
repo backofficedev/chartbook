@@ -27,7 +27,7 @@ def _normalize_y(y: str | Sequence[str]) -> list[str]:
     :returns: List of y column names.
     :rtype: list[str]
     """
-    if isinstance(y, str):
+    if isinstance(y, (str, bytes)) or not isinstance(y, Sequence):
         return [y]
     cols = list(y)
     if not cols:

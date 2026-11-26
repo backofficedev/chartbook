@@ -1188,12 +1188,14 @@ def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
     if not pipelines:
         return
     from chartbook import snapshot as snapshots
-    from chartbook.store import StoreError, default_store
+    from chartbook.store import StoreError, StoreNotAvailableError, default_store
     from chartbook.versions import name_of
 
     try:
         store = store if store is not None else default_store()
         found, unreadable = snapshots.readable_snapshots(store)
+    except StoreNotAvailableError:
+        raise
     except (StoreError, ValueError, OSError) as error:
         warnings.warn(f"The snapshots in the store are not in the index: {error}", stacklevel=3)
         return
