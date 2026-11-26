@@ -584,7 +584,7 @@ def load(
         kept = _cut_pandas(frame, *cut)
         if kept is None:
             # The date column is nowhere pandas put it: the rows as polars tells them, never the whole frame
-            kept = _pinned(formats.scan_location(location, where), cut).collect().to_pandas()
+            kept = formats._pandas_of(_pinned(formats.scan_location(location, where), cut))
         return kept
     if format == "polars_eager":
         return _pinned(formats.scan_location(location, where), cut).collect()

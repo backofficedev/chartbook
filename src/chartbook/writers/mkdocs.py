@@ -191,10 +191,15 @@ class MkDocsWriter(SphinxWriter):
         per line, give the order and the set, and a page's title is its first
         heading, else its file name.
         """
+        from chartbook.config import untrusted_source
+        from chartbook.hashing import escapes
+
+        untrusted = untrusted_source()
         pages = [p for p in (pipeline.get("site_pages") or []) if p not in ("index_toc.md", "index.md")]
         site_dir = (pipeline.get("site_dir") or {}).get("resolved_path")
-        toc = Path(site_dir) / "index_toc.md" if site_dir else None
-        if toc is not None and toc.is_file():
+        site_root = Path(site_dir) if site_dir else None
+        toc = site_root / "index_toc.md" if site_root else None
+        if toc is not None and toc.is_file() and (not untrusted or escapes(toc, site_root) is None):
             listed = []
             for line in toc.read_text(encoding="utf-8").splitlines():
                 entry = line.strip()
@@ -208,8 +213,9 @@ class MkDocsWriter(SphinxWriter):
         entries = []
         for page in pages:
             title = Path(page).stem.replace("_", " ").replace("-", " ").title()
-            if site_dir and (Path(site_dir) / page).is_file():
-                for line in (Path(site_dir) / page).read_text(encoding="utf-8", errors="replace").splitlines():
+            page_path = site_root / page if site_root else None
+            if page_path is not None and page_path.is_file() and (not untrusted or escapes(page_path, site_root) is None):
+                for line in page_path.read_text(encoding="utf-8", errors="replace").splitlines():
                     if line.startswith("# "):
                         title = line[2:].strip()
                         break

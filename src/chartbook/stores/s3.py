@@ -1960,6 +1960,7 @@ class S3Store(Store):
         return self._read_note(self._root_key(lockfile, this_machine(create=False) if machine is None else machine))
 
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
+        self._check_layout()
         key = self._root_key(lockfile, this_machine(create=False) if machine is None else machine)
         if not self._exists(key):
             return False
@@ -1982,7 +1983,7 @@ class S3Store(Store):
             except (ValueError, KeyError, TypeError) as error:
                 detail = "the file is empty" if body == b"" else str(error)
                 raise StoreError(
-                    f"Cannot read {self}/{entry['Key']}: {detail}.{_unreadable_note_remedy(name, error)}"
+                    f"Cannot read {self}/{self._name(entry['Key'])}: {detail}.{_unreadable_note_remedy(name, error)}"
                 ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
@@ -2175,6 +2176,7 @@ class _S3Pending(PendingSnapshot):
                 self._took.append((entry, source))
                 return entry
             content_hash = written  # the bytes changed since they were hashed: new, in this snapshot's folder
+            break
         target = f"{PIPELINES_DIR}/{self.folder}/{self._claim()}/{path}"
         written, kind, size = self._write_file(source, target, links)
         self._uploaded.append(self.store._key(target))

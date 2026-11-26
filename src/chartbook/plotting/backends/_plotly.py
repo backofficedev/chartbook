@@ -357,6 +357,8 @@ class PlotlyBackend(BaseBackend):
 
         stackgroup = "one" if config.stacked else None
 
+        from chartbook.plotting._overlays import _color_to_rgba
+
         for i, y_col in enumerate(config.y):
             label = config.labels.get(y_col, y_col) if config.labels else y_col
             fig.add_trace(
@@ -368,9 +370,7 @@ class PlotlyBackend(BaseBackend):
                     fill="tonexty" if config.stacked else "tozeroy",
                     stackgroup=stackgroup,
                     line=dict(color=colors[i]),
-                    fillcolor=colors[i].replace(")", ", 0.5)").replace("rgb", "rgba", 1)
-                    if colors[i].startswith("rgb(")
-                    else colors[i],
+                    fillcolor=_color_to_rgba(colors[i], 0.5),
                 )
             )
 
@@ -414,12 +414,16 @@ class PlotlyBackend(BaseBackend):
             or [palette[(len(config.left_y) + i) % len(palette)] for i in range(len(config.right_y))]
         )
 
+        both_bars = config.left_type == "bar" and config.right_type == "bar"
+
         # Add left axis traces
         for i, y_col in enumerate(config.left_y):
             color = left_colors[i] if i < len(left_colors) else left_colors[0]
             trace = self._create_trace_for_type(
                 df, config.x, y_col, config.left_type, color
             )
+            if both_bars:
+                trace.update(offsetgroup=f"left_{i}")
             fig.add_trace(trace, secondary_y=False)
 
         # Add right axis traces
@@ -428,6 +432,8 @@ class PlotlyBackend(BaseBackend):
             trace = self._create_trace_for_type(
                 df, config.x, y_col, config.right_type, color
             )
+            if both_bars:
+                trace.update(offsetgroup=f"right_{i}")
             fig.add_trace(trace, secondary_y=True)
 
         # Update layout
@@ -435,6 +441,8 @@ class PlotlyBackend(BaseBackend):
             "template": get_config().plotly_template,
             "hovermode": "x unified",
         }
+        if both_bars:
+            layout_kwargs["barmode"] = "group"
 
         if config.title:
             layout_kwargs["title"] = config.title

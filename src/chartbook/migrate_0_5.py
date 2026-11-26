@@ -1299,7 +1299,11 @@ def run(root, echo: Callable[[str], None] = lambda line: None, after_step: Calla
                 # Once more, just before the old folder goes aside: a file that arrived since its step is put in its place,
                 # and what then goes aside that a snapshot may want is named: a file whose place is taken, a record that arrived
                 for earlier in found.steps:
-                    if earlier.op in ("rename", "copy") and _do(root, earlier) == "as it is":
+                    if (
+                        earlier.op in ("rename", "copy")
+                        and not os.path.lexists(root / earlier.target)
+                        and _do(root, earlier) == "as it is"
+                    ):
                         _add(so_far, "copied_as_is", [earlier.target], held)
                 taken = _taken(root, found.steps, _aside_name(root))
                 _add(so_far, "in_place", taken, held)

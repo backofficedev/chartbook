@@ -56,6 +56,11 @@ class ChartConfig:
     # Pass-through for advanced usage
     extra_kwargs: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        if self.extra_kwargs:
+            names = ", ".join(repr(k) for k in sorted(self.extra_kwargs))
+            raise TypeError(f"Unexpected keyword argument(s): {names}")
+
 
 @dataclass
 class OverlayConfig:
@@ -107,6 +112,11 @@ class DualAxisConfig:
 
     # Pass-through for advanced usage
     extra_kwargs: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.extra_kwargs:
+            names = ", ".join(repr(k) for k in sorted(self.extra_kwargs))
+            raise TypeError(f"Unexpected keyword argument(s): {names}")
 
 
 @dataclass
@@ -221,6 +231,15 @@ class ChartResult:
         self._mpl_figure, self._mpl_axes = backend.build_figure(
             self._df, self._config, self._overlay
         )
+
+    def close(self) -> None:
+        """Close the lazily created matplotlib figure, if any."""
+        if self._mpl_figure is not None:
+            import matplotlib.pyplot as plt
+
+            plt.close(self._mpl_figure)
+            self._mpl_figure = None
+            self._mpl_axes = None
 
     def show(self) -> "ChartResult":
         """Display the figure inline.

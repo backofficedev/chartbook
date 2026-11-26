@@ -443,6 +443,7 @@ class _Moving(_FolderPending):
                 self._taken.append((entry, source))
                 return entry
             content_hash = written  # the bytes changed since they were hashed: new, in this snapshot's folder
+            break
         target = self._claim().joinpath(*path.split("/"))
         written, kind = self._write_file(source, target, links)
         used.add(kind)

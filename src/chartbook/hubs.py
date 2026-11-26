@@ -142,7 +142,7 @@ def dependency_records(dependencies, pins=()):
             location = {}
         commit = location.get("commit")
         moment = entry.get("snapshot")
-        safe = {"id": identity, "location": {"kind": "store"}}
+        safe = {"id": identity, "via": "store", "location": {"kind": "store"}}
         alias = entry.get("key") or (entry.get("id") if identity != entry.get("id") else None)
         if isinstance(alias, str):
             try:

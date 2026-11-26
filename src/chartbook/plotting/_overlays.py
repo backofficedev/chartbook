@@ -187,6 +187,13 @@ def _as_naive_utc(value: Any) -> pd.Timestamp | None:
         return ts
     if isinstance(value, date):
         return pd.Timestamp(value)
+    if isinstance(value, str):
+        ts = pd.to_datetime(value, errors="coerce")
+        if pd.isna(ts):
+            return None
+        if ts.tzinfo is not None:
+            return ts.tz_convert("UTC").tz_localize(None)
+        return ts
     return None
 
 
@@ -239,17 +246,18 @@ def apply_overlays_plotly(
     if overlay.nber_recessions:
         try:
             x_min, x_max = _x_range(df[x_col])
-            recessions = get_nber_recessions()
-            filtered = filter_recessions_for_range(recessions, x_min, x_max)
+            if x_min is not None or x_max is not None:
+                recessions = get_nber_recessions()
+                filtered = filter_recessions_for_range(recessions, x_min, x_max)
 
-            for _, row in filtered.iterrows():
-                fig.add_vrect(
-                    x0=row["start"],
-                    x1=row["end"],
-                    fillcolor="rgba(128, 128, 128, 0.2)",
-                    layer="below",
-                    line_width=0,
-                )
+                for _, row in filtered.iterrows():
+                    fig.add_vrect(
+                        x0=row["start"],
+                        x1=row["end"],
+                        fillcolor="rgba(128, 128, 128, 0.2)",
+                        layer="below",
+                        line_width=0,
+                    )
         except FREDAPIError:
             # Skip recession shading if API fails
             pass
@@ -384,7 +392,7 @@ def apply_overlays_plotly(
             if len(x_raw) == len(y_raw) and len(x_raw) > 1:
                 x_arr = _x_values_to_numeric(x_raw)
                 y_arr = pd.to_numeric(pd.Series(y_raw), errors="coerce").to_numpy(dtype=float)
-                mask = ~(np.isnan(x_arr) | np.isnan(y_arr))
+                mask = np.isfinite(x_arr) & np.isfinite(y_arr)
                 if mask.sum() > 1:
                     coeffs = np.polyfit(x_arr[mask], y_arr[mask], 1)
                     order = np.argsort(x_arr[mask])
@@ -456,17 +464,18 @@ def apply_overlays_matplotlib(
     if overlay.nber_recessions:
         try:
             x_min, x_max = _x_range(df[x_col])
-            recessions = get_nber_recessions()
-            filtered = filter_recessions_for_range(recessions, x_min, x_max)
+            if x_min is not None or x_max is not None:
+                recessions = get_nber_recessions()
+                filtered = filter_recessions_for_range(recessions, x_min, x_max)
 
-            for _, row in filtered.iterrows():
-                ax.axvspan(
-                    _mpl_x_coord(row["start"], df[x_col], use_positional_x),
-                    _mpl_x_coord(row["end"], df[x_col], use_positional_x),
-                    alpha=0.2,
-                    color="gray",
-                    zorder=0,
-                )
+                for _, row in filtered.iterrows():
+                    ax.axvspan(
+                        _mpl_x_coord(row["start"], df[x_col], use_positional_x),
+                        _mpl_x_coord(row["end"], df[x_col], use_positional_x),
+                        alpha=0.2,
+                        color="gray",
+                        zorder=0,
+                    )
         except FREDAPIError:
             # Skip recession shading if API fails
             pass
@@ -548,7 +557,7 @@ def apply_overlays_matplotlib(
         if x_line is not None and y_line is not None and len(x_line) == len(y_line) and len(x_line) > 1:
             x_numeric = _x_values_to_numeric(x_line)
 
-            mask = ~(np.isnan(x_numeric) | np.isnan(y_line))
+            mask = np.isfinite(x_numeric) & np.isfinite(y_line)
             if mask.sum() > 1:
                 coeffs = np.polyfit(x_numeric[mask], y_line[mask], 1)
                 order = np.argsort(x_numeric[mask])

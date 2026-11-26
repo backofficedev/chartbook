@@ -566,6 +566,21 @@ def note_manifest_written(directory: Union[str, Path], before_text: str) -> None
     directory = Path(os.path.abspath(directory))
     path = note_path(directory)
     note = _read(path)
+    if note is None:
+        try:
+            others = [entry.path for entry in os.scandir(folder()) if entry.name.endswith(".json")]
+        except OSError:
+            return
+        for other in others:
+            candidate = Path(other)
+            found = _read(candidate)
+            try:
+                if found is not None and isinstance(found.get("folder"), str) and os.path.samefile(found["folder"], directory):
+                    path = candidate
+                    note = found
+                    break
+            except OSError:
+                continue
     if note is None or note.get("state") != "built" or note.get("machine") != _machine():
         return
     source = note.get("source")

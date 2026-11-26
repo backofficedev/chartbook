@@ -1684,6 +1684,10 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
         for key in _PROJECT_PATH_KEYS:
             if key in project:
                 named.append((f"[project] {key}", project[key]))
+    if not isinstance(project, dict) or "readme" not in project:
+        named.append(("[project] readme", "./README.md"))
+    if not isinstance(project, dict) or "site_dir" not in project:
+        named.append(("[project] site_dir", "./docs_src/site"))
     for table in ASSET_TABLES:
         entries = raw_manifest.get(table)
         if not isinstance(entries, dict):
@@ -1694,6 +1698,13 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
             for key, value in entry.items():
                 if key == "path" or key.endswith("_path"):
                     named.append((f"[{table}.{name}] {key}", value))
+            series = entry.get("series")
+            if isinstance(series, dict):
+                for s_name, s_entry in series.items():
+                    if isinstance(s_entry, dict):
+                        for s_key, s_value in s_entry.items():
+                            if s_key == "path" or s_key.endswith("_path"):
+                                named.append((f"[{table}.{name}.series.{s_name}] {s_key}", s_value))
     for where, value in named:
         if not isinstance(value, str) or not value.strip():
             continue

@@ -28,8 +28,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
-#: Allowed characters for each component of a pipeline ID.
-ID_COMPONENT_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+#: Allowed characters for each component of a pipeline ID (excluding "." and "..").
+ID_COMPONENT_PATTERN = re.compile(r"^(?!\.{1,2}$)[A-Za-z0-9._-]+$")
 
 
 class UnsupportedRevisionError(ValueError):

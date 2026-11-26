@@ -738,8 +738,28 @@ def _generate_docs_mkdocs(
         )
         if strip_mathjax2:
             _strip_mathjax2_from_notebooks(pages_dir)
-        # The theme's second copy of the logo and favicon is for Sphinx's conf.py; Material shares that folder name
-        shutil.rmtree(pages_dir / "assets", ignore_errors=True)
+        # The theme's second copy of the logo and favicon is for Sphinx's conf.py; Material shares that folder name.
+        # Remove only theme assets not provided by any pipeline's own site_dir/assets/.
+        theme_assets = temp_docs_src_dir / "assets"
+        user_assets: set[str] = set()
+        for record in built.get("records", []):
+            if record.get("kind") == "Pipeline":
+                site_dir = (record.get("site_dir") or {}).get("resolved_path")
+                if site_dir and (Path(site_dir) / "assets").is_dir():
+                    for item in (Path(site_dir) / "assets").rglob("*"):
+                        if item.is_file():
+                            user_assets.add(item.relative_to(Path(site_dir) / "assets").as_posix())
+        if theme_assets.is_dir() and (pages_dir / "assets").is_dir():
+            for item in theme_assets.rglob("*"):
+                if item.is_file():
+                    rel = item.relative_to(theme_assets).as_posix()
+                    if rel not in user_assets:
+                        (pages_dir / "assets" / rel).unlink(missing_ok=True)
+            try:
+                if not any((pages_dir / "assets").iterdir()):
+                    (pages_dir / "assets").rmdir()
+            except OSError:
+                pass
         _warn_about_sphinx_syntax_in_site_pages(built, pages_dir)
         try:
             site_config = validate_conf_py_values(manifest, pipeline_theme)

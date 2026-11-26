@@ -254,8 +254,19 @@ class Stores:
 
     def incomplete(self, content_hash, size_bytes, files=None, every=False, pipeline=None):
         # In the stores that have it for that pipeline, as a read of it looks for it
-        problems = [s.incomplete(content_hash, size_bytes, files, every, pipeline=pipeline) for s in self._holding(content_hash, pipeline)]
-        return None if None in problems else (problems[0] if problems else "not in any store")
+        problems = []
+        for entry in self._available():
+            try:
+                if not entry.store.has(content_hash, pipeline):
+                    continue
+                problem = entry.store.incomplete(content_hash, size_bytes, files, every, pipeline=pipeline)
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
+                continue
+            if problem is None:
+                return None
+            problems.append(problem)
+        return problems[0] if problems else None
 
     def hashes(self):
         return iter(sorted(set(self._collect("hashes"))))
@@ -267,8 +278,14 @@ class Stores:
         return self._collect("origins", commit, name)
 
     def listing(self, content_hash, single):
-        for store in self._holding(content_hash):
-            listing = store.listing(content_hash, single)
+        for entry in self._available():
+            try:
+                if not entry.store.has(content_hash):
+                    continue
+                listing = entry.store.listing(content_hash, single)
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
+                continue
             if listing is not None:
                 return listing
         return None
@@ -277,13 +294,24 @@ class Stores:
         return self._collect("files_of", content_hash)
 
     def size_of(self, content_hash):
-        store = next(self._holding(content_hash), None)
-        if store is None:
-            raise ObjectNotFoundError(f"No reachable store holds {content_hash}")
-        return store.size_of(content_hash)
+        for entry in self._available():
+            try:
+                if not entry.store.has(content_hash):
+                    continue
+                return entry.store.size_of(content_hash)
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
+        raise ObjectNotFoundError(f"No reachable store holds {content_hash}")
 
     def age_of(self, content_hash, now=None):
-        ages = [s.age_of(content_hash, now) for s in self._holding(content_hash)]
+        ages = []
+        for entry in self._available():
+            try:
+                if not entry.store.has(content_hash):
+                    continue
+                ages.append(entry.store.age_of(content_hash, now))
+            except (StoreUnreachableError, OSError) as error:
+                self._unreachable(entry, error)
         if not ages:
             raise ObjectNotFoundError(f"No reachable store holds {content_hash}")
         return min(ages)
@@ -482,7 +510,7 @@ class Stores:
             yield self
 
     def __getattr__(self, name):
-        if name in {"delete", "delete_unowned", "remove_snapshot", "tidy", "check_tidy", "remove_root"}:
+        if name in {"delete", "delete_unowned", "remove_snapshot", "tidy", "tidy_pipeline", "check_tidy", "remove_root"}:
             raise ValueError("Select one store for destructive maintenance with --store NAME")
         return getattr(self.default(), name)
 

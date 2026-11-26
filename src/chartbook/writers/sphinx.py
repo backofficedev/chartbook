@@ -826,7 +826,13 @@ class SphinxWriter:
         site_pages = pipeline.get("site_pages") or []
         index_toc_content = ""
         if "index_toc.md" in site_pages and (pipeline.get("site_dir") or {}).get("resolved_path"):
-            index_toc_content = (Path(pipeline["site_dir"]["resolved_path"]) / "index_toc.md").read_text(encoding="utf-8")
+            from chartbook.config import untrusted_source
+            from chartbook.hashing import escapes
+
+            site_root = Path(pipeline["site_dir"]["resolved_path"])
+            toc_path = site_root / "index_toc.md"
+            if not untrusted_source() or escapes(toc_path, site_root) is None:
+                index_toc_content = toc_path.read_text(encoding="utf-8")
         template = environment.get_template("index.md")
         return template.render(
             pipeline_manifest=self._pipeline_manifest(pipeline),
@@ -1390,9 +1396,15 @@ class SphinxWriter:
         docs = pipeline.get("docs") or {}
         if not docs.get("path"):
             return []
+        from chartbook.config import untrusted_source
+        from chartbook.hashing import escapes
+
+        readme_path = base_dir / docs["path"]
+        if untrusted_source() and escapes(readme_path, base_dir) is not None:
+            return []
         # readlines(), not splitlines(): a form feed or a NEL inside a line
         # is not a line break to the page
-        with open(base_dir / docs["path"], encoding="utf-8") as file:
+        with open(readme_path, encoding="utf-8") as file:
             return file.readlines()
 
     def _model_manifest(self, record: dict) -> dict:

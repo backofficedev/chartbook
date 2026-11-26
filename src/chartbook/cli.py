@@ -4333,8 +4333,16 @@ def store_ls(pipeline, store_name):
         from chartbook import snapshot as snapshots
         from chartbook.store import pipeline_folder
 
+        target_folder = None
+        if pipeline is not None:
+            try:
+                target_folder = pipeline_folder(pipeline)
+            except ValueError as e:
+                click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+                raise SystemExit(1)
+
         for record in every:
-            if record.readable or (pipeline is not None and record.folder.parent.name != pipeline_folder(pipeline)):
+            if record.readable or (target_folder is not None and record.folder.parent.name != target_folder):
                 continue
             try:
                 snapshots.read(record.path)
@@ -5174,7 +5182,7 @@ def store_export(pipeline, to, latest, snapshots):
         raise SystemExit(1)
     try:
         done = sharing.export(the_store, pipeline, to, "latest" if latest else list(snapshots) or None, echo=click.echo)
-    except StoreError as e:
+    except (StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     _say_copied(done, "Exported")
@@ -5255,7 +5263,7 @@ def store_verify():
         the_store = default_store()
         total = len(list(the_store.hashes()))
         problems = the_store.verify()
-    except (StoreError, ValueError) as e:
+    except (StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
@@ -5603,7 +5611,7 @@ def store_gc(dry_run, yes, forget_missing, forget_note=None, keep_days=None, kee
             the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage,
             aggressive=aggressive, hashed=True, without_notes=(pending.note,) if pending is not None else None,
         )
-    except (StoreError, lock.LockError, ValueError) as e:
+    except (StoreError, lock.LockError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)

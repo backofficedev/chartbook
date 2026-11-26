@@ -358,6 +358,11 @@ def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
         for source in folder.rglob("*"):
             if not source.is_file():
                 continue
+            if untrusted_source():
+                from chartbook.hashing import escapes
+
+                if escapes(source, folder) is not None:
+                    continue
             relative = source.relative_to(folder)
             if relative.parent == Path(".") and relative.name == "index_toc.md":
                 continue

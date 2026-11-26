@@ -414,7 +414,20 @@ class GitCache:
         if not (repo / "HEAD").is_file():
             repo.parent.mkdir(parents=True, exist_ok=True)
             staging = repo.with_name(_staging_name())
-            self._git("init", "--quiet", "--bare", str(staging))
+            try:
+                self._git("init", "--quiet", "--bare", str(staging))
+            except BaseException:
+                _remove_staging(staging)
+                raise
+            if repo.exists() and not (repo / "HEAD").is_file():
+                # Partial or corrupt bare directory left without HEAD: move aside and remove
+                corrupt = repo.with_name(_staging_name())
+                try:
+                    os.replace(repo, corrupt)
+                except OSError:
+                    _remove_staging(repo)
+                else:
+                    _remove_staging(corrupt)
             try:
                 rename_when_let(staging, repo)
             except OSError:

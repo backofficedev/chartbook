@@ -339,9 +339,7 @@ def _listed_files(content: hashing.ContentHash, resolved: str, rows: bool = Fals
 
 def _names_one_file(resolved: str) -> bool:
     """Whether a declared path names one file, hashed as its bytes, and not a folder or a glob (:func:`chartbook.hashing.find_files`)."""
-    from chartbook.utils import is_glob_pattern
-
-    return not is_glob_pattern(resolved) and os.path.isfile(resolved)
+    return not hashing.is_pattern(resolved) and os.path.isfile(resolved)
 
 
 def _parquet_rows(file: Path) -> Optional[int]:

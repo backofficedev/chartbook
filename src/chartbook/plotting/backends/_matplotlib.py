@@ -110,7 +110,13 @@ class MatplotlibBackend(BaseBackend):
 
         axis.set_major_formatter(mticker.FuncFormatter(_fmt))
 
-    def _apply_config(self, ax: "matplotlib.axes.Axes", config: "ChartConfig") -> None:
+    def _apply_config(
+        self,
+        ax: "matplotlib.axes.Axes",
+        config: "ChartConfig",
+        x_series: "pd.Series | None" = None,
+        use_positional_x: bool = False,
+    ) -> None:
         """Apply chart configuration to axes."""
         if config.title:
             ax.set_title(config.title)
@@ -119,7 +125,17 @@ class MatplotlibBackend(BaseBackend):
         if config.y_title:
             ax.set_ylabel(config.y_title)
         if config.x_range:
-            ax.set_xlim(config.x_range)
+            if x_series is not None:
+                from chartbook.plotting._overlays import _mpl_x_coord
+
+                ax.set_xlim(
+                    (
+                        _mpl_x_coord(config.x_range[0], x_series, use_positional_x),
+                        _mpl_x_coord(config.x_range[1], x_series, use_positional_x),
+                    )
+                )
+            else:
+                ax.set_xlim(config.x_range)
         if config.y_range:
             ax.set_ylim(config.y_range)
         if config.x_tickformat:
@@ -180,9 +196,11 @@ class MatplotlibBackend(BaseBackend):
         """Save figure to file."""
         import matplotlib.pyplot as plt
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_path, bbox_inches="tight", dpi=300)
-        plt.close(fig)
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(output_path, bbox_inches="tight", dpi=300)
+        finally:
+            plt.close(fig)
 
     def _get_colors(self, config: "ChartConfig", n_series: int) -> list[str]:
         """Get colors for the chart series."""
@@ -211,7 +229,7 @@ class MatplotlibBackend(BaseBackend):
             ax.plot(df[config.x], df[y_col], label=label, color=colors[i])
 
         pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config)
+        self._apply_config(ax, config, x_series=df[config.x])
         self._apply_overlays(ax, overlay, df, config.x)
         if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
             ax.legend()
@@ -248,7 +266,8 @@ class MatplotlibBackend(BaseBackend):
 
         import pandas as pd
 
-        bottom = np.zeros(len(df)) if config.stacked else None
+        pos_bottom = np.zeros(len(df)) if config.stacked else None
+        neg_bottom = np.zeros(len(df)) if config.stacked else None
 
         for i, y_col in enumerate(config.y):
             label = config.labels.get(y_col, y_col) if config.labels else y_col
@@ -256,8 +275,10 @@ class MatplotlibBackend(BaseBackend):
 
             if config.stacked:
                 stacked_vals = np.nan_to_num(vals, nan=0.0)
-                ax.bar(x, stacked_vals, width, label=label, color=colors[i], bottom=bottom)
-                bottom = bottom + stacked_vals
+                bottoms = np.where(stacked_vals >= 0, pos_bottom, neg_bottom)
+                ax.bar(x, stacked_vals, width, label=label, color=colors[i], bottom=bottoms)
+                pos_bottom = pos_bottom + np.maximum(stacked_vals, 0.0)
+                neg_bottom = neg_bottom + np.minimum(stacked_vals, 0.0)
             else:
                 offset = (i - len(config.y) / 2 + 0.5) * width
                 ax.bar(x + offset, vals, width, label=label, color=colors[i])
@@ -267,7 +288,7 @@ class MatplotlibBackend(BaseBackend):
         ax.set_xticklabels(df[config.x], rotation=45, ha="right")
 
         pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config)
+        self._apply_config(ax, config, x_series=df[config.x], use_positional_x=True)
         self._apply_overlays(ax, overlay, df, config.x, use_positional_x=True)
         if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
             ax.legend()
@@ -340,7 +361,7 @@ class MatplotlibBackend(BaseBackend):
             has_category_legend = False
 
         pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config)
+        self._apply_config(ax, config, x_series=df[config.x])
         self._apply_overlays(ax, overlay, df, config.x)
         if has_category_legend or len(ax.get_legend_handles_labels()[1]) > pre_labels:
             ax.legend()
@@ -372,10 +393,11 @@ class MatplotlibBackend(BaseBackend):
         names_col = config.names or config.x
         values_col = config.values or config.y[0]
 
+        import numpy as np
         import pandas as pd
 
         numeric_vals = pd.to_numeric(df[values_col], errors="coerce")
-        valid = numeric_vals.notna()
+        valid = numeric_vals.notna() & np.isfinite(numeric_vals) & (numeric_vals >= 0)
         valid_vals = numeric_vals[valid]
         valid_df = df.loc[valid]
         if not valid_vals.empty and valid_vals.sum() != 0:
@@ -438,7 +460,7 @@ class MatplotlibBackend(BaseBackend):
                 ax.plot(df[config.x], df[y_col], color=colors[i])
 
         pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config)
+        self._apply_config(ax, config, x_series=df[config.x])
         self._apply_overlays(ax, overlay, df, config.x)
         if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
             ax.legend()
@@ -481,17 +503,23 @@ class MatplotlibBackend(BaseBackend):
         # If either axis uses bars, both axes share integer positional x coordinates
         # so datetime/categorical x-axes don't mismatch epoch days vs 0..N-1.
         use_positional_x = config.left_type == "bar" or config.right_type == "bar"
+        both_bars = config.left_type == "bar" and config.right_type == "bar"
+        total_bars = len(config.left_y) + len(config.right_y) if both_bars else None
 
         # Plot left axis
         self._plot_series_on_axis(
             ax1, df, config.x, config.left_y, config.left_type, left_colors,
             use_positional_x=use_positional_x,
+            bar_slot_offset=0,
+            bar_total_slots=total_bars,
         )
 
         # Plot right axis
         self._plot_series_on_axis(
             ax2, df, config.x, config.right_y, config.right_type, right_colors,
             use_positional_x=use_positional_x,
+            bar_slot_offset=len(config.left_y) if both_bars else 0,
+            bar_total_slots=total_bars,
         )
 
         # Configure axes
@@ -549,9 +577,12 @@ class MatplotlibBackend(BaseBackend):
         colors: list[str],
         *,
         use_positional_x: bool = False,
+        bar_slot_offset: int = 0,
+        bar_total_slots: int | None = None,
     ) -> None:
         """Plot series on the given axis based on chart type."""
         import numpy as np
+        import pandas as pd
 
         x_vals = np.arange(len(df)) if use_positional_x else df[x_col]
 
@@ -562,15 +593,19 @@ class MatplotlibBackend(BaseBackend):
                 ax.plot(x_vals, df[y_col], label=y_col, color=color)
             elif chart_type == "bar":
                 x = np.arange(len(df))
-                width = 0.8 / len(y_cols)
-                offset = (i - len(y_cols) / 2 + 0.5) * width
-                ax.bar(x + offset, df[y_col], width, label=y_col, color=color)
+                total = bar_total_slots if bar_total_slots is not None else len(y_cols)
+                width = 0.8 / total
+                slot = bar_slot_offset + i
+                offset = (slot - total / 2 + 0.5) * width
+                vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
+                ax.bar(x + offset, vals, width, label=y_col, color=color)
                 ax.set_xticks(x)
                 ax.set_xticklabels(df[x_col], rotation=45, ha="right")
             elif chart_type == "scatter":
                 ax.scatter(x_vals, df[y_col], label=y_col, color=color, alpha=0.7)
             elif chart_type == "area":
+                vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
                 ax.fill_between(
-                    x_vals, df[y_col], alpha=0.5, label=y_col, color=color
+                    x_vals, vals, alpha=0.5, label=y_col, color=color
                 )
-                ax.plot(x_vals, df[y_col], color=color)
+                ax.plot(x_vals, vals, color=color)

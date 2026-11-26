@@ -91,6 +91,9 @@
         },
         "rendered": {
           "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
         }
       }
     }

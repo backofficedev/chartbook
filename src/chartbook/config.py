@@ -1202,7 +1202,7 @@ def set_default_catalog_path(catalog_path: Path) -> None:
         raise FileNotFoundError(f"File not found: {catalog_path}")
 
     # Validate that it is a catalog-type manifest
-    from chartbook.manifest import V1FormatError, detect_v1_format, resolve_project_type
+    from chartbook.manifest import V1FormatError, detect_v1_format, require_chartbook, resolve_project_type
 
     with open(catalog_path, "rb") as f:
         manifest = tomli.load(f)
@@ -1212,6 +1212,11 @@ def set_default_catalog_path(catalog_path: Path) -> None:
 
     if catalog_path.name == "catalog.toml":
         project = manifest.get("project")
+        if project is not None and not isinstance(project, dict):
+            raise ValueError(
+                f"{catalog_path}: [project] must be a table, got {type(project).__name__}."
+            )
+        require_chartbook(manifest, source=str(catalog_path))
         explicit_type = project.get("type") if isinstance(project, dict) else None
         if explicit_type not in (None, "catalog"):
             raise ValueError(
@@ -1221,9 +1226,13 @@ def set_default_catalog_path(catalog_path: Path) -> None:
         config_type = "catalog"
     else:
         config_type = resolve_project_type(manifest, source=str(catalog_path))
+        if config_type == "catalog":
+            raise ValueError(
+                f"{catalog_path} is an old catalog. Run 'chartbook catalog migrate'."
+            )
     if config_type != "catalog":
         raise ValueError(
-            f"Expected a catalog-type chartbook.toml, but found type={config_type!r}. "
+            f"Expected a catalog-type catalog.toml, but found type={config_type!r}. "
             f"The config command requires a catalog project, not a pipeline."
         )
 

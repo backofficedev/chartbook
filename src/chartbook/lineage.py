@@ -378,6 +378,8 @@ class _Walker:
             return node
         place = str(taken.path)
         if place in self.visited:
+            if labels:
+                self.visited[place].hashes.update(labels)
             node.seen = True
             return node
         self.visited[place] = node

@@ -60,6 +60,17 @@ def _builds_on_there(taken, source, target, whole):
     return None
 
 
+def _readable_snapshots(store) -> list:
+    """Read every readable snapshot record in *store*, skipping unreadable records."""
+    found = []
+    for p in store.all_snapshot_files() + store.pinned_snapshot_files():
+        try:
+            found.append(snapshot.read(p))
+        except snapshot.SnapshotError:
+            continue
+    return found
+
+
 def copy_snapshot(taken, source, target, complete=False, whole=None, decides=False):
     """Copy one snapshot into another store, each file checked by its hash as it is written; its record there.
 
@@ -75,7 +86,7 @@ def copy_snapshot(taken, source, target, complete=False, whole=None, decides=Fal
         the form it has in the source (``store move``).
     """
     whole = whole if whole is not None else set()  # the complete snapshots in the target that this run wrote, or read and hashed
-    existing = [snapshot.read(p) for p in target.all_snapshot_files() + target.pinned_snapshot_files()]
+    existing = _readable_snapshots(target)
     for held in existing:
         if (held.pipeline, held.commit, held.made_at) == (taken.pipeline, taken.commit, taken.made_at):
             def logical(value):
@@ -193,7 +204,7 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
     for entry in stores.entries:
         if entry is target_entry or not entry.reachable:
             continue
-        found = [snapshot.read(p) for p in entry.store.all_snapshot_files() + entry.store.pinned_snapshot_files()]
+        found = _readable_snapshots(entry.store)
         chosen = [t for t in found if t.pipeline == pipeline]
         if chosen and _same_place(entry.store, target):
             # Its records would be taken for the copies, then removed with their files
@@ -206,7 +217,7 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
             sources.append((entry, chosen))
             total += sum(entry.store.size_of(h) for h in set().union(*(t.hashes() for t in chosen)))
     if not sources:
-        held = [snapshot.read(p) for p in target.all_snapshot_files() + target.pinned_snapshot_files()]
+        held = _readable_snapshots(target)
         if not any(t.pipeline == pipeline for t in held):
             raise StoreError(f"No reachable store has a snapshot of {pipeline!r}")
     if dry_run:
@@ -275,7 +286,7 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
         # Clearing a record leaves its files for a tidy: this pipeline's go now, and no other's,
         # once the target is seen to hold every record still
         try:
-            held = {(t.commit, t.made_at) for t in map(snapshot.read, target.all_snapshot_files() + target.pinned_snapshot_files())
+            held = {(t.commit, t.made_at) for t in _readable_snapshots(target)
                     if t.pipeline == pipeline}
         except (snapshot.SnapshotError, ValueError, StoreError, OSError) as error:
             raise StoreError(f"Moved {count} snapshot(s) of {pipeline}, but {to!r} could not be read again ({error}); "

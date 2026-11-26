@@ -802,11 +802,6 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     from chartbook.store import default_store
     from chartbook.utils import is_glob_pattern
 
-    from chartbook.links import resolve as linked_location
-    linked = linked_location(asset, manifest_dir)
-    if linked is not None:
-        return linked
-
     manifest_path = manifest_dir / MANIFEST_NAME
     raw = _read_raw_manifest(manifest_path)
     try:
@@ -825,6 +820,11 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             found_at=_catalog_hint(asset.pipeline_id, manifest_dir),
             known=_known_ids(manifest_dir, dependencies),
         ) from None
+
+    from chartbook.links import resolve as linked_location
+    linked = linked_location(asset, manifest_dir)
+    if linked is not None:
+        return linked
 
     if dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir):
         raise AssetNotPinnedError(
@@ -1659,6 +1659,10 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
         )
 
     entry = raw[table][name]
+    if not isinstance(entry, dict):
+        raise ValueError(
+            f"[{table}.{name}] in {manifest_path} must be a table, got {type(entry).__name__}."
+        )
     if table == "dataframes" and ("table" in entry or "query" in entry):
         return _resolve_in_source(entry, name, raw, manifest_dir)
     declared_path = entry.get("path")
@@ -2066,11 +2070,13 @@ def _newest_snapshot_of(asset: AssetRef, store=None):
         has snapshots of it that none can be taken from.
     """
     from chartbook import lock
-    from chartbook.store import default_store
+    from chartbook.store import StoreNotAvailableError, default_store
 
     try:
         store = default_store() if store is None else store
         found = _snapshots_in(store)
+    except StoreNotAvailableError:
+        raise
     except Exception as error:  # noqa: BLE001 - an unreadable store is a reason, said in the error
         return None, f"the store cannot be read ({error})", None, True
     pipeline_id = asset.pipeline_id

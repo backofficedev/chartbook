@@ -3991,10 +3991,18 @@ def _copy_regular_file(source: Path, target: Path) -> bool:
         opened = os.fstat(reader.fileno())
         if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (looked.st_dev, looked.st_ino):
             return False
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with open(target, "xb") as writer:
-            while chunk := reader.read(1024 * 1024):
-                writer.write(chunk)
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with open(target, "xb") as writer:
+                while chunk := reader.read(1024 * 1024):
+                    writer.write(chunk)
+        except OSError:
+            try:
+                if target.is_file() and not target.is_symlink():
+                    target.unlink()
+            except OSError:
+                pass
+            return False
     return True
 
 
@@ -4290,9 +4298,11 @@ def _place_asset(record: dict, store: Store, folder: Path, of: Snapshot, at: Opt
         # A file of it is a link, or not synced yet: the rest of the version is laid out
         return f"the store does not give it: {str(error).rstrip('.')}"
     if is_glob_pattern(plain):
-        _copy_kept(kept, folder / glob_root(plain))
+        if not _copy_kept(kept, folder / glob_root(plain)):
+            return "its files could not be written where its path says"
     elif record.get("files") or not kept.single:
-        _copy_kept(kept, folder / plain)
+        if not _copy_kept(kept, folder / plain):
+            return "its files could not be written where its path says"
     else:
         if not kept.files:
             return "its object holds no file"
@@ -4539,12 +4549,18 @@ def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
     return changed if isinstance(changed, str) else None
 
 
-def _copy_kept(kept, target: Path) -> None:
+def _copy_kept(kept, target: Path) -> bool:
     """Copy an asset's files from where the store keeps them to a folder, under their paths inside the asset, writable; nothing on disk is written over."""
+    if not kept.files:
+        return False
+    ok = True
     for file in kept.files:
         parts = plain_parts(file.relative)
         if parts is None:
+            ok = False
             continue
         destination = target.joinpath(*parts)
         if not os.path.lexists(destination):
-            _copy_regular_file(file.location, destination)
+            if not _copy_regular_file(file.location, destination):
+                ok = False
+    return ok

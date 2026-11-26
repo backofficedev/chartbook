@@ -3360,19 +3360,23 @@ class FolderStore(Store):
         pipelines = Path(os.path.realpath(self.root / self._places().pipelines))
         for asset in self._held(content_hash):
             for file in asset.files:
-                if not os.path.lexists(file.location):
+                try:
+                    location = on_disk(self.root, list(file.location.relative_to(self.root).parts))
+                except ValueError:
+                    location = file.location
+                disk_path = _any_length(location)
+                if not os.path.lexists(disk_path):
                     continue
-                if os.path.islink(file.location) or not self._in_a_tree(file.location):
+                if os.path.islink(disk_path) or not self._in_a_tree(location):
                     raise StoreError(
                         f"{file.path} of {content_hash} in the store at {self} is a link, or leads out of the store: "
                         f"it is not removed. `chartbook store verify` checks a store."
                     )
                 try:
-                    _make_removable(str(file.location))
-                    os.remove(file.location)
+                    _remove_file(str(disk_path))
                 except OSError as error:
                     raise StoreError(
-                        f"Cannot remove {file.path} of {content_hash} at {self._shown(file.location)}: "
+                        f"Cannot remove {file.path} of {content_hash} at {self._shown(location)}: "
                         f"{error.strerror or error}. {self._not_this_users_remedy()}"
                     ) from None
                 removed = True
