@@ -402,7 +402,12 @@ def get(
     base_dir = _defaults.get("BASE_DIR", Path.cwd())
 
     def _finalize(raw_value):
-        if "DIR" in var_name and convert_dir_vars_to_abs_path and cast in (undefined, Path, str):
+        if (
+            "DIR" in var_name
+            and convert_dir_vars_to_abs_path
+            and cast in (undefined, Path, str)
+            and isinstance(raw_value, (str, os.PathLike))
+        ):
             raw_value = _if_relative_make_abs(Path(raw_value), base_dir)
         if cast is not undefined:
             raw_value = cast(raw_value)

@@ -58,6 +58,7 @@ dependencies:
   - r-zoo
   - r-stargazer
 {% endif %}
+{% if cookiecutter.include_chartbook or cookiecutter.include_jupyter_notebooks or cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
   - pip
   - pip:
 {% if cookiecutter.include_chartbook or cookiecutter.include_jupyter_notebooks %}
@@ -65,4 +66,5 @@ dependencies:
 {% endif %}
 {% if cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
       - wrds==3.*
+{% endif %}
 {% endif %}

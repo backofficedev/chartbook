@@ -119,6 +119,8 @@ class TestProvenanceFilesAndEnvAudit9:
         assert isinstance(from_default, Path)
         assert from_default.is_absolute()
 
+        assert env.get("UNSET_CUSTOM_DIR", default=None) is None
+
 
 class TestCLIEdgeCasesAudit9:
     def test_path_command_handles_corrupt_lockfile_cleanly(self, tmp_path):

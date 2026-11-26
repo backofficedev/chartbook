@@ -264,6 +264,8 @@ def config(
 
     # 4. Use the default value provided in the local file. Error if not found
     try:
+        if cast is None:
+            return _config(var_name, default=default)
         return _config(var_name, default=default, cast=cast)
     except Exception as e:
         raise ValueError(
