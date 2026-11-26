@@ -543,12 +543,17 @@ class SphinxWriter:
             recorded = record.get("glimpse")
             if isinstance(recorded, str):
                 glimpse = recorded
-            elif (record.get("content_hash") or record.get("definition_hash")) and not Path(resolved).exists():
-                # A version laid out without its data, from a snapshot whose index recorded no glimpse (ChartBook 0.4);
-                # a table or query has a definition hash, and its parquet is not laid out either
-                glimpse = NO_GLIMPSE_RECORDED
             else:
-                glimpse = get_dataframe_glimpse(Path(resolved), record.get("format"), record.get("read_options"))
+                from chartbook import hashing
+
+                found = hashing.find_files(resolved) if hashing.is_pattern(resolved) else None
+                has_local_files = Path(resolved).exists() or bool(found and found.files)
+                if (record.get("content_hash") or record.get("definition_hash")) and not has_local_files:
+                    # A version laid out without its data, from a snapshot whose index recorded no glimpse (ChartBook 0.4);
+                    # a table or query has a definition hash, and its parquet is not laid out either
+                    glimpse = NO_GLIMPSE_RECORDED
+                else:
+                    glimpse = get_dataframe_glimpse(Path(resolved), record.get("format"), record.get("read_options"))
             dates = record.get("last_dates")
             if isinstance(dates, dict) and isinstance(dates.get("min"), str) and isinstance(dates.get("max"), str):
                 first, last = dates["min"], dates["max"]
@@ -832,6 +837,8 @@ class SphinxWriter:
             toc_path = site_root / "index_toc.md"
             if not untrusted_source() or escapes(toc_path, site_root) is None:
                 index_toc_content = toc_path.read_text(encoding="utf-8")
+        from chartbook.sitefiles import _a_site_page
+
         template = environment.get_template("index.md")
         return template.render(
             pipeline_manifest=self._pipeline_manifest(pipeline),
@@ -848,8 +855,11 @@ class SphinxWriter:
             ],
             notes_list=[f"cb/{_local_name(r)}.md" for r in notes],
             # The theme's front page lists the pipeline's own pages, but not
-            # the two it merges or replaces at the root
-            site_pages_list=[p for p in site_pages if "/" in p or p not in ("index_toc.md", "index.md")],
+            # the two it merges or replaces at the root, nor build config/templates
+            site_pages_list=[
+                p for p in site_pages
+                if ("/" in p or p not in ("index_toc.md", "index.md")) and _a_site_page(Path(p))
+            ],
             index_toc_content=index_toc_content,
             show_code_updated=True,
             freshness=[fact for fact in [_freshness("Code updated", pipeline.get("code_changed_at"))] if fact],

@@ -222,19 +222,25 @@ class MatplotlibBackend(BaseBackend):
     ) -> tuple["matplotlib.figure.Figure", "matplotlib.axes.Axes"]:
         """Build a line chart figure without saving."""
         fig, ax = self._setup_figure(size)
-        colors = self._get_colors(config, len(config.y))
+        try:
+            colors = self._get_colors(config, len(config.y))
 
-        for i, y_col in enumerate(config.y):
-            label = config.labels.get(y_col, y_col) if config.labels else y_col
-            ax.plot(df[config.x], df[y_col], label=label, color=colors[i])
+            for i, y_col in enumerate(config.y):
+                label = config.labels.get(y_col, y_col) if config.labels else y_col
+                ax.plot(df[config.x], df[y_col], label=label, color=colors[i])
 
-        pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config, x_series=df[config.x])
-        self._apply_overlays(ax, overlay, df, config.x)
-        if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
-            ax.legend()
-        self._add_annotations(fig, ax, config)
-        return fig, ax
+            pre_labels = len(ax.get_legend_handles_labels()[1])
+            self._apply_config(ax, config, x_series=df[config.x])
+            self._apply_overlays(ax, overlay, df, config.x)
+            if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+                ax.legend()
+            self._add_annotations(fig, ax, config)
+            return fig, ax
+        except BaseException:
+            import matplotlib.pyplot as plt
+
+            plt.close(fig)
+            raise
 
     def create_line(
         self,
@@ -259,41 +265,47 @@ class MatplotlibBackend(BaseBackend):
         import numpy as np
 
         fig, ax = self._setup_figure(size)
-        colors = self._get_colors(config, len(config.y))
+        try:
+            colors = self._get_colors(config, len(config.y))
 
-        x = np.arange(len(df))
-        width = 0.8 / len(config.y) if not config.stacked else 0.8
+            x = np.arange(len(df))
+            width = 0.8 / len(config.y) if not config.stacked else 0.8
 
-        import pandas as pd
+            import pandas as pd
 
-        pos_bottom = np.zeros(len(df)) if config.stacked else None
-        neg_bottom = np.zeros(len(df)) if config.stacked else None
+            pos_bottom = np.zeros(len(df)) if config.stacked else None
+            neg_bottom = np.zeros(len(df)) if config.stacked else None
 
-        for i, y_col in enumerate(config.y):
-            label = config.labels.get(y_col, y_col) if config.labels else y_col
-            vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
+            for i, y_col in enumerate(config.y):
+                label = config.labels.get(y_col, y_col) if config.labels else y_col
+                vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
 
-            if config.stacked:
-                stacked_vals = np.nan_to_num(vals, nan=0.0)
-                bottoms = np.where(stacked_vals >= 0, pos_bottom, neg_bottom)
-                ax.bar(x, stacked_vals, width, label=label, color=colors[i], bottom=bottoms)
-                pos_bottom = pos_bottom + np.maximum(stacked_vals, 0.0)
-                neg_bottom = neg_bottom + np.minimum(stacked_vals, 0.0)
-            else:
-                offset = (i - len(config.y) / 2 + 0.5) * width
-                ax.bar(x + offset, vals, width, label=label, color=colors[i])
+                if config.stacked:
+                    stacked_vals = np.nan_to_num(vals, nan=0.0)
+                    bottoms = np.where(stacked_vals >= 0, pos_bottom, neg_bottom)
+                    ax.bar(x, stacked_vals, width, label=label, color=colors[i], bottom=bottoms)
+                    pos_bottom = pos_bottom + np.maximum(stacked_vals, 0.0)
+                    neg_bottom = neg_bottom + np.minimum(stacked_vals, 0.0)
+                else:
+                    offset = (i - len(config.y) / 2 + 0.5) * width
+                    ax.bar(x + offset, vals, width, label=label, color=colors[i])
 
-        # Set x-tick labels
-        ax.set_xticks(x)
-        ax.set_xticklabels(df[config.x], rotation=45, ha="right")
+            # Set x-tick labels
+            ax.set_xticks(x)
+            ax.set_xticklabels(df[config.x], rotation=45, ha="right")
 
-        pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config, x_series=df[config.x], use_positional_x=True)
-        self._apply_overlays(ax, overlay, df, config.x, use_positional_x=True)
-        if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
-            ax.legend()
-        self._add_annotations(fig, ax, config)
-        return fig, ax
+            pre_labels = len(ax.get_legend_handles_labels()[1])
+            self._apply_config(ax, config, x_series=df[config.x], use_positional_x=True)
+            self._apply_overlays(ax, overlay, df, config.x, use_positional_x=True)
+            if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+                ax.legend()
+            self._add_annotations(fig, ax, config)
+            return fig, ax
+        except BaseException:
+            import matplotlib.pyplot as plt
+
+            plt.close(fig)
+            raise
 
     def create_bar(
         self,
@@ -316,57 +328,62 @@ class MatplotlibBackend(BaseBackend):
     ) -> tuple["matplotlib.figure.Figure", "matplotlib.axes.Axes"]:
         """Build a scatter chart figure without saving."""
         fig, ax = self._setup_figure(size)
+        try:
+            y_col = config.y[0]  # Scatter uses first y column
 
-        y_col = config.y[0]  # Scatter uses first y column
+            # Handle size mapping
+            sizes = None
+            if config.size is not None and config.size in df.columns:
+                import pandas as pd
 
-        # Handle size mapping
-        sizes = None
-        if config.size is not None and config.size in df.columns:
-            import pandas as pd
+                sizes = pd.to_numeric(df[config.size], errors="coerce").astype(float)
+                # Normalize sizes to reasonable marker sizes
+                span = sizes.max() - sizes.min()
+                if pd.isna(span) or span == 0:
+                    sizes = pd.Series(60.0, index=df.index)
+                else:
+                    sizes = ((sizes - sizes.min()) / span * 200 + 20).fillna(60.0)
 
-            sizes = pd.to_numeric(df[config.size], errors="coerce").astype(float)
-            # Normalize sizes to reasonable marker sizes
-            span = sizes.max() - sizes.min()
-            if pd.isna(span) or span == 0:
-                sizes = pd.Series(60.0, index=df.index)
+            # Handle color by category
+            if config.color_by is not None and config.color_by in df.columns:
+                import pandas as pd
+
+                categories = df[config.color_by].unique()
+                palette = get_config().color_palette
+                colors = [palette[i % len(palette)] for i in range(len(categories))]
+                for cat, color in zip(categories, colors):
+                    mask = (
+                        df[config.color_by].isna()
+                        if pd.isna(cat)
+                        else (df[config.color_by] == cat).fillna(False)
+                    )
+                    cat_sizes = sizes[mask] if sizes is not None else None
+                    ax.scatter(
+                        df.loc[mask, config.x],
+                        df.loc[mask, y_col],
+                        s=cat_sizes,
+                        c=color,
+                        label=str(cat),
+                        alpha=0.7,
+                    )
+                has_category_legend = True
             else:
-                sizes = ((sizes - sizes.min()) / span * 200 + 20).fillna(60.0)
+                color = self._get_colors(config, 1)[0]
+                ax.scatter(df[config.x], df[y_col], s=sizes, c=color, alpha=0.7)
+                has_category_legend = False
 
-        # Handle color by category
-        if config.color_by is not None and config.color_by in df.columns:
-            import pandas as pd
+            pre_labels = len(ax.get_legend_handles_labels()[1])
+            self._apply_config(ax, config, x_series=df[config.x])
+            self._apply_overlays(ax, overlay, df, config.x)
+            if has_category_legend or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+                ax.legend()
+            self._add_annotations(fig, ax, config)
+            return fig, ax
+        except BaseException:
+            import matplotlib.pyplot as plt
 
-            categories = df[config.color_by].unique()
-            palette = get_config().color_palette
-            colors = [palette[i % len(palette)] for i in range(len(categories))]
-            for cat, color in zip(categories, colors):
-                mask = (
-                    df[config.color_by].isna()
-                    if pd.isna(cat)
-                    else (df[config.color_by] == cat).fillna(False)
-                )
-                cat_sizes = sizes[mask] if sizes is not None else None
-                ax.scatter(
-                    df.loc[mask, config.x],
-                    df.loc[mask, y_col],
-                    s=cat_sizes,
-                    c=color,
-                    label=str(cat),
-                    alpha=0.7,
-                )
-            has_category_legend = True
-        else:
-            color = self._get_colors(config, 1)[0]
-            ax.scatter(df[config.x], df[y_col], s=sizes, c=color, alpha=0.7)
-            has_category_legend = False
-
-        pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config, x_series=df[config.x])
-        self._apply_overlays(ax, overlay, df, config.x)
-        if has_category_legend or len(ax.get_legend_handles_labels()[1]) > pre_labels:
-            ax.legend()
-        self._add_annotations(fig, ax, config)
-        return fig, ax
+            plt.close(fig)
+            raise
 
     def create_scatter(
         self,
@@ -389,34 +406,39 @@ class MatplotlibBackend(BaseBackend):
     ) -> tuple["matplotlib.figure.Figure", "matplotlib.axes.Axes"]:
         """Build a pie chart figure without saving."""
         fig, ax = self._setup_figure(size)
+        try:
+            names_col = config.names or config.x
+            values_col = config.values or config.y[0]
 
-        names_col = config.names or config.x
-        values_col = config.values or config.y[0]
+            import numpy as np
+            import pandas as pd
 
-        import numpy as np
-        import pandas as pd
+            numeric_vals = pd.to_numeric(df[values_col], errors="coerce")
+            valid = numeric_vals.notna() & np.isfinite(numeric_vals) & (numeric_vals >= 0)
+            valid_vals = numeric_vals[valid]
+            valid_df = df.loc[valid]
+            if not valid_vals.empty and valid_vals.sum() != 0:
+                colors = get_config().color_palette[: len(valid_df)]
+                wedges, texts, autotexts = ax.pie(
+                    valid_vals,
+                    labels=valid_df[names_col],
+                    colors=colors,
+                    autopct="%1.1f%%",
+                    startangle=90,
+                )
 
-        numeric_vals = pd.to_numeric(df[values_col], errors="coerce")
-        valid = numeric_vals.notna() & np.isfinite(numeric_vals) & (numeric_vals >= 0)
-        valid_vals = numeric_vals[valid]
-        valid_df = df.loc[valid]
-        if not valid_vals.empty and valid_vals.sum() != 0:
-            colors = get_config().color_palette[: len(valid_df)]
-            wedges, texts, autotexts = ax.pie(
-                valid_vals,
-                labels=valid_df[names_col],
-                colors=colors,
-                autopct="%1.1f%%",
-                startangle=90,
-            )
+            ax.axis("equal")
 
-        ax.axis("equal")
+            if config.title:
+                ax.set_title(config.title)
 
-        if config.title:
-            ax.set_title(config.title)
+            self._add_annotations(fig, ax, config)
+            return fig, ax
+        except BaseException:
+            import matplotlib.pyplot as plt
 
-        self._add_annotations(fig, ax, config)
-        return fig, ax
+            plt.close(fig)
+            raise
 
     def create_pie(
         self,
@@ -439,33 +461,39 @@ class MatplotlibBackend(BaseBackend):
     ) -> tuple["matplotlib.figure.Figure", "matplotlib.axes.Axes"]:
         """Build an area chart figure without saving."""
         fig, ax = self._setup_figure(size)
-        colors = self._get_colors(config, len(config.y))
+        try:
+            colors = self._get_colors(config, len(config.y))
 
-        if config.stacked:
-            ax.stackplot(
-                df[config.x],
-                [df[y_col] for y_col in config.y],
-                labels=[
-                    config.labels.get(y, y) if config.labels else y for y in config.y
-                ],
-                colors=colors,
-                alpha=0.7,
-            )
-        else:
-            for i, y_col in enumerate(config.y):
-                label = config.labels.get(y_col, y_col) if config.labels else y_col
-                ax.fill_between(
-                    df[config.x], df[y_col], alpha=0.5, label=label, color=colors[i]
+            if config.stacked:
+                ax.stackplot(
+                    df[config.x],
+                    [df[y_col] for y_col in config.y],
+                    labels=[
+                        config.labels.get(y, y) if config.labels else y for y in config.y
+                    ],
+                    colors=colors,
+                    alpha=0.7,
                 )
-                ax.plot(df[config.x], df[y_col], color=colors[i])
+            else:
+                for i, y_col in enumerate(config.y):
+                    label = config.labels.get(y_col, y_col) if config.labels else y_col
+                    ax.fill_between(
+                        df[config.x], df[y_col], alpha=0.5, label=label, color=colors[i]
+                    )
+                    ax.plot(df[config.x], df[y_col], color=colors[i])
 
-        pre_labels = len(ax.get_legend_handles_labels()[1])
-        self._apply_config(ax, config, x_series=df[config.x])
-        self._apply_overlays(ax, overlay, df, config.x)
-        if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
-            ax.legend()
-        self._add_annotations(fig, ax, config)
-        return fig, ax
+            pre_labels = len(ax.get_legend_handles_labels()[1])
+            self._apply_config(ax, config, x_series=df[config.x])
+            self._apply_overlays(ax, overlay, df, config.x)
+            if len(config.y) > 1 or len(ax.get_legend_handles_labels()[1]) > pre_labels:
+                ax.legend()
+            self._add_annotations(fig, ax, config)
+            return fig, ax
+        except BaseException:
+            import matplotlib.pyplot as plt
+
+            plt.close(fig)
+            raise
 
     def create_area(
         self,
@@ -488,72 +516,84 @@ class MatplotlibBackend(BaseBackend):
     ) -> tuple["matplotlib.figure.Figure", "matplotlib.axes.Axes"]:
         """Build a dual-axis chart figure without saving."""
         fig, ax1 = self._setup_figure(size)
-        ax2 = ax1.twinx()
+        try:
+            ax2 = ax1.twinx()
 
-        palette = get_config().color_palette
-        left_colors = (
-            config.left_colors
-            or [palette[i % len(palette)] for i in range(len(config.left_y))]
-        )
-        right_colors = (
-            config.right_colors
-            or [palette[(len(config.left_y) + i) % len(palette)] for i in range(len(config.right_y))]
-        )
+            palette = get_config().color_palette
+            left_colors = (
+                config.left_colors
+                or [palette[i % len(palette)] for i in range(len(config.left_y))]
+            )
+            right_colors = (
+                config.right_colors
+                or [palette[(len(config.left_y) + i) % len(palette)] for i in range(len(config.right_y))]
+            )
 
-        # If either axis uses bars, both axes share integer positional x coordinates
-        # so datetime/categorical x-axes don't mismatch epoch days vs 0..N-1.
-        use_positional_x = config.left_type == "bar" or config.right_type == "bar"
-        both_bars = config.left_type == "bar" and config.right_type == "bar"
-        total_bars = len(config.left_y) + len(config.right_y) if both_bars else None
+            # If either axis uses bars, both axes share integer positional x coordinates
+            # so datetime/categorical x-axes don't mismatch epoch days vs 0..N-1.
+            use_positional_x = config.left_type == "bar" or config.right_type == "bar"
+            both_bars = config.left_type == "bar" and config.right_type == "bar"
+            total_bars = len(config.left_y) + len(config.right_y) if both_bars else None
 
-        # Plot left axis
-        self._plot_series_on_axis(
-            ax1, df, config.x, config.left_y, config.left_type, left_colors,
-            use_positional_x=use_positional_x,
-            bar_slot_offset=0,
-            bar_total_slots=total_bars,
-        )
+            # Plot left axis
+            self._plot_series_on_axis(
+                ax1, df, config.x, config.left_y, config.left_type, left_colors,
+                use_positional_x=use_positional_x,
+                bar_slot_offset=0,
+                bar_total_slots=total_bars,
+            )
 
-        # Plot right axis
-        self._plot_series_on_axis(
-            ax2, df, config.x, config.right_y, config.right_type, right_colors,
-            use_positional_x=use_positional_x,
-            bar_slot_offset=len(config.left_y) if both_bars else 0,
-            bar_total_slots=total_bars,
-        )
+            # Plot right axis
+            self._plot_series_on_axis(
+                ax2, df, config.x, config.right_y, config.right_type, right_colors,
+                use_positional_x=use_positional_x,
+                bar_slot_offset=len(config.left_y) if both_bars else 0,
+                bar_total_slots=total_bars,
+            )
 
-        # Configure axes
-        if config.title:
-            ax1.set_title(config.title)
-        if config.x_title:
-            ax1.set_xlabel(config.x_title)
-        if config.left_y_title:
-            ax1.set_ylabel(config.left_y_title)
-        if config.right_y_title:
-            ax2.set_ylabel(config.right_y_title)
-        if config.left_y_range:
-            ax1.set_ylim(config.left_y_range)
-        if config.right_y_range:
-            ax2.set_ylim(config.right_y_range)
-        if config.left_y_tickformat:
-            self._apply_tickformat(ax1.yaxis, config.left_y_tickformat)
-        if config.right_y_tickformat:
-            self._apply_tickformat(ax2.yaxis, config.right_y_tickformat)
+            if use_positional_x:
+                import numpy as np
 
-        # Apply overlays to left axis before collecting legend entries
-        from chartbook.plotting._overlays import apply_overlays_matplotlib
+                ax1.set_xticks(np.arange(len(df)))
+                ax1.set_xticklabels(df[config.x], rotation=45, ha="right")
 
-        apply_overlays_matplotlib(ax1, overlay, df, config.x, use_positional_x=use_positional_x)
+            # Configure axes
+            if config.title:
+                ax1.set_title(config.title)
+            if config.x_title:
+                ax1.set_xlabel(config.x_title)
+            if config.left_y_title:
+                ax1.set_ylabel(config.left_y_title)
+            if config.right_y_title:
+                ax2.set_ylabel(config.right_y_title)
+            if config.left_y_range:
+                ax1.set_ylim(config.left_y_range)
+            if config.right_y_range:
+                ax2.set_ylim(config.right_y_range)
+            if config.left_y_tickformat:
+                self._apply_tickformat(ax1.yaxis, config.left_y_tickformat)
+            if config.right_y_tickformat:
+                self._apply_tickformat(ax2.yaxis, config.right_y_tickformat)
 
-        # Combine legends
-        lines1, labels1 = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
-        if labels1 or labels2:
-            ax1.legend(lines1 + lines2, labels1 + labels2, loc="best")
-        # Its caption, note and source, which were not drawn
-        self._add_annotations(fig, ax1, config)
+            # Apply overlays to left axis before collecting legend entries
+            from chartbook.plotting._overlays import apply_overlays_matplotlib
 
-        return fig, ax1
+            apply_overlays_matplotlib(ax1, overlay, df, config.x, use_positional_x=use_positional_x)
+
+            # Combine legends
+            lines1, labels1 = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            if labels1 or labels2:
+                ax1.legend(lines1 + lines2, labels1 + labels2, loc="best")
+            # Its caption, note and source, which were not drawn
+            self._add_annotations(fig, ax1, config)
+
+            return fig, ax1
+        except BaseException:
+            import matplotlib.pyplot as plt
+
+            plt.close(fig)
+            raise
 
     def create_dual_axis(
         self,
@@ -599,8 +639,6 @@ class MatplotlibBackend(BaseBackend):
                 offset = (slot - total / 2 + 0.5) * width
                 vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
                 ax.bar(x + offset, vals, width, label=y_col, color=color)
-                ax.set_xticks(x)
-                ax.set_xticklabels(df[x_col], rotation=45, ha="right")
             elif chart_type == "scatter":
                 ax.scatter(x_vals, df[y_col], label=y_col, color=color, alpha=0.7)
             elif chart_type == "area":

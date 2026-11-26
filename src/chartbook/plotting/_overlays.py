@@ -27,12 +27,12 @@ def _x_values_to_numeric(x_values) -> np.ndarray:
         and any(isinstance(v, (pd.Timestamp, date, datetime, np.datetime64)) for v in non_null)
     )
     if is_dt:
-        dt = pd.to_datetime(x_series, errors="coerce")
+        dt = pd.to_datetime(x_series, errors="coerce", utc=True)
         return _datetime_series_to_seconds(dt)
     try:
         x_numeric = pd.to_numeric(x_series, errors="coerce")
         if x_numeric.isna().all():
-            dt = pd.to_datetime(x_series, errors="coerce")
+            dt = pd.to_datetime(x_series, errors="coerce", utc=True)
             if not dt.isna().all():
                 return _datetime_series_to_seconds(dt)
             return np.arange(len(x_series), dtype=float)
@@ -232,7 +232,13 @@ def _x_range(x_data: pd.Series) -> tuple:
         return None, None
     if isinstance(x_data.dtype, pd.CategoricalDtype) and not x_data.cat.ordered:
         return None, None
-    return x_data.min(), x_data.max()
+    non_null = x_data.dropna()
+    if non_null.empty:
+        return None, None
+    try:
+        return non_null.min(), non_null.max()
+    except TypeError:
+        return None, None
 
 
 def apply_overlays_plotly(

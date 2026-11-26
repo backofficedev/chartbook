@@ -3916,15 +3916,16 @@ def what_is_wrong_in(asset: KeptAsset, read: Optional[dict] = None) -> list[tupl
     pipeline_folder = asset.record.folder.parent
     for file in asset.files:
         location = _on_disk_where_kept(file, pipeline_folder)
-        if os.path.islink(location):
-            wrong.append((file.location, f"{file.path} is a link to {link_target(location)}, not a file the store keeps"))
+        disk_path = _any_length(location)
+        if os.path.islink(disk_path):
+            wrong.append((file.location, f"{file.path} is a link to {link_target(disk_path)}, not a file the store keeps"))
             continue
         key = str(location)
         if read is not None and key in read:
             actual = read[key]
         else:
             try:
-                actual = hashing.format_hash(hashing.HashCache().file_hex(Path(_any_length(location))))  # fresh, so every byte is read
+                actual = hashing.format_hash(hashing.HashCache().file_hex(Path(disk_path)))  # fresh, so every byte is read
             except OSError as error:
                 actual = error
             if read is not None:

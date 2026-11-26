@@ -554,8 +554,16 @@ def _kept_apart(sources, inside) -> list:
     """
     if not inside or not isinstance(sources, list):
         return []
+    from chartbook.resolve import NOT_TABLES
+
     opened = set(sources)
-    pairs = [(str(location), relative) for relative, location in sorted(inside.items()) if str(location) in opened]
+    pairs = [
+        (str(location), relative)
+        for relative, location in sorted(inside.items())
+        if str(location) in opened
+        and _visible(relative.split("/"))
+        and not relative.lower().endswith(NOT_TABLES)
+    ]
     whole = len({location for location, _ in pairs}) == len(pairs) and all(
         Path(location).parts[-len(Path(relative).parts):] == Path(relative).parts for location, relative in pairs
     )
@@ -768,19 +776,37 @@ def _partitions(files: list[str], folder: Path, by_file: Optional[dict] = None, 
 
 def _key_values(key: str, values: list[str], scratch: Path) -> tuple:
     """A Hive key's type, and what each of its values as written is, as polars reads them (:func:`_partitions`)."""
+    import errno
+    from urllib.parse import unquote
+
+    def as_text() -> tuple:
+        # Text, as polars reads a key's value it is told is text: unescaped, and Hive's null
+        return pl.String, {value: None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in values}
+
+    bad_chars = set('<>:"|?*') if os.name == "nt" else {"*"}
+    for value in values:
+        part = f"{key}={value}"
+        if any(ch in bad_chars for ch in part) or len(part.encode("utf-8")) > 255:
+            return as_text()
     for i, value in enumerate(values):
         # A folder each, so that two values are not one folder on a disk that ignores case
-        _written(pl.DataFrame({_FILE: [value]}), scratch / str(i) / f"{key}={value}" / "part.parquet")
+        try:
+            _written(pl.DataFrame({_FILE: [value]}), scratch / str(i) / f"{key}={value}" / "part.parquet")
+        except RuntimeError as error:
+            cause = error.__cause__
+            if isinstance(cause, OSError) and (
+                cause.errno in (errno.EINVAL, errno.ENAMETOOLONG)
+                or getattr(cause, "winerror", None) in (123, 206)
+            ):
+                return as_text()
+            raise
     try:
         read = pl.scan_parquet(scratch, hive_partitioning=True).collect()
     except READ_ERRORS:
         read = None
     if read is not None and key in read.columns and read.height == len(values):
         return read.schema[key], dict(zip(read[_FILE], read[key]))
-    # Text, as polars reads a key's value it is told is text: unescaped, and Hive's null
-    from urllib.parse import unquote
-
-    return pl.String, {value: None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in values}
+    return as_text()
 
 
 #: How a folder's keys are read, said when they cannot be (:func:`_scratch`).

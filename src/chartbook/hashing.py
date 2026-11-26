@@ -455,13 +455,13 @@ def escapes(path: Union[str, Path], root: Union[str, Path]) -> Optional[Path]:
     :returns: The real path of the first file outside *root*, or None if
         every file is inside it or there are no files.
     """
-    inside = os.path.realpath(root)
+    inside = Path(os.path.realpath(root))
 
     def outside(candidate) -> Optional[Path]:
-        real = os.path.realpath(candidate)
-        if real == inside or real.startswith(inside + os.sep):
+        real = Path(os.path.realpath(candidate))
+        if real.is_relative_to(inside):
             return None
-        return Path(real)
+        return real
 
     text = str(path)
     if not is_pattern(text):

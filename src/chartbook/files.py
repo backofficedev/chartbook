@@ -201,7 +201,7 @@ def _bounded(file: Path) -> tuple[bytes, bool]:
             out += inflate.decompress(more, PREVIEW_BYTES - len(out))
         # Whole only if the stream ended, and nothing follows it: a file of
         # several gzip members (two files joined with `cat`) has more to show
-        whole = inflate.eof and len(out) < PREVIEW_BYTES and not inflate.unused_data and not f.read(1)
+        whole = inflate.eof and len(out) <= PREVIEW_BYTES and not inflate.unconsumed_tail and not inflate.unused_data and not f.read(1)
         return out, whole
 
 

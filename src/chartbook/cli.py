@@ -2731,7 +2731,11 @@ def _echo_pin_report(report, listed=()):
     from chartbook.check import display_path
     from chartbook.links import read as read_links
     from chartbook.refs import KIND_TABLES
-    linked = read_links(report.lockfile.parent, active=False)
+    try:
+        linked = read_links(report.lockfile.parent, active=False)
+    except (ValueError, OSError) as error:
+        click.echo(f"warning: {_said(error)}", err=True)
+        linked = {}
     if linked:
         click.echo(f"{len(linked)} link(s) in place, not used here.")
 

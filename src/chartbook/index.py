@@ -1343,8 +1343,14 @@ def _site_pages(project: dict, base_dir: Path) -> Optional[tuple[dict, list[str]
     resolved = project.get("_resolved_site_dir")
     if not resolved:
         return None
+    from chartbook.sitefiles import _a_site_page
+
     folder = Path(resolved)
-    pages = sorted(page.relative_to(folder).as_posix() for page in folder.rglob("*.md") if page.is_file())
+    pages = sorted(
+        page.relative_to(folder).as_posix()
+        for page in folder.rglob("*.md")
+        if page.is_file() and _a_site_page(page.relative_to(folder))
+    )
     try:
         shown = Path(os.path.relpath(folder, base_dir)).as_posix()
     except ValueError:  # on another drive (Windows), where no relative path reaches it

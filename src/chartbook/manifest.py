@@ -1298,7 +1298,7 @@ def with_dependency(text: str, key: str, entry: dict) -> str:
 #: the twelve digits a version is shown with, with or without the algorithm
 #: in front. A label is in a committed file and is read for years, so it is
 #: not allowed to be shorter than the name it was copied from.
-VERSION_PATTERN = re.compile(r"^(sha256:)?[0-9a-f]{12,64}$")
+VERSION_PATTERN = re.compile(r"^(sha256:)?[0-9a-f]{12,64}\Z")
 
 #: A label that could be taken for the start of a hash: four or more hex
 #: digits and nothing else, which is what a typed version may be.

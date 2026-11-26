@@ -126,9 +126,21 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
             None,
         )
         if here is not None:
+            try:
+                here_logical = _logical_document(here.path)
+                record_logical = _logical_document(record.path)
+            except (OSError, ValueError) as error:
+                done.refused.append((what, f"its record cannot be read: {error}"))
+                continue
+            if here_logical != record_logical:
+                done.refused.append((what, (
+                    f"the store has a different snapshot of this pipeline, commit and time already, in "
+                    f"{here.folder.name}. Nothing was imported over it"
+                )))
+                continue
             # There only if the store's own snapshot of that moment is whole, its own files read and
             # hashed: nothing is imported over one that is not, since a snapshot's folder is not changed
-            wrong = into.verify_snapshot(here.path, [asset.content_hash for asset in here.assets])
+            wrong = into.verify_snapshot(here.path, [asset.content_hash for asset in record.assets])
             if wrong:
                 more = f" (and {len(wrong) - 1} more of its files)" if len(wrong) > 1 else ""
                 # The way out is named only on what was looked at: what is being imported is read too, each
@@ -203,6 +215,20 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
         done.copied.append(moment)
         echo(f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}")
     return done
+
+
+def _logical_document(path: Path) -> dict:
+    """A snapshot record without storage-layout fields (top-level and per-part ``stored``)."""
+    raw = json.loads(Path(_any_length(path)).read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("record is not a JSON object")
+    raw.pop("stored", None)
+    records = raw.get("records")
+    parts = [*(records if isinstance(records, list) else []), raw.get("index"), raw.get("documents")]
+    for part in parts:
+        if isinstance(part, dict):
+            part.pop("stored", None)
+    return raw
 
 
 def _builds_on_there(record: KeptRecord, into: Store, whole: set) -> Optional[str]:

@@ -85,8 +85,8 @@ def enrich(records, stores, notes=None):
             def canonical(value):
                 owner, separator, local = value.rpartition(":")
                 return aliases.get(owner, owner) + separator + local if separator else value
-            hub["inputs"] = [canonical(v) for v in hub.get("inputs", [])]
-            hub["pinned_inputs"] = {canonical(k): v for k, v in hub.get("pinned_inputs", {}).items()}
+            hub["inputs"] = [canonical(v) for v in (hub.get("inputs") or [])]
+            hub["pinned_inputs"] = {canonical(k): v for k, v in (hub.get("pinned_inputs") or {}).items()}
             hub.pop("trained_from", None)  # computed from verified snapshot identities below
             records.append(hub)
     result = []

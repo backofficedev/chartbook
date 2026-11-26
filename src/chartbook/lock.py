@@ -465,6 +465,11 @@ def _lock_from_document(document: dict, where: str) -> Lock:
                             "it lists a dependency without an id that is a name. The file is not one "
                             "ChartBook wrote: restore it from git, or remove it and run `chartbook pin`"
                         )
+                    if "location" in entry and not isinstance(entry["location"], dict):
+                        raise ValueError(
+                            "it lists a dependency with a location that is not an object. The file is not one "
+                            "ChartBook wrote: restore it from git, or remove it and run `chartbook pin`"
+                        )
         # Pinned from a snapshot, which each person may build again; one from its repository is pinned whole
         from_snapshots = {
             entry["id"] for entry in lock.dependencies
@@ -2624,7 +2629,14 @@ def _put_note(store, lock_path: Path, pins: NotePins, machine: Optional[str], *,
     :returns: Whether a note was written or removed.
     """
     wrote = False
-    pairs = [(one, one.root_of(lock_path, machine=machine)) for one in _writable_stores(store)]
+    pairs = []
+    first_error = None
+    for one in _writable_stores(store):
+        try:
+            pairs.append((one, one.root_of(lock_path, machine=machine)))
+        except (StoreError, OSError) as error:
+            if first_error is None:
+                first_error = error
     roots = [root for _, root in pairs if root is not None]
     if pins.complete or not roots:
         merged_hashes = set(pins.hashes)
@@ -2637,7 +2649,6 @@ def _put_note(store, lock_path: Path, pins: NotePins, machine: Optional[str], *,
         merged_labels = set(pins.labelled).union(*(set(root.labelled) for root in roots if root.labelled is not None))
     if not merged_hashes and not merged_snaps:
         if pins.complete:
-            first_error = None
             for one, before in pairs:
                 if before is not None:
                     try:
@@ -2646,11 +2657,10 @@ def _put_note(store, lock_path: Path, pins: NotePins, machine: Optional[str], *,
                     except (StoreError, OSError) as error:
                         if first_error is None:
                             first_error = error
-            if first_error is not None:
-                raise first_error
+        if first_error is not None:
+            raise first_error
         return wrote
     targets = {id(one) for one in _note_targets(store, merged_hashes, merged_snaps)}
-    first_error = None
     for one, before in pairs:
         if id(one) not in targets:
             if pins.complete and before is not None:

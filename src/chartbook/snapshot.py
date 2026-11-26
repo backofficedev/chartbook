@@ -1760,8 +1760,8 @@ def _marked(raw: dict, key: str) -> set[str]:
 
 #: What a label may be called: what a reference carries after ``@``, and
 #: not something that reads as the start of a version's hash.
-LABEL_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
-_HEX_START = re.compile(r"^[0-9a-f]{4,64}$")  # as `validate_aliases` reads "looks like a version"
+LABEL_PATTERN = re.compile(r"^[A-Za-z0-9._-]+\Z")
+_HEX_START = re.compile(r"^[0-9a-f]{4,64}\Z")  # as `validate_aliases` reads "looks like a version"
 
 
 def labels_skipped(raw: dict) -> list[tuple[str, str]]:

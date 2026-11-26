@@ -431,7 +431,12 @@ def write_site(
     apply_code_change_times(manifest, known=code_times)
     if built_index is None:
         cache = hash_cache if hash_cache is not None else hashing.HashCache(docs_build_dir / hashing.CACHE_FILE)
-        built_index = index_module.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines or ())
+        built_index = index_module.build_index(
+            manifest,
+            cache=cache,
+            skip_pipelines=skip_pipelines or (),
+            size_threshold=size_threshold,
+        )
         cache.save()
     enable_data_download = bool(manifest["project"].get("enable_data_download", False))
 

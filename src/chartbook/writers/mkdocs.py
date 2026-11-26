@@ -82,7 +82,7 @@ class MkDocsWriter(SphinxWriter):
             return self._charts_page()
         return self.catalog_page(page_path)
 
-    def _pages(self, kind: str, from_root: bool = True) -> list:
+    def _pages(self, kind: str, from_root: bool = True, plain: bool = False) -> list:
         """The pages of one kind, as a list of titles and links, by pipeline then name."""
         records = sorted(
             (r for r in self.records.values() if r["kind"] == kind and r.get("current", True)),
@@ -91,8 +91,9 @@ class MkDocsWriter(SphinxWriter):
         entries = []
         for record in records:
             if (record.get("location") or {}).get("kind") == "store" and record.get("kind") != "Pipeline":
-                from chartbook.writers.sphinx import _as_text
-                record = {**record, "name": _as_text(record.get("name")), "description": _as_text(record.get("description"))}
+                from chartbook.writers.sphinx import _as_text, _without_markup
+                name = _without_markup(record.get("name")) if plain else _as_text(record.get("name"))
+                record = {**record, "name": name, "description": _as_text(record.get("description"))}
             path = self.page_path(record)
             entries.append(
                 {
@@ -193,9 +194,13 @@ class MkDocsWriter(SphinxWriter):
         """
         from chartbook.config import untrusted_source
         from chartbook.hashing import escapes
+        from chartbook.sitefiles import _a_site_page
 
         untrusted = untrusted_source()
-        pages = [p for p in (pipeline.get("site_pages") or []) if p not in ("index_toc.md", "index.md")]
+        pages = [
+            p for p in (pipeline.get("site_pages") or [])
+            if p not in ("index_toc.md", "index.md") and _a_site_page(Path(p))
+        ]
         site_dir = (pipeline.get("site_dir") or {}).get("resolved_path")
         site_root = Path(site_dir) if site_dir else None
         toc = site_root / "index_toc.md" if site_root else None
@@ -237,11 +242,11 @@ class MkDocsWriter(SphinxWriter):
             pipeline = next(r for r in self.records.values() if r["kind"] == "Pipeline")
             own = [self.records[i] for i in pipeline.get("assets", []) if i in self.records]
             slug = _slug(pipeline["id"])
-            charts = [{p["title"]: p["link"]} for p in self._pages("Chart")]
+            charts = [{p["title"]: p["link"]} for p in self._pages("Chart", plain=True)]
             nav.append({"Charts": [{"All charts": "cb/charts.md"}, *charts]})
-            _append(nav, "Dataframes", self._pages("Dataframe"))
-            _append(nav, "Models", self._pages("Model"))
-            _append(nav, "Files", self._pages("File"))
+            _append(nav, "Dataframes", self._pages("Dataframe", plain=True))
+            _append(nav, "Models", self._pages("Model", plain=True))
+            _append(nav, "Files", self._pages("File", plain=True))
             _append(
                 nav,
                 "Notebooks",
@@ -267,16 +272,28 @@ class MkDocsWriter(SphinxWriter):
             def titled(pages):
                 return [{f"{p['title']} ({p['pipeline']})": p["link"]} for p in pages]
 
-            nav.append({"Charts": [{"All charts": "cb/charts.md"}, *titled(self._pages("Chart"))]})
-            nav.append({"Dataframes": [{"All dataframes": "cb/dataframes.md"}, *titled(self._pages("Dataframe"))]})
+            nav.append({"Charts": [{"All charts": "cb/charts.md"}, *titled(self._pages("Chart", plain=True))]})
+            nav.append({"Dataframes": [{"All dataframes": "cb/dataframes.md"}, *titled(self._pages("Dataframe", plain=True))]})
             if any(r["kind"] == "Model" for r in self.records.values()):
-                nav.append({"Models": [{"All models": "cb/models.md"}, *titled(self._pages("Model"))]})
+                nav.append({"Models": [{"All models": "cb/models.md"}, *titled(self._pages("Model", plain=True))]})
             if any(r["kind"] == "File" for r in self.records.values()):
-                nav.append({"Files": [{"All files": "cb/files.md"}, *titled(self._pages("File"))]})
+                nav.append({"Files": [{"All files": "cb/files.md"}, *titled(self._pages("File", plain=True))]})
+            from chartbook.writers.sphinx import _without_markup
+
+            raw_pipelines = {
+                r["id"]: r for r in self.index.get("records", [])
+                if isinstance(r, dict) and r.get("kind") == "Pipeline" and "id" in r
+            }
             pipelines = sorted((r for r in self.records.values() if r["kind"] == "Pipeline"), key=lambda r: r["id"])
-            nav.append(
-                {"Pipelines": [{"All pipelines": "cb/pipelines.md"}, *[{r.get("name") or r["id"]: self.pipeline_page_path(r)} for r in pipelines]]}
-            )
+            pipeline_nav = []
+            for r in pipelines:
+                if (r.get("location") or {}).get("kind") == "store":
+                    raw = raw_pipelines.get(r["id"], r)
+                    title = _without_markup(raw.get("name")) or r["id"]
+                else:
+                    title = r.get("name") or r["id"]
+                pipeline_nav.append({title: self.pipeline_page_path(r)})
+            nav.append({"Pipelines": [{"All pipelines": "cb/pipelines.md"}, *pipeline_nav]})
             if self._has_versions():
                 nav.append({"Versions": "cb/versions.md"})
             if self.index.get("stores") is not None:

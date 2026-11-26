@@ -62,8 +62,8 @@ MOST_MANIFESTS = 200
 #: server that answers nothing must not hold a pin for ever. Only where the person has set neither.
 SLOWEST_FETCH = {"GIT_HTTP_LOW_SPEED_LIMIT": "1000", "GIT_HTTP_LOW_SPEED_TIME": "30"}
 
-_COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
-_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+_COMMIT = re.compile(r"^[0-9a-f]{7,40}\Z")
+_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
 
 
 class NoOrder(Exception):

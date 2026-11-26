@@ -660,6 +660,10 @@ def cycle(
 
     directory = Path(project_dir).resolve()
     root = pipeline or snapshot.pipeline_in(directory)
+    if follow_pins:
+        from chartbook.multi_store import with_dependencies
+
+        store = with_dependencies(directory, store)
     finder = _Finder(store, follow_pins, git_cache, lockfiles, shared, members)
     # The pipeline's own table is read as the command would read it: an
     # error in it is the command's to say, where one upstream is passed over

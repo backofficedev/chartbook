@@ -121,7 +121,8 @@ def split_rev(ref: str) -> tuple[str, Optional[str]]:
         return ref, None
     if "@" in ref:
         base, rev = ref.rsplit("@", 1)
-        return base, rev or None
+        if rev:
+            return base, rev
     return ref, None
 
 
