@@ -6429,7 +6429,11 @@ def install_claude_skill(force, project):
             shutil.copyfile(src_file, target_dir / src_file.name)
             click.echo(f"  {src_file.name}")
     except OSError as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"the skill could not be installed: {_said(e)}",
+            err=True,
+        )
         raise SystemExit(1)
 
     if existed and before and standing != "current":
