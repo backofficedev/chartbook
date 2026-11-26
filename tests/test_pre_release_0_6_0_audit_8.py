@@ -99,27 +99,35 @@ class TestSchemasAndIndex:
 
 
 class TestUntrustedSymlinkConfinement:
-    def test_refuse_paths_outside_checks_default_readme_and_series_docs(self, tmp_path, monkeypatch):
+    def test_refuse_paths_outside_checks_series_docs(self, tmp_path, monkeypatch):
         outside = tmp_path / "secret.txt"
         outside.write_text("top-secret", encoding="utf-8")
 
         proj = tmp_path / "pipe"
         proj.mkdir()
-        (proj / "README.md").symlink_to(outside)
-        (proj / "chartbook.toml").write_text('[project]\nid = "p"\ntitle = "P"\n', encoding="utf-8")
-
-        monkeypatch.setenv("CHARTBOOK_UNTRUSTED_SOURCE", "1")
-        with pytest.raises(ValueError, match="not a plain path inside the pipeline's folder"):
-            manifest_mod.load_manifest(proj)
-
-        # Remove README symlink and test nested series.*.docs_path
-        (proj / "README.md").unlink()
         (proj / "chartbook.toml").write_text(
             '[project]\nid = "p"\ntitle = "P"\n'
             '[dataframes.d]\npath = "./data.parquet"\n'
             '[dataframes.d.series.s]\ndocs_path = "../secret.txt"\n',
             encoding="utf-8",
         )
+        monkeypatch.setenv("CHARTBOOK_UNTRUSTED_SOURCE", "1")
+        with pytest.raises(ValueError, match="not a plain path inside the pipeline's folder"):
+            manifest_mod.load_manifest(proj)
+
+    def test_refuse_paths_outside_checks_default_readme_symlink(self, tmp_path, monkeypatch):
+        outside = tmp_path / "secret.txt"
+        outside.write_text("top-secret", encoding="utf-8")
+
+        proj = tmp_path / "pipe"
+        proj.mkdir()
+        try:
+            (proj / "README.md").symlink_to(outside)
+        except OSError:
+            pytest.skip("symlinks unavailable on this platform")
+        (proj / "chartbook.toml").write_text('[project]\nid = "p"\ntitle = "P"\n', encoding="utf-8")
+
+        monkeypatch.setenv("CHARTBOOK_UNTRUSTED_SOURCE", "1")
         with pytest.raises(ValueError, match="not a plain path inside the pipeline's folder"):
             manifest_mod.load_manifest(proj)
 
@@ -130,7 +138,10 @@ class TestUntrustedSymlinkConfinement:
         site_dir = tmp_path / "pipe" / "docs_src" / "site"
         site_dir.mkdir(parents=True)
         (site_dir / "safe.md").write_text("# Safe\n", encoding="utf-8")
-        (site_dir / "leak.md").symlink_to(outside)
+        try:
+            (site_dir / "leak.md").symlink_to(outside)
+        except OSError:
+            pytest.skip("symlinks unavailable on this platform")
 
         dest = tmp_path / "build"
         dest.mkdir()

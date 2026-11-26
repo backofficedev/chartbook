@@ -130,11 +130,23 @@ def get_pipeline_publishing_plan(manifest, publish_dir):
             try:
                 rel = full_path.relative_to(base_resolved)
             except ValueError:
-                safe_parts = [
-                    part for part in Path(file_path).parts
-                    if part not in ("", ".", "..", "/", "\\") and not part.endswith(":")
-                ]
-                rel = Path("_external", *safe_parts) if safe_parts else Path("_external", full_path.name)
+                if found.single:
+                    safe_parts = [
+                        part for part in Path(file_path).parts
+                        if part not in ("", ".", "..", "/", "\\") and not part.endswith(":")
+                    ]
+                    rel = Path("_external", *safe_parts) if safe_parts else Path("_external", full_path.name)
+                else:
+                    root_resolved = found.root.resolve()
+                    try:
+                        inner = full_path.relative_to(root_resolved)
+                    except ValueError:
+                        inner = Path(full_path.name)
+                    root_parts = [
+                        part for part in found.root.parts
+                        if part not in ("", ".", "..", "/", "\\") and not part.endswith(":") and not hashing.is_pattern(part)
+                    ]
+                    rel = Path("_external", *root_parts, inner) if root_parts else Path("_external", inner)
             dest = publish_dir / rel
             if dest.resolve() != full_path:
                 publishing_plan[full_path] = dest

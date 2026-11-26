@@ -3991,17 +3991,20 @@ def _copy_regular_file(source: Path, target: Path) -> bool:
         opened = os.fstat(reader.fileno())
         if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (looked.st_dev, looked.st_ino):
             return False
+        created = False
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             with open(target, "xb") as writer:
+                created = True
                 while chunk := reader.read(1024 * 1024):
                     writer.write(chunk)
         except OSError:
-            try:
-                if target.is_file() and not target.is_symlink():
-                    target.unlink()
-            except OSError:
-                pass
+            if created:
+                try:
+                    if target.is_file() and not target.is_symlink():
+                        target.unlink()
+                except OSError:
+                    pass
             return False
     return True
 

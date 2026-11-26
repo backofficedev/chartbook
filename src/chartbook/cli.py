@@ -1030,12 +1030,22 @@ def _require_trust_to_render(project_dir, running: bool = False) -> bool:
     project_dir = Path(project_dir)
     here = "here" if project_dir.resolve() == Path.cwd().resolve() else f"in {project_dir}"
     answered = _trust_answers.get(Path(project_dir).resolve())
-    if trust_of(project_dir) is None and answered is None and _can_ask():
+    try:
+        current_trust = trust_of(project_dir)
+    except ValueError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if current_trust is None and answered is None and _can_ask():
         answered = _ask_to_trust_a_folder(project_dir)
         if answered == "n":
             click.echo("Nothing was rendered.", err=True)
             raise SystemExit(1)
-    if trust_of(project_dir) is None and answered == "r":
+        try:
+            current_trust = trust_of(project_dir)
+        except ValueError as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            raise SystemExit(1)
+    if current_trust is None and answered == "r":
         click.echo(
             click.style("Warning: ", fg="yellow", bold=True)
             + "rendered as files from a store are, as you answered: no query is run, and no template or "
@@ -1043,7 +1053,7 @@ def _require_trust_to_render(project_dir, running: bool = False) -> bool:
             err=True,
         )
         return True
-    if trust_of(project_dir) is None:
+    if current_trust is None:
         click.echo(
             click.style("Warning: ", fg="yellow", bold=True)
             + f"{project_dir} is not a pipeline you trust, so it is read as files from a store are: "
@@ -1184,6 +1194,8 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     project_dir = resolve_project_dir(project_dir)
     # Publishing copies the files the manifest names: in a folder the user
     # has not trusted, as a build of files from a store, nothing outside it
+    from chartbook.store import StoreError
+
     untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
     try:
         with _untrusted_mode(untrusted):
@@ -1199,7 +1211,7 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
             if not publish_dir.is_absolute():
                 publish_dir = project_dir / Path(publish_dir)
             publish_pipeline(publish_dir=publish_dir, base_dir=project_dir, verbose=verbose)
-    except (ValueError, FileNotFoundError) as e:
+    except (ValueError, OSError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
@@ -1512,6 +1524,7 @@ def path_command(ref, kind, project_dir, list_files):
     from chartbook.assets import files as resolve_files
     from chartbook.assets import path as resolve_path
     from chartbook.errors import NoSinglePathError
+    from chartbook.lock import LockError
     from chartbook.store import StoreError
 
     resolver = resolve_files if list_files else resolve_path
@@ -1525,7 +1538,7 @@ def path_command(ref, kind, project_dir, list_files):
             err=True,
         )
         raise SystemExit(1)
-    except (LookupError, FileNotFoundError, ValueError, TypeError, StoreError) as e:
+    except (LookupError, OSError, ValueError, TypeError, StoreError, LockError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     # Nothing but the paths on stdout: this output gets captured
@@ -2052,7 +2065,7 @@ def _load_raw_catalog(catalog_toml_path):
 
 
 
-def _catalog_or_make_one(required=True, to_show_a_snapshot=False):
+def _catalog_or_make_one(required=True, to_show_a_snapshot=False, ask=True):
     """The catalog this machine uses, made over its store if there is none yet.
 
     By default a store and a catalog are one unit, so the first command
@@ -2074,8 +2087,18 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False):
         return path
     from chartbook.config import get_store_url, make_default_catalog, shown_store_url
 
-    store = shown_store_url(get_store_url())
-    if _can_ask():
+    try:
+        store = shown_store_url(get_store_url())
+    except (ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    ctx = click.get_current_context(silent=True)
+    if ctx is not None and (
+        ctx.params.get("as_json")
+        or (isinstance(ctx.obj, dict) and ctx.obj.get("json"))
+    ):
+        ask = False
+    if ask and _can_ask():
         click.echo("No catalog yet" + (", to show it in." if to_show_a_snapshot else "."), err=True)
         try:
             agreed = _confirm(f"Create one over your store at {store}?", default=True)
@@ -2092,12 +2115,20 @@ def _catalog_or_make_one(required=True, to_show_a_snapshot=False):
                 err=True,
             )
             raise SystemExit(1)
-        path, _ = make_default_catalog()
+        try:
+            path, _ = make_default_catalog()
+        except (ValueError, OSError) as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            raise SystemExit(1)
         click.echo(f"Made {path}.", err=True)
         return path
     from chartbook.config import said_catalog_made
 
-    path, made = make_default_catalog()
+    try:
+        path, made = make_default_catalog()
+    except (ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
     if made:
         click.echo(said_catalog_made(path), err=True)
     return path
@@ -2168,7 +2199,11 @@ def catalog_init(title):
         click.echo(f"Global catalog already exists: {get_global_catalog_path()}")
         return
 
-    catalog_path = create_global_catalog(title=title)
+    try:
+        catalog_path = create_global_catalog(title=title)
+    except (ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
     click.echo(said_catalog_made(catalog_path))
     click.echo("`chartbook catalog build` renders its site, and `chartbook catalog open` opens it.")
 
@@ -2489,6 +2524,7 @@ def data_get_path(pipeline, dataframe, catalog):
         chartbook data get-path --pipeline yield_curve --dataframe repo_public
     """
     from chartbook.data import get_data_path
+    from chartbook.lock import LockError
     from chartbook.store import StoreError
 
     if catalog is None:
@@ -2497,7 +2533,7 @@ def data_get_path(pipeline, dataframe, catalog):
         # The command is in the working directory's pipeline: the calling file is this one
         path = get_data_path(pipeline, dataframe, catalog_path=catalog, project_dir=Path.cwd())
         click.echo(str(path))
-    except (LookupError, OSError, ValueError, StoreError) as e:
+    except (LookupError, OSError, ValueError, StoreError, LockError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
@@ -5061,10 +5097,11 @@ def store_migrate(dry_run, yes):
         raise SystemExit(1)
     try:
         plan = migrate.plan(the_store.root)
-    except StoreError as e:
+        to_move_0_5 = not plan.needed and migrate_0_5.to_move(the_store.root)
+    except (StoreError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    if not plan.needed and migrate_0_5.to_move(the_store.root):
+    if to_move_0_5:
         # A store of 0.5, a move to this layout that was cut short, or a moved store with what 0.5 keeps at its top
         _move_from_0_5(the_store, dry_run, yes)
         return
@@ -5072,7 +5109,7 @@ def store_migrate(dry_run, yes):
         try:
             # Asked of the store itself: one with two layouts in it is neither, and says so
             earlier = the_store.earlier_layout()
-        except StoreError as e:
+        except (StoreError, OSError) as e:
             click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
             raise SystemExit(1)
         if earlier:
@@ -5220,7 +5257,7 @@ def store_import(folder):
     the_store = _folder_store_or_exit()
     try:
         done = sharing.import_snapshots(the_store, folder, echo=click.echo)
-    except StoreError as e:
+    except (StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     _say_copied(done, "Imported")
@@ -6234,7 +6271,7 @@ def trust(path, render_only, repository, list_, forget):
         raw = _read_manifest_file(folder) if manifest_path.is_file() else None
         if raw is not None and resolve_project_type(raw, source=str(manifest_path)) == "pipeline":
             pipeline_id = derive_pipeline_id(raw.get("project") or {}, folder)
-    except ValueError:
+    except (ValueError, OSError):
         raw = None  # a manifest that cannot be read is the build's to say; the folder is still trusted
     remote = repository_key(get_git_remote_url(folder)) or None
     try:
@@ -6274,10 +6311,7 @@ def config():
 
     try:
         set_default_catalog_path(catalog_path)
-    except FileNotFoundError as exc:
-        click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
-    except ValueError as exc:
+    except (OSError, ValueError) as exc:
         click.echo(f"Error: {exc}", err=True)
         raise SystemExit(1)
 
@@ -6380,19 +6414,23 @@ def install_claude_skill(force, project):
         if not click.confirm(f"Replace them with ChartBook {__version__}'s?"):
             raise SystemExit(0)
 
-    target_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
 
-    # Drop files from older skill layouts (e.g. REFERENCE.md) so the
-    # installed copy exactly mirrors the bundled skill
-    for existing in _visible_files():
-        if existing.name not in expected_names:
-            existing.unlink()
-            click.echo(f"  removed stale {existing.name}")
-    old_stamp.unlink(missing_ok=True)
+        # Drop files from older skill layouts (e.g. REFERENCE.md) so the
+        # installed copy exactly mirrors the bundled skill
+        for existing in _visible_files():
+            if existing.name not in expected_names:
+                existing.unlink()
+                click.echo(f"  removed stale {existing.name}")
+        old_stamp.unlink(missing_ok=True)
 
-    for src_file in skill_files:
-        shutil.copyfile(src_file, target_dir / src_file.name)
-        click.echo(f"  {src_file.name}")
+        for src_file in skill_files:
+            shutil.copyfile(src_file, target_dir / src_file.name)
+            click.echo(f"  {src_file.name}")
+    except OSError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
 
     if existed and before and standing != "current":
         click.echo(f"\nUpdated the skill in {shown} from ChartBook {before} to {__version__}")
@@ -6577,7 +6615,10 @@ def catalog_migrate(catalog_path):
         raise click.ClickException(str(error)) from None
     click.echo(f"Migrated to {target}")
     from chartbook.config import get_store_setting, get_global_settings_path, get_system_settings_path
-    _, origin = get_store_setting()
+    try:
+        _, origin = get_store_setting()
+    except ValueError:
+        origin = None
     if origin in ("user", "system"):
         settings_path = get_global_settings_path() if origin == "user" else get_system_settings_path()
         click.echo(

@@ -73,11 +73,11 @@ def enrich(records, stores, notes=None):
                         "frequency", "units", "category", "provider", "license_expiration", "maintainer"):
                 if key in latest:
                     hub[key] = latest[key]
-            for field in ("inputs",):
+            for field in ("inputs", "stale_inputs"):
                 value = hub.get(field)
                 if value is not None:
                     hub[field] = [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
-            for field in ("pinned_inputs", "trained_with"):
+            for field in ("pinned_inputs", "trained_with", "inputs_now"):
                 value = hub.get(field)
                 if value is not None:
                     hub[field] = {k: v for k, v in value.items() if isinstance(k, str) and isinstance(v, str)} if isinstance(value, dict) else {}

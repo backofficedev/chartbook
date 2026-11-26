@@ -302,9 +302,12 @@ def preview_of(listed: list, root: Union[str, Path]) -> Optional[dict]:
 
 def _inside(relative: object) -> bool:
     """Whether a path a record lists stays inside its asset on every system: parts joined by ``/``, none empty, ``.`` or ``..``, no ``\\`` and no drive."""
-    if not isinstance(relative, str) or "\\" in relative or "\0" in relative or re.match(r"[A-Za-z]:", relative):
+    if not isinstance(relative, str) or "\\" in relative or "\0" in relative:
         return False
-    return all(part not in ("", ".", "..") for part in relative.split("/"))
+    return all(
+        part not in ("", ".", "..") and not re.match(r"[A-Za-z]:", part)
+        for part in relative.split("/")
+    )
 
 
 def listing_root(declared: Union[str, Path]) -> Path:

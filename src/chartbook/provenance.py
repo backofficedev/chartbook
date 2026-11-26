@@ -117,6 +117,17 @@ def panel(record_id: str, records: dict, reversed_index: Optional[dict] = None) 
     for input_id in record.get("inputs") or []:
         other = records.get(input_id)
         cross = _owner(input_id) != pipeline_id
+        dependency = _dependency_for(pipeline, input_id) if cross else None
+        # `trained_with` and `stale_inputs` may be keyed by canonical ID, bare local name, or dependency alias key
+        _, sep, local = input_id.rpartition(":")
+        candidate_keys = [input_id]
+        if sep:
+            if not cross:
+                candidate_keys.append(local)
+            elif dependency and dependency.get("key"):
+                candidate_keys.append(f"{dependency['key']}:{local}")
+        matched_trained = next((trained_with[k] for k in candidate_keys if k in trained_with), None)
+        is_stale = any(k in stale for k in candidate_keys)
         entry = {
             "id": input_id,
             "kind": (other or {}).get("kind"),
@@ -124,10 +135,9 @@ def panel(record_id: str, records: dict, reversed_index: Optional[dict] = None) 
             "cross": cross,
             "hash_now": (other or {}).get("content_hash"),
             "pinned": pinned.get(input_id),
-            "trained_with": trained_with.get(input_id),
-            "stale": input_id in stale,
+            "trained_with": matched_trained,
+            "stale": is_stale,
         }
-        dependency = _dependency_for(pipeline, input_id) if cross else None
         if dependency:
             location = dependency.get("location") or {}
             entry["pin"] = {

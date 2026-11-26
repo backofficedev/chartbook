@@ -401,15 +401,16 @@ def get(
     """
     base_dir = _defaults.get("BASE_DIR", Path.cwd())
 
+    def _finalize(raw_value):
+        if "DIR" in var_name and convert_dir_vars_to_abs_path and cast in (undefined, Path, str):
+            raw_value = _if_relative_make_abs(Path(raw_value), base_dir)
+        if cast is not undefined:
+            raw_value = cast(raw_value)
+        return raw_value
+
     # 1. Command line arguments (highest priority)
     if var_name in _cli_vars and _cli_vars[var_name] is not None:
-        value = _cli_vars[var_name]
-        # Apply cast if provided
-        if cast is not undefined:
-            value = cast(value)
-        if "DIR" in var_name and convert_dir_vars_to_abs_path:
-            value = _if_relative_make_abs(Path(value), base_dir)
-        return value
+        return _finalize(_cli_vars[var_name])
 
     # 2. Environment variables through decouple
     # Use decouple but with a sentinel default to detect if it was found
@@ -417,11 +418,7 @@ def get(
     env_value = _decouple_config(var_name, default=env_sentinel)
     if env_value is not env_sentinel:
         # Found in environment
-        if cast is not undefined:
-            env_value = cast(env_value)
-        if "DIR" in var_name and convert_dir_vars_to_abs_path:
-            env_value = _if_relative_make_abs(Path(env_value), base_dir)
-        return env_value
+        return _finalize(env_value)
 
     # 3. Module defaults dictionary
     if var_name in _defaults:
@@ -432,7 +429,8 @@ def get(
         return default_value
 
     # 4. Use the default value provided by the caller. Error if not found
-    return _decouple_config(var_name, default=default, cast=cast)
+    raw_default = _decouple_config(var_name, default=default)
+    return _finalize(raw_default)
 
 
 # Backwards compatibility alias
