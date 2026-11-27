@@ -1,18 +1,14 @@
-# Keeping Costly Outputs
+# Protecting Expensive Outputs
 
-Most of what a pipeline makes is cheap to make again. Some of it is not:
+Most pipeline outputs are cheap to rebuild. Some aren't:
 
-- the output of a paid API run over a corpus, such as OpenAI's batch API over every filing of a
-  decade: money, each time;
-- a trained model, a PyTorch network or a fine-tuned language model: GPU hours, and weights that
-  never come back bit for bit;
-- a pull from a vendor with a quota or hours-long queries, such as Bloomberg or WRDS: a day;
-- a scrape of a page that has since changed, or a point-in-time vintage of a series that is
-  revised: it cannot be made again at all;
-- data a person made by hand, such as labels or a curated list: someone's week.
+- **Paid LLM or API batch runs** (e.g., running an LLM over 10 years of filings)
+- **Trained ML models** (GPU hours and non-deterministic weights)
+- **Slow or quota-limited vendor pulls** (Bloomberg, WRDS)
+- **Point-in-time scrapes or vintages** that can never be reproduced once the source changes
+- **Hand-labeled datasets** curated by humans
 
-For an output like that, ChartBook keeps every version in the store for as long as you say, puts
-it back on disk when it is missing, and stops a build that is about to make it again.
+Mark any of these with `keep = true` in `chartbook.toml`. ChartBook will preserve every version in your store during garbage collection, restore missing files with `chartbook restore`, and stop `chartbook run` (or an agent!) from accidentally overwriting or recomputing them.
 
 ## Mark it
 

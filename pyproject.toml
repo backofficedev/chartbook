@@ -126,6 +126,7 @@ dev = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
     "mkdocs-jupyter>=0.25",
+    "sphinx-clarity-theme>=2.1.0 ; python_full_version >= '3.11'",
 ]
 
 [project.scripts]

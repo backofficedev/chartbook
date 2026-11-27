@@ -114,35 +114,33 @@ today_fmt = "%B %d, %Y"
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_book_theme"
+html_theme = "sphinx_clarity_theme"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "home_page_in_toc": True,
-    "navigation_with_keys": True,
-    "show_navbar_depth": 1,
-    "show_toc_level": 3,
-    "navbar_end": ["theme-switcher", "navbar-icon-links"],
-    "icon_links": [
+    "header_title": False,
+    "logo_dark": "_static/logo-dark.png",
+    "header_menu": [
+        {"content": "Quickstart", "url": "getting-started"},
+        {"content": "AI Agents", "url": "guide/agents"},
+        {"content": "CLI", "url": "reference/cli"},
         {
-            "name": "Repository",
+            "content": "GitHub",
             "url": "https://github.com/backofficedev/chartbook",
-            "icon": "fa-solid fa-code-branch",
+            "as": "button",
+            "tooltip": "View ChartBook on GitHub",
         },
     ],
-    # The logo cut to its edges, one for each theme (docs_src/_diagrams/make_brand.py)
-    "logo": {
-        "image_light": "_static/logo-light.png",
-        "image_dark": "_static/logo-dark.png",
-    },
+    "edit_page_label": "Edit on GitHub",
+    "edit_page_url": "https://github.com/backofficedev/chartbook/edit/main/docs_src/{path}",
 }
 
 # What a link to these pages shows on Slack, X or LinkedIn (_templates/layout.html)
 html_context = {
     "social_card": "https://backofficedev.github.io/chartbook/_static/social-card.png",
     "social_description": (
-        "Data pipelines with provenance: each builds on another's exact, versioned output, traced to "
-        "its sources and verified by hash, in one catalog for people and agents."
+        "Composable data pipelines for humans and agents. Give your coding agents a living catalog "
+        "of every dataset, chart, and model—snapshot pipelines like packages and verify every number."
     ),
 }
 
@@ -150,19 +148,10 @@ html_title = "ChartBook Documentation"
 html_logo = "_static/logo-light.png"
 html_favicon = "_static/logo.png"
 
-# Custom CSS/JS
+# Custom CSS (minimal additions on top of Clarity's native Tailwind/DaisyUI defaults)
 html_css_files = [
     "custom.css",
 ]
-
-# Sidebar configuration
-html_sidebars = {
-    "**": [
-        "navbar-logo.html",
-        "search-button-field.html",
-        "sbt-sidebar-nav.html",
-    ]
-}
 
 
 def _publish_index_schemas(app, exception):

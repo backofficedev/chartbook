@@ -307,11 +307,44 @@ wheels = [
 
 [[package]]
 name = "beautifulsoup4"
-version = "4.15.0"
+version = "4.13.3"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version >= '3.11' and python_full_version < '3.11.5' and sys_platform == 'win32'",
+    "python_full_version >= '3.11' and python_full_version < '3.11.5' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.11' and python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+]
 dependencies = [
     { name = "soupsieve", version = "2.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11.5'" },
     { name = "soupsieve", version = "3.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11.5'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f0/3c/adaf39ce1fb4afdd21b611e3d530b183bb7759c9b673d60db0e347fd4439/beautifulsoup4-4.13.3.tar.gz", hash = "sha256:1bd32405dacc920b42b83ba01644747ed77456a65760e285fbc47633ceddaf8b", size = 619516, upload-time = "2025-02-04T20:05:01.681Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/49/6abb616eb3cbab6a7cca303dc02fdf3836de2e0b834bf966a7f5271a34d8/beautifulsoup4-4.13.3-py3-none-any.whl", hash = "sha256:99045d7d3f08f91f0d656bc9b7efbae189426cd913d830294a15eefa0ea4df16", size = 186015, upload-time = "2025-02-04T20:05:03.729Z" },
+]
+
+[[package]]
+name = "beautifulsoup4"
+version = "4.15.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11'",
+]
+dependencies = [
+    { name = "soupsieve", version = "2.10", source = { registry = "https://pypi.org/simple" } },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/43/65/318323f98dbee45d42dff61d8f047181bc6f2268a9068cfad035a46be5af/beautifulsoup4-4.15.0.tar.gz", hash = "sha256:288e3ca7d54b06f2ac191970bc275c1939cb46d450b255bf6718b04aa37ab4f7", size = 632571, upload-time = "2026-06-07T16:44:20.453Z" }
@@ -747,6 +780,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "requests" },
     { name = "seaborn" },
+    { name = "sphinx-clarity-theme", marker = "python_full_version >= '3.11'" },
 ]
 
 [package.metadata]
@@ -810,6 +844,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "requests" },
     { name = "seaborn" },
+    { name = "sphinx-clarity-theme", marker = "python_full_version >= '3.11'", specifier = ">=2.1.0" },
 ]
 
 [[package]]
@@ -3350,7 +3385,7 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "beautifulsoup4" },
+    { name = "beautifulsoup4", version = "4.13.3", source = { registry = "https://pypi.org/simple" } },
     { name = "ipykernel", version = "7.4.0", source = { registry = "https://pypi.org/simple" } },
     { name = "jupytext" },
     { name = "mkdocs" },
@@ -3611,7 +3646,8 @@ name = "nbconvert"
 version = "7.17.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "beautifulsoup4" },
+    { name = "beautifulsoup4", version = "4.13.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "beautifulsoup4", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "bleach", extra = ["css"] },
     { name = "defusedxml" },
     { name = "jinja2" },
@@ -4781,7 +4817,7 @@ resolution-markers = [
 dependencies = [
     { name = "accessible-pygments" },
     { name = "babel" },
-    { name = "beautifulsoup4" },
+    { name = "beautifulsoup4", version = "4.15.0", source = { registry = "https://pypi.org/simple" } },
     { name = "docutils", version = "0.21.2", source = { registry = "https://pypi.org/simple" } },
     { name = "pygments" },
     { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" } },
@@ -4816,7 +4852,7 @@ resolution-markers = [
 dependencies = [
     { name = "accessible-pygments" },
     { name = "babel" },
-    { name = "beautifulsoup4" },
+    { name = "beautifulsoup4", version = "4.13.3", source = { registry = "https://pypi.org/simple" } },
     { name = "docutils", version = "0.22.4", source = { registry = "https://pypi.org/simple" } },
     { name = "jinja2" },
     { name = "pygments" },
@@ -5888,6 +5924,19 @@ wheels = [
 ]
 
 [[package]]
+name = "sphinx-clarity-theme"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4", version = "4.13.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "sphinx-null-theme" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/af/2e95cef7f4c6a23056dff865361bbf305a006c16f039605d9de9d325f645/sphinx_clarity_theme-2.1.0.tar.gz", hash = "sha256:8ba8ddb7d50d1b040e63b2b707a1ce9acc1bb4f66b796b4268557216b6eba9e3", size = 389831, upload-time = "2026-03-14T10:02:04.676Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/d3/3c44e95b7eb8bbecb2b2bd411f0643ce410671d0101ff79b2e3352c111e3/sphinx_clarity_theme-2.1.0-py3-none-any.whl", hash = "sha256:66a946615f0a7366b21956028ea5fdd5991c6c7ae7c9920c0d7f8bfc9b13fb9c", size = 73014, upload-time = "2026-03-14T10:02:02.404Z" },
+]
+
+[[package]]
 name = "sphinx-copybutton"
 version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
@@ -5979,6 +6028,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/37/1e/577bae038372885ebc34bd8c0f290295785a0250cac6528eb6d50e4b92d5/sphinx-multitoc-numbering-0.1.3.tar.gz", hash = "sha256:c9607671ac511236fa5d61a7491c1031e700e8d498c9d2418e6c61d1251209ae", size = 4542, upload-time = "2021-03-15T12:01:43.758Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/9f/902f2030674cd9473fdbe5a2c2dec2618c27ec853484c35f82cf8df40ece/sphinx_multitoc_numbering-0.1.3-py3-none-any.whl", hash = "sha256:33d2e707a9b2b8ad636b3d4302e658a008025106fe0474046c651144c26d8514", size = 4616, upload-time = "2021-03-15T12:01:42.419Z" },
+]
+
+[[package]]
+name = "sphinx-null-theme"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4", version = "4.13.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "sphinx", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
+    { name = "sphinx", version = "9.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/95/9c/6089f36354e4a5367d6c47bacbb7bbd57d58394c5c0d9d8a837866562a77/sphinx_null_theme-1.0.0.tar.gz", hash = "sha256:1df1715a21b90bad0cc9d577b69990e4283229f0a79a680414651f075559bdde", size = 15388, upload-time = "2026-02-02T07:07:24.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/65/9ecc1a8759153d99243849c43bf7980bda82962e6c51893ebd89db0aa018/sphinx_null_theme-1.0.0-py3-none-any.whl", hash = "sha256:5c9a6e0fbace9697c10aed01d6fbff77240e64ee0e62544232efc5d85e09009c", size = 18971, upload-time = "2026-02-02T07:07:22.791Z" },
 ]
 
 [[package]]

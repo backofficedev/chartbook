@@ -22,9 +22,9 @@ import numpy as np
 from PIL import Image
 
 STATIC = Path("docs_src/_static")
-HEADLINE = "Know exactly where every number came from."
-SUB = ("ChartBook connects your team's data pipelines, in any language, so each one builds on another's exact, "
-       "versioned output: traced to its sources, verified by hash, in one catalog for people and agents.")
+HEADLINE = "Composable data pipelines for humans and agents."
+SUB = ("Give your coding agents a living catalog of every dataset, chart, and model. "
+       "Snapshot pipelines like packages, compose them safely, and verify every number they touch.")
 
 
 def transparent(rgb: np.ndarray) -> np.ndarray:
@@ -96,7 +96,7 @@ def social_card() -> None:
     p {{ margin: 22px 0 0; max-width: 1000px; color: #9aa7b4; font-size: 25px; line-height: 1.4; }}
     .url {{ margin-top: auto; color: #58a6ff; font-size: 22px; font-family: Consolas, Menlo, monospace; }}
     </style></head><body><div class="card"><img src="{logo}" alt="">
-    <div class="eyebrow">Data pipelines with provenance</div><h1>{HEADLINE}</h1><p>{SUB}</p>
+    <div class="eyebrow">Built for Agentic Data Science</div><h1>{HEADLINE}</h1><p>{SUB}</p>
     <div class="url">backofficedev.github.io/chartbook</div></div></body></html>"""
     with tempfile.TemporaryDirectory(prefix="cbcard-") as scratch:
         html = Path(scratch) / "card.html"

@@ -1,21 +1,21 @@
 # ChartBook
 
-> Data pipelines with provenance. ChartBook connects a team's data pipelines, in any language, so each one builds on another's exact, versioned output: every chart traces back to its sources, every input is verified by hash, and everything lands in one catalog that people browse and agents build on.
+> Composable data pipelines for humans and agents. Give your coding agents a living catalog of every dataset, chart, and model. Snapshot pipelines like packages, compose them safely, and verify every number they touch.
 
-A **pipeline** is a folder in git with a manifest, `chartbook.toml`, that declares what it makes (dataframes, charts, models, files, notebooks, notes). A **snapshot** is everything one pipeline built at one commit, by hash, kept in a **store**; another pipeline **pins** it in `chartbook.lock` and reads it by name. A **catalog** is one site over every snapshot in its stores. Every page is also published as Markdown: `guide/agents.html` is `guide/agents.md`.
+A **pipeline** is a folder in git with a `chartbook.toml` manifest declaring what it builds (dataframes, charts, models, files, notebooks, notes) and how to build it (`[scripts] build`). A **snapshot** freezes everything one pipeline built at a commit by content hash in a **store**; downstream pipelines **pin** it in `chartbook.lock` and load it by name. A **catalog** is one searchable website and CLI over every snapshot in your stores. Every page is also published as Markdown: `guide/agents.html` is `guide/agents.md`.
 
-## Start with these
+## Everyday commands
 
-Six commands cover most of what people do. The middle four are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. `chartbook --help` lists them first:
+Four everyday commands cover 95% of ChartBook (plus two one-time helpers):
 
-| You type | It does |
+| Command | What it does |
 |---|---|
-| `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
-| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
-| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
-| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
-| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+| `chartbook run` | Pins new dependencies, runs `[scripts] build`, and verifies every declared output |
+| `chartbook snapshot` | Freezes a committed build into your store for other pipelines, teammates, and agents |
+| `chartbook pin --update` | Moves `chartbook.lock` forward to the newest upstream snapshots when you choose |
+| `chartbook catalog open` | Builds (if needed) and opens the catalog website covering every snapshot in your stores |
+| `chartbook install agents` | Once per project: installs the Claude Code skill and adds a ChartBook section to `AGENTS.md` |
+| `chartbook init` | Optional: scaffolds a batteries-included project from the bundled template |
 
 ## Get started
 

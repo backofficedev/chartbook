@@ -1,16 +1,8 @@
-# Let Your Agent Use the Catalog
+# Working with AI Agents
 
-An agent works from the catalog the way a new teammate does: it finds out what exists, reads what
-each thing is, uses it, and checks that it can be trusted. Each step is one command, and each
-answer is small, so the agent reads only what it needs: a line per asset first, a write-up when
-one matters, the data last.
+Coding agents are great at writing analysis scripts, but they struggle in real data projects: they guess file paths, lose track of which CSV is current, or rebuild tables that another team member already cleaned.
 
-| Step | The agent runs | It gets |
-|---|---|---|
-| **What is there?** | `chartbook ls --json` | One record per pipeline and asset: its ID, kind, name and description |
-| **What is it?** | `chartbook get-docs ID` | What a person reads on the asset's page: a dataframe's facts, write-up and columns; a pipeline's README |
-| **Use it** | `data.load("pipeline:name")`, `chartbook add` | The data, pinned to the exact snapshot it read |
-| **Can it be trusted?** | `chartbook lineage --json` | Every snapshot upstream, by commit and hash, checked |
+ChartBook turns your team's pipelines into a **living skills and data catalog** for your agents—while snapshots give you the **audit trail** to verify everything they build.
 
 ```{raw} html
 <video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: chartbook ls --json listing every asset, chartbook get-docs printing a model's write-up, chartbook add pinning the yield curve, and chartbook lineage checking it">
@@ -19,26 +11,34 @@ one matters, the data last.
 </video>
 ```
 
-The examples below use the {doc}`tutorial catalog <../tutorials/explore-a-catalog>`.
+## 1. Teach your agent ChartBook (one command)
 
-## Teach your agent ChartBook
+Run this once inside any pipeline folder:
 
-```console
+```bash
 chartbook install agents
 ```
 
-does it for every agent, in a pipeline's folder. It installs a skill for Claude Code: when
-ChartBook comes up, Claude reads what the commands above do and when to use each. And it writes a
-ChartBook section into the project's `AGENTS.md`, which other coding agents read when they start:
-what the project is, the few commands that matter, and where the whole reference is. The section
-is between two marker lines, so the command can replace it after an upgrade and leave your own
-notes alone ({ref}`the reference <chartbook-install-agents>`). Commit `AGENTS.md`.
+This does two things automatically:
+- **Claude Code:** Installs a ChartBook skill so Claude knows when and how to search your catalog, read dataset schemas, pin dependencies, and verify lineage.
+- **Cursor, Codex, and other agents:** Writes a concise ChartBook section into your project's `AGENTS.md` (wrapped in marker comments so future upgrades update cleanly without touching your own notes). Commit `AGENTS.md` so the whole team gets it.
 
-`chartbook install claude-skill` is the first half alone. Any agent can also be pointed at the
-catalog site's `llms.txt`, one line per asset with a link to its page, which every `chartbook
-catalog build` writes at the site's root.
+:::{note}
+Want only the Claude Code skill? Run `chartbook install claude-skill`. Every catalog site also publishes an [`llms.txt`](https://llmstxt.org/) at its root for web-based or RAG agents.
+:::
 
-## What is there?
+## 2. How an agent uses your catalog
+
+An agent works through your catalog progressively, keeping its context window lean—one short listing first, documentation only for the assets that matter, and data last:
+
+| Step | What the agent runs | What it gets |
+|---|---|---|
+| **Discover** | `chartbook ls --json` | Compact list of every pipeline, dataset, chart, and model with descriptions |
+| **Inspect** | `chartbook get-docs <id>` | Full documentation, data sources, date ranges, row counts, and column schema |
+| **Load & Pin** | `chartbook add <pipeline>` + `data.load(...)` | Clean data pinned to an exact snapshot in `chartbook.lock` |
+| **Verify** | `chartbook lineage --json` | Full upstream chain, checked by commit and content hash |
+
+### Discover what exists
 
 ```console
 $ chartbook ls --json
@@ -47,39 +47,29 @@ $ chartbook ls --json
    "description": "The Federal Reserve Board's zero-coupon Treasury yield curve, daily since 1961."},
   {"kind": "chart", "id": "tutorial/treasury_curve:chart/yields", "name": "Treasury Yields Since 1961",
    "description": "The 2-, 10- and 30-year zero-coupon yields", "pipeline": "tutorial/treasury_curve"},
-  {"kind": "dataframe", "id": "tutorial/treasury_curve:zero_coupon_yields", ...},
-  ...
+  {"kind": "dataframe", "id": "tutorial/treasury_curve:zero_coupon_yields", ...}
 ]
 ```
 
-Every kind is listed: dataframes, charts, models, files, notes and notebooks. The `id` is what
-every other command takes. `chartbook ls dataframes --json` lists one kind.
+Filter to a single kind anytime with `chartbook ls dataframes --json` (or `charts`, `models`, `notebooks`, `files`).
 
-## What is it?
+### Read schemas and docs without loading gigabytes
 
 ```console
-$ chartbook get-docs treasury_curve
-# Treasury Curve
-
-The Federal Reserve Board's zero-coupon Treasury yield curve: one row a day since 1961, one column
-per maturity from 1 to 30 years. ...
-
-$ chartbook get-docs rate_outlook:model/spread_ar1
-`spread[t+1] = intercept + slope * spread[t]`, fitted with NumPy on the first 80% of months and
-scored on the rest. ...
+$ chartbook get-docs treasury_curve:zero_coupon_yields
 ```
 
-A pipeline's name alone gives its README; `pipeline:kind/name` gives that asset's write-up. A
-dataframe needs no kind, and gets its whole page: its sources and license, rows and dates, its
-write-up, and a table of its columns and their types (`treasury_curve:zero_coupon_yields`). The same works with keywords,
-`chartbook get-docs --pipeline treasury_curve --chart yields`. `--path` prints where the
-write-up's file is instead of its text.
+`chartbook get-docs` prints the exact same facts a human sees on the catalog website—sources, license, row count, date coverage, write-up, and column names/types—without touching the underlying parquet file.
 
-## Use it
+- Pass a pipeline name (`treasury_curve`) to read its README.
+- Pass `pipeline:dataframe` (`treasury_curve:zero_coupon_yields`) to read a dataframe's full spec.
+- Pass `pipeline:kind/name` (`rate_outlook:model/spread_ar1`) for charts, models, notes, or files.
 
-From a pipeline, depend on what the agent found, and read it by name:
+### Load clean, pinned data
 
-```console
+Once the agent finds the dataset it needs, it adds the dependency and loads it by name:
+
+```bash
 chartbook add tutorial/treasury_curve
 ```
 
@@ -89,27 +79,15 @@ from chartbook import data
 yields = data.load("treasury_curve:zero_coupon_yields", format="pandas")
 ```
 
-`chartbook add` pins the newest snapshot in `chartbook.lock`, so the agent's code reads the same
-bytes on every run until someone runs `chartbook pin --update`. From another language,
-`chartbook path treasury_curve:zero_coupon_yields` prints the pinned file's path. Outside any
-pipeline, in a notebook, `data.load(pipeline="treasury_curve", dataframe="zero_coupon_yields")`
-reads the newest snapshot through the catalog.
+Working in R, Stata, or a shell script? `chartbook path treasury_curve:zero_coupon_yields` prints the exact path to the pinned file.
 
-## Can it be trusted?
+## 3. How *you* verify what your agents built
 
-```{image} ../_static/diagrams/provenance-light.svg
-:alt: The Fed's yield curve file, pulled into treasury_curve's zero_coupon_yields at a hash; a chart made from it, and rate_outlook's model trained on it at that hash, through a pin
-:class: only-light
-:align: center
-```
+Letting agents build larger, multi-pipeline projects only works if you can trust the numbers at the end. ChartBook gives you three built-in guardrails:
 
-```{image} ../_static/diagrams/provenance-dark.svg
-:alt: The Fed's yield curve file, pulled into treasury_curve's zero_coupon_yields at a hash; a chart made from it, and rate_outlook's model trained on it at that hash, through a pin
-:class: only-dark
-:align: center
-```
-
-Before it builds on a number, an agent can check where it came from:
+1. **Agents build; humans approve snapshots.** `chartbook run` builds and checks outputs locally, but never publishes to a shared store. The installed agent instructions explicitly tell agents *not* to run `chartbook snapshot` without your go-ahead.
+2. **Every dependency change is a clean `git diff`.** Because `chartbook.lock` pins exact snapshots and content hashes, reviewing an agent's pull request shows immediately which datasets it pulled in and whether any upstream numbers moved.
+3. **One-command audit trail.** Run `chartbook lineage` to trace every upstream snapshot back to its source and verify every hash:
 
 ```console
 $ chartbook lineage
@@ -119,13 +97,22 @@ tutorial/rate_outlook (this folder)
 2 snapshot(s) upstream; no gaps.
 ```
 
-`chartbook lineage --json` gives the same as JSON, and `--check` exits nonzero on a gap, for CI.
-What it checks is what ChartBook guarantees: each pin names a snapshot by commit and the content
-hash of every file in it, and the bytes read are those bytes. Whether the code that made them is
-right is still a person's call; the catalog says whose, and at which commit.
+```{image} ../_static/diagrams/provenance-light.svg
+:alt: Upstream source data flowing through verified snapshots and pins into charts and models
+:class: only-light
+:align: center
+```
 
-## Next
+```{image} ../_static/diagrams/provenance-dark.svg
+:alt: Upstream source data flowing through verified snapshots and pins into charts and models
+:class: only-dark
+:align: center
+```
 
-- {doc}`../tutorials/explore-a-catalog`: the catalog these examples use, built from three pipelines you clone
-- {doc}`depending-on-pipelines`: pins, the lockfile and `chartbook pin --update`
-- {doc}`../reference/cli`: every command, and every option of these
+Run `chartbook lineage --check` in CI to fail automatically if any upstream link is broken or unverified.
+
+## Next steps
+
+- {doc}`../tutorials/explore-a-catalog` — try these commands live on a three-pipeline catalog
+- {doc}`depending-on-pipelines` — how snapshots, pins, and `chartbook.lock` connect larger projects
+- {doc}`../reference/cli` — full CLI reference for `ls`, `get-docs`, `lineage`, and `install agents`

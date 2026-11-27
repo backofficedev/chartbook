@@ -2,6 +2,9 @@
 name = "My Pipeline"
 description = "A demo pipeline: two random walks and a chart of them"
 
+[scripts]
+build = "python src/build_chart.py"
+
 [dataframes.walks]
 name = "Random Walks"
 description = "Two simulated random walk series"

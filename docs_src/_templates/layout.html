@@ -1,6 +1,6 @@
 {%- extends "!layout.html" %}
-{#- The card a link to a page shows when it is shared: conf.py's html_context says which #}
-{%- block extrahead %}
+{#- Social cards for link previews on Slack, X, and LinkedIn -#}
+{%- block head_tag_end %}
 {{ super() }}
 <meta property="og:type" content="website">
 <meta property="og:title" content="{{ title|striptags|e }} · ChartBook">

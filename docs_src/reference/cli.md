@@ -2,18 +2,18 @@
 
 Every command supports `--help`. Everything the CLI needs ships with `pip install chartbook`; see {doc}`../getting-started`.
 
-## Start with these
+## The everyday commands
 
-Six commands cover most of what people do. The middle four are typed in a pipeline's folder, and `chartbook run` runs the script that `chartbook.toml` names as `build` under `[scripts]`. `chartbook --help` lists them first.
+Four everyday commands cover 95% of ChartBook—plus two one-time setup helpers:
 
-| You type | It does |
+| Command | What it does |
 |---|---|
-| `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
-| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
-| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
-| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
-| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+| `chartbook run` | Pins new dependencies, runs `[scripts] build`, and verifies every declared output |
+| `chartbook snapshot` | Freezes a committed build into your store so other pipelines, teammates, and agents can use it |
+| `chartbook pin --update` | Moves `chartbook.lock` forward to the newest upstream snapshots when you choose |
+| `chartbook catalog open` | Builds (if needed) and opens the catalog website covering every snapshot in your stores |
+| `chartbook install agents` | *Once per project:* installs the Claude Code skill and adds a ChartBook section to `AGENTS.md` |
+| `chartbook init` | *Optional:* scaffolds a batteries-included project from the bundled template |
 
 ## More commands
 

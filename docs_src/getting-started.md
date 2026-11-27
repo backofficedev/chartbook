@@ -1,21 +1,19 @@
 # Quickstart
 
-In five minutes you will build a pipeline that makes a dataset and a chart, and a website that
-shows both, with a record of exactly what each one was made from.
+Build your first ChartBook pipeline, take a verified snapshot, and open your searchable catalog in **five minutes**—starting from three minimal files with zero framework lock-in.
 
 ```{raw} html
-<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: the Quickstart's manifest, the script that writes the data and the chart, chartbook docs build asking whether the folder is yours, and the index's record of each asset with its hash and what it was made from">
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal walking through the ChartBook Quickstart: chartbook.toml, build script, running, snapshotting, and opening the catalog">
 <source src="_static/tapes/quickstart.webm" type="video/webm">
 <source src="_static/tapes/quickstart.mp4" type="video/mp4">
 </video>
 ```
 
-You need Python 3.10 or newer, and git.
+**Prerequisites:** Python 3.10+ and `git`.
 
-## 1. Make a folder and install ChartBook
+## 1. Create a folder and install ChartBook
 
-A pipeline is a folder. Make one, give it its own Python environment, and install ChartBook in
-it.
+A pipeline is just a regular git folder. Create one, set up a virtual environment, and install ChartBook:
 
 ::::{tab-set}
 :sync-group: shell
@@ -32,6 +30,18 @@ pip install chartbook
 ```
 :::
 
+:::{tab-item} uv
+:sync: uv
+```bash
+mkdir -p my-pipeline/src
+cd my-pipeline
+git init
+uv venv
+source .venv/bin/activate
+uv pip install chartbook
+```
+:::
+
 :::{tab-item} Windows PowerShell
 :sync: powershell
 ```powershell
@@ -42,57 +52,37 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install chartbook
 ```
-If PowerShell says running scripts is disabled, allow your own once with
-`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, and activate again.
-:::
-
-:::{tab-item} Windows Command Prompt
-:sync: cmd
-```bat
-mkdir my-pipeline\src
-cd my-pipeline
-git init
-python -m venv .venv
-.venv\Scripts\activate.bat
-pip install chartbook
-```
+If PowerShell blocks script activation, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once and activate again.
 :::
 
 ::::
 
-One install has everything: the command line, data loading, plotting and the site builder.
-Using [uv](https://docs.astral.sh/uv/)? `uv venv` and `uv pip install chartbook` do the same.
+One install includes everything: the CLI, data loading, plotting, and the catalog site builder.
 
-## 2. Say what the pipeline makes
+## 2. Declare what your pipeline builds
 
-`chartbook.toml` is the pipeline's **manifest**. It names each thing the pipeline makes, says
-where it goes, and carries a short write-up of it. This one makes a dataframe, `walks`, and a
-chart of it, `random_walks`. Save it in `my-pipeline/`:
+Add a small `chartbook.toml` manifest in `my-pipeline/`. It tells ChartBook two things: **how to run your build** (`[scripts]`) and **what datasets or charts it produces**:
 
 ```{literalinclude} _examples/quickstart/chartbook.toml
 :language: toml
 :caption: chartbook.toml
 ```
 
-And a `README.md` beside it, which becomes the site's front page:
+Add a short `README.md` (which becomes your pipeline's landing page in the catalog) and a `.gitignore` so git tracks your code while ignoring generated data and HTML:
 
 ```{literalinclude} _examples/quickstart/README.md
 :language: markdown
 :caption: README.md
 ```
 
-And a `.gitignore`, so that git keeps the code and leaves out what it makes: `chartbook snapshot`
-takes a pipeline only when everything in git is committed.
-
 ```{literalinclude} _examples/quickstart/.gitignore
 :language: text
 :caption: .gitignore
 ```
 
-## 3. Write the code that makes it
+## 3. Write your build script
 
-ChartBook does not run your analysis for you, and does not care how it is written. Here it is one
-Python script. It asks the manifest where `walks` goes instead of repeating the path:
+ChartBook doesn't care how you generate your outputs—Python, R, Stata, SQL, or a Makefile all work. Here's a short Python script that writes the `walks` dataset (asking ChartBook where `walks` lives instead of hardcoding paths) and saves a chart:
 
 ```{literalinclude} _examples/quickstart/src/build_chart.py
 :language: python
@@ -100,49 +90,19 @@ Python script. It asks the manifest where `walks` goes instead of repeating the 
 :emphasize-lines: 13
 ```
 
-Run it from the `my-pipeline` folder:
+## 4. Run, commit, and snapshot
 
-```console
-python src/build_chart.py
+Now use the core ChartBook loop: **run** to build and verify outputs, **commit** your code, and **snapshot** to freeze the result into your store.
+
+```bash
+chartbook run
 ```
 
-It writes the dataset, `_data/walks.parquet`, and the chart in five files under `_output/`:
-interactive HTML, and PNG and PDF in two sizes, ready for a paper or a slide.
+The first time you run a new folder, ChartBook asks you to confirm you trust it (type `y`). Then `chartbook run` executes `python src/build_chart.py` and confirms that both `_data/walks.parquet` and `_output/random_walks.html` were created.
 
-## 4. Build the site
+Next, commit your code and take a snapshot:
 
-```console
-chartbook docs build
-```
-
-The first time, ChartBook asks whether this folder is yours, since building a pipeline's site can
-run what its manifest names. It is: type `y`. Then open it:
-
-```console
-chartbook docs open
-```
-
-```{image} _static/screenshots/quickstart-site-light.png
-:alt: The site's front page: the README, and the pipeline's charts and dataframes in the sidebar
-:class: only-light cb-screenshot
-:align: center
-```
-
-```{image} _static/screenshots/quickstart-site-dark.png
-:alt: The site's front page: the README, and the pipeline's charts and dataframes in the sidebar
-:class: only-dark cb-screenshot
-:align: center
-```
-
-Click **Two Random Walks** under Pipeline Charts, then the dataframe it names.
-
-## 5. Take a snapshot
-
-The site shows what the pipeline made. A **snapshot** declares it ready for other pipelines to
-read: every asset, by content hash, into your store, labelled with the commit it was built from.
-So commit first (the `.gitignore` leaves the data and the site out, and git keeps the code):
-
-```console
+```bash
 git add -A
 git commit -m "First pipeline"
 chartbook snapshot
@@ -156,111 +116,106 @@ No catalog yet, to show it in.
 Create one over your store at /Users/you/.chartbook/store? [Y/n]:
 ```
 
-Press Enter. The store is a folder, `~/.chartbook/store`, made on this first write; the
-**catalog** is the site over everything in it, and by default the two are one unit, so ChartBook
-makes the catalog over your store the first time something needs it. Any other pipeline on this
-machine can now read `my_pipeline:walks` by name, pinned to these exact bytes, and
-`chartbook catalog build` shows it beside every other snapshot here. Run `chartbook snapshot`
-again and nothing is written: the same bytes at the same commit are the snapshot already there.
+Press **Enter** to create your local catalog over `~/.chartbook/store` (ChartBook only asks once).
 
-## What just happened
+## 5. Open your catalog
 
-- **The manifest declared two assets**, each with a name, a place and a write-up. Your code
-  asked for `walks` by name, so the path is written once.
-- **The build recorded everything it found** in `docs/index.json`, beside the site: an ID for
-  each asset (`my_pipeline:walks`, `my_pipeline:chart/random_walks`), where it is, and a content
-  hash of its bytes. The chart's page reads that record: **Made from** `my_pipeline:walks`, and
-  the hash that dataset has in this build.
-- **The dataframe got a page of its own**: its columns and first rows, its date range, and which
-  charts use it.
-- **The snapshot put the build in your store**, by hash, under the commit, where another pipeline
-  reads it with `data.load("my_pipeline:walks")` and never from this folder.
+```bash
+chartbook catalog open
+```
+
+ChartBook builds your catalog website (confirm with **Enter** when prompted) and opens it in your browser.
+
+```{image} _static/screenshots/quickstart-site-light.png
+:alt: The catalog site showing the pipeline README, charts, and dataframes in the sidebar
+:class: only-light cb-screenshot
+:align: center
+```
+
+```{image} _static/screenshots/quickstart-site-dark.png
+:alt: The catalog site showing the pipeline README, charts, and dataframes in the sidebar
+:class: only-dark cb-screenshot
+:align: center
+```
+
+Click **Two Random Walks** to inspect the chart page, then click the **Random Walks** dataframe link:
 
 ```{image} _static/screenshots/quickstart-chart-light.png
-:alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from
+:alt: The chart page showing the interactive plot, write-up, and verified provenance table
 :class: only-light cb-screenshot
 :width: 560px
 :align: center
 ```
 
 ```{image} _static/screenshots/quickstart-chart-dark.png
-:alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from
+:alt: The chart page showing the interactive plot, write-up, and verified provenance table
 :class: only-dark cb-screenshot
 :width: 560px
 :align: center
 ```
 
 ```{image} _static/screenshots/quickstart-dataframe-light.png
-:alt: The dataframe's page: a glimpse of its columns and rows, and a Provenance table with its hash, size, rows and the chart that uses it
+:alt: The dataframe page showing a data glimpse, columns, row count, and content hash
 :class: only-light cb-screenshot
 :width: 560px
 :align: center
 ```
 
 ```{image} _static/screenshots/quickstart-dataframe-dark.png
-:alt: The dataframe's page: a glimpse of its columns and rows, and a Provenance table with its hash, size, rows and the chart that uses it
+:alt: The dataframe page showing a data glimpse, columns, row count, and content hash
 :class: only-dark cb-screenshot
 :width: 560px
 :align: center
 ```
 
-Change the seed in `build_chart.py`, run it again and rebuild the site: the chart, the glimpse and
-both hashes change with it.
+## What you just unlocked
 
-## Start with these
+- **Your agents can now discover and load this data.** Run `chartbook ls` or `chartbook get-docs my_pipeline:walks` in any terminal—or run `chartbook install agents` to teach Claude Code, Cursor, and other coding agents automatically.
+- **Other pipelines can depend on it like a package.** Any project can now call `data.load("my_pipeline:walks")` and get these exact, hash-verified bytes without touching this folder.
+- **Every number has an audit trail.** Change the random seed in `src/build_chart.py`, run `chartbook run`, commit, and `chartbook snapshot`—the chart, data glimpse, and hashes update together while keeping the old version intact.
 
-You did each step by hand above, to see what it is. Six commands cover most of what people do
-after that:
+## The four everyday commands
 
-| You type | It does |
+You just used almost everything you need day to day:
+
+| Command | When you use it |
 |---|---|
-| `chartbook init` | Once: starts a project from the template, in a new folder |
-| `chartbook run` | Builds this pipeline: pins what it reads, runs its build script, and looks for everything `chartbook.toml` declares |
-| `chartbook snapshot` | Puts that build in your store, labelled with its commit, where other pipelines read it and the catalog shows it. Commit first |
-| `chartbook pin --update` | Takes the newest snapshot of each pipeline it reads |
-| `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
-| `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
+| `chartbook run` | Build your pipeline, pin any new dependencies, and verify outputs |
+| `chartbook snapshot` | Freeze a committed build into your store for other pipelines and the catalog |
+| `chartbook pin --update` | Pull the latest snapshots from upstream pipelines you depend on |
+| `chartbook catalog open` | Build (if needed) and open the catalog in your browser |
 
-`chartbook run` runs the script the manifest names as `build`. A project `chartbook init` makes
-has one; this pipeline gets one with two more lines in `chartbook.toml`:
+:::{tip} Want a batteries-included project template?
+This Quickstart stayed minimal on purpose. If you want a ready-made project with a `doit` task runner, example notebooks, and pre-wired data sources (FRED, Fed yield curve, OFR, Bloomberg, CRSP), run `chartbook init`—see {doc}`guide/starting-a-project`.
+:::
 
-```toml
-[scripts]
-build = "python src/build_chart.py"
-```
-
-Then `chartbook run` is step 3: it runs the script, and looks for everything the manifest
-declares. Step 5 is `chartbook snapshot`, as you typed it, once your work is committed; and the
-site of step 4 is still `chartbook docs build`, unless your build script renders it too, as the
-template's does. The rest is in the {doc}`reference/cli`.
-
-## Next
+## Next steps
 
 ::::{grid} 1 2 2 2
 :gutter: 3
 
-:::{grid-item-card} Explore a catalog
-:link: tutorials/explore-a-catalog
+:::{grid-item-card} {octicon}`hubot;1.4em` Working with AI Agents
+:link: guide/agents
 :link-type: doc
-Build a catalog from three pipelines on public data, browse it, and point your agent at it.
+Run `chartbook install agents` and turn your catalog into a living skills layer for your coding agents.
 :::
 
-:::{grid-item-card} Depend on another pipeline
+:::{grid-item-card} {octicon}`repo-forked;1.4em` Linking Pipelines Together
 :link: guide/depending-on-pipelines
 :link-type: doc
-Read another pipeline's data, pinned to one of its snapshots, and let others read yours.
+Depend on another pipeline's snapshot, lock versions in `chartbook.lock`, and update on your schedule.
 :::
 
-:::{grid-item-card} Start a real project
+:::{grid-item-card} {octicon}`book;1.4em` Explore a Real Catalog
+:link: tutorials/explore-a-catalog
+:link-type: doc
+Clone and connect three public-data pipelines, browse their versions, and trace a model back to its source.
+:::
+
+:::{grid-item-card} {octicon}`file-directory;1.4em` Start from the Full Template
 :link: guide/starting-a-project
 :link-type: doc
-`chartbook init` scaffolds a project with a build script, notebooks and its own pages.
-:::
-
-:::{grid-item-card} Document a pipeline
-:link: guide/documenting-a-pipeline
-:link-type: doc
-Notebooks, models, files, notes and your own pages: everything the manifest can describe.
+Use `chartbook init` to scaffold a full project with `doit`, notebooks, and built-in data pullers.
 :::
 
 ::::

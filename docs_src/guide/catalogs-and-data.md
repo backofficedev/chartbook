@@ -1,83 +1,44 @@
-# Catalogs and Stores
+# Catalogs and Shared Stores
 
-A **store** is a folder that holds snapshots. A **catalog** is a list of stores, and a site over
-every snapshot in them. Neither reads a working folder, and neither copies data anywhere. By
-default the two are one unit: ChartBook makes the catalog over your store the first time you need
-it, and asks first at a terminal.
+A **store** is a folder that holds versioned snapshots of your datasets, trained models, charts, and other build artifacts. A **catalog** is the searchable website (and CLI index) built over all the snapshots in your stores.
 
-```console
-$ chartbook catalog open        # the first time: "No catalog yet. Create one over your store at …? [Y/n]"
-The catalog's site has not been built yet. Build it before opening? [Y/n]: 
-$ chartbook store add team "~/Google Drive/chartbook-store-team"   # a second store joins it
+Putting a store in a synced or shared folder lets you **share artifacts across multiple machines, teammates, and parallel coding agents**—with zero servers or infrastructure to maintain.
+
+```bash
+chartbook catalog open
 ```
 
-`chartbook catalog open` is the one command to remember: it builds the site when the stores have
-snapshots the site does not show yet, after asking, and opens it. `chartbook catalog build` builds
-it without opening, for a script.
-
-The catalog lists every snapshot of every pipeline in its stores, each its own site as its owner
-declared it ready, and which pipeline pins it. {doc}`../tutorials/explore-a-catalog` builds this one
-from three pipelines you clone and build:
+`chartbook catalog open` is the one command to remember: if new snapshots have landed since the last build, it asks to rebuild the site and opens it in your browser. (Use `chartbook catalog build` in scripts or CI when you don't want to open a browser.)
 
 ```{image} ../_static/screenshots/tutorial-versions-light.png
-:alt: The catalog's Versions page: each pipeline's snapshots by commit and time, and which pipeline pins each
+:alt: The catalog Versions page listing snapshots by commit and timestamp, and showing which pipelines pin each one
 :class: only-light cb-screenshot
 :align: center
 ```
 
 ```{image} ../_static/screenshots/tutorial-versions-dark.png
-:alt: The catalog's Versions page: each pipeline's snapshots by commit and time, and which pipeline pins each
+:alt: The catalog Versions page listing snapshots by commit and timestamp, and showing which pipelines pin each one
 :class: only-dark cb-screenshot
 :align: center
 ```
 
-## A store is a folder
+## Sharing snapshots with your team
 
-Your own store is a folder on this machine. A store a team shares is a folder a sync service keeps
-in step between machines, Google Drive, Dropbox or OneDrive, or a folder on a shared disk.
-Point each machine at the same folder and a snapshot made on one is there for the others
-once the sync has finished. Nothing in ChartBook moves snapshots between machines; the folder does. A store in an S3 bucket is not available in ChartBook 0.6.0: it has not been brought to this
-version's store layout yet, and is on the {doc}`roadmap <../roadmap>`; a bucket that 0.5 wrote is as it
-was, and 0.5 still reads and writes it.
+Your personal store lives at `~/.chartbook/store`. To share snapshots with a team or research group, point everyone at a **synced or shared folder**—Google Drive, Dropbox, OneDrive, or a network drive:
 
-Inside, the layout is made to be read by a person:
-
-```text
-chartbook-store-team/
-  snapshots/
-    acme+news_headlines/
-      README.txt                           that each folder is a complete snapshot, and that gc removes them
-      2026-05-01T120000Z_a1b2c3d4e5f6/     a snapshot: when it was made _ its commit
-        _data/articles/year=2023/...       the pipeline's files, in their own places
-        _chartbook/snapshot.json           the record: every file, and its hash
-  increments/
-    acme+news_headlines/
-      2026-06-01T120000Z_e5f6a7b8c9d0/     a later one, kept as an increment:
-        _data/articles/year=2024/...       only the files the one above does not have
-        _chartbook/snapshot.json
-        _chartbook/INCREMENT.txt           one line: the snapshot the rest is in
-  _chartbook/                              ChartBook's own notes; nothing here is for a person
-  store.json                               which layout this is
-  README.txt                               what the folder is, for whoever opens it
+```bash
+chartbook store add team "~/Google Drive/chartbook-store-team"
 ```
 
-A folder under `snapshots/` is a complete snapshot: it holds every file of that version, and can be
-read, copied or sent as it is. A folder under `increments/` is a snapshot too, kept in less room:
-it holds only the files that differ from one complete snapshot, and says which. To anything that
-reads or pins, it is a snapshot like any other ({ref}`snapshots-in-the-store`). A store that ChartBook 0.5 laid out has `pipelines/` at the top and keeps each
-file once; this ChartBook reads such a store as it is, makes no snapshot in it and removes nothing
-from it, and says so.
+When one teammate runs `chartbook snapshot`, the synced folder delivers the snapshot to everyone else. Their `chartbook ls`, `chartbook catalog open`, and `chartbook pin --update` see it automatically.
 
-`CHARTBOOK_STORE` points a process at exactly one store; `chartbook store info` says which stores
-this machine uses and what set them.
+:::{note} Looking for S3 stores?
+S3 stores are temporarily unavailable on the 0.6.0 store layout and are tracked on the {doc}`../roadmap`.
+:::
 
-## The catalog is its stores
+## Routing pipelines across multiple stores
 
-The machine's catalog is `~/.chartbook/catalog.toml`, made over the machine's store the first time a
-command needs it (`chartbook catalog init` makes it ahead of time, or with a title). Its `[stores]`
-table lists the stores to read,
-in order; the first is where new snapshots go unless a store's `pipelines` list routes a pipeline
-elsewhere.
+Your machine's catalog configuration lives in `~/.chartbook/catalog.toml`. Add as many stores as you like—personal, team, per-collaborator, or read-only archives:
 
 ```toml
 [project]
@@ -95,32 +56,13 @@ url = "/mnt/archive/chartbook-store"
 read_only = true
 ```
 
-A store is a folder, a `file://` URL, or a scheme a plugin provides (a store in an S3 bucket is not available in 0.6.0; see the {doc}`roadmap <../roadmap>`). `chartbook store
-add NAME URL` adds one and lists the pipelines it finds; `store remove NAME` removes the entry and
-leaves the files; `store move ID --to NAME` moves a pipeline's snapshots to another store, verifies
-the copies, and removes them from the source. One Drive folder per collaborator, each a store, is
-how one person shares different projects with different people.
+- New snapshots go to the first store unless a store's `pipelines` list routes a pipeline elsewhere.
+- Move an existing pipeline's snapshots between stores safely with `chartbook store move <id> --to <store_name>`.
+- Inspect your active stores anytime with `chartbook store info` or `chartbook ls stores`.
 
-## What the catalog shows
+## Keeping your store small
 
-Every pipeline with a snapshot in any store, and every version of each. A version's page is built
-from its snapshot's documents, charts, notebooks and index: the data is not laid out and not read.
-The index recorded each dataframe's columns, rows, dates and first rows when the snapshot was made,
-so the catalog shows them without touching a data file. What a catalog build keeps on your disk is
-the site, its `_docs/` build tree beside the catalog, and each version's built site under
-`~/.chartbook/cache/versions`; no data file is copied or read. A pipeline enters the catalog when its owner runs `chartbook
-snapshot`; the catalog runs no pipeline's code.
-
-`chartbook ls` lists what the catalog shows on the command line; `chartbook ls stores` and
-`chartbook ls versions` the stores and the versions.
-
-## Keeping the store small
-
-The store keeps a snapshot **complete**, every file of its version in its own folder, or, where
-little changed since an earlier one, as an **increment**, whose folder holds only the files that
-differ. `chartbook snapshot` decides which by itself, so that a pipeline that changes a little
-copies a little ({ref}`snapshots-in-the-store`). `chartbook store ls` lists them and what each
-one's folder holds:
+Snapshots are stored either as **complete** folders (every file) or **increments** (only files that changed since the last complete snapshot). See what's on disk with `chartbook store ls`:
 
 ```console
 $ chartbook store ls acme/news_headlines
@@ -128,50 +70,37 @@ acme/news_headlines (3 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
   2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
   2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  increment  611.9 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
-A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
 ```
 
-A snapshot's folder is not deleted by hand: a lockfile may pin it, and an increment may keep its
-files in it.
-`chartbook store gc` removes snapshots safely: it keeps the newest of each pipeline, everything a
-lockfile pins (including what every local branch and tag of a project pins, recorded in the
-store's notes under `_chartbook/roots/`), a snapshot a model's label points into, a complete
-snapshot that an increment it keeps builds on, and anything made in the last seven days; it lists
-what it would remove, says which note holds a pin, and asks. After `chartbook snapshot`, one line
-says what gc would clear of that pipeline; after `chartbook catalog build`, of the whole store.
-`--no-gc-reminder` silences it, and `chartbook catalog build --gc` runs gc after the build.
-Nothing is removed unless you ask.
+To free disk space, **never delete snapshot folders manually**—use `chartbook store gc`:
 
-```console
-$ chartbook catalog build
-...
-`chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
+```bash
+chartbook store gc
 ```
 
-To give someone a version, `chartbook store export acme/news_headlines --latest
---to FOLDER` writes its snapshot, complete, wherever you say. `chartbook store import FOLDER` takes one
-in. And `chartbook snapshot --complete` makes a complete snapshot in the store itself, and says
-where its folder is.
+`chartbook store gc` always previews what it will delete and asks before removing anything. It automatically protects:
+- The newest snapshot of every pipeline
+- Any snapshot pinned by a lockfile (across your local branches and tags)
+- Any snapshot referenced by a model alias or a kept increment
+- Any snapshot less than 7 days old
 
-## Reading data through a catalog
-
-Inside a pipeline, another pipeline's data is read as pinned ({doc}`depending-on-pipelines`).
-Outside any pipeline, in a notebook that belongs to none, a read is a one-off exploration of a
-pipeline's newest snapshot:
-
-```python
-from chartbook import data
-
-frame = data.load(pipeline="acme/rates", dataframe="rates")
+:::{dropdown} Inside a store folder (for the curious)
+```text
+chartbook-store-team/
+  snapshots/
+    acme+news_headlines/
+      2026-05-01T120000Z_a1b2c3d4e5f6/     # complete snapshot (date_commit)
+        _data/articles/year=2023/...
+        _chartbook/snapshot.json           # manifest + file hashes
+  increments/
+    acme+news_headlines/
+      2026-06-01T120000Z_e5f6a7b8c9d0/     # only changed files
+        _data/articles/year=2024/...
+        _chartbook/snapshot.json
+        _chartbook/INCREMENT.txt
+  _chartbook/                              # internal metadata
+  store.json
+  README.txt
 ```
-
-There is no fallback to a working folder: a pipeline with no snapshot is not read. If two
-repositories claim one ID, `repository = "https://github.com/acme/rates"` under
-`[pipelines."acme/rates"]` in the catalog says which. A dataset of many files has files and no one
-path; `data.load` reads it, as {doc}`reading-and-writing-data` says.
-
-## Upgrading from a folder catalog
-
-`chartbook catalog migrate`, once on each machine, turns a catalog that listed folders into one
-that lists stores, keeps a backup, and names the working pipelines that need a snapshot before they
-appear. It changes no store layout, snapshot hash or lockfile.
+Catalog builds only read snapshot indexes, charts, and docs—they never copy or scan your raw data files.
+:::

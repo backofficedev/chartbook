@@ -1,239 +1,100 @@
-# Depending on Another Pipeline
+# Linking Pipelines Together
 
-A pipeline often builds on data another pipeline made. ChartBook lets it do that without reading
-the other pipeline's folder: the other pipeline's owner declares a build ready, and you pin that
-build and read it by name.
+As data projects grow—especially when AI agents are writing more of your code—giant monolithic repos become fragile and hard to verify.
 
-```toml
-# chartbook.toml
-[dependencies]
-"ftsfr/fed_yield_curve" = {}
-```
-
-```console
-$ chartbook pin                 # pin its newest snapshot; writes chartbook.lock
-$ git add chartbook.lock
-```
-
-```python
-from chartbook import data
-
-rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy, read from the store
-```
+ChartBook lets you split work into small, independent pipelines that depend on each other **like software packages**. Downstream pipelines never read another project's working folder; they read an exact, frozen **snapshot** from your store.
 
 ```{image} ../_static/diagrams/depending-light.svg
-:alt: their folder, a snapshot in the store, your folder: snapshot, then pin; never read the folder directly
+:alt: Upstream pipeline creates a snapshot in the store; downstream pipeline pins it in chartbook.lock and reads from the store
 :class: only-light
 :align: center
 ```
 
 ```{image} ../_static/diagrams/depending-dark.svg
-:alt: their folder, a snapshot in the store, your folder: snapshot, then pin; never read the folder directly
+:alt: Upstream pipeline creates a snapshot in the store; downstream pipeline pins it in chartbook.lock and reads from the store
 :class: only-dark
 :align: center
 ```
 
-Three words carry the arrangement, and {doc}`vocabulary` defines them. A **snapshot** records
-what one pipeline *made*: every asset it built at one commit, with its content hash, kept in the
-**store** (a folder of yours, or one a team shares). A **pin** freezes which snapshot of a
-dependency you read, and the **lockfile**, `chartbook.lock`, records the pins. The lockfile is
-committed and has no timestamp on purpose: a `git diff` of it means "a pin moved" and nothing else.
+## The core workflow in 30 seconds
 
-On the catalog's page of what you built, the pin is named: what it was made from, *as pinned*, the
-snapshot and the hash of the bytes it read. Here, the tutorial's model, trained on another
-pipeline's yield curve ({doc}`../tutorials/explore-a-catalog` builds it):
+**1. Upstream pipeline publishes a snapshot** (once committed):
+
+```bash
+chartbook run
+git add -A && git commit -m "Update Treasury yields"
+chartbook snapshot
+```
+
+**2. Downstream pipeline adds it and loads by name:**
+
+```bash
+chartbook add ftsfr/fed_yield_curve
+```
+
+```python
+from chartbook import data
+
+rates = data.load("fed_yield_curve:treasury_rates")
+```
+
+**3. Downstream updates only when *you* choose:**
+
+```bash
+chartbook pin --update
+```
+
+That's the whole mental model:
+- **Snapshot** (`chartbook snapshot`) — freezes what an upstream pipeline built at a specific commit into your store.
+- **Pin** (`chartbook.lock`) — records the exact snapshot and content hashes your downstream pipeline reads. Commit `chartbook.lock` to git.
+- **Update** (`chartbook pin --update`) — moves your lockfile forward to the newest upstream snapshot and shows you exactly what changed (hashes, new rows, dates).
+
+## `chartbook pin` vs. `chartbook pin --update`
+
+| Command | What it does |
+|---|---|
+| `chartbook run` | Automatically pins any *new* dependencies in `[dependencies]` before running your build. Never moves existing pins. |
+| `chartbook pin` | Pins unpinned dependencies in `chartbook.lock`. Never moves an existing pin. |
+| `chartbook pin --update` | Moves existing pins forward to the newest snapshots in your store (pass a pipeline name to update just one). |
+| `chartbook pin --check` | Read-only check for CI: verifies every pin in `chartbook.lock` is available. |
+
+:::{tip} You don't even have to declare dependencies upfront
+If your script calls `data.load("acme/rates:treasury")` for a pipeline that's in your store but not yet in `chartbook.toml`, `chartbook run` catches it and offers to add it to `[dependencies]`, pin it, and re-run for you.
+:::
+
+## How reads behave in notebooks vs. builds
+
+| Situation | In a Jupyter notebook | Inside `chartbook run` |
+|---|---|---|
+| Dependency is pinned | Reads the pinned snapshot | Reads the pinned snapshot |
+| Declared, not yet pinned | Pins newest snapshot & tells you | `run` pins it before building |
+| Not in `[dependencies]` | Reads newest snapshot with a warning | Stops and offers to add & pin it |
+
+Need to iterate on an upstream and downstream pipeline simultaneously before snapshotting? Run `chartbook link acme/rates ../rates` to temporarily read the local working folder (delete `chartbook.links.toml` when you're done).
+
+## Inspecting upstream lineage in the catalog
+
+Every downstream chart or model page in your catalog automatically shows which upstream snapshot and content hash it was built from:
 
 ```{image} ../_static/screenshots/tutorial-model-light.png
-:alt: A model's page: trained on another pipeline's dataframe as pinned, the snapshot at 59a435b, and the hash of the input it read
+:alt: A model page showing the pinned upstream dataframe, commit, and input hash
 :class: only-light cb-screenshot
 :align: center
 ```
 
 ```{image} ../_static/screenshots/tutorial-model-dark.png
-:alt: A model's page: trained on another pipeline's dataframe as pinned, the snapshot at 59a435b, and the hash of the input it read
+:alt: A model page showing the pinned upstream dataframe, commit, and input hash
 :class: only-dark cb-screenshot
 :align: center
 ```
 
-## Declare it
+## Working without a shared store (cloning someone else's repo)
 
-Name the other pipeline by its ID; `chartbook add ftsfr/fed_yield_curve` writes the line and pins it. Its
-snapshots are found in the store by that ID, so nothing of the other repository has to be on your
-disk. When the two pipelines are in one repository, name the other by its folder instead:
-
-```toml
-[dependencies]
-"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
-```
-
-`chartbook run --check` warns while a dependency is declared and not pinned. Dependencies form a directed
-acyclic graph: every command that would pin or build a cycle refuses and says who depends on whom.
-
-## They build, and declare the build ready
-
-In the other pipeline's folder, with everything committed:
-
-```console
-$ chartbook run                 # build it
-…
-$ chartbook snapshot            # copy what it built into the store, labelled with the commit
-ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
-Snapshot made: 6 files, 23.0 MB.
-A pipeline that depends on this one gets it with `chartbook pin --update`.
-```
-
-That is a snapshot, and it is what of theirs you read. Their folder is never read, and a build
-by itself changes nothing you read: a snapshot is made when they ask for one, of work a commit
-describes. (`chartbook run --snapshot` is the two in one command.)
-
-Snapshot again and nothing new is written: a snapshot is the hash of every file the build made, and
-the same bytes and the same pins at the same commit are the snapshot already there (`No new
-snapshot: the same bytes and the same pins as the one made …`). New data at the same commit makes a
-new one, which the store may keep in less room, with only the files that changed
-({ref}`below <snapshots-in-the-store>`).
-
-## You pin it, read it, and update when you choose
-
-```console
-$ chartbook pin                 # once, to start depending on it
-$ chartbook pin --update        # later, when you want their newer snapshot; the lockfile diff shows the move
-```
-
-```python
-rates = data.load("fed_yield_curve:treasury_rates")     # a frame
-path  = data.path("fed_yield_curve:treasury_rates")     # the parquet file in the store, for a reader of your own
-files = data.files("news_headlines:articles")           # a folder of files: every file, wherever the store keeps it
-```
-
-What you get is the build they declared ready, not whatever is in their `_data/` folder this
-minute. A dataset of many files has files and no one path; {doc}`reading-and-writing-data` says why,
-and how `data.load`, `data.sql` and `data.files` read it.
-
-| Who | Does | When |
-|---|---|---|
-| The other pipeline's owner | `chartbook snapshot`, with everything committed | When a build is ready for others |
-| You | `chartbook pin`, once | To start depending on it |
-| You | `chartbook pin --update` | When you want their newer snapshot |
-
-## Reading before you pin
-
-In a notebook, a read does what you most likely meant and says what it did. In a build under
-`chartbook run`, only a pin is read, since nothing else would be recorded.
-
-| What you read | In a notebook | In a build under `chartbook run` |
-|---|---|---|
-| A dependency that is pinned | The pinned copy | The pinned copy |
-| A dependency declared and not pinned | Pins its newest snapshot now, and says so | `run` pinned it before the build |
-| A pipeline not in `[dependencies]` | Its newest snapshot, with a warning that nothing records it | An error; at a terminal, `chartbook run` then offers to add it and build again |
-| One with no snapshot, whose folder is here | An error naming `chartbook snapshot` in that folder, or `chartbook link` | The same error |
-
-```python
->>> data.load("acme/rates:treasury")
-acme/rates: pinned to its newest snapshot, 3f2a9c1, made 2026-10-16 22:06 UTC (chartbook.lock). `chartbook pin --update acme/rates` moves it.
-```
-
-To work on both pipelines at once, `chartbook link acme/rates ../rates` makes reads follow that
-working folder, with a warning; delete `chartbook.links.toml` to go back.
-
-## Building your pipeline
-
-```toml
-[scripts]
-build = "doit"
-```
-
-```console
-$ chartbook run                 # pins what has no pin yet, then runs the build script
-```
-
-`chartbook run` never builds in a `path` dependency's folder and never reads it: its owner makes the
-snapshot. When the folder is yours, `chartbook run --upstream` builds and snapshots one that has no
-snapshot yet. It never moves a pin; `chartbook pin --update` does that. A dependency can also be a git
-repository, `{ git = "https://…", rev = "v1.2" }`: `chartbook pin` pins the files it commits, and
-`chartbook run` builds the rest once, in ChartBook's own clean copy of that commit.
-
-(snapshots-in-the-store)=
-## What a snapshot is in the store
-
-Every snapshot is a whole version: its record lists every file of every asset. The first snapshot
-of a pipeline is **complete**: its folder in the store holds every one of those files, each in its
-own place, and can be read or copied as it is.
-
-**A later snapshot may be kept as an increment.** Where little has changed, the store keeps the new
-snapshot in less room: its folder holds only the files that differ from the complete snapshot
-before it, and the rest are read from that one. `chartbook snapshot` decides by itself, and its
-last lines say which it made:
-
-```console
-$ chartbook snapshot
-acme/news_headlines at e5f6a7b: 3 asset(s) in the store
-Snapshot made, kept as an increment: 2 of 43 files, 310.2 MB. The rest is in the snapshot made 2026-05-01 12:00 UTC.
-A pipeline that depends on this one gets it with `chartbook pin --update`.
-```
-
-This changes nothing for whoever reads or pins it. A pin names a snapshot, and one kept as an
-increment is pinned and read as any other. When the increments since the last complete snapshot
-have added up to the size of a complete one, the next one is complete again, with nobody asking.
-
-**`--complete` when you want a folder that stands by itself.** `chartbook snapshot --complete`
-makes a complete snapshot whatever the store would choose, and says where its folder is: to look
-at, to copy, or to hand to somebody. `chartbook run --snapshot --complete` does the same after a
-build. In a script it copies every file each time; without it, the store decides.
-
-**A large table that grows by date is better written as a folder partitioned by year.** The store
-compares files, and knows nothing of rows. A table in one file changes whole when a day is added,
-so every snapshot of it holds the whole table again. In a folder with a file for each year, only
-the newest part changes, and an increment holds that part and nothing else: a 1 GB table of sixty
-years is 1 GB at each snapshot as one file, and about 17 MB as a folder by year. Keep the real
-date column in the data, and name it as the dataframe's `date_col`. Partition by day only where a
-day is large; a small table gains nothing from parts.
-
-`chartbook store ls` lists the snapshots and what each one's folder holds:
-
-```console
-$ chartbook store ls acme/news_headlines
-acme/news_headlines (2 snapshot(s))
-  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  complete   2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  increment  310.2 MB here, 41 file(s) in 2026-05-01T120000Z_a1b2c3d4e5f6
-A complete snapshot's folder holds every file of its version; an increment's holds what the one it builds on does not.
-```
-
-A snapshot's folder is not deleted by hand: a lockfile may pin it, and an increment may keep its
-files in it. `chartbook store gc` removes snapshots safely: it keeps what every lockfile note
-names, including what each local branch and tag of a project pins, and says which note holds a
-pin (`--forget-note` forgets one of this machine's). After a snapshot, one line says what gc
-would clear of **this** pipeline; after a catalog build, of the whole store.
-{doc}`catalogs-and-data` has the store side of this.
-
-## What a pin holds
-
-`chartbook.lock` pins what code reads: every **dataframe** and every **model** of a dependency,
-each by the hash of its file. A chart, a notebook, a note or a plain file is not pinned: each is
-drawn from the data, and drawn anew by every build (a Plotly chart has a random id in its page, an
-executed notebook the time of each cell), so no second build has the same bytes. It is still read,
-`assets.path("fed_yield_curve:chart/curve")`, from the snapshot the lockfile names. Its owner pins
-one all the same with `lock = true` on the asset, for a file that is an input and not an output
-({ref}`configuration <lock-true>`).
-
-For a dataframe the lockfile records its **rows** as well as its file: the last date in it
-(`as_of`), and a hash of the rows of each calendar year up to that date. That is what lets a pin be
-met by a file that is not the pinned one, which the next section is about. It needs the
-dataframe's `date_col` in its owner's manifest; without one the table has a single hash of all its
-rows.
-
-## With no shared store: build the other pipeline yourself
-
-A class, or two people on two laptops, share a repository and no store. The lockfile then names
-snapshots only its author has. So each person builds the other pipeline themselves, at the commit
-the lockfile names, and ChartBook checks that what they built holds the pinned rows.
-
-`chartbook run` says all there is to build, in the order to build it, and stops. What a pipeline
-on the list reads in turn is on it too, before it:
+If you clone a project whose `chartbook.lock` pins snapshots from a teammate's laptop (and you don't share a store), `chartbook run` detects the missing upstream snapshots and prints the exact, ordered commands to build them locally:
 
 ```console
 $ chartbook run
-Fetching https://github.com/ftsfr/he_kelly_manela, to see what ftsfr/he_kelly_manela reads in turn.
-ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/x/.chartbook/store.
+ftsfr/report cannot be built yet: 2 pipelines it reads are not in the store at /Users/you/.chartbook/store.
 Build them in this order, with the commands below, one at a time. Each ends with a snapshot, which is what the next one reads.
 
 1. ftsfr/he_kelly_manela at 7802799    https://github.com/ftsfr/he_kelly_manela
@@ -246,119 +107,28 @@ Build them in this order, with the commands below, one at a time. Each ends with
 
 Then here again:
      chartbook run --project-dir /work/report
-Where a store is shared, nothing has to be built: point CHARTBOOK_STORE at the one that has them, or wait for its sync to finish.
 ```
 
-Each line is one command, the same in every shell (PowerShell and `cmd.exe` among them), and can
-be typed as it is, from any folder, in the order given, one at a time. None enters a folder: you
-stay where you are, and the last line is the command you typed, with this pipeline's folder. A
-folder on this
-machine is one your `[dependencies]` names by `path`; a clone you already have beside your project
-is read and built where it is; any other repository is cloned beside your project. Nothing here
-moves your own repository to another commit. The whole of it is in the
-{ref}`reference <not-in-your-store>`. One step of it, with the check that fetches nothing:
+Even if the upstream source has published new rows since the original snapshot, ChartBook checks **row hashes up to the pinned date (`as_of`)**. As long as historical rows match, your local build seamlessly stands in for the pin and `data.load()` filters out newer rows automatically so your results stay bit-for-bit reproducible.
 
-```console
-$ chartbook pin --check
-ftsfr/fed_yield_curve: 1 of its 1 pin is not in the store at ~/.chartbook/store, and no build of yours at 0db8051 stands in: treasury_yields
-  To build it yourself: in ../fed_yield_curve, `git checkout 0db8051` and `chartbook run --snapshot`: a build of yours meets a pin by the same file or, for a dataframe, by the same rows up to the pin's last date.
-  …
-$ git -C ../fed_yield_curve checkout 0db8051
-$ chartbook run --snapshot --project-dir ../fed_yield_curve
-$ chartbook pin --check
-ftsfr/fed_yield_curve: read from your own build of 0db8051, made 2026-11-17 09:22 UTC
-  treasury_yields: the pinned rows, through 2026-10-30; 24 newer rows
-1 pin(s) of 1 dependency: 0 in the store, 1 met by your own build. Nothing written.
-```
+:::{dropdown} Tips for making upstream tables easy to reproduce
+1. **Set `date_col`** on your dataframe in `chartbook.toml` so ChartBook can hash rows by period and distinguish new rows from revised history.
+2. **Write Parquet without unnamed pandas indexes:** use `df.to_parquet(path, index=False)`. Row-position indexes shift when new rows arrive.
+3. **In CI, use `chartbook run --frozen`** so builds fail fast if `chartbook.lock` is incomplete or missing a snapshot.
+:::
 
-Your build is not the author's file: another day, another writer, and the source has published
-since. It **stands in** for the pinned snapshot when it meets every pin of that dependency, and
-then everything read of that dependency is read from it. The lockfile is not touched, so everyone
-is checked against the same pin. A build is named by its commit and when it was made, since you
-may have several of one commit: the newest that meets every pin is the one.
+(snapshots-in-the-store)=
+## Good to know: how snapshots stay fast and small
 
-This is for a store that does not have the snapshot the lockfile names. A store that has it has
-the pin itself, and nothing stands in for it there: see "In CI, and on a shared store" below.
+ChartBook stores snapshots in human-readable folders under `~/.chartbook/store` (or your team's shared store). You don't need to manage the internals, but a few details are handy for large datasets:
 
-| Between the pin and your build | What the check says |
-|---|---|
-| New rows after the pin's last date | Met. They are counted, and left out of what you read |
-| The same rows in other bytes: another parquet writer, another row order | Met |
-| An old value revised, or arriving late (FRED, Ken French) | Not met: `the rows of 2024-01-02 to 2024-12-31 differ` |
-| A model, a version pinned by its label, or a dataframe with no rows recorded | Met by the same file only |
+- **Automatic increments:** The first snapshot of a pipeline is **complete** (holds every file). When little changes in later snapshots, ChartBook automatically stores an **increment** containing only the changed files—transparent to every reader and pin. Pass `--complete` to force a standalone folder.
+- **Partition large growing tables by year:** Because snapshots compare files, partitioning a multi-gigabyte time-series table by year means each new snapshot only copies the current year's partition.
+- **Models have versions & aliases:** Give a model snapshot an alias like `champion` in `[models.<id>.aliases]`, then reference it downstream as `pipeline:model/<id>@champion`.
+- **Clean up safely:** Never delete snapshot folders by hand. Use `chartbook store gc` to preview and remove unpinned snapshots older than 7 days.
 
-A read then gives the pinned rows, on every machine:
+:::{dropdown} What gets pinned in `chartbook.lock`?
+`chartbook.lock` pins **dataframes** and **models** by content hash (and row hashes by year for dataframes). Charts, notebooks, and notes aren't hash-pinned by default because re-rendering them produces different metadata bytes, though you can opt any asset in with `lock = true` in `chartbook.toml` ({ref}`configuration <lock-true>`).
 
-```python
-rates = data.load("fed_yield_curve:treasury_yields")     # the pinned rows: nothing after 2026-10-30
-last  = data.as_of("fed_yield_curve:treasury_yields")    # datetime.date(2026, 10, 30)
-path  = data.path("fed_yield_curve:treasury_yields")     # your build's file as it is, newer rows and all
-```
-
-`data.load` and `data.sql` leave out the rows after the pin's last date; only `chartbook pin --update`
-brings later rows. `data.path` hands over the file as it is and says so once, and `data.as_of` is
-where the pinned rows end, for a reader of your own (which has then to keep the rows with no date
-itself: `data.load` does). When the source has changed its past, the
-check exits 1 and a read stops, each naming the periods that differ. Nothing brings revised data
-back: a shared store does, by keeping the bytes. To go on with what you built,
-`chartbook pin --update ftsfr/fed_yield_curve` pins your build, and the lockfile's diff shows which
-periods changed.
-
-Three things on the other pipeline's side make this work:
-
-- **Declare `date_col`** on each dataframe, so its rows are hashed by period and new rows are told
-  from old ones.
-- **Write parquet without the pandas index:** `df.to_parquet(path, index=False)`. An index with no
-  name is written as a column of row positions, which shift when a pull has more rows, so no later
-  build has the pinned rows. `chartbook snapshot` and `chartbook run --check` say when a file has one.
-- **Snapshot and pin with ChartBook 0.6.0 or later.** A pin made from a snapshot of an earlier
-  ChartBook records no rows, and is met by the same file only. `chartbook pin` says when a pin is
-  of that kind. To pin its rows, nothing has to be built again: `chartbook snapshot` in the other
-  pipeline makes a new snapshot of the same files, which records them, and `chartbook pin --update` in
-  yours moves to it.
-
-`chartbook pin --update` and `chartbook snapshot` say what a dataframe's rows did: `24 new rows, through
-2026-11-11; earlier rows unchanged`, or `earlier rows changed: the rows of … differ`. A few tables
-have no rows hash, and `chartbook snapshot` says which and why: a column of lists, a single day
-whose rows count for more than 128 MB, more than 256 columns, a large CSV, a parquet file written
-in pages too large to read a little at a time. {design}`pins-and-rebuilds` has the whole design.
-
-## In CI, and on a shared store
-
-A build server changes nothing: `chartbook run --frozen` builds only if the lockfile is complete
-and every pin is in the store, and fails with a list of what is missing otherwise. A team points
-every machine at one store, and a dependency named by its ID is read on any of them; a half-synced
-file makes a command say so and ask you to run it again. A shared store has the snapshot the
-lockfile names, so that snapshot is the pin: where a file of it is missing, it is lost or still on
-its way, and no other build of that commit is read in its place.
-
-## When ChartBook itself moves on
-
-A store is shared across versions of ChartBook, and a lockfile is not. A store's layout has been
-the same since 0.3, so two people on different versions can use one. `chartbook.lock` has a
-version of its own, and the one this ChartBook writes began with 0.6.0: an earlier ChartBook
-cannot read it. What tells an earlier ChartBook to upgrade, and how, is the line in
-`chartbook.toml` that says which one the pipeline needs:
-
-```toml
-[project]
-requires_chartbook = ">=0.6.0"
-```
-
-`chartbook init` writes that line, and `chartbook pin` and `chartbook pin --update` raise it when they
-leave a lockfile that needs more than it says: commit the two files together. (`chartbook run`
-writes no manifest, and says that `chartbook pin` does.) Everyone else is then told what to
-install by the first command they run, and in a uv project, where `uv add "chartbook>=0.6.0"`
-records the same floor, they get it at their next `uv sync`. The changelog's "Read this first"
-has the steps for each release that changes a file.
-
-## Models have versions
-
-A model's bytes become a **version** when a snapshot first holds them, named by the start of their
-hash. `[models.x.aliases]` gives a version a label such as `champion`, and another pipeline reads it
-as `fed_yield_curve:model/x@champion`; `chartbook pin --update` moves the pin when the label does.
-
-Every asset page shows a **provenance panel**: what the asset was made from, at which hashes, and
-for a model whether its training data has moved since. {ref}`[dependencies] <dependencies>` in the
-reference has every field, including a dependency fetched from a published store on a machine that
-never built it.
+When ChartBook's lockfile format requires a minimum version, `chartbook pin` updates `requires_chartbook = ">=0.6.0"` in `chartbook.toml` so teammates get a clear upgrade message.
+:::
