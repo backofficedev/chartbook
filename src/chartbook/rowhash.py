@@ -1459,6 +1459,24 @@ def _arrow_binary_length(array):
     return pc.binary_length(array)
 
 
+def _batch_bytes(batch) -> int:
+    """What a batch's values take, as ``nbytes`` says; pyarrow before 26 cannot say it of a view column of text, so there it is counted from the values: their own bytes and 16 for each value's view."""
+    try:
+        return batch.nbytes
+    except TypeError:  # pyarrow.ArrowTypeError
+        import pyarrow as pa
+        import pyarrow.compute as pc
+
+        total = 0
+        for column in batch.columns:
+            kind = column.type
+            if getattr(pa.types, "is_string_view", lambda _: False)(kind) or getattr(pa.types, "is_binary_view", lambda _: False)(kind):
+                total += 16 * len(column) + int(pc.sum(_arrow_binary_length(column)).as_py() or 0)
+            else:
+                total += column.nbytes
+        return total
+
+
 def _row_sizes(batch):
     """What each row of a batch takes once every value is written out, in bytes: its own bytes for text, a dictionary's value for each row that names it, and its width for anything else."""
     import numpy as np
@@ -1612,7 +1630,7 @@ def _parquet_batches(file, target, added) -> Iterator:
                         if part is None:
                             break
                         parts.append(part)
-                        taken += part.nbytes
+                        taken += _batch_bytes(part)
                     if len(parts) != len(readers):
                         if parts:
                             raise ValueError("its columns ended at different rows")
@@ -2036,7 +2054,7 @@ class _Pieces:
         """Put a batch's rows in a piece; *size* is what they count for, and *span* the least and greatest timestamp among them."""
         self.waiting.setdefault(key, []).append(batch)
         # What it holds, and what it costs to hold at all: a slice of one row of 256 columns is mostly the latter
-        self.held += batch.nbytes + 64 * batch.num_columns
+        self.held += _batch_bytes(batch) + 64 * batch.num_columns
         self.sizes[key] = self.sizes.get(key, 0) + int(size)
         self.counts[key] = self.counts.get(key, 0) + batch.num_rows
         if span is not None:
