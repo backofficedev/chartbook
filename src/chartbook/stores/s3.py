@@ -187,7 +187,7 @@ COPY_LIMIT = 5 * 1024**3
 
 _READ_ONLY = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 _WRITABLE = stat.S_IWUSR | _READ_ONLY
-_BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
+_BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\Z")
 _REFUSED = ("AccessDenied", "403", "Forbidden", "AllAccessDisabled", "InvalidAccessKeyId", "SignatureDoesNotMatch")
 #: What a write that is only to be made if nothing is there says when something is.
 _TAKEN = ("PreconditionFailed", "412", "ConditionalRequestConflict", "409")

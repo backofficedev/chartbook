@@ -61,11 +61,11 @@ KIND_TABLES = {
 }
 
 # A part may be a path inside the asset, so it may contain "/"
-_PART_PATTERN = re.compile(r"^[A-Za-z0-9._/-]+$")
+_PART_PATTERN = re.compile(r"^[A-Za-z0-9._/-]+\Z")
 # A revision may be an algorithm-qualified hash, so it may contain ":"
-_REV_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+$")
+_REV_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+\Z")
 # A registry is a host, which may carry a port
-_REGISTRY_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+$")
+_REGISTRY_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+\Z")
 
 
 class KindMismatchError(ValueError):

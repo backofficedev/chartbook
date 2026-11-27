@@ -364,7 +364,7 @@ PENDING_SECONDS = 3600
 #: ``store migrate`` reads: ``objects/<algorithm>/<2 hex>/<rest>``.
 OBJECTS_DIR = "objects"
 
-_HEX = re.compile(r"^[0-9a-f]{64}$")
+_HEX = re.compile(r"^[0-9a-f]{64}\Z")
 _READ_ONLY = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 
 
@@ -871,11 +871,11 @@ def _remove_tree(directory: Path, own: bool = False) -> None:
 SNAPSHOTS_DIR = "snapshots"
 #: The file beside a pipeline's records, in a store of ChartBook 0.2, that notes the folders they were made from.
 ORIGINS_FILE = "origins"
-_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
 #: A record's name in a store of ChartBook 0.2: when it was made, ``20261013T182205.123456Z``, and a count if two share that time.
-_RECORD_NAME = re.compile(r"^[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z(-[0-9]+)?\.json$")
+_RECORD_NAME = re.compile(r"^[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z(-[0-9]+)?\.json\Z")
 #: A note of a lockfile's name: 32 hex digits of a hash (:func:`root_name`).
-_ROOT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
+_ROOT_NAME = re.compile(r"^[0-9a-f]{32}\.json\Z")
 
 
 def is_record_name(name: str) -> bool:
@@ -4012,10 +4012,10 @@ def _is_or_under_a_link(location: Path, pipelines: Path, checked: Optional[dict]
         current = current / part
         known = checked.get(current)
         if known is None:
-            known = checked[current] = os.path.islink(current)
+            known = checked[current] = os.path.islink(_any_length(current))
         if known:
             return True
-    return os.path.islink(location)
+    return os.path.islink(_any_length(location))
 
 
 #: The end of a note, under ``tmp/``, of a snapshot being made: its own folder, and the folders of the earlier
@@ -4616,7 +4616,7 @@ class _FolderPending(PendingSnapshot):
     def _inside(self, target: Path) -> None:
         """Refuse to write where a link leads: a record or a folder of the store may be anyone's."""
         pipelines = Path(os.path.realpath(self.store.root / self.store._places().pipelines))
-        if os.path.islink(target) or not self.store._in_a_tree(target.parent):
+        if os.path.islink(_any_length(target)) or not self.store._in_a_tree(target.parent):
             raise StoreError(
                 f"{target} is a link, or under one that leads out of the store: nothing is written there. "
                 f"`chartbook store verify` checks a store."

@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 #: Allowed characters for each component of a pipeline ID (excluding "." and "..").
-ID_COMPONENT_PATTERN = re.compile(r"^(?!\.{1,2}$)[A-Za-z0-9._-]+$")
+ID_COMPONENT_PATTERN = re.compile(r"^(?!\.{1,2}\Z)[A-Za-z0-9._-]+\Z")
 
 
 class UnsupportedRevisionError(ValueError):

@@ -1302,7 +1302,7 @@ VERSION_PATTERN = re.compile(r"^(sha256:)?[0-9a-f]{12,64}\Z")
 
 #: A label that could be taken for the start of a hash: four or more hex
 #: digits and nothing else, which is what a typed version may be.
-_LOOKS_LIKE_A_VERSION = re.compile(r"^[0-9a-f]{4,64}$")
+_LOOKS_LIKE_A_VERSION = re.compile(r"^[0-9a-f]{4,64}\Z")
 
 
 def validate_aliases(aliases, where: str) -> dict:

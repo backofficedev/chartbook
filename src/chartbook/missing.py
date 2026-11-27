@@ -382,6 +382,8 @@ class _Walk:
                 try:
                     pipeline = snapshot.pipeline_in(folder)
                     newest, _ = snapshot.newest_for(folder, self.store)
+                except StoreNotAvailableError:
+                    raise
                 except (snapshot.SnapshotError, StoreError, OSError, ValueError):
                     continue  # a catalog, a folder that is not in git, a record that cannot be read: the pin says so
                 found.append(_Need(key, pipeline, Wanted(pipeline, folder=folder, by_path=True) if newest is None else None))

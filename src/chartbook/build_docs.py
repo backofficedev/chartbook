@@ -263,9 +263,11 @@ def _chartbook_keep_inside(app, doctree):
             if "://" in target or target.startswith("data:") or not target:
                 continue
             # Sphinx reads a target that starts with / from the site's root
+            from pathlib import Path
+
             base = root if target.startswith("/") else here
             full = os.path.realpath(os.path.join(base, target.lstrip("/")))
-            if full != root and not full.startswith(root + os.sep):
+            if not Path(full).is_relative_to(Path(root)):
                 node.replace_self(nodes.literal(text=f"[{target}: outside the site, not included]"))
                 break
 
