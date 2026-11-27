@@ -1715,7 +1715,7 @@ def _arrow_key_type(dtype):
     if dtype in wide_kinds:
         return pa.string()
     kind = _plain(pl.Series([], dtype=dtype).to_arrow(compat_level=pl.CompatLevel.oldest()).type)
-    if pa.types.is_dictionary(kind):
+    if pa.types.is_dictionary(kind) or pa.types.is_decimal(kind):
         return pa.string()
     return kind
 

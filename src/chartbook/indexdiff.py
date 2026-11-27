@@ -62,7 +62,7 @@ ENVELOPE_FIELDS = ("root", "schema")
 
 
 def _names(versions) -> list[str]:
-    return [v.get("version") for v in (versions or []) if isinstance(v, dict)]
+    return [v["version"] for v in (versions or []) if isinstance(v, dict) and isinstance(v.get("version"), str)]
 
 
 @dataclass
@@ -270,7 +270,7 @@ def _short(value) -> str:
 
 
 def _column_names(columns) -> list[str]:
-    return [c.get("name") for c in (columns or []) if isinstance(c, dict)]
+    return [c["name"] for c in (columns or []) if isinstance(c, dict) and isinstance(c.get("name"), str)]
 
 
 def format_diff(found: IndexDiff) -> str:

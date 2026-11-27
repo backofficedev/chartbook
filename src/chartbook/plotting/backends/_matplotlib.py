@@ -464,10 +464,16 @@ class MatplotlibBackend(BaseBackend):
         try:
             colors = self._get_colors(config, len(config.y))
 
+            import pandas as pd
+
             if config.stacked:
+                y_arrays = [
+                    pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
+                    for y_col in config.y
+                ]
                 ax.stackplot(
                     df[config.x],
-                    [df[y_col] for y_col in config.y],
+                    y_arrays,
                     labels=[
                         config.labels.get(y, y) if config.labels else y for y in config.y
                     ],
@@ -477,10 +483,11 @@ class MatplotlibBackend(BaseBackend):
             else:
                 for i, y_col in enumerate(config.y):
                     label = config.labels.get(y_col, y_col) if config.labels else y_col
+                    vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
                     ax.fill_between(
-                        df[config.x], df[y_col], alpha=0.5, label=label, color=colors[i]
+                        df[config.x], vals, alpha=0.5, label=label, color=colors[i]
                     )
-                    ax.plot(df[config.x], df[y_col], color=colors[i])
+                    ax.plot(df[config.x], vals, color=colors[i])
 
             pre_labels = len(ax.get_legend_handles_labels()[1])
             self._apply_config(ax, config, x_series=df[config.x])

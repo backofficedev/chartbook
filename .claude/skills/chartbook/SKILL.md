@@ -144,7 +144,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 Projects use `chartbook.toml` with these sections (all `[project]` keys are optional — an empty file is a valid pipeline manifest):
 
 - `[project]`: All project metadata — name, description, maintainer, contributors, repo_url, copyright, logo/favicon, os_compatibility, `site_dir` (custom site pages, defaults to `./docs_src/site/` when it exists), `enable_data_download`, `writer` (`"sphinx"` by default; `"mkdocs"` builds the site with MkDocs, `pip install chartbook[mkdocs]`). `build` here is the old place for `[scripts] build`, still read
-- `[scripts]`: Named commands, one string each; `build` is what `chartbook run` and `chartbook run` run
+- `[scripts]`: Named commands, one string each; `build` is what `chartbook run` runs
 - `[models]`: Trained models (`path`, `trained_on`, `metrics_path`, a write-up), with `[models.<id>.aliases]` for labelled versions
 - `[files]`: Files that are not tables, whatever is inside (gzipped JSON lines, text, HTML, PDFs, images, arrays, a SQLite file, a vendor's zip): `path` (a file, a folder or a glob) and a dataframe's governance fields (`description`, a write-up, `sources`, `providers`, `license`, `restrictions`, `tags`, `keep`). Addressed `file/<name>`
 - `[dependencies]`: Other pipelines this one reads from, by ID: `"acme/rates" = {}` (its snapshots in the store), `{ path = "../x" }` (a folder, for two pipelines in one repository) or `{ git = "…" }` (a repository)

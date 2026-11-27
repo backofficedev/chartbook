@@ -92,16 +92,19 @@ def _color_to_rgba(color: str, alpha: float) -> str:
         inner = color[4:-1]  # Extract "r, g, b"
         return f"rgba({inner}, {alpha})"
 
-    # Hex color
+    # Hex color (#RGB, #RGBA, #RRGGBB, #RRGGBBAA)
     if color.startswith("#"):
         hex_color = color[1:]
-        if len(hex_color) == 3:
-            # Short form #RGB -> #RRGGBB
+        if len(hex_color) in (3, 4):
             hex_color = "".join(c * 2 for c in hex_color)
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        return f"rgba({r}, {g}, {b}, {alpha})"
+        if len(hex_color) in (6, 8):
+            try:
+                r = int(hex_color[0:2], 16)
+                g = int(hex_color[2:4], 16)
+                b = int(hex_color[4:6], 16)
+                return f"rgba({r}, {g}, {b}, {alpha})"
+            except ValueError:
+                pass
 
     # Named color
     if color in _NAMED_COLORS:
@@ -526,14 +529,16 @@ def apply_overlays_matplotlib(
         )
 
     # Bands (fill between y columns)
+    if overlay.bands:
+        import pandas as pd
     for band in overlay.bands:
         y_upper_col = band["y_upper"]
         y_lower_col = band["y_lower"]
 
         ax.fill_between(
             df[x_col],
-            df[y_lower_col],
-            df[y_upper_col],
+            pd.to_numeric(df[y_lower_col], errors="coerce").to_numpy(dtype=float),
+            pd.to_numeric(df[y_upper_col], errors="coerce").to_numpy(dtype=float),
             alpha=band.get("alpha", 0.3),
             color=band.get("color", "blue"),
             label=band.get("label"),

@@ -1660,10 +1660,13 @@ def _load_catalog_for_cli(catalog_path=None):
     # folder itself: an entry's path written from the former still reads
     named = _as_named(catalog_path) if catalog_path is not None else resolved
     if named.is_dir():
-        named = named / "catalog.toml"
+        named = named / ("catalog.toml" if (named / "catalog.toml").is_file() else "chartbook.toml")
+    if not named.is_file():
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"Catalog file not found: {resolved}", err=True)
+        raise SystemExit(1)
     try:
         manifest = load_manifest(base_dir=named.parent)
-    except (ValueError, FileNotFoundError) as e:
+    except (ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     return manifest, resolved
