@@ -371,7 +371,12 @@ def read_state(build_dir: Path) -> Optional[dict]:
             state = json.load(f)
     except (OSError, ValueError):
         return None
-    if not isinstance(state, dict) or state.get("version") != STATE_VERSION:
+    if (
+        not isinstance(state, dict)
+        or state.get("version") != STATE_VERSION
+        or not isinstance(state.get("pipelines"), dict)
+        or (state.get("code_times") is not None and not isinstance(state.get("code_times"), dict))
+    ):
         return None
     return state
 
@@ -444,7 +449,20 @@ def plan_build(
             reuse.append(pipeline_id)
         else:
             regenerate.append(pipeline_id)
+    from datetime import datetime
+    from chartbook.manifest import CODE_TIME_FORMAT
+
     recorded_times = state.get("code_times") or {}
+    valid_times = {}
+    for p in reuse:
+        stamp = recorded_times.get(p)
+        if not isinstance(stamp, str):
+            continue
+        try:
+            datetime.strptime(stamp, CODE_TIME_FORMAT)
+        except ValueError:
+            continue
+        valid_times[p] = stamp
     return BuildPlan(
         current_global,
         fingerprints,
@@ -452,7 +470,7 @@ def plan_build(
         reuse,
         fresh=False,
         rendered=bool(state.get("rendered")),
-        code_times={p: recorded_times[p] for p in reuse if p in recorded_times},
+        code_times=valid_times,
     )
 
 

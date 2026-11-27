@@ -1708,13 +1708,16 @@ def _arrow_kept_apart(location, pairs: list):
 
 
 def _arrow_key_type(dtype):
-    """Arrow type for a Hive partition key; wide 128-bit Polars ints fall back to string (PyArrow has no int128)."""
+    """Arrow type for a Hive partition key; wide 128-bit Polars ints and dictionary/categorical types fall back to string."""
     import pyarrow as pa
 
     wide_kinds = tuple(k for k in (getattr(pl, "Int128", None), getattr(pl, "UInt128", None)) if k is not None)
     if dtype in wide_kinds:
         return pa.string()
-    return _plain(pl.Series([], dtype=dtype).to_arrow(compat_level=pl.CompatLevel.oldest()).type)
+    kind = _plain(pl.Series([], dtype=dtype).to_arrow(compat_level=pl.CompatLevel.oldest()).type)
+    if pa.types.is_dictionary(kind):
+        return pa.string()
+    return kind
 
 
 def _plain(kind):

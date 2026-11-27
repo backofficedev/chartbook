@@ -226,6 +226,11 @@ def digest(pipeline_id: str, records: dict) -> str:
     linked = {
         "shown": {owner: (records.get(owner) or {}).get("snapshots") for owner in owners},
         "trained_from": {record_id: records[record_id].get("trained_from") for record_id in said},
+        "model_versions": {
+            record_id: records[record_id].get("versions")
+            for record_id in said
+            if records[record_id].get("kind") == "Model"
+        },
     }
     text = json.dumps({"said": said, "linked": linked}, sort_keys=True, default=str)
     return hashlib.sha256(text.encode()).hexdigest()

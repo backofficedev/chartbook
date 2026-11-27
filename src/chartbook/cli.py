@@ -640,13 +640,23 @@ def _render_site(
                 f"{label} cannot be or contain the project directory to prevent accidental project deletion"
             )
 
-    if output_dir.exists() and not output_dir.is_dir():
-        raise click.UsageError(
-            f"Output path '{output_dir}' exists and is not a directory"
-        )
+    for target, label in (
+        (output_dir, "Output path"),
+        (docs_build_dir, "Build directory"),
+        (temp_docs_src_dir, "Temporary docs source directory"),
+    ):
+        if target is not None and target.exists() and not target.is_dir():
+            raise click.UsageError(
+                f"{label} '{target}' exists and is not a directory"
+            )
 
     # Check if output directory exists and prompt for confirmation
-    if output_dir.exists() and not force_write and any(output_dir.iterdir()):
+    try:
+        has_existing = output_dir.exists() and not force_write and any(output_dir.iterdir())
+    except OSError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if has_existing:
         if not click.confirm(
             f"Directory '{output_dir}' already exists. Do you want to overwrite it?\n"
             "(add the -f/--force-write option to overwrite without prompting)",
@@ -1125,7 +1135,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     if not watch:
         try:
             summary = generate_docs(incremental=incremental, **build_kwargs)
-        except (ValueError, FileNotFoundError, StoreError) as e:
+        except (ValueError, OSError, StoreError) as e:
             report(e)
             raise SystemExit(1)
         if summary is not None:
@@ -1138,7 +1148,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     def build_once():
         try:
             summary = generate_docs(incremental=True, **build_kwargs)
-        except (ValueError, FileNotFoundError, StoreError) as e:
+        except (ValueError, OSError, StoreError) as e:
             report(e)
             raise SystemExit(1)
         click.echo(summary.describe())
@@ -2386,7 +2396,11 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
         if looks_like_build_tree(_docs_dir):
             import shutil
 
-            shutil.rmtree(_docs_dir)
+            try:
+                shutil.rmtree(_docs_dir)
+            except OSError as e:
+                click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+                raise SystemExit(1)
 
     # A site built with MkDocs is built whole: the kept build directory is Sphinx's
     from chartbook.manifest import load_manifest
