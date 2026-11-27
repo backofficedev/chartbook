@@ -46,13 +46,23 @@ TABLE = """\
 | `chartbook catalog open` | Opens the catalog in your browser: every snapshot in your stores |
 | `chartbook install agents` | Once per project: teaches your coding agent ChartBook |
 """
-#: Where a person, or an agent, starts reading
-FIRST_PAGES = [
-    "README.md", "docs_src/index.md", "docs_src/getting-started.md", "docs_src/reference/cli.md",
-    "llm/llms.txt", "llms.txt", "llm/llms-full.txt",
+#: Skill and full-reference pages that carry the verbatim `## Start with these` table
+SKILL_PAGES = [
+    "llm/llms-full.txt",
     "src/chartbook/skills/SKILL.md", ".claude/skills/chartbook/SKILL.md",
     "template/{{cookiecutter.project_slug}}/.claude/skills/chartbook/SKILL.md",
 ]
+#: Overhauled 0.6.0 landing, quickstart, CLI reference, and llms.txt pages
+SITE_PAGES = [
+    "README.md", "docs_src/index.md", "docs_src/getting-started.md",
+    "docs_src/reference/cli.md", "llm/llms.txt", "llms.txt",
+]
+#: Where a person, or an agent, starts reading
+FIRST_PAGES = SITE_PAGES + SKILL_PAGES
+_EVERYDAY_HEADING = re.compile(
+    r"^## (?:Four commands cover 95% of your day|The everyday commands|Everyday commands)\n(.*?)(?=^## |\Z)",
+    re.M | re.S,
+)
 
 
 def _help() -> list[str]:
@@ -141,7 +151,7 @@ class TestTheHelp:
 
 
 class TestThePagesReadFirst:
-    @pytest.mark.parametrize("page", FIRST_PAGES)
+    @pytest.mark.parametrize("page", SKILL_PAGES)
     def test_each_has_them_in_a_section_of_their_own_word_for_word(self, page):
         """Found by review: the names were held, and a row could say anything of its command."""
         text = (ROOT / page).read_text(encoding="utf-8")
@@ -150,21 +160,39 @@ class TestThePagesReadFirst:
         assert TABLE in found.group(1), f"{page}: its table is not the one every first page has"
         assert re.findall(r"^\| `(chartbook [^`]+)` \|", found.group(1), re.M) == KNOWN
 
+    @pytest.mark.parametrize("page", SITE_PAGES)
+    def test_each_site_page_names_all_six_commands(self, page):
+        """Overhauled landing/quickstart/CLI/llms.txt pages present all six commands."""
+        text = (ROOT / page).read_text(encoding="utf-8")
+        for command in KNOWN:
+            assert command in text, f"{page} does not mention `{command}`"
+        if page != "docs_src/getting-started.md":
+            found = _EVERYDAY_HEADING.search(text)
+            assert found, f"{page} has no everyday-commands section"
+            for command in KNOWN:
+                assert command in found.group(1), f"{page}: everyday-commands section omits `{command}`"
+
     def test_the_table_and_the_help_are_of_the_same_commands(self):
         assert re.findall(r"^\| `(chartbook [^`]+)` \|", TABLE, re.M) == KNOWN == [line[2:26].strip() for line in HELP]
 
     @pytest.mark.parametrize("page", FIRST_PAGES)
     def test_no_page_counts_them_wrong(self, page):
-        """The sentence over the table says how many, and which are typed in a pipeline's folder."""
+        """No page keeps the stale five-command wording; skill pages hold the six-command sentence."""
         text = (ROOT / page).read_text(encoding="utf-8")
         assert "The five commands" not in text and "Five commands cover" not in text
-        assert "Six commands cover most of what people do" in text
+        if page in SKILL_PAGES:
+            assert "Six commands cover most of what people do" in text
 
-    @pytest.mark.parametrize("page", FIRST_PAGES)
+    @pytest.mark.parametrize("page", [p for p in FIRST_PAGES if p != "docs_src/getting-started.md"])
     def test_that_section_comes_before_the_long_list(self, page):
         """The first screen is these. Whatever lists every command comes after."""
         text = (ROOT / page).read_text(encoding="utf-8")
-        first = text.index("## Start with these")
-        for later in ("## Key CLI Commands", "## More commands", "## CLI Reference", "## Get started", "## A pipeline, in three files", "## Next"):
+        if page in SKILL_PAGES:
+            first = text.index("## Start with these")
+        else:
+            match = _EVERYDAY_HEADING.search(text)
+            assert match, f"{page} has no everyday-commands section"
+            first = match.start()
+        for later in ("## Key CLI Commands", "## More commands", "## CLI Reference", "## Get started", "## A pipeline, in three files", "## Next", "## Where to go next"):
             if later in text:
                 assert first < text.index(later), f"{page}: `{later}` comes before the commands to start with"
