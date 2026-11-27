@@ -99,7 +99,7 @@ _MODEL_PAGE_TAIL = """
 
 | Metric | Value |
 |--------|-------|
-{% for name, value in metrics.items() %}| `{{name}}` | {{value}} |
+{% for name, value in metrics.items() %}| {{name | literal}} | {{value}} |
 {% endfor %}
 {% endif %}
 
@@ -109,7 +109,7 @@ _MODEL_PAGE_TAIL = """
 A version is made by a snapshot. Its name is the start of the model's content hash:
 `chartbook path model/{{model_id}}@<version>` gives its path.
 
-| Version | Made | Commit | Labels |{% for name in version_metrics %} `{{name}}` |{% endfor %}
+| Version | Made | Commit | Labels |{% for name in version_metrics %} {{name | literal}} |{% endfor %}
 |---------|------|--------|--------|{% for name in version_metrics %}------|{% endfor %}
 {% for version in versions %}| `{{version.name}}` | {{version.made}} | `{{version.commit}}` | {{version.labels}} |{% for name in version_metrics %} {{version.metrics.get(name, "")}} |{% endfor %}
 {% endfor %}
@@ -858,7 +858,7 @@ class SphinxWriter:
             # the two it merges or replaces at the root, nor build config/templates
             site_pages_list=[
                 p for p in site_pages
-                if ("/" in p or p not in ("index_toc.md", "index.md")) and _a_site_page(Path(p))
+                if ("/" in p or p.lower() not in ("index_toc.md", "index.md")) and _a_site_page(Path(p))
             ],
             index_toc_content=index_toc_content,
             show_code_updated=True,
@@ -2068,12 +2068,14 @@ def _parts(record: dict) -> Optional[dict]:
 
 
 def _format_metric(value) -> str:
-    """A score for a table: whole numbers whole, others to six significant digits."""
+    """A score for a table: whole numbers whole, others to six significant digits, strings escaped."""
     if isinstance(value, bool):
         return "true" if value else "false"
-    if not isinstance(value, float):
+    if isinstance(value, int):
         return str(value)
-    return f"{value:.6g}"
+    if isinstance(value, float):
+        return f"{value:.6g}"
+    return _as_text(value)
 
 
 def _most_recent_valid_datapoints(

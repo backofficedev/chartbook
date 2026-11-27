@@ -1681,16 +1681,13 @@ def run_checks(
 def check_links(manifest, base_dir):
     from chartbook.identity import _git_environment
     from chartbook.links import NAME, read
+    import os
     import subprocess
     if manifest["project"]["type"] != "pipeline":
         return []
     path = Path(base_dir) / NAME
-    if not path.exists():
+    if not os.path.lexists(path):
         return []
-    try:
-        linked = read(base_dir, active=False)
-    except (OSError, ValueError) as error:
-        return [Problem(path, "links", "", str(error))]
     try:
         tracked = subprocess.run(
             ["git", "ls-files", "--error-unmatch", "--", NAME],
@@ -1702,6 +1699,12 @@ def check_links(manifest, base_dir):
         tracked = False
     if tracked:
         return [Problem(path, "links", "", "A tracked chartbook.links.toml is not portable. Remove it from git and add it to .gitignore.")]
+    if path.is_symlink() and not path.exists():
+        return [Problem(path, "links", "", "chartbook.links.toml is a broken symlink.")]
+    try:
+        linked = read(base_dir, active=False)
+    except (OSError, ValueError) as error:
+        return [Problem(path, "links", "", str(error))]
     for pipeline, folder in linked.items():
         warnings.warn(f"Linked dependency {pipeline}: {folder}; its pin is not in use.", stacklevel=2)
     return []

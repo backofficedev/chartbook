@@ -1661,7 +1661,7 @@ def arrow_dataset(location):
     # The keys of polars' types, as Arrow names them, text plain. A dataset
     # gives a key's value where a file has a column of its name too
     loaded = scan_location(location).collect_schema()
-    arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
+    arrow = {key: _arrow_key_type(loaded[key]) for key in keys}
     # Each path with `/`, as pyarrow writes a file's and not the folder it is told keys start below
     found = [Path(file).as_posix() for file in found]
     given = {"partitioning": ds.partitioning(pa.schema(list(arrow.items())), flavor="hive")}
@@ -1683,7 +1683,7 @@ def _arrow_kept_apart(location, pairs: list):
 
     keys = _keys_of_pairs(pairs, _scan_files(pl.scan_ipc, [pairs[0][0]], hive_partitioning=False).collect_schema())
     loaded = scan_location(location).collect_schema()
-    arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
+    arrow = {key: _arrow_key_type(loaded[key]) for key in keys}
     first = ds.dataset([Path(pairs[0][0]).as_posix()], format="ipc").schema
     fields = {column.name: column.with_type(_plain(column.type)) for column in first}
     fields.update((key, pa.field(key, kind)) for key, kind in arrow.items())
@@ -1694,13 +1694,27 @@ def _arrow_kept_apart(location, pairs: list):
         for key, (_, values) in keys.items():
             value = values[i]
             field = ds.field(key)
-            said = said & (field.is_null() if value is None else field == pa.scalar(value, type=arrow[key]))
+            if value is None:
+                said = said & field.is_null()
+            else:
+                scalar_val = str(value) if arrow[key] == pa.string() else value
+                said = said & (field == pa.scalar(scalar_val, type=arrow[key]))
         partitions.append(said)
     return ds.FileSystemDataset.from_paths(
         # Each path with `/`, as pyarrow writes a file's (arrow_dataset)
         [Path(location).as_posix() for location, _ in pairs], schema=plain, format=ds.IpcFileFormat(),
         filesystem=fs.LocalFileSystem(), partitions=partitions,
     )
+
+
+def _arrow_key_type(dtype):
+    """Arrow type for a Hive partition key; wide 128-bit Polars ints fall back to string (PyArrow has no int128)."""
+    import pyarrow as pa
+
+    wide_kinds = tuple(k for k in (getattr(pl, "Int128", None), getattr(pl, "UInt128", None)) if k is not None)
+    if dtype in wide_kinds:
+        return pa.string()
+    return _plain(pl.Series([], dtype=dtype).to_arrow(compat_level=pl.CompatLevel.oldest()).type)
 
 
 def _plain(kind):

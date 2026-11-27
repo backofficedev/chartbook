@@ -51,7 +51,7 @@ $ chartbook ls --json
 ]
 ```
 
-Filter to a single kind anytime with `chartbook ls dataframes --json` (or `charts`, `models`, `notebooks`, `files`).
+Filter to a single kind anytime with `chartbook ls dataframes --json` (or `charts`, `pipelines`), or filter the `kind` field of `chartbook ls --json` for `model`, `notebook`, and `files` assets.
 
 ### Read schemas and docs without loading gigabytes
 

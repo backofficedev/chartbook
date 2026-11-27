@@ -332,9 +332,10 @@ UNTRUSTED_SITE_FILES = frozenset({".md", ".png", ".jpg", ".jpeg", ".gif", ".webp
 def _a_site_page(relative: Path) -> bool:
     """Whether a file of a site folder may be copied into the site: not the build's own configuration or templates."""
     parts = relative.parts
-    if parts and parts[0] in ("_templates", "_build"):
+    if parts and parts[0].lower() in ("_templates", "_build"):
         return False
-    if len(parts) == 1 and (relative.name.startswith("conf.py") or relative.name in ("docutils.conf", "mkdocs.yml")):
+    lower_name = relative.name.lower()
+    if len(parts) == 1 and (lower_name.startswith("conf.py") or lower_name in ("docutils.conf", "mkdocs.yml")):
         return False
     return True
 
@@ -364,7 +365,7 @@ def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
                 if escapes(source, folder) is not None:
                     continue
             relative = source.relative_to(folder)
-            if relative.parent == Path(".") and relative.name == "index_toc.md":
+            if relative.parent == Path(".") and relative.name.lower() == "index_toc.md":
                 continue
             if not _a_site_page(relative):
                 warnings.warn(
@@ -375,7 +376,7 @@ def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
                 continue
             if untrusted_source() and source.suffix.lower() not in UNTRUSTED_SITE_FILES:
                 continue  # from a store: pages and pictures, nothing a tool might run
-            if relative.parent == Path(".") and relative.name == "index.md":
+            if relative.parent == Path(".") and relative.name.lower() == "index.md":
                 warnings.warn(
                     f"Ignoring '{source}': a root index.md in site_dir would replace the "
                     f"site's front page. Put what it should show in index_toc.md instead.",

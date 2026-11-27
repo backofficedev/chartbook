@@ -175,7 +175,7 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
     for source in (pipeline_manifest.get("sources") or {}).values():
         if not isinstance(source, dict) or source.get("backend") != "duckdb":
             continue
-        url = source.get("url")
+        url = source.get("_resolved_url") or source.get("url")
         if not isinstance(url, str) or not url.strip():
             continue
         try:

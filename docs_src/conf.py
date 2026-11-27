@@ -114,26 +114,38 @@ today_fmt = "%B %d, %Y"
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_clarity_theme"
-html_static_path = ["_static"]
+import importlib.util
 
-html_theme_options = {
-    "header_title": False,
-    "logo_dark": "_static/logo-dark.png",
-    "header_menu": [
-        {"content": "Quickstart", "url": "getting-started"},
-        {"content": "AI Agents", "url": "guide/agents"},
-        {"content": "CLI", "url": "reference/cli"},
-        {
-            "content": "GitHub",
-            "url": "https://github.com/backofficedev/chartbook",
-            "as": "button",
-            "tooltip": "View ChartBook on GitHub",
-        },
-    ],
-    "edit_page_label": "Edit on GitHub",
-    "edit_page_url": "https://github.com/backofficedev/chartbook/edit/main/docs_src/{path}",
-}
+if importlib.util.find_spec("sphinx_clarity_theme") is not None:
+    html_theme = "sphinx_clarity_theme"
+    html_theme_options = {
+        "header_title": False,
+        "logo_dark": "_static/logo-dark.png",
+        "header_menu": [
+            {"content": "Quickstart", "url": "getting-started"},
+            {"content": "AI Agents", "url": "guide/agents"},
+            {"content": "CLI", "url": "reference/cli"},
+            {
+                "content": "GitHub",
+                "url": "https://github.com/backofficedev/chartbook",
+                "as": "button",
+                "tooltip": "View ChartBook on GitHub",
+            },
+        ],
+        "edit_page_label": "Edit on GitHub",
+        "edit_page_url": "https://github.com/backofficedev/chartbook/edit/main/docs_src/{path}",
+    }
+    # Custom CSS (minimal additions on top of Clarity's native Tailwind/DaisyUI defaults)
+    html_css_files = [
+        "custom.css",
+    ]
+else:
+    # sphinx-clarity-theme requires Python >= 3.11; fall back to sphinx_book_theme on 3.10.
+    html_theme = "sphinx_book_theme"
+    html_theme_options = {}
+    html_css_files = []
+
+html_static_path = ["_static"]
 
 # What a link to these pages shows on Slack, X or LinkedIn (_templates/layout.html)
 html_context = {
@@ -147,11 +159,6 @@ html_context = {
 html_title = "ChartBook Documentation"
 html_logo = "_static/logo-light.png"
 html_favicon = "_static/logo.png"
-
-# Custom CSS (minimal additions on top of Clarity's native Tailwind/DaisyUI defaults)
-html_css_files = [
-    "custom.css",
-]
 
 
 def _publish_index_schemas(app, exception):

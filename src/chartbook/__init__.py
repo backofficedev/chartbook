@@ -16,7 +16,7 @@ For the files of an asset, and a table of them:
 
 For plotting:
     from chartbook import plotting
-    plotting.line(df, chart_id="my_chart", x="date", y="value")
+    plotting.line(df, x="date", y="value").save(chart_id="my_chart")
 
 For CLI (install via pipx):
     pipx install chartbook

@@ -1073,7 +1073,7 @@ def _is_catalog_folder(project_dir) -> bool:
     try:
         raw = _read_manifest_file(project_dir)
         return resolve_project_type(raw, source=str(project_dir / "chartbook.toml")) == "catalog"
-    except (ValueError, FileNotFoundError):
+    except (ValueError, OSError):
         return False
 
 
@@ -1200,6 +1200,8 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     try:
         with _untrusted_mode(untrusted):
             manifest = load_manifest(base_dir=project_dir)
+            if manifest["project"]["type"] != "pipeline":
+                raise ValueError("`chartbook publish` stages a pipeline, not a catalog.")
             pipeline_id = manifest["project"]["id"]
 
             if publish_dir is None:
@@ -1355,7 +1357,7 @@ def _check_pipeline(project_dir, within_days, policy_path):
                     policy_label = "the default policy"
             else:
                 policy_label = "the default policy"
-    except (ValueError, FileNotFoundError, TypeError, KeyError, StoreError) as e:
+    except (ValueError, OSError, TypeError, KeyError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
@@ -2393,7 +2395,7 @@ def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run
 
     try:
         incremental = load_manifest(project_dir)["project"].get("writer", "sphinx") != "mkdocs"
-    except (ValueError, FileNotFoundError, TypeError, KeyError, StoreError) as e:
+    except (ValueError, OSError, TypeError, KeyError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     if not incremental and watch:
@@ -2568,10 +2570,13 @@ def data_get_docs(pipeline, dataframe, catalog):
         docs = get_docs_page(pipeline, parse_asset_ref(dataframe, kind="dataframe"), catalog_path=catalog)
         click.echo(docs.rstrip("\n"))
     except (KeyError, ValueError, StoreError) as e:
-        click.echo(f"Error: {e}", err=True)
+        click.echo(f"Error: {_said(e)}", err=True)
         raise SystemExit(1)
     except FileNotFoundError as e:
-        click.echo(f"Error: Documentation file not found: {e}", err=True)
+        click.echo(f"Error: Documentation file not found: {_said(e)}", err=True)
+        raise SystemExit(1)
+    except OSError as e:
+        click.echo(f"Error: {_said(e)}", err=True)
         raise SystemExit(1)
 
 
@@ -2593,8 +2598,8 @@ def data_get_docs_path(pipeline, dataframe, catalog):
     try:
         path = get_docs_path(pipeline, dataframe, catalog_path=catalog)
         click.echo(str(path))
-    except (FileNotFoundError, KeyError, ValueError, StoreError) as e:
-        click.echo(f"Error: {e}", err=True)
+    except (OSError, KeyError, ValueError, StoreError) as e:
+        click.echo(f"Error: {_said(e)}", err=True)
         raise SystemExit(1)
 
 
@@ -2710,13 +2715,16 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
             click.echo(get_docs_page(pipeline, asset, catalog_path=catalog).rstrip("\n"))
     except StoreError as e:
         # The store's own words, as a synced folder still downloading the snapshot
-        click.echo(f"Error: {e}", err=True)
+        click.echo(f"Error: {_said(e)}", err=True)
         raise SystemExit(1)
     except (KeyError, ValueError) as e:
-        click.echo(f"Error: {e}", err=True)
+        click.echo(f"Error: {_said(e)}", err=True)
         raise SystemExit(1)
     except FileNotFoundError as e:
-        click.echo(f"Error: Documentation file not found: {e}", err=True)
+        click.echo(f"Error: Documentation file not found: {_said(e)}", err=True)
+        raise SystemExit(1)
+    except OSError as e:
+        click.echo(f"Error: {_said(e)}", err=True)
         raise SystemExit(1)
 
 

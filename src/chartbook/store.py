@@ -2595,10 +2595,14 @@ class FolderStore(Store):
         emptied = {str(file.parent) for file, _ in removed}
         for name in names:
             folder = pipeline_path / name
-            if (only is not None and name != only) or not is_snapshot_folder(name) or not folder.is_dir() or folder.is_symlink():
+            if (only is not None and name != only) or not is_snapshot_folder(name) or not folder.is_dir() or folder.is_symlink() or str(folder) in folders:
                 continue
             cleared = folder / OWN_DIR / CLEARED_FILE
-            if os.path.isfile(_any_length(cleared)) and not os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE)) and not any(
+            has_cleared = os.path.isfile(_any_length(cleared))
+            has_record = os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE))
+            if not has_record and not has_cleared and older_than and now - _newest_in(folder) < PENDING_FOLDER_SECONDS:
+                continue  # an unrecorded, uncleared snapshot folder still within its pending window
+            if has_cleared and not has_record and not any(
                 Path(directory) / file_name != cleared for directory, _, files in os.walk(folder) for file_name in files
             ):
                 try:

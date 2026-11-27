@@ -199,7 +199,7 @@ class MkDocsWriter(SphinxWriter):
         untrusted = untrusted_source()
         pages = [
             p for p in (pipeline.get("site_pages") or [])
-            if p not in ("index_toc.md", "index.md") and _a_site_page(Path(p))
+            if p.lower() not in ("index_toc.md", "index.md") and _a_site_page(Path(p))
         ]
         site_dir = (pipeline.get("site_dir") or {}).get("resolved_path")
         site_root = Path(site_dir) if site_dir else None

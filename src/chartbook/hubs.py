@@ -126,13 +126,14 @@ def dependency_records(dependencies, pins=()):
     from chartbook.identity import validate_pipeline_id
     if not isinstance(dependencies, list):
         return []
-    pinned = {p.get("id"): p for p in pins if isinstance(p, dict)}
+    pinned = {p.get("id"): p for p in pins if isinstance(p, dict) and isinstance(p.get("id"), str)}
     result = []
     for entry in dependencies:
         if not isinstance(entry, dict):
             continue
         pin = pinned.get(entry.get("key") or entry.get("id"), {})
-        identity = pin.get("pinned_from") or (pin.get("location") or {}).get("pipeline") or entry.get("pinned_from") or entry.get("id")
+        pin_location = pin.get("location") if isinstance(pin.get("location"), dict) else {}
+        identity = pin.get("pinned_from") or pin_location.get("pipeline") or entry.get("pinned_from") or entry.get("id")
         try:
             validate_pipeline_id(identity)
         except ValueError:

@@ -264,6 +264,8 @@ def publish_pipeline(publish_dir: Path, base_dir: Path, verbose=False):
     :type verbose: bool
     """
     manifest = load_manifest(base_dir=base_dir)
+    if manifest["project"]["type"] != "pipeline":
+        raise ValueError("`chartbook publish` stages a pipeline, not a catalog.")
     copy_publishable_pipeline_files(manifest, base_dir, publish_dir, verbose=verbose)
     revise_published_chartbook_toml(publish_dir, base_dir=base_dir)
 
