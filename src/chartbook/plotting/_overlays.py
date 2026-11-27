@@ -529,8 +529,6 @@ def apply_overlays_matplotlib(
         )
 
     # Bands (fill between y columns)
-    if overlay.bands:
-        import pandas as pd
     for band in overlay.bands:
         y_upper_col = band["y_upper"]
         y_lower_col = band["y_lower"]

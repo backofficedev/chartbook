@@ -227,7 +227,7 @@ class MatplotlibBackend(BaseBackend):
 
             for i, y_col in enumerate(config.y):
                 label = config.labels.get(y_col, y_col) if config.labels else y_col
-                ax.plot(df[config.x], df[y_col], label=label, color=colors[i])
+                ax.plot(df[config.x], self._coerce_y(df[y_col]), label=label, color=colors[i])
 
             pre_labels = len(ax.get_legend_handles_labels()[1])
             self._apply_config(ax, config, x_series=df[config.x])
@@ -360,7 +360,7 @@ class MatplotlibBackend(BaseBackend):
                     cat_sizes = sizes[mask] if sizes is not None else None
                     ax.scatter(
                         df.loc[mask, config.x],
-                        df.loc[mask, y_col],
+                        self._coerce_y(df.loc[mask, y_col]),
                         s=cat_sizes,
                         c=color,
                         label=str(cat),
@@ -369,7 +369,7 @@ class MatplotlibBackend(BaseBackend):
                 has_category_legend = True
             else:
                 color = self._get_colors(config, 1)[0]
-                ax.scatter(df[config.x], df[y_col], s=sizes, c=color, alpha=0.7)
+                ax.scatter(df[config.x], self._coerce_y(df[y_col]), s=sizes, c=color, alpha=0.7)
                 has_category_legend = False
 
             pre_labels = len(ax.get_legend_handles_labels()[1])
@@ -614,6 +614,18 @@ class MatplotlibBackend(BaseBackend):
         fig, ax = self._build_dual_axis_figure(df, config, overlay, size)
         self._save_figure(fig, output_path)
 
+    @staticmethod
+    def _coerce_y(series: "pd.Series"):
+        """Coerce numeric-like object/string y series to float arrays; keep genuinely categorical y series as-is."""
+        import pandas as pd
+
+        if pd.api.types.is_numeric_dtype(series):
+            return series
+        numeric = pd.to_numeric(series, errors="coerce")
+        if numeric.notna().any() or series.isna().all():
+            return numeric.to_numpy(dtype=float)
+        return series
+
     def _plot_series_on_axis(
         self,
         ax: "matplotlib.axes.Axes",
@@ -637,7 +649,7 @@ class MatplotlibBackend(BaseBackend):
             color = colors[i] if i < len(colors) else colors[0]
 
             if chart_type == "line":
-                ax.plot(x_vals, df[y_col], label=y_col, color=color)
+                ax.plot(x_vals, self._coerce_y(df[y_col]), label=y_col, color=color)
             elif chart_type == "bar":
                 x = np.arange(len(df))
                 total = bar_total_slots if bar_total_slots is not None else len(y_cols)
@@ -647,7 +659,7 @@ class MatplotlibBackend(BaseBackend):
                 vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
                 ax.bar(x + offset, vals, width, label=y_col, color=color)
             elif chart_type == "scatter":
-                ax.scatter(x_vals, df[y_col], label=y_col, color=color, alpha=0.7)
+                ax.scatter(x_vals, self._coerce_y(df[y_col]), label=y_col, color=color, alpha=0.7)
             elif chart_type == "area":
                 vals = pd.to_numeric(df[y_col], errors="coerce").to_numpy(dtype=float)
                 ax.fill_between(
